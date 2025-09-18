@@ -17,58 +17,261 @@ export default function NotRegistered({ email }: NotRegisteredProps) {
     await signOut({ callbackUrl: "/" });
   };
 
+
   return (
     <>
       <Head>
-        <title>Access Denied</title>
+        <title>Access Denied - TechTool</title>
+        <link
+          rel="icon"
+          href="https://drive.google.com/uc?export=download&id=1Lp_N2cdiIQUDGdoFNn9b-wDDA9TiQFcu&format=png"
+          type="image/png"
+        />
       </Head>
       <div className="not-registered-page">
-        <div className="container">
-          <h1>🔒 Access Denied</h1>
-          <p>
-            The email address <strong>{email}</strong> is not registered to use
-            this system.
-          </p>
-          <button onClick={handleLogout} disabled={loading}>
-            {loading ? "Logging Out..." : "Try a Different Account"}
-          </button>
+        <div className="error-container">
+          <div className="error-icon">
+            <div className="icon-wrapper">
+              <i className="fas fa-shield-alt"></i>
+            </div>
+          </div>
+          
+          <div className="error-content">
+            <h1>Access Denied</h1>
+            <p className="error-message">
+              The email address <span className="email-highlight">{email}</span> is not registered to use this system.
+            </p>
+            <p className="help-text">
+              Please contact your administrator to request access or try signing in with a different account.
+            </p>
+          </div>
+          
+          <div className="action-buttons">
+            <button 
+              className="primary-btn" 
+              onClick={handleLogout} 
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i>
+                  Logging Out...
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-sign-out-alt"></i>
+                  Try a Different Account
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+        
+        <div className="floating-elements">
+          <div className="floating-shape shape-1"></div>
+          <div className="floating-shape shape-2"></div>
+          <div className="floating-shape shape-3"></div>
         </div>
       </div>
       <style jsx>{`
         .not-registered-page {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
             Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
-          text-align: center;
-          padding-top: 50px;
-          background-color: #ffebee;
-          color: #c62828;
           min-height: 100vh;
           margin: 0;
+          background: linear-gradient(135deg, #667eea 0%, #f093fb 50%, #f5576c 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 2rem;
+          position: relative;
+          overflow: hidden;
         }
-        .container {
-          background-color: #ffffff;
-          padding: 40px;
-          border-radius: 8px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-          display: inline-block;
+        
+        .error-container {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border-radius: 20px;
+          padding: 3rem;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          text-align: center;
+          max-width: 500px;
+          width: 100%;
+          position: relative;
+          z-index: 2;
         }
-        button {
-          padding: 12px 24px;
-          font-size: 16px;
-          cursor: pointer;
-          border-radius: 4px;
-          border: none;
-          background-color: #4285f4;
+        
+        .error-icon {
+          margin-bottom: 2rem;
+        }
+        
+        .icon-wrapper {
+          width: 80px;
+          height: 80px;
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0 auto;
+          box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+        }
+        
+        .icon-wrapper i {
+          font-size: 2rem;
           color: white;
-          margin-top: 20px;
-          transition: background-color 0.3s;
         }
-        button:hover {
-          background-color: #357ae8;
+        
+        .error-content h1 {
+          font-size: 2.5rem;
+          font-weight: 700;
+          color: #1f2937;
+          margin: 0 0 1rem 0;
         }
-        button:disabled {
-          background-color: #cccccc;
+        
+        .error-message {
+          font-size: 1.1rem;
+          color: #6b7280;
+          line-height: 1.6;
+          margin: 0 0 1rem 0;
+        }
+        
+        .email-highlight {
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          font-weight: 600;
+        }
+        
+        .help-text {
+          font-size: 0.95rem;
+          color: #9ca3af;
+          line-height: 1.5;
+          margin: 0 0 2rem 0;
+        }
+        
+        .action-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+        }
+        
+        .primary-btn, .secondary-btn {
+          padding: 1rem 2rem;
+          font-size: 1rem;
+          font-weight: 600;
+          border-radius: 12px;
+          border: none;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.75rem;
+          transition: all 0.3s ease;
+          text-decoration: none;
+        }
+        
+        .primary-btn {
+          background: linear-gradient(135deg, #4f46e5, #7c3aed);
+          color: white;
+          box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+        }
+        
+        .primary-btn:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+        }
+        
+        .secondary-btn {
+          background: transparent;
+          color: #6b7280;
+          border: 2px solid #e5e7eb;
+        }
+        
+        .secondary-btn:hover {
+          background: #f9fafb;
+          border-color: #d1d5db;
+          color: #374151;
+        }
+        
+        .primary-btn:disabled {
+          background: #d1d5db;
           cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+        }
+        
+        .floating-elements {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 1;
+        }
+        
+        .floating-shape {
+          position: absolute;
+          border-radius: 50%;
+          opacity: 0.1;
+          animation: float 6s ease-in-out infinite;
+        }
+        
+        .shape-1 {
+          width: 150px;
+          height: 150px;
+          background: linear-gradient(45deg, #ff6b6b, #feca57);
+          top: 10%;
+          left: 10%;
+          animation-delay: 0s;
+        }
+        
+        .shape-2 {
+          width: 100px;
+          height: 100px;
+          background: linear-gradient(45deg, #48dbfb, #0abde3);
+          top: 60%;
+          right: 15%;
+          animation-delay: 2s;
+        }
+        
+        .shape-3 {
+          width: 120px;
+          height: 120px;
+          background: linear-gradient(45deg, #ff9ff3, #f368e0);
+          bottom: 20%;
+          left: 20%;
+          animation-delay: 4s;
+        }
+        
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        @media (max-width: 768px) {
+          .not-registered-page {
+            padding: 1rem;
+          }
+          
+          .error-container {
+            padding: 2rem;
+          }
+          
+          .error-content h1 {
+            font-size: 2rem;
+          }
+          
+          .action-buttons {
+            gap: 0.75rem;
+          }
+          
+          .primary-btn, .secondary-btn {
+            padding: 0.875rem 1.5rem;
+            font-size: 0.95rem;
+          }
         }
       `}</style>
     </>

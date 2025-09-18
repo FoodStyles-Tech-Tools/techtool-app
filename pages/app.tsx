@@ -11,7 +11,7 @@ import { signOut } from "next-auth/react";
 
 const FAVICON_URL =
   process.env.FAVICON_URL ??
-  "https://drive.google.com/uc?export=download&id=1Lp_N2cdiIQUDGdoFNn9b-wDDA9TiQFcu";
+  "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>";
 
 type AppPageProps = {
   appHtml: string;
@@ -143,9 +143,29 @@ export default function AppPage({
       <Script src="https://cdn.jsdelivr.net/npm/chart.js" strategy="beforeInteractive" />
       <Script id="supabase-init" strategy="beforeInteractive">
         {`
-          const SUPABASE_URL = ${JSON.stringify(supabaseUrl)};
-          const SUPABASE_KEY = ${JSON.stringify(supabaseAnonKey)};
-          const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          console.log("Setting up Supabase environment variables...");
+          window.SUPABASE_URL = ${JSON.stringify(supabaseUrl)};
+          window.SUPABASE_KEY = ${JSON.stringify(supabaseAnonKey)};
+          console.log("Supabase URL set:", window.SUPABASE_URL);
+          console.log("Supabase Key set:", window.SUPABASE_KEY ? "Present" : "Missing");
+          
+          // Initialize Supabase client immediately
+          function initSupabaseClient() {
+            if (typeof window.supabase !== 'undefined') {
+              console.log("Creating Supabase client...");
+              window.supabaseClient = window.supabase.createClient(
+                window.SUPABASE_URL,
+                window.SUPABASE_KEY
+              );
+              console.log("Supabase client created successfully!");
+            } else {
+              console.log("Supabase library not ready, retrying...");
+              setTimeout(initSupabaseClient, 100);
+            }
+          }
+          
+          // Start initialization
+          initSupabaseClient();
         `}
       </Script>
       <div

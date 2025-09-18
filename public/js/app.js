@@ -1,4 +1,19 @@
   // --- GLOBAL STATE ---
+  console.log("🚀 JavaScript file loaded successfully!");
+  
+  // Global test function
+  window.testApp = function() {
+    console.log("🧪 Testing app initialization...");
+    console.log("🧪 DOM ready state:", document.readyState);
+    console.log("🧪 Required elements:", {
+      loader: !!document.getElementById("loader"),
+      tableWrapper: !!document.querySelector(".table-wrapper"),
+      errorMessage: !!document.getElementById("error-message"),
+      supabaseClient: !!window.supabaseClient
+    });
+    initializeApp();
+  };
+  
   let appData = {
     allTickets: [],
     tickets: [],
@@ -39,6 +54,31 @@
   let dashboardStartDate = null;
   let dashboardEndDate = null;
   let reconcileSelectedUserName = null;
+  
+  // --- SUPABASE INITIALIZATION ---
+  function waitForSupabase() {
+    return new Promise((resolve, reject) => {
+      let attempts = 0;
+      const maxAttempts = 100; // 10 seconds max wait
+      
+      const checkSupabase = () => {
+        attempts++;
+        console.log(`Checking for Supabase... attempt ${attempts}`);
+        
+        if (typeof window !== 'undefined' && window.supabaseClient) {
+          console.log("Supabase client found!");
+          resolve(window.supabaseClient);
+        } else if (attempts >= maxAttempts) {
+          console.error("Supabase initialization timeout");
+          reject(new Error("Supabase initialization timeout"));
+        } else {
+          setTimeout(checkSupabase, 100);
+        }
+      };
+      checkSupabase();
+    });
+  }
+  
   // --- UTILITY FUNCTIONS ---
   function escapeHtml(text) {
     if (typeof text !== "string") return text;
@@ -116,13 +156,66 @@
     }
   }
 
-  document.addEventListener("DOMContentLoaded", async function () {
+  // Multiple initialization approaches to ensure the app starts
+  function initializeApp() {
+    console.log("🚀 Initializing app...");
+    console.log("🚀 DOM ready state:", document.readyState);
+    console.log("🚀 Document body exists:", !!document.body);
+    
+    // Check if required elements exist
+    const loader = document.getElementById("loader");
+    const tableWrapper = document.querySelector(".table-wrapper");
+    const errorMessage = document.getElementById("error-message");
+    
+    console.log("🚀 Required elements found:", {
+      loader: !!loader,
+      tableWrapper: !!tableWrapper,
+      errorMessage: !!errorMessage
+    });
+    
+    if (!loader || !tableWrapper || !errorMessage) {
+      console.error("❌ Required elements not found, retrying in 100ms...");
+      setTimeout(initializeApp, 100);
+      return;
+    }
+    
+    console.log("✅ All required elements found, starting app...");
+    startApp();
+  }
+  
+  async function startApp() {
+    console.log("🚀 App.js loaded and starting...");
+    console.log("🚀 JavaScript file loaded successfully!");
     const loader = document.getElementById("loader");
     reconcileWrapper = document.getElementById("reconcile-view-wrapper");
     tableWrapper = document.querySelector(".table-wrapper");
     const errorMessage = document.getElementById("error-message");
+    
     try {
       setupNotifications();
+      
+      // Wait for Supabase to be available
+      console.log("Waiting for Supabase to initialize...");
+      const supabaseClient = await waitForSupabase();
+      console.log("Supabase initialized successfully");
+      console.log("Supabase URL:", window.SUPABASE_URL);
+      console.log("Supabase Key:", window.SUPABASE_KEY ? "Present" : "Missing");
+      
+      // Test Supabase connection
+      console.log("Testing Supabase connection...");
+      try {
+        const { data, error } = await supabaseClient.from('user').select('count').limit(1);
+        if (error) {
+          console.error("Supabase connection test failed:", error);
+        } else {
+          console.log("✅ Supabase connection test successful");
+        }
+      } catch (testError) {
+        console.error("Supabase connection test error:", testError);
+      }
+      
+      // Make supabaseClient available globally
+      window.supabaseClient = supabaseClient;
 
       const [
         { data: ticketData, error: ticketError },
@@ -134,26 +227,35 @@
         { data: reconcileData, error: reconcileError },
       ] = await Promise.all([
         fetchAllPaginatedData(
-          supabaseClient.from("ticket").select(`*, project (projectName)`)
+          window.supabaseClient.from("ticket").select(`*, project (projectName)`)
         ),
-        supabaseClient
+        window.supabaseClient
           .from("project")
           .select("*")
           .order("id", { ascending: true }),
-        supabaseClient
+        window.supabaseClient
           .from("member")
           .select("clockify_name")
           .order("clockify_name"),
-        supabaseClient.from("user").select("id, name, email").order("name"),
+        window.supabaseClient.from("user").select("id, name, email").order("name"),
         // MODIFIED: Select 'id' and the text column 'skills'
-        supabaseClient.from("skills").select("id, skills").order("skills"),
+        window.supabaseClient.from("skills").select("id, skills").order("skills"),
         fetchAllPaginatedData(
-          supabaseClient
+          window.supabaseClient
             .from("reconcileHrs")
             .select("*")
             .order("id", { ascending: false })
         ),
       ]);
+
+      console.log("Data fetch results:", {
+        ticketData: ticketData?.length || 0,
+        projectData: projectData?.length || 0,
+        memberData: memberData?.length || 0,
+        userData: userData?.length || 0,
+        skillsData: skillsData?.length || 0,
+        reconcileData: reconcileData?.length || 0,
+      });
 
       if (
         ticketError ||
@@ -281,9 +383,37 @@
       subscribeToTicketChanges();
       loader.style.display = "none";
     } catch (error) {
-      console.error("Error during initialization:", error.message);
-      loader.style.display = "none";
-      errorMessage.style.display = "flex";
+      console.error("Error during initialization:", error);
+      console.error("Error stack:", error.stack);
+      if (loader) loader.style.display = "none";
+      if (errorMessage) {
+        errorMessage.style.display = "flex";
+        errorMessage.innerHTML = `
+          <h3>Application Error</h3>
+          <p><strong>Error:</strong> ${error.message}</p>
+          <p><strong>Details:</strong> Check the browser console for more information.</p>
+          <button onclick="location.reload()" style="margin-top: 10px; padding: 8px 16px; background: #4f46e5; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Reload Page
+          </button>
+        `;
+      }
+    }
+  }
+  
+  // Multiple initialization triggers
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeApp);
+  } else {
+    // DOM is already ready
+    initializeApp();
+  }
+  
+  // Fallback initialization
+  window.addEventListener('load', () => {
+    console.log("🚀 Window load event fired");
+    if (document.getElementById("loader") && document.getElementById("loader").style.display !== "none") {
+      console.log("🚀 App still loading, triggering initialization...");
+      initializeApp();
     }
   });
 
@@ -722,7 +852,7 @@
       createdAtTimestamp = new Date().toISOString();
     }
 
-    const { data: lastTicket, error: idError } = await supabaseClient.rpc(
+    const { data: lastTicket, error: idError } = await window.supabaseClient.rpc(
       "get_last_ticket_id"
     );
     if (idError && idError.code !== "PGRST116") {
@@ -1067,7 +1197,7 @@
       };
     });
 
-    const { data, error } = await supabaseClient.rpc("bulk_update_tickets", {
+    const { data, error } = await window.supabaseClient.rpc("bulk_update_tickets", {
       updates_payload: payload,
     });
 
@@ -4222,7 +4352,7 @@
     const assigneeInput = row.querySelector("#inline-new-assignee-cell input");
     const assigneeId = assigneeInput.dataset.value || null;
 
-    const { data: lastIdData, error: idError } = await supabaseClient.rpc(
+    const { data: lastIdData, error: idError } = await window.supabaseClient.rpc(
       "get_last_ticket_id"
     );
 
@@ -5223,7 +5353,7 @@ This document explains each level, when to use it, and provides concrete example
     submitBtn.textContent = "Creating...";
     submitBtn.disabled = true;
 
-    const { data: lastId, error: idError } = await supabaseClient.rpc(
+    const { data: lastId, error: idError } = await window.supabaseClient.rpc(
       "get_last_ticket_id"
     );
 
