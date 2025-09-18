@@ -1299,25 +1299,52 @@
 
     const addNewBtn = document.getElementById("add-new-btn");
     const addNewMenu = document.getElementById("add-new-menu");
-    document
-      .getElementById("add-new-task-option")
-      .addEventListener("click", () => {
-        openAddTaskModal();
-        addNewMenu.style.display = "none";
-      });
-    document
-      .getElementById("add-new-project-option")
-      .addEventListener("click", () => {
-        openAddProjectModal();
-        addNewMenu.style.display = "none";
-      });
-    addNewBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      addNewMenu.style.display =
-        addNewMenu.style.display === "block" ? "none" : "block";
+    const addNewTaskOption = document.getElementById("add-new-task-option");
+    const addNewProjectOption = document.getElementById("add-new-project-option");
+
+    console.log("Add New Button Elements:", {
+      addNewBtn: !!addNewBtn,
+      addNewMenu: !!addNewMenu,
+      addNewTaskOption: !!addNewTaskOption,
+      addNewProjectOption: !!addNewProjectOption
     });
+
+    // Add null checks to prevent errors
+    if (addNewTaskOption) {
+      addNewTaskOption.addEventListener("click", () => {
+        console.log("Add New Task clicked");
+        openAddTaskModal();
+        if (addNewMenu) addNewMenu.style.display = "none";
+      });
+    } else {
+      console.error("Add New Task option not found!");
+    }
+
+    if (addNewProjectOption) {
+      addNewProjectOption.addEventListener("click", () => {
+        console.log("Add New Project clicked");
+        openAddProjectModal();
+        if (addNewMenu) addNewMenu.style.display = "none";
+      });
+    } else {
+      console.error("Add New Project option not found!");
+    }
+
+    if (addNewBtn) {
+      addNewBtn.addEventListener("click", (e) => {
+        console.log("Add New Button clicked");
+        e.stopPropagation();
+        if (addNewMenu) {
+          addNewMenu.style.display =
+            addNewMenu.style.display === "block" ? "none" : "block";
+        }
+      });
+    } else {
+      console.error("Add New Button not found!");
+    }
     document.addEventListener("click", (e) => {
       if (
+        addNewMenu && 
         addNewMenu.style.display === "block" &&
         !e.target.closest("#add-new-dropdown")
       ) {
