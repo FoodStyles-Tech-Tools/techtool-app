@@ -31,7 +31,7 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
-export default function AppPage({
+export default function ReconcilePage({
   appHtml,
   mode,
   name,
@@ -133,7 +133,7 @@ export default function AppPage({
   return (
     <>
       <Head>
-        <title>TechTool App</title>
+        <title>TechTool App - Reconcile Hours</title>
         <link rel="icon" href={faviconUrl} />
       </Head>
       <Script
@@ -220,20 +220,6 @@ export const getServerSideProps: GetServerSideProps<AppPageProps> = async (
   const role = user.role ?? "User";
   const email = session.user.email;
 
-  const ticketParam = context.query.ticket;
-  const unassignedParam = context.query.unassigned;
-
-  let initialView = "";
-  let ticketNumber = "";
-
-  if (typeof unassignedParam === "string" && unassignedParam) {
-    initialView = "unassigned";
-    ticketNumber = unassignedParam;
-  } else if (typeof ticketParam === "string" && ticketParam) {
-    initialView = "my-ticket";
-    ticketNumber = ticketParam;
-  }
-
   const templatePath = path.join(
     process.cwd(),
     "templates",
@@ -246,9 +232,9 @@ export const getServerSideProps: GetServerSideProps<AppPageProps> = async (
     "{{NAME}}": escapeHtml(name ?? ""),
     "{{MODE}}": escapeHtml(mode),
     "{{ROLE}}": escapeHtml(role ?? ""),
-    "{{SCRIPT_URL}}": escapeHtml("/app"),
-    "{{TICKET_NUMBER}}": escapeHtml(ticketNumber),
-    "{{INITIAL_VIEW}}": escapeHtml(initialView),
+    "{{SCRIPT_URL}}": escapeHtml("/reconcile"),
+    "{{TICKET_NUMBER}}": escapeHtml(""),
+    "{{INITIAL_VIEW}}": escapeHtml("reconcile"),
     "{{FAVICON_URL}}": escapeHtml(FAVICON_URL),
   };
 

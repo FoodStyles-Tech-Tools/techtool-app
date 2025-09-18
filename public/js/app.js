@@ -357,24 +357,31 @@
         window.top.location.href = scriptUrl;
       });
 
-      if (urlInitialView && urlTicketNumber) {
-        currentView = urlInitialView;
+      // Determine initial view from URL or server-side data
+      let initialView = urlInitialView;
+      
+      // If no server-side initial view, try to get it from the current URL
+      if (!initialView) {
+        initialView = getViewFromUrl();
+      }
+      
+      // Handle ticket number filtering if present
+      if (urlTicketNumber) {
         ticketNumberFilter = urlTicketNumber;
         clearUrlFilterBtn.style.display = "inline-flex";
-        document
-          .querySelectorAll(".nav-btn.active")
-          .forEach((btn) => btn.classList.remove("active"));
-        document
-          .getElementById(`nav-${urlInitialView}`)
-          .classList.add("active");
         document.getElementById("ticket-number-filter").value = urlTicketNumber;
-      } else {
-        // MODIFIED: Default to 'home' view
-        currentView = "home";
-        document
-          .querySelectorAll(".nav-btn.active")
-          .forEach((btn) => btn.classList.remove("active"));
-        document.getElementById("nav-home").classList.add("active");
+      }
+      
+      // Set the current view
+      currentView = initialView;
+      
+      // Update active navigation button
+      document
+        .querySelectorAll(".nav-btn.active")
+        .forEach((btn) => btn.classList.remove("active"));
+      const targetBtn = document.getElementById(`nav-${initialView}`);
+      if (targetBtn) {
+        targetBtn.classList.add("active");
       }
 
       applyFilterAndRender();
@@ -1607,37 +1614,76 @@
         const view = btn.id.replace("nav-", "");
         if (currentView === view) return; // Do nothing if already on this view
 
-        // Only reset the main filters when switching to a view that uses them
-        if (view !== "home" && view !== "reconcile") {
-          resetFilters();
+        // Map view names to URL paths
+        const viewToUrl = {
+          "home": "/home",
+          "my-ticket": "/myTicket",
+          "unassigned": "/unassigned",
+          "all": "/allTickets",
+          "reconcile": "/reconcile"
+        };
+
+        const targetUrl = viewToUrl[view];
+        if (targetUrl) {
+          // Use client-side navigation to avoid full page reload
+          if (window.history && window.history.pushState) {
+            window.history.pushState({ view: view }, '', targetUrl);
+          }
         }
-        document
-          .getElementById("quick-add-btn")
-          .addEventListener("click", addQuickAddTaskRow);
 
-        document
-          .getElementById("readme-btn")
-          .addEventListener("click", showReadmeModal);
-
-        currentView = view;
-        currentPage = 1;
-        reconcileCurrentPage = 1;
-
-        // Update the active button style
-        navButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-
-        // Exit bulk edit mode if it's active
-        if (isBulkEditMode) exitBulkEditMode(false);
-
-        // Render the newly selected view
-        applyFilterAndRender();
+        // Switch to the new view
+        switchToView(view, navButtons);
       });
+    });
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', (event) => {
+      const view = event.state?.view || getViewFromUrl();
+      if (view && view !== currentView) {
+        const navButtons = document.querySelectorAll(".nav-panel .nav-btn");
+        switchToView(view, navButtons);
+      }
     });
 
     document
       .getElementById("readme-btn")
       .addEventListener("click", showReadmeModal);
+  }
+
+  function getViewFromUrl() {
+    const path = window.location.pathname;
+    const urlToView = {
+      "/home": "home",
+      "/myTicket": "my-ticket",
+      "/unassigned": "unassigned",
+      "/allTickets": "all",
+      "/reconcile": "reconcile"
+    };
+    return urlToView[path] || "home";
+  }
+
+  function switchToView(view, navButtons) {
+    // Only reset the main filters when switching to a view that uses them
+    if (view !== "home" && view !== "reconcile") {
+      resetFilters();
+    }
+
+    currentView = view;
+    currentPage = 1;
+    reconcileCurrentPage = 1;
+
+    // Update the active button style
+    navButtons.forEach((b) => b.classList.remove("active"));
+    const targetBtn = document.getElementById(`nav-${view}`);
+    if (targetBtn) {
+      targetBtn.classList.add("active");
+    }
+
+    // Exit bulk edit mode if it's active
+    if (isBulkEditMode) exitBulkEditMode(false);
+
+    // Render the newly selected view
+    applyFilterAndRender();
   }
   function addBulkEditListeners() {
     document
