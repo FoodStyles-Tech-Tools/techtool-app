@@ -1,4 +1,3 @@
-<script>
   // --- GLOBAL STATE ---
   let appData = {
     allTickets: [],
@@ -646,11 +645,10 @@
         "success"
       );
       if (insertedTickets && insertedTickets.length > 0) {
-        google.script.run
-          .withFailureHandler((err) =>
-            showToast("Notification Error: " + err.message, "error")
-          )
-          .sendDiscordNotification(insertedTickets, appData.currentUserName);
+        await sendDiscordNotificationViaApi(
+          insertedTickets,
+          appData.currentUserName
+        );
       }
 
       confirmModal.style.display = "none";
@@ -2074,6 +2072,30 @@
         }
       }, 500);
     }, 3000);
+  }
+
+  async function sendDiscordNotificationViaApi(insertedTickets, creatorName) {
+    if (!insertedTickets || insertedTickets.length === 0) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/discord/notify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ insertedTickets, creatorName }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to send Discord notification.");
+      }
+    } catch (error) {
+      console.error("Discord notification failed", error);
+      showToast(`Notification Error: ${error.message}`, "error");
+    }
   }
 
   function addTableEventListeners() {
@@ -4264,11 +4286,10 @@
       // On success, the row is removed, so no reset is needed.
       row.remove();
       if (insertedTickets && insertedTickets.length > 0) {
-        google.script.run
-          .withFailureHandler((err) =>
-            showToast("Discord Notification Error: " + err.message, "error")
-          )
-          .sendDiscordNotification(insertedTickets, appData.currentUserName);
+        await sendDiscordNotificationViaApi(
+          insertedTickets,
+          appData.currentUserName
+        );
       }
     }
   }
@@ -4760,52 +4781,6 @@ This document explains each level, when to use it, and provides concrete example
 
   // --- ADD THIS TO THE END OF YOUR JavaScript.html FILE ---
 
-  document.addEventListener("DOMContentLoaded", () => {
-    // --- USER CONTROL & THEME LOGIC ---
-    const userEmail = document.getElementById("user-email").value;
-    const userName = document.getElementById("user-name").value;
-    const initialMode = document.getElementById("initial-mode").value;
-    const scriptUrl = document.getElementById("script-url").value;
-
-    const modeToggle = document.getElementById("mode-toggle");
-    const logoutButton = document.querySelector(".logout-button");
-    const userAvatar = document.getElementById("user-avatar");
-
-    // Populate user details
-    if (userAvatar && userName) {
-      userAvatar.textContent = userName.charAt(0).toUpperCase();
-    }
-
-    // Set initial state of the theme toggle
-    if (modeToggle) {
-      modeToggle.checked = initialMode === "dark";
-    }
-
-    // Listener for the dark/light mode toggle
-    modeToggle.addEventListener("change", (event) => {
-      const newMode = event.target.checked ? "dark" : "light";
-      document.body.classList.toggle("dark", newMode === "dark");
-
-      // Persist the new mode to Supabase
-      google.script.run.updateUserMode(newMode);
-    });
-
-    // Listener for the logout button
-    logoutButton.addEventListener("click", () => {
-      // Show the logout overlay for immediate feedback
-      const overlay = document.getElementById("logout-overlay");
-      if (overlay) {
-        overlay.style.display = "flex";
-      }
-
-      // Call server-side logout and redirect on success
-      google.script.run
-        .withSuccessHandler(() => {
-          window.top.location.href = scriptUrl;
-        })
-        .logout();
-    });
-  });
   /**
    * Formats an ISO date string into DD-MMM-YYYY format.
    * @param {string} isoString - The date string to format.
@@ -6276,4 +6251,3 @@ This document explains each level, when to use it, and provides concrete example
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
   }
-</script>
