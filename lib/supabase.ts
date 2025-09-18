@@ -34,7 +34,7 @@ export function getSupabaseServerClient() {
 export async function getUserByEmail(email: string) {
   const client = getSupabaseServerClient();
   const { data, error } = await client
-    .from<SupabaseUserRow>("user")
+    .from("user")
     .select("name,email,mode,role")
     .ilike("email", email)
     .maybeSingle();
@@ -43,13 +43,13 @@ export async function getUserByEmail(email: string) {
     throw error;
   }
 
-  return data;
+  return data as SupabaseUserRow | null;
 }
 
 export async function setUserMode(email: string, mode: string) {
   const client = getSupabaseServerClient();
   const { error } = await client
-    .from<SupabaseUserRow>("user")
+    .from("user")
     .update({ mode })
     .ilike("email", email);
 
