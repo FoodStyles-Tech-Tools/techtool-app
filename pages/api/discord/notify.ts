@@ -77,7 +77,9 @@ export default async function handler(
 
   const appUrlBase =
     process.env.TICKET_URL_BASE ??
-    "https://script.google.com/a/macros/foodstyles.com/s/AKfycbyLsFfdDaPFxxV3uGm92BbnAK1_Ai_pbfXSnMPOjKHX9aeBXUUmXultZ65cjudinE_b0Q/exec?authuser=0&ticket=HRB-";
+    (process.env.NODE_ENV === "production" 
+      ? "https://techtool-app.vercel.app/app?ticket=HRB-"
+      : "http://localhost:3000/app?ticket=HRB-");
 
   const roleIdToMention = process.env.DISCORD_ROLE_ID ?? "1174256958853881936";
 
