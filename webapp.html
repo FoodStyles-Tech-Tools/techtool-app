@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <base target="_top" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      // ⚠️ IMPORTANT: Replace with your actual Supabase URL and Anon Key
+      const SUPABASE_URL = "https://xbjelezpuxkxcdmxbbih.supabase.co";
+      const SUPABASE_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhiamVsZXpwdXhreGNkbXhiYmloIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU1NjA2MjQsImV4cCI6MjA3MTEzNjYyNH0.Kta26Lh7YwtsdmZwWCFyWabUq9uxqFoMJ_Rd5T1B8og";
+
+      // Initialize the Supabase client
+      const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    </script>
+
+    <?!= HtmlService.createHtmlOutputFromFile('CSS').getContent(); ?>
+  </head>
+  <body class="<?= mode ?>">
+    <div class="container">
+      <aside class="sidebar">
+        <h1 class="sidebar-header">TechTool</h1>
+        <div class="nav-panel">
+          <button id="nav-home" class="nav-btn active">
+            <i class="fas fa-home" style="width: 1.2em"></i> Home
+          </button>
+          <button id="nav-my-ticket" class="nav-btn">
+            <i class="fas fa-user" style="width: 1.2em"></i> My Ticket
+            <span
+              id="my-ticket-count"
+              class="nav-badge"
+              style="display: none"
+            ></span>
+          </button>
+          <button id="nav-unassigned" class="nav-btn">
+            <i class="fas fa-inbox" style="width: 1.2em"></i> Unassigned
+            <span
+              id="unassigned-count"
+              class="nav-badge"
+              style="display: none"
+            ></span>
+          </button>
+          <button id="nav-all" class="nav-btn">
+            <i class="fas fa-list-ul" style="width: 1.2em"></i> All Tickets
+          </button>
+          <button id="nav-reconcile" class="nav-btn">
+            <i class="far fa-clock" style="width: 1.2em"></i> Reconcile Hours
+          </button>
+        </div>
+
+        <div class="user-controls">
+          <div class="theme-toggle">
+            <span>Appearance</span>
+            <label class="switch">
+              <input type="checkbox" id="mode-toggle" />
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <div class="user-profile">
+            <div class="avatar" id="user-avatar"></div>
+            <div class="details">
+              <div class="name"><?= name ?></div>
+              <div class="email"><?= email ?></div>
+            </div>
+            <button class="logout-button" title="Logout">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <div class="main-content-wrapper">
+        <main>
+          <div id="dashboard-view-wrapper" style="display: none">
+            <div class="dashboard-header">
+              <h2 class="dashboard-title">Enchantment Dashboard</h2>
+              <div id="dashboard-filters" class="dashboard-filters">
+                <div class="filter-group">
+                  <label for="dashboard-assignee-filter"
+                    ><i class="fas fa-user-circle"></i> Wizard</label
+                  >
+                  <select id="dashboard-assignee-filter"></select>
+                </div>
+                <div class="filter-group">
+                  <label for="dashboard-start-date"
+                    ><i class="fas fa-calendar-alt"></i> Spell Start</label
+                  >
+                  <input type="date" id="dashboard-start-date" />
+                </div>
+                <div class="filter-group">
+                  <label for="dashboard-end-date"
+                    ><i class="fas fa-calendar-alt"></i> Spell End</label
+                  >
+                  <input type="date" id="dashboard-end-date" />
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-grid top-stats">
+              <div class="dashboard-card total-tickets-card">
+                <h3>Total Quests</h3>
+                <p id="total-tickets-count" class="stat-number">0</p>
+                <i class="fas fa-scroll card-bg-icon"></i>
+              </div>
+              <div class="dashboard-card at-risk-card">
+                <h3>Perilous Quests</h3>
+                <div class="risk-breakdown">
+                  <div class="risk-item">
+                    <span class="risk-label">Blocked</span>
+                    <span id="blocked-tickets-count" class="risk-count">0</span>
+                  </div>
+                  <div class="risk-item">
+                    <span class="risk-label">On Hold</span>
+                    <span id="on-hold-tickets-count" class="risk-count">0</span>
+                  </div>
+                  <div class="risk-item">
+                    <span class="risk-label">Extreme</span>
+                    <span id="extreme-tickets-count" class="risk-count">0</span>
+                  </div>
+                </div>
+                <i class="fas fa-skull-crossbones card-bg-icon"></i>
+              </div>
+            </div>
+
+            <div class="dashboard-grid mid-section">
+              <div class="dashboard-card chart-card">
+                <h3>Weekly Magic Flow</h3>
+                <canvas id="trends-chart"></canvas>
+              </div>
+              <div class="side-stats">
+                <div class="dashboard-card workload-card">
+                  <h3>Current Workload</h3>
+                  <p id="current-workload-count" class="stat-number">0</p>
+                  <i class="fas fa-magic card-bg-icon"></i>
+                </div>
+                <div class="dashboard-card to-fix-card">
+                  <h3>Fix Corrupted Spells</h3>
+                  <p id="to-fix-count" class="stat-number">0</p>
+                  <i class="fas fa-exclamation-triangle card-bg-icon"></i>
+                </div>
+              </div>
+            </div>
+
+            <div class="dashboard-grid bottom-lists">
+              <div class="dashboard-card list-card">
+                <h3><i class="fas fa-fire"></i> Urgent & High Priority</h3>
+                <div
+                  id="urgent-tickets-list"
+                  class="ticket-list-container"
+                ></div>
+              </div>
+              <div class="dashboard-card list-card">
+                <h3><i class="fas fa-tasks"></i> To-Do List</h3>
+                <div id="todo-tickets-list" class="ticket-list-container"></div>
+              </div>
+            </div>
+          </div>
+          <div class="actions-container">
+            <div class="left-actions">
+              <div
+                id="reconcile-filters"
+                class="filter-panel"
+                style="display: none"
+              >
+                <div
+                  id="reconcile-user-filter-container"
+                  class="filter-item"
+                  style="display: none"
+                >
+                  <label for="reconcile-user-select"
+                    ><i class="fas fa-user-friends"></i> Team Member</label
+                  >
+                  <select
+                    id="reconcile-user-select"
+                    class="inline-editor"
+                  ></select>
+                </div>
+                <div class="filter-item">
+                  <label>
+                    <input
+                      type="checkbox"
+                      id="reconcile-exclude-done"
+                      checked
+                    />
+                    Exclude Done
+                  </label>
+                </div>
+              </div>
+              <div class="dropdown-container">
+                <button id="filter-btn" class="action-btn secondary-btn">
+                  <i class="fas fa-filter"></i>
+                  <span>Filters</span>
+                </button>
+                <div id="filter-menu" class="dropdown-menu">
+                  <div class="filter-menu-section">
+                    <div class="filter-menu-item">
+                      <label for="project-filter-select">Project</label>
+                      <select
+                        id="project-filter-select"
+                        class="inline-editor"
+                      ></select>
+                    </div>
+                    <div class="filter-menu-item">
+                      <label for="epic-filter-select">Epic</label>
+                      <select
+                        id="epic-filter-select"
+                        class="inline-editor"
+                      ></select>
+                    </div>
+                  </div>
+                  <div class="filter-menu-section">
+                    <div class="filter-menu-item-checkbox">
+                      <label
+                        ><input
+                          type="checkbox"
+                          id="group-by-project-checkbox"
+                          checked
+                        />
+                        Group by Project</label
+                      >
+                    </div>
+                    <div class="filter-menu-item-checkbox">
+                      <label
+                        ><input
+                          type="checkbox"
+                          id="group-by-epic-checkbox"
+                          checked
+                        />
+                        Group by Epic</label
+                      >
+                    </div>
+                  </div>
+                  <div
+                    class="filter-menu-section"
+                    id="my-ticket-filters"
+                    style="display: none"
+                  >
+                    <div class="filter-menu-item">
+                      <label for="status-filter-select">Status</label>
+                      <select
+                        id="status-filter-select"
+                        class="inline-editor"
+                      ></select>
+                    </div>
+                    <div class="filter-menu-item-checkbox">
+                      <label
+                        ><input
+                          type="checkbox"
+                          id="exclude-done-checkbox"
+                          checked
+                        />
+                        Exclude Done</label
+                      >
+                    </div>
+                  </div>
+                  <div class="filter-menu-section">
+                    <button id="to-fix-btn" class="dropdown-item">
+                      <i
+                        class="fas fa-exclamation-triangle"
+                        style="color: var(--warning-color)"
+                      ></i>
+                      <span>Incomplete Data Only</span>
+                    </button>
+                  </div>
+                </div>
+                <button
+                  id="clear-url-filter-btn"
+                  class="action-btn secondary-btn"
+                  style="display: none"
+                >
+                  <i class="fas fa-times"></i>
+                  <span>Clear Search</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="right-actions">
+              <div class="search-group">
+                <div class="search-wrapper">
+                  <i class="fas fa-hashtag"></i>
+                  <input
+                    type="number"
+                    id="ticket-number-filter"
+                    placeholder="Ticket #"
+                  />
+                </div>
+                <div class="search-wrapper">
+                  <i class="fas fa-search"></i>
+                  <input
+                    type="text"
+                    id="task-search-input"
+                    placeholder="Search Title/Description..."
+                  />
+                </div>
+              </div>
+
+              <button
+                id="readme-btn"
+                class="action-btn secondary-btn"
+                title="Show Guidelines"
+              >
+                <i class="fas fa-book"></i>
+              </button>
+              <button id="bulk-edit-btn" class="action-btn secondary-btn">
+                <i class="fas fa-layer-group"></i>
+              </button>
+
+              <div id="add-new-dropdown" class="dropdown-container">
+                <button id="add-new-btn" class="action-btn">
+                  <span>Add New</span>
+                  <i
+                    class="fas fa-chevron-down"
+                    style="font-size: 0.8em; margin-left: 8px"
+                  ></i>
+                </button>
+                <div id="add-new-menu" class="dropdown-menu">
+                  <div id="add-new-task-option" class="dropdown-item">
+                    <i class="fas fa-tasks"></i> Add Task
+                  </div>
+                  <div id="add-new-project-option" class="dropdown-item">
+                    <i class="fas fa-folder"></i> Add Project
+                  </div>
+                </div>
+              </div>
+
+              <button
+                id="quick-add-btn"
+                class="action-btn secondary-btn"
+                title="Quick Add Task"
+              >
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="task-detail-modal"
+            class="modal-overlay"
+            style="display: none"
+          >
+            <div class="modal-content">
+              <button class="close-button modal-close-btn">&times;</button>
+              <div id="task-detail-modal-body" class="modal-body"></div>
+            </div>
+          </div>
+
+          <div
+            id="bulk-actions-panel"
+            class="bulk-actions-panel"
+            style="display: none"
+          >
+            <span id="selection-count">0 selected</span>
+            <button id="assign-selected-btn" class="action-btn" disabled>
+              Assign
+            </button>
+            <button id="update-selected-btn" class="action-btn" disabled>
+              Update
+            </button>
+            <button id="cancel-bulk-edit-btn" class="cancel-btn">Cancel</button>
+          </div>
+
+          <div id="loader" class="loader-container">
+            <div class="spinner"></div>
+            <p>Loading Data...</p>
+          </div>
+          <div id="error-message" class="error-container" style="display: none">
+            <p>Could not load data. Please try again later.</p>
+          </div>
+
+          <div class="table-wrapper" style="display: none">
+            <table>
+              <thead>
+                <tr></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <div
+            id="reconcile-view-wrapper"
+            class="table-wrapper"
+            style="display: none"
+          >
+            <div
+              id="reconcile-pagination-controls"
+              class="pagination-controls"
+              style="display: none"
+            >
+              <span
+                id="reconcile-total-count"
+                class="page-info"
+                style="margin-right: auto"
+              ></span>
+              <button id="reconcile-prev-page">&laquo; Previous</button>
+              <span id="reconcile-page-info" class="page-info"></span>
+              <button id="reconcile-next-page">Next &raquo;</button>
+            </div>
+          </div>
+
+          <div
+            id="pagination-controls"
+            class="pagination-controls"
+            style="display: none"
+          >
+            <button id="prev-page">&laquo; Previous</button>
+            <span id="page-info"></span>
+            <input
+              type="number"
+              id="page-jump-input"
+              min="1"
+              placeholder="Page..."
+            />
+            <button id="page-jump-btn">Go</button>
+            <button id="next-page">Next &raquo;</button>
+          </div>
+        </main>
+      </div>
+    </div>
+    <div id="logout-overlay" class="logout-overlay" style="display: none">
+      <div class="spinner"></div>
+      <p>Logging out...</p>
+    </div>
+    <div id="add-task-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 1400px">
+        <div class="modal-header">
+          <h2>Add New Tickets</h2>
+          <div class="bulk-settings-toggle-container">
+            <span>Use Bulk Settings</span>
+            <label class="switch">
+              <input type="checkbox" id="bulk-settings-toggle" checked />
+              <span class="slider round"></span>
+            </label>
+          </div>
+          <button class="close-button modal-close-btn">&times;</button>
+        </div>
+
+        <div class="modal-body add-task-layout">
+          <div class="left-panel">
+            <h3>Bulk Settings</h3>
+            <p class="panel-description">
+              These values will apply to all new tickets unless overridden.
+            </p>
+
+            <div class="detail-field">
+              <label
+                ><i class="fas fa-calendar-plus fa-fw"></i> Created Date</label
+              >
+              <input
+                type="date"
+                id="bulk-add-created-date"
+                class="inline-editor"
+              />
+            </div>
+            <div class="detail-field">
+              <label><i class="fas fa-folder fa-fw"></i> Project</label>
+              <select
+                id="bulk-add-project-select"
+                class="inline-editor"
+              ></select>
+            </div>
+            <div class="detail-field">
+              <label><i class="fas fa-bolt fa-fw"></i> Epic</label>
+              <input
+                type="text"
+                id="bulk-add-epic"
+                class="inline-editor"
+                list="epic-datalist-bulk-add"
+                placeholder="Type or select an epic..."
+              />
+              <datalist id="epic-datalist-bulk-add"></datalist>
+            </div>
+            <div class="detail-field">
+              <label><i class="fas fa-user-tag fa-fw"></i> Requested By</label>
+              <select id="bulk-add-requested-by" class="inline-editor"></select>
+            </div>
+            <div class="detail-field">
+              <label><i class="fas fa-user-check fa-fw"></i> Assignee</label>
+              <div id="bulk-add-assignee-container"></div>
+            </div>
+            <div
+              class="detail-field"
+              id="bulk-add-assigned-date-container"
+              style="display: none"
+            >
+              <label
+                ><i class="fas fa-calendar-alt fa-fw"></i> Assigned Date</label
+              >
+              <input
+                type="date"
+                id="bulk-add-assigned-date"
+                class="inline-editor"
+              />
+            </div>
+            <div class="detail-field">
+              <label
+                ><i class="fas fa-puzzle-piece fa-fw"></i> Complexity</label
+              >
+              <select id="bulk-add-complexity" class="inline-editor"></select>
+            </div>
+            <div class="detail-field">
+              <label><i class="fas fa-tools fa-fw"></i> Skills</label>
+              <div id="bulk-add-skills-container"></div>
+            </div>
+            <div class="detail-field">
+              <label><i class="fas fa-flag fa-fw"></i> Status</label>
+              <select id="bulk-add-status" class="inline-editor">
+                <option>Open</option>
+                <option>In Progress</option>
+                <option>Completed</option>
+              </select>
+            </div>
+            <div
+              class="detail-field"
+              id="bulk-add-started-date-container"
+              style="display: none"
+            >
+              <label
+                ><i class="fas fa-calendar-alt fa-fw"></i> Started Date</label
+              >
+              <input
+                type="date"
+                id="bulk-add-started-date"
+                class="inline-editor"
+              />
+            </div>
+            <div
+              class="detail-field"
+              id="bulk-add-completed-date-container"
+              style="display: none"
+            >
+              <label
+                ><i class="fas fa-calendar-alt fa-fw"></i> Completed Date</label
+              >
+              <input
+                type="date"
+                id="bulk-add-completed-date"
+                class="inline-editor"
+              />
+            </div>
+          </div>
+          <div class="right-panel">
+            <div class="table-wrapper" id="new-tickets-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 30%">Title</th>
+                    <th style="width: 30%">Description</th>
+                    <th style="width: 15%">Type</th>
+                    <th style="width: 15%">Priority</th>
+                    <th style="width: 10%"></th>
+                  </tr>
+                </thead>
+                <tbody id="new-tickets-tbody"></tbody>
+              </table>
+            </div>
+            <button
+              id="add-another-ticket-btn"
+              class="action-btn"
+              style="
+                background-color: transparent;
+                color: var(--accent-color);
+                border: 1px solid var(--accent-color);
+                margin-top: 1rem;
+                align-self: flex-start;
+              "
+            >
+              <i class="fas fa-plus"></i> Add Another Ticket
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="submit-new-tickets-btn" class="save-btn">
+            Submit Tickets
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="add-project-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 800px">
+        <div class="modal-header">
+          <h2>Add New Project</h2>
+          <button class="close-button modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid">
+            <div class="detail-field">
+              <label>Project Name</label
+              ><input type="text" id="new-project-name" class="inline-editor" />
+            </div>
+            <div class="detail-field">
+              <label>Description</label
+              ><textarea
+                id="new-project-description"
+                class="inline-editor"
+                rows="1"
+              ></textarea>
+            </div>
+            <div class="detail-field">
+              <label>Priority</label
+              ><select id="new-project-priority" class="inline-editor">
+                <option>High</option>
+                <option selected>Medium</option>
+                <option>Low</option>
+              </select>
+            </div>
+            <div class="detail-field">
+              <label>Project Owner</label>
+              <div id="new-project-owner-container"></div>
+            </div>
+            <div class="detail-field">
+              <label>Collaborators</label>
+              <div id="new-project-collaborators-container"></div>
+            </div>
+            <div class="detail-field">
+              <label>Attachment URL</label
+              ><input
+                type="url"
+                id="new-project-attachment"
+                class="inline-editor"
+              />
+            </div>
+            <div class="detail-field">
+              <label>Start Date</label
+              ><input
+                type="date"
+                id="new-project-start-date"
+                class="inline-editor"
+              />
+            </div>
+            <div class="detail-field">
+              <label>Est. Completion Date</label
+              ><input
+                type="date"
+                id="new-project-est-completed-date"
+                class="inline-editor"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="submit-new-project-btn" class="save-btn">
+            Add Project
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="bulk-update-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 800px">
+        <div class="modal-header">
+          <h2>Bulk Update Selected Tickets</h2>
+          <button class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Only fill in the fields you want to update. Leave fields blank to
+            keep current values.
+          </p>
+          <div class="detail-grid" style="margin-top: 1.5rem">
+            <div class="detail-field">
+              <label>Project</label>
+              <div id="bulk-update-project-container"></div>
+            </div>
+            <div class="detail-field">
+              <label>Epic</label
+              ><input
+                type="text"
+                id="bulk-update-epic"
+                class="inline-editor"
+                list="epic-datalist-bulk"
+              />
+            </div>
+            <div class="detail-field">
+              <label>Skills</label>
+              <div id="bulk-update-skills-container"></div>
+            </div>
+            <div class="detail-field">
+              <label>Complexity</label
+              ><select
+                id="bulk-update-complexity"
+                class="inline-editor"
+              ></select>
+            </div>
+            <div class="detail-field">
+              <label>Requested By</label
+              ><select
+                id="bulk-update-requestedBy"
+                class="inline-editor"
+              ></select>
+            </div>
+            <div class="detail-field">
+              <label>Status</label
+              ><select id="bulk-update-status" class="inline-editor"></select>
+            </div>
+            <div class="detail-field">
+              <label>Priority</label
+              ><select id="bulk-update-priority" class="inline-editor"></select>
+            </div>
+          </div>
+          <datalist id="epic-datalist-bulk"></datalist>
+        </div>
+        <div class="modal-footer">
+          <button id="confirm-bulk-update-btn" class="save-btn">
+            Update Tickets</button
+          ><button class="cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="subtask-confirm-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 520px">
+        <div class="modal-header"><h2>Incomplete Subtasks Detected</h2></div>
+        <div class="modal-body">
+          <p
+            id="subtask-confirm-message"
+            style="line-height: 1.6; font-size: 1rem"
+          ></p>
+        </div>
+        <div class="modal-footer">
+          <button class="cancel-btn" id="subtask-confirm-no">
+            No, Go Back
+          </button>
+          <button class="save-btn" id="subtask-confirm-yes">
+            Yes, Auto-Resolve
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="new-epic-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 500px">
+        <div class="modal-header">
+          <h2 id="new-epic-modal-title">Create New Epic</h2>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 1rem">
+            Enter a name for the new epic. You will then be prompted to add the
+            first task within the epic.
+          </p>
+          <input
+            type="text"
+            id="new-epic-name-input"
+            class="inline-editor"
+            placeholder="Epic Name..."
+          />
+        </div>
+        <div class="modal-footer">
+          <button id="cancel-new-epic" class="cancel-btn">Cancel</button>
+          <button id="submit-new-epic" class="save-btn">
+            Create & Add Task
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="project-detail-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 1200px; padding: 0">
+        <button
+          class="close-button modal-close-btn"
+          style="top: 1rem; right: 1.5rem; z-index: 10"
+        >
+          &times;
+        </button>
+        <div
+          id="project-detail-modal-body"
+          class="modal-body"
+          style="display: flex; width: 100%; padding: 0; overflow: hidden"
+        >
+          <div
+            class="ticket-main-content"
+            style="background-color: var(--surface-color)"
+          >
+            <textarea
+              id="edit-project-name"
+              class="modal-title-textarea"
+              placeholder="Project Name..."
+            ></textarea>
+            <h4 class="modal-section-label">Description</h4>
+            <textarea
+              id="edit-project-description"
+              class="modal-description-textarea"
+              placeholder="Add a description..."
+            ></textarea>
+          </div>
+
+          <div class="ticket-details-sidebar">
+            <div class="sidebar-section">
+              <h4>Properties</h4>
+              <div class="sidebar-property-editable">
+                <label class="prop-label">Project Owner</label>
+                <div id="edit-project-owner-container"></div>
+              </div>
+              <div class="sidebar-property-editable">
+                <label class="prop-label">Priority</label
+                ><select
+                  id="edit-project-priority"
+                  class="inline-editor"
+                  style="width: 100%"
+                >
+                  <option>High</option>
+                  <option>Medium</option>
+                  <option>Low</option>
+                </select>
+              </div>
+              <div class="sidebar-property-editable">
+                <label class="prop-label">Collaborators</label>
+                <div id="edit-project-collaborators-container"></div>
+              </div>
+              <div class="sidebar-property-editable">
+                <label class="prop-label">Attachment URL</label
+                ><input
+                  type="url"
+                  id="edit-project-attachment"
+                  class="inline-editor"
+                  style="width: 100%"
+                />
+              </div>
+            </div>
+            <div class="sidebar-section">
+              <h4>Dates</h4>
+              <div class="sidebar-property-editable">
+                <label class="prop-label">Start Date</label
+                ><input
+                  type="date"
+                  id="edit-project-start-date"
+                  class="inline-editor"
+                  style="width: 100%"
+                />
+              </div>
+              <div class="sidebar-property-editable">
+                <label class="prop-label">Est. Completion Date</label
+                ><input
+                  type="date"
+                  id="edit-project-est-completed-date"
+                  class="inline-editor"
+                  style="width: 100%"
+                />
+              </div>
+            </div>
+            <div
+              class="sidebar-section"
+              style="margin-top: auto; padding-top: 1rem"
+            >
+              <button
+                id="save-project-details-btn"
+                class="save-btn"
+                style="width: 100%"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="unsaved-changes-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 480px">
+        <div class="modal-header">
+          <h2 id="unsaved-modal-title">Unsaved Changes</h2>
+        </div>
+        <div class="modal-body">
+          <p id="unsaved-modal-message" style="line-height: 1.6">
+            You have unsaved changes. Are you sure you want to discard them?
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button id="unsaved-keep-editing-btn" class="cancel-btn">
+            Keep Editing
+          </button>
+          <button
+            id="unsaved-discard-btn"
+            class="action-btn"
+            style="
+              background-color: var(--danger-color);
+              border-color: var(--danger-color);
+            "
+          >
+            Discard
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="readme-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 800px">
+        <div class="modal-header">
+          <h2>Task Management Guidelines</h2>
+          <button class="close-button modal-close-btn">&times;</button>
+        </div>
+        <div id="readme-content" class="modal-body"></div>
+      </div>
+    </div>
+
+    <div id="unsaved-date-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 550px">
+        <div class="modal-header">
+          <h2>Unsaved Date Changes</h2>
+        </div>
+        <div class="modal-body">
+          <p>
+            You have the following unsaved date changes. Do you want to apply
+            them before closing?
+          </p>
+          <ul
+            id="unsaved-changes-list"
+            style="
+              margin-top: 1rem;
+              list-style-position: inside;
+              padding-left: 1rem;
+              background-color: var(--row-alt-color);
+              border: 1px solid var(--border-color);
+              border-radius: 8px;
+              padding: 1rem;
+            "
+          ></ul>
+        </div>
+        <div class="modal-footer">
+          <button id="unsaved-date-no" class="cancel-btn">
+            No, Discard Changes
+          </button>
+          <button id="unsaved-date-yes" class="save-btn">
+            Yes, Apply Changes
+          </button>
+        </div>
+      </div>
+    </div>
+    <div
+      id="open-to-complete-modal"
+      class="modal-overlay"
+      style="display: none"
+    >
+      <div class="modal-content" style="max-width: 480px">
+        <div class="modal-header">
+          <h2 id="open-to-complete-title">Set Start Date</h2>
+        </div>
+        <div class="modal-body">
+          <p
+            style="
+              margin-bottom: 1.5rem;
+              text-align: center;
+              font-size: 1rem;
+              line-height: 1.6;
+            "
+          >
+            This ticket is moving from <strong>Open</strong> to
+            <strong>Completed</strong>. <br />Please confirm the actual start
+            date.
+          </p>
+          <div class="date-picker-area">
+            <label for="open-to-complete-date-input">Started Date</label>
+            <input
+              type="date"
+              id="open-to-complete-date-input"
+              class="inline-editor"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="open-to-complete-cancel-btn" class="cancel-btn">
+            Cancel
+          </button>
+          <button id="open-to-complete-confirm-btn" class="save-btn">
+            Confirm & Complete
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="history-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Change History</h2>
+          <button class="close-button">&times;</button>
+        </div>
+        <div id="history-content" class="modal-body"></div>
+      </div>
+    </div>
+    <div id="attachment-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Attachments</h2>
+          <button class="close-button">&times;</button>
+        </div>
+        <div id="attachment-content" class="modal-body"></div>
+      </div>
+    </div>
+    <div id="reason-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="reason-modal-title">Provide Reason</h2>
+        </div>
+        <div class="modal-body">
+          <p>Please provide a reason for this change:</p>
+          <textarea
+            id="reason-input"
+            rows="4"
+            style="width: 100%; margin-top: 1rem"
+          ></textarea>
+        </div>
+        <div class="modal-footer">
+          <button id="submit-reason" class="save-btn">Submit</button
+          ><button id="cancel-reason" class="cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <div id="assignee-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 400px">
+        <div class="modal-header">
+          <h2>Assign Tickets</h2>
+          <button class="close-button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Select an assignee:</p>
+          <div
+            class="editable-field-wrapper has-value"
+            style="margin-top: 1rem"
+          >
+            <select
+              id="assignee-select"
+              class="inline-editor"
+              style="
+                width: 100%;
+                border: 1px solid var(--border-color);
+                background-color: var(--bg-color);
+              "
+            ></select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="confirm-assign-btn" class="save-btn">Assign</button
+          ><button class="cancel-btn">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <div id="warning-modal" class="modal-overlay" style="display: none">
+      <div class="modal-content" style="max-width: 500px">
+        <div class="modal-header">
+          <h2>Data Validation Warnings</h2>
+          <button class="close-button">&times;</button>
+        </div>
+        <div id="warning-content" class="modal-body"></div>
+      </div>
+    </div>
+    <div
+      id="complete-confirm-modal"
+      class="modal-overlay"
+      style="display: none"
+    >
+      <div class="modal-content" style="max-width: 520px">
+        <div class="modal-header">
+          <h2>Complete Ticket from Open</h2>
+          <button class="close-button" id="ccm-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            Start Date &amp; Complete Date is in the same date — are you sure to
+            continue?
+          </p>
+          <div
+            id="ccm-adjust-wrapper"
+            style="
+              display: none;
+              gap: 8px;
+              align-items: center;
+              margin: 0.5rem 0;
+            "
+          >
+            <label for="ccm-date">Adjust Start Date:</label
+            ><input type="date" id="ccm-date" class="inline-editor" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="save-btn" id="ccm-yes">Yes</button
+          ><button class="action-btn" id="ccm-adjust">Adjust Start Date</button
+          ><button class="cancel-btn" id="ccm-no">No</button>
+        </div>
+      </div>
+    </div>
+    <div
+      id="bulk-start-adjust-modal"
+      class="modal-overlay"
+      style="display: none"
+    >
+      <div class="modal-content" style="max-width: 720px">
+        <div class="modal-header">
+          <h2>Complete From Open – Per Ticket</h2>
+          <button class="close-button" id="bsam-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 0.75rem">
+            Some tickets are moving from <strong>Open</strong> to
+            <strong>Completed</strong>. Choose an action for each:
+          </p>
+          <div
+            id="bsam-list"
+            style="
+              display: grid;
+              grid-template-columns: 1fr;
+              gap: 10px;
+              max-height: 50vh;
+              overflow: auto;
+            "
+          ></div>
+        </div>
+        <div class="modal-footer">
+          <button class="save-btn" id="bsam-apply">Apply</button
+          ><button class="cancel-btn" id="bsam-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="add-ticket-confirm-modal"
+      class="modal-overlay"
+      style="display: none"
+    >
+      <div class="modal-content" style="max-width: 800px">
+        <div class="modal-header">
+          <h2>Confirm New Tickets</h2>
+          <button class="close-button modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p style="margin-bottom: 1rem">
+            Please review the tickets below before submitting. The following
+            tickets will be created:
+          </p>
+          <div
+            id="confirm-ticket-list"
+            class="ticket-list-container"
+            style="
+              max-height: 50vh;
+              overflow-y: auto;
+              background-color: var(--row-alt-color);
+              border: 1px solid var(--border-color);
+              border-radius: 8px;
+              padding: 1rem;
+            "
+          ></div>
+        </div>
+        <div class="modal-footer">
+          <button id="cancel-ticket-confirmation-btn" class="cancel-btn">
+            Go Back & Edit
+          </button>
+          <button id="confirm-and-submit-tickets-btn" class="save-btn">
+            Confirm & Submit
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="reconcile-create-ticket-modal"
+      class="modal-overlay"
+      style="display: none"
+    >
+      <div class="modal-content" style="max-width: 900px">
+        <div class="modal-header">
+          <h2><i class="fas fa-magic"></i> Create Ticket from Time Entry</h2>
+          <button class="close-button modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="detail-grid" id="reconcile-create-ticket-form">
+            <div class="detail-field" style="grid-column: 1 / -1">
+              <label
+                ><i class="fas fa-heading fa-fw"></i> Title
+                <span class="required-indicator">(* required)</span></label
+              >
+              <input
+                type="text"
+                id="rct-title"
+                class="inline-editor"
+                required
+              />
+            </div>
+
+            <div class="detail-field" style="grid-column: 1 / -1">
+              <label><i class="fas fa-align-left fa-fw"></i> Description</label>
+              <textarea
+                id="rct-description"
+                class="inline-editor"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <div class="detail-field">
+              <label
+                ><i class="fas fa-calendar-plus fa-fw"></i> Created Date
+                <span class="required-indicator">(* required)</span></label
+              >
+              <div class="date-input-wrapper">
+                <input
+                  type="date"
+                  id="rct-createdAt"
+                  class="inline-editor"
+                  required
+                />
+                <span
+                  id="rct-createdAt-display"
+                  class="date-format-display"
+                ></span>
+              </div>
+            </div>
+            <div class="detail-field">
+              <label><i class="fas fa-tag fa-fw"></i> Type</label>
+              <select id="rct-type" class="inline-editor">
+                <option value="Task">Task</option>
+                <option value="Bug">Bug</option>
+                <option value="Request">Request</option>
+              </select>
+            </div>
+
+            <div class="detail-field">
+              <label
+                ><i class="fas fa-user-tag fa-fw"></i> Requested By
+                <span class="required-indicator">(* required)</span></label
+              >
+              <div id="rct-requestedBy-container"></div>
+            </div>
+            <div class="detail-field">
+              <label><i class="fas fa-user-check fa-fw"></i> Assignee</label>
+              <div id="rct-assignee-container"></div>
+            </div>
+
+            <div class="detail-field">
+              <label><i class="fas fa-flag fa-fw"></i> Status</label>
+              <select id="rct-status" class="inline-editor">
+                <option selected>Open</option>
+                <option>In Progress</option>
+                <option>On Hold</option>
+                <option>Blocked</option>
+                <option>Cancelled</option>
+                <option>Rejected</option>
+                <option>Completed</option>
+              </select>
+            </div>
+
+            <div
+              class="detail-field rct-conditional"
+              id="rct-assignedAt-container"
+              style="display: none"
+            >
+              <label
+                ><i class="fas fa-calendar-check fa-fw"></i> Assigned Date
+                <span class="required-indicator">(* required)</span></label
+              >
+              <div class="date-input-wrapper">
+                <input type="date" id="rct-assignedAt" class="inline-editor" />
+                <span
+                  id="rct-assignedAt-display"
+                  class="date-format-display"
+                ></span>
+              </div>
+            </div>
+
+            <div
+              class="detail-field rct-conditional"
+              id="rct-startedAt-container"
+              style="display: none"
+            >
+              <label
+                ><i class="fas fa-play-circle fa-fw"></i> Started Date
+                <span class="required-indicator">(* required)</span></label
+              >
+              <div class="date-input-wrapper">
+                <input type="date" id="rct-startedAt" class="inline-editor" />
+                <span
+                  id="rct-startedAt-display"
+                  class="date-format-display"
+                ></span>
+              </div>
+            </div>
+            <div
+              class="detail-field rct-conditional"
+              id="rct-completedAt-container"
+              style="display: none"
+            >
+              <label
+                ><i class="fas fa-check-circle fa-fw"></i> Completed Date
+                <span class="required-indicator">(* required)</span></label
+              >
+              <div class="date-input-wrapper">
+                <input type="date" id="rct-completedAt" class="inline-editor" />
+                <span
+                  id="rct-completedAt-display"
+                  class="date-format-display"
+                ></span>
+              </div>
+            </div>
+            <div
+              class="detail-field rct-conditional"
+              id="rct-reason-container"
+              style="display: none; grid-column: 1 / -1"
+            >
+              <label
+                ><i class="fas fa-comment-dots fa-fw"></i> Reason
+                <span class="required-indicator">(* required)</span></label
+              >
+              <input
+                type="text"
+                id="rct-reason"
+                class="inline-editor"
+                placeholder="Reason for status change..."
+              />
+            </div>
+
+            <div class="detail-field">
+              <label
+                ><i class="fas fa-puzzle-piece fa-fw"></i> Complexity
+                <span class="required-indicator">(* required)</span></label
+              >
+              <select id="rct-complexity" class="inline-editor" required>
+                <option value="" disabled selected>Select...</option>
+                <option>Easy</option>
+                <option>Moderate</option>
+                <option>Complex</option>
+              </select>
+            </div>
+            <div class="detail-field">
+              <label
+                ><i class="fas fa-tools fa-fw"></i> Skills
+                <span class="required-indicator">(* required)</span></label
+              >
+              <div id="rct-skills-container"></div>
+            </div>
+
+            <div class="detail-field">
+              <label><i class="fas fa-folder fa-fw"></i> Project</label>
+              <div id="rct-project-container"></div>
+            </div>
+            <div class="detail-field">
+              <label><i class="fas fa-bolt fa-fw"></i> Epic</label>
+              <input
+                type="text"
+                id="rct-epic"
+                class="inline-editor"
+                list="epic-datalist-rct"
+                placeholder="Type or select..."
+              />
+              <datalist id="epic-datalist-rct"></datalist>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="rct-submit-btn" class="save-btn">Create Ticket</button>
+        </div>
+      </div>
+    </div>
+
+    <input type="hidden" id="user-email" value="<?= email ?>" />
+    <input type="hidden" id="user-name" value="<?= name ?>" />
+    <input type="hidden" id="initial-mode" value="<?= mode ?>" />
+    <input type="hidden" id="user-role" value="<?= role ?>" />
+    <input type="hidden" id="script-url" value="<?= scriptUrl ?>" />
+    <input type="hidden" id="script-url" value="<?= scriptUrl ?>" />
+
+    <input type="hidden" id="url-ticket-number" value="<?= ticketNumber ?>" />
+    <input type="hidden" id="url-initial-view" value="<?= initialView ?>" />
+
+    <input type="hidden" id="favicon-url" value="<?= faviconUrl ?>" />
+    <?!= HtmlService.createHtmlOutputFromFile('JavaScript').getContent(); ?>
+  </body>
+</html>

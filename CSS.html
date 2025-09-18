@@ -1,0 +1,3295 @@
+<style>
+  /* --- FONT IMPORT --- */
+  @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+  @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css");
+
+  /* --- CSS VARIABLES --- */
+  :root {
+    --font-family: "Inter", sans-serif;
+
+    /* Light Mode Palette */
+    --bg-color: #f9fafb; /* Lighter background */
+    --surface-color: #ffffff;
+    --text-primary: #1f2937; /* Softer black */
+    --text-secondary: #6b7280; /* Softer grey */
+    --border-color: #e5e7eb; /* Lighter border */
+    --header-color: #111827;
+    --accent-color: #4f46e5; /* Indigo */
+    --accent-bg-light: #e0e7ff;
+    --shadow-color: rgba(0, 0, 0, 0.05);
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+    --success-color: #10b981;
+    --success-bg-color: #d1fae5;
+    --row-alt-color: #f9fafb;
+    --row-hover-color: #f3f4f6;
+    --nested-bg-color: #f8f9fc;
+  }
+
+  .dark {
+    /* Dark Mode Palette */
+    --bg-color: #111827;
+    --surface-color: #1f2937;
+    --text-primary: #d1d5db;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+    --header-color: #f9fafb;
+    --accent-color: #818cf8;
+    --accent-bg-light: rgba(129, 140, 248, 0.16);
+    --shadow-color: rgba(0, 0, 0, 0.2);
+    --danger-color: #f87171;
+    --warning-color: #fbbf24;
+    --success-color: #34d399;
+    --success-bg-color: rgba(52, 211, 153, 0.15);
+    --row-alt-color: #1f2937;
+    --row-hover-color: #374151;
+    --nested-bg-color: #1a2332;
+  }
+
+  /* --- RESET & BASE STYLES --- */
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    display: flex;
+    flex-direction: column;
+    /* zoom: 0.9; */
+    padding: 0;
+  }
+
+  /* --- MODERN APP LAYOUT STYLES --- */
+  .container {
+    display: flex;
+    flex-direction: row;
+    height: 100vh;
+    padding: 0;
+    max-width: 100%;
+  }
+
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background-color: var(--surface-color);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem 1rem;
+  }
+
+  .sidebar-header {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--header-color);
+    padding: 0 0.5rem 1.5rem 0.5rem;
+  }
+
+  .main-content-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 1rem 2.5rem; /* Adjusted padding */
+  }
+
+  main {
+    padding: 0;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* ADD THIS LINE to fix scrolling */
+  }
+
+  /* --- MODERN NAVIGATION STYLES --- */
+  .nav-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border-bottom: none;
+    margin-bottom: 0;
+    height: 100%;
+  }
+
+  .nav-btn {
+    border: none;
+    border-left: 3px solid transparent;
+    justify-content: flex-start;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+    background-color: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background-color 0.2s;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    text-align: left;
+  }
+
+  .nav-btn:hover:not(.active) {
+    background-color: var(--row-hover-color);
+    color: var(--text-primary);
+  }
+
+  .nav-btn.active {
+    color: var(--accent-color);
+    border-left-color: var(--accent-color);
+    background-color: var(--accent-bg-light);
+    font-weight: 600;
+  }
+
+  .nav-badge {
+    background-color: var(--border-color);
+    color: var(--text-secondary);
+    border: none;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: auto;
+    display: inline-block;
+    line-height: 1.2;
+    transition: all 0.2s ease;
+  }
+
+  .nav-btn.active .nav-badge {
+    background-color: var(--accent-color);
+    color: white;
+  }
+
+  /* --- ACTIONS CONTAINER --- */
+  .actions-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .left-actions,
+  .right-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem; /* Consistent gap */
+    flex-wrap: wrap;
+  }
+  .right-actions {
+    margin-left: auto;
+  }
+  .filter-panel {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .filter-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .filter-item label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+  }
+  #status-filter-select,
+  #project-filter-select,
+  #epic-filter-select {
+    width: 100%;
+  }
+  .search-group {
+    display: flex;
+    gap: 1rem;
+  }
+  .search-wrapper {
+    position: relative;
+    width: 220px;
+  }
+  .search-wrapper:has(#ticket-number-filter) {
+    width: 120px;
+  }
+  .search-wrapper i {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+  }
+
+  mark {
+    background-color: #fef3c7; /* Softer yellow */
+    color: #92400e;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+
+  /* --- TABLE STYLES --- */
+  .table-wrapper {
+    overflow: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 12px; /* Larger radius */
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--surface-color);
+    box-shadow: 0 4px 6px -1px var(--shadow-color),
+      0 2px 4px -2px var(--shadow-color);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    border-style: hidden;
+    table-layout: fixed;
+  }
+  tbody tr {
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.2s ease-in-out;
+    position: relative;
+  }
+  tbody tr:last-child {
+    border-bottom: none;
+  }
+  th,
+  td {
+    padding: 0.875rem 1.25rem; /* Adjusted padding */
+    text-align: left;
+    font-size: 0.875rem;
+    white-space: normal;
+    word-break: break-word;
+    vertical-align: middle;
+    position: relative;
+    border: none;
+  }
+
+  /* Column Widths */
+  table:not(.project-view) thead tr th:nth-child(1) {
+    width: 10%;
+  }
+  table:not(.project-view) thead tr th:nth-child(2) {
+    width: 45%;
+  }
+  table:not(.project-view) thead tr th:nth-child(3) {
+    width: 8%;
+  }
+  table:not(.project-view) thead tr th:nth-child(4) {
+    width: 10%;
+  }
+  table:not(.project-view) thead tr th:nth-child(5) {
+    width: 9%;
+  }
+  table:not(.project-view) thead tr th:nth-child(6) {
+    width: 10%;
+  }
+  table:not(.project-view) thead tr th:nth-child(7) {
+    width: 7%;
+  }
+  table:not(.project-view) thead tr th:nth-child(8) {
+    width: 4%;
+  }
+
+  .bulk-edit-active thead tr th.checkbox-cell,
+  .bulk-edit-active tbody tr td.checkbox-cell {
+    width: 45px !important;
+  }
+  .bulk-edit-active table:not(.project-view) thead tr th:nth-child(2) {
+    width: 8%;
+  }
+  .bulk-edit-active table:not(.project-view) thead tr th:nth-child(3) {
+    width: 47%;
+  }
+
+  th {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.75rem; /* Smaller header */
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    background-color: var(--surface-color);
+    z-index: 10;
+  }
+  /* Remove alternating row color for a cleaner look */
+  /* tbody tr:nth-child(even) { background-color: var(--row-alt-color); } */
+
+  tbody tr:hover {
+    background-color: var(--row-hover-color);
+    cursor: pointer;
+  }
+  tbody tr:hover .task-content strong {
+    color: var(--accent-color);
+  }
+  .updating {
+    opacity: 0.5;
+    cursor: progress !important;
+  }
+  .is-successful {
+    animation: success-flash 1.5s ease-out;
+  }
+  @keyframes success-flash {
+    0%,
+    100% {
+      background-color: transparent;
+    }
+    25%,
+    75% {
+      background-color: var(--success-bg-color);
+    }
+  }
+
+  /* --- INTERACTIVE & EDITABLE ELEMENTS --- */
+  .editable-field-wrapper {
+    position: relative;
+  }
+  select,
+  input,
+  textarea {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--surface-color);
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px 0 var(--shadow-color);
+  }
+  #task-search-input,
+  #ticket-number-filter {
+    padding-left: 2.25rem;
+  }
+  .dark select,
+  .dark input,
+  .dark textarea {
+    background-color: var(--bg-color);
+  }
+  input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+    box-shadow: none;
+  }
+  select:hover,
+  input:hover,
+  textarea:hover {
+    border-color: #d1d5db; /* Slightly darker border on hover */
+  }
+  select:focus,
+  input:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--accent-bg-light);
+  }
+  select.placeholder-selected {
+    color: var(--text-secondary);
+  }
+  .clear-icon {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: none;
+    font-size: 0.9rem;
+  }
+  .editable-field-wrapper:has(input[type="date"]) .clear-icon {
+    right: 2rem;
+  }
+  .editable-field-wrapper.has-value:hover .clear-icon {
+    display: block;
+  }
+  .clear-icon:hover {
+    color: var(--danger-color);
+  }
+  .input-error {
+    border-color: var(--danger-color) !important;
+  }
+
+  /* Searchable Dropdown */
+  .searchable-dropdown {
+    position: relative;
+  }
+  .searchable-dropdown-input {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .searchable-dropdown-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    min-width: 200px;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px; /* Rounded dropdown */
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    margin-top: 4px;
+    padding: 4px;
+  }
+  .searchable-dropdown-list div {
+    padding: 0.5rem;
+    cursor: pointer;
+    border-radius: 4px;
+    margin: 2px;
+  }
+  .searchable-dropdown-list div:hover {
+    background-color: var(--row-hover-color);
+  }
+
+  /* --- ICONS & IN-TABLE ELEMENTS --- */
+  .task-icons {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .history-icon,
+  .attachment-icon,
+  .copy-icon {
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1rem;
+    transition: color 0.2s, opacity 0.2s;
+    opacity: 0.5;
+  }
+  tbody tr:hover .history-icon,
+  tbody tr:hover .attachment-icon,
+  tbody tr:hover .copy-icon {
+    opacity: 1;
+  }
+  .history-icon:hover,
+  .attachment-icon:hover,
+  .copy-icon:hover {
+    color: var(--accent-color);
+  }
+  .id-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .id-container span {
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+  .id-container .copy-icon {
+    opacity: 0;
+    font-size: 0.8rem;
+  }
+  tbody tr:hover .id-container .copy-icon {
+    opacity: 1;
+  }
+  .id-and-age {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+  .ticket-age {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+  .ticket-age i {
+    font-size: 0.7rem;
+  }
+  .ticket-age.overdue {
+    color: var(--danger-color);
+    font-weight: 600;
+  }
+  .warning-icon {
+    color: var(--warning-color);
+    font-size: 0.875rem;
+  }
+
+  /* --- TASK DISPLAY (INLINE) --- */
+  .task-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .task-content {
+    flex-grow: 1;
+  }
+  .task-content strong {
+    font-weight: 500;
+  }
+
+  .tag-editor .editable-field-wrapper {
+    display: none;
+  }
+  .status-tag,
+  .type-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.125rem 0.625rem; /* Adjusted padding */
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: capitalize;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .tag-editor .editable-field-wrapper {
+    display: none;
+  }
+  .tag-editor.is-editing .status-tag {
+    display: none;
+  }
+  .tag-editor.is-editing .editable-field-wrapper {
+    display: block;
+  }
+
+  /* Tag Colors */
+  .status-open,
+  .status-planning {
+    background-color: #f3f4f6;
+    color: #374151;
+    border-color: #e5e7eb;
+  }
+  .status-in-progress {
+    background-color: #fef9c3;
+    color: #92400e;
+    border-color: #fde68a;
+  }
+  .status-on-hold {
+    background-color: #ffedd5;
+    color: #9a3412;
+    border-color: #fed7aa;
+  }
+  .status-blocked {
+    background-color: #374151;
+    color: #f9fafb;
+    border-color: #4b5563;
+  }
+  .status-rejected,
+  .status-cancelled {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-color: #fecaca;
+  }
+  .status-completed,
+  .status-approved {
+    background-color: #d1fae5;
+    color: #065f46;
+    border-color: #a7f3d0;
+  }
+  .status-default {
+    background-color: #f3f4f6;
+    color: #4b5563;
+    border-color: #e5e7eb;
+  }
+
+  .type-task {
+    background-color: #ede9fe;
+    color: #5b21b6;
+    border-color: #ddd6fe;
+  }
+  .type-bug {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-color: #fecaca;
+  }
+  .type-request,
+  .type-questions {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-color: #bfdbfe;
+  }
+  .type-default {
+    background-color: #f3f4f6;
+    color: #4b5563;
+    border-color: #e5e7eb;
+  }
+
+  .priority-urgent {
+    background-color: #111827;
+    color: #f9fafb;
+  }
+  .priority-high {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+  .priority-medium {
+    background-color: #fef3c7;
+    color: #92400e;
+  }
+  .priority-low {
+    background-color: #e5e7eb;
+    color: #374151;
+  }
+  .priority-default {
+    background-color: #f3f4f6;
+    color: #4b5563;
+  }
+
+  /* --- MULTI-SELECT DROPDOWN --- */
+  .multi-select-container {
+    position: relative;
+    width: 100%;
+  }
+  .multi-select-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    min-height: 40px;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+  .multi-select-container:hover .multi-select-pills {
+    background-color: var(--bg-color);
+    border-color: var(--border-color);
+  }
+  .multi-select-container.is-open .multi-select-pills {
+    border-color: var(--accent-color);
+  }
+  .multi-select-placeholder {
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .multi-select-pill {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--row-alt-color);
+    color: var(--text-primary);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    border: 1px solid var(--border-color);
+  }
+  .multi-select-pill .remove-pill {
+    margin-left: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 2px;
+    border-radius: 50%;
+    transition: color 0.2s;
+    color: var(--text-secondary);
+  }
+  .multi-select-pill .remove-pill:hover {
+    color: var(--danger-color);
+  }
+  .multi-select-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1001;
+    margin-top: 4px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+  .multi-select-container.is-open .multi-select-dropdown {
+    display: block;
+  }
+  .multi-select-option {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+  }
+  .multi-select-option:hover {
+    background-color: var(--row-alt-color);
+  }
+  .multi-select-option input {
+    margin-right: 0.5rem;
+  }
+
+  /* --- GENERIC MODAL STYLES --- */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(17, 24, 39, 0.6); /* Darker overlay */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    /* CHANGE: Add padding for spacing */
+    padding: 1.5rem 2rem;
+    /* REMOVE: These are no longer needed */
+    /* padding-bottom: 1rem; */
+    /* margin-bottom: 1rem; */
+  }
+  .modal-header h2 {
+    color: var(--header-color);
+  }
+  .close-button {
+    background: none;
+    border: none;
+    font-size: 1.75rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+  }
+  .modal-body {
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+  .modal-footer {
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    /* CHANGE: Add padding for spacing */
+    padding: 1rem 2rem;
+    /* REMOVE: These are no longer needed */
+    /* margin-top: 1.5rem; */
+    /* padding-top: 1rem; */
+  }
+
+  /* History & Attachment Modals */
+  .history-entry {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .history-entry:last-child {
+    border-bottom: none;
+  }
+  .history-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.25rem;
+  }
+  .history-change {
+    font-size: 0.9rem;
+  }
+  .attachment-link {
+    display: block;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+    text-decoration: none;
+    color: var(--accent-color);
+    word-break: break-all;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+  }
+  .attachment-link:last-child {
+    border-bottom: none;
+  }
+  .attachment-link:hover {
+    background-color: var(--bg-color);
+  }
+
+  /* Detail Grid (used in Add Project and Bulk Update) */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+  .detail-field {
+    display: flex;
+    flex-direction: column;
+  }
+  .detail-field label {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+  }
+  .detail-field.has-warning label {
+    color: var(--warning-color);
+  }
+  .detail-field.has-warning input,
+  .detail-field.has-warning select,
+  .detail-field.has-warning .searchable-dropdown-input {
+    border-color: var(--warning-color) !important;
+  }
+
+  /* Add Task Modal */
+  .add-task-project-section {
+    padding: 1rem;
+    background-color: var(--row-alt-color);
+    border-radius: 8px;
+  }
+  .add-task-project-section label,
+  .new-ticket-row-body label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    display: block;
+  }
+  .add-task-project-section > label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .new-ticket-row {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+    background-color: var(--surface-color);
+  }
+  .new-ticket-row:last-child {
+    margin-bottom: 0;
+  }
+  .new-ticket-row-header,
+  .new-ticket-row-body {
+    display: grid;
+    gap: 1rem;
+  }
+  .new-ticket-row-header {
+    grid-template-columns: 1fr 1fr;
+    margin-bottom: 1rem;
+  }
+  .new-ticket-row-body {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  .new-ticket-row-header input,
+  .new-ticket-row-header textarea,
+  .new-ticket-row-body select {
+    background-color: var(--row-alt-color);
+    border-color: var(--row-alt-color);
+  }
+
+  /* Find the .new-ticket-row rule and CHANGE it to this */
+  .new-ticket-row {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: var(--surface-color);
+    /* ADD these new properties */
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  /* Find and REPLACE this rule */
+  .new-ticket-actions {
+    display: flex;
+    align-items: center; /* Vertically centers the button */
+    height: 36px; /* Matches the height of the Title/Description inputs for perfect alignment */
+  }
+
+  /* Find and REPLACE this rule */
+  .remove-ticket-row-btn {
+    background: none;
+    border: none;
+    color: var(--danger-color); /* Ensures the icon is red */
+    cursor: pointer;
+    font-size: 1.1rem; /* Makes the icon slightly larger */
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    opacity: 0.65; /* Makes the icon a bit more visible by default */
+    line-height: 1;
+  }
+
+  /* Find and REPLACE this rule */
+  .remove-ticket-row-btn:hover {
+    opacity: 1; /* Makes the icon fully visible on hover */
+    background-color: var(
+      --row-alt-color
+    ); /* Adds a subtle background highlight */
+  }
+  .new-ticket-content {
+    flex-grow: 1;
+  }
+
+  /* --- MODERN TICKET DETAIL MODAL --- */
+  #task-detail-modal .modal-content {
+    padding: 0;
+    display: flex;
+    flex-direction: row;
+    max-height: 90vh;
+    overflow-y: auto; /* Allow the whole modal to scroll if it gets too big */
+    width: 90vw;
+    max-width: 1400px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 12px var(--shadow-color);
+    overflow-y: auto;
+  }
+
+  .modal-close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    z-index: 10;
+  }
+
+  #task-detail-modal .modal-body {
+    display: flex;
+    width: 100%;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* --- Left Column: Main Content --- */
+  .ticket-main-content {
+    flex: 2;
+    padding: 2rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    border-right: 1px solid var(--border-color);
+    background-color: var(--surface-color);
+  }
+
+  .ticket-main-header {
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+  }
+
+  .ticket-id-tag {
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 0.25rem 0.6rem;
+    background-color: var(--row-alt-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    display: inline-block;
+  }
+
+  .modal-title-textarea {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--header-color);
+    line-height: 1.3;
+    border: none;
+    background: transparent;
+    padding: 0.5rem;
+    margin: -0.5rem;
+    border-radius: 8px;
+    resize: none;
+    width: 100%; /* Make it full width */
+  }
+  .modal-title-textarea:hover {
+    background-color: var(--row-alt-color);
+  }
+  .modal-title-textarea:focus {
+    background-color: var(--surface-color);
+    border: 1px solid var(--accent-color);
+    box-shadow: none;
+  }
+
+  .modal-section-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 2rem 0 0.5rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .modal-description-textarea {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+    border: 1px solid transparent;
+    padding: 0.5rem;
+    margin: 0rem;
+    border-radius: 8px;
+    resize: auto;
+    overflow-y: auto; /* <-- This is important */
+    min-height: 200px; /* <-- Set a reasonable starting height */
+    background: transparent;
+    width: 100%;
+  }
+
+  .modal-description-textarea:hover {
+    background-color: var(--row-alt-color);
+    border-color: var(--border-color);
+  }
+  .modal-description-textarea:focus {
+    background-color: var(--surface-color);
+    border-color: var(--accent-color);
+    box-shadow: none;
+  }
+
+  .ticket-attachments-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .attachment-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--surface-color);
+  }
+  .attachment-card:hover {
+    background-color: var(--row-alt-color);
+  }
+
+  .attachment-card .file-icon {
+    font-size: 1.5rem;
+    color: var(--accent-color);
+  }
+
+  .attachment-card .file-info {
+    flex-grow: 1;
+  }
+
+  .attachment-card .file-info strong {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+  }
+  .attachment-card .file-info span {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+  .attachment-card .attachment-action-btn {
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .attachment-card .attachment-action-btn:hover {
+    color: var(--accent-color);
+  }
+
+  /* --- Subtask Styles --- */
+  .ticket-subtasks-container {
+    margin-top: 1.5rem;
+  }
+  .subtask-list {
+    list-style: none;
+    margin: 0.5rem 0;
+    padding: 0;
+  }
+  .subtask-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .subtask-item:last-child {
+    border-bottom: none;
+  }
+  .subtask-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+  .subtask-item span {
+    flex-grow: 1;
+    font-size: 0.9rem;
+  }
+  .subtask-item.completed span {
+    text-decoration: line-through;
+    color: var(--text-secondary);
+  }
+  .subtask-item .copy-icon {
+    margin-left: auto;
+  }
+  .remove-subtask-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 1rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .subtask-item:hover .remove-subtask-btn,
+  .subtask-item:hover .copy-icon {
+    opacity: 1;
+  }
+  .remove-subtask-btn:hover {
+    color: var(--danger-color);
+  }
+  .add-subtask-area {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .add-subtask-area input {
+    flex-grow: 1;
+  }
+
+  /* --- Comment Styles --- */
+  .ticket-comments-container {
+    margin-top: 1.5rem;
+  }
+  .comment-list {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .comment-item {
+    display: flex;
+    gap: 1rem;
+  }
+  .comment-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--border-color);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .comment-body {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+  }
+  .comment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+  .comment-author {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .comment-timestamp {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+  }
+  .comment-text {
+    line-height: 1.5;
+    color: var(--text-primary);
+  }
+  .comment-input-area {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+  .comment-input-area textarea {
+    resize: vertical;
+    min-height: 60px;
+  }
+  .comment-input-area button {
+    align-self: flex-end;
+  }
+
+  /* --- Right Column: Details Sidebar --- */
+  .ticket-details-sidebar {
+    flex: 1;
+    min-width: 320px;
+    max-width: 380px;
+    background-color: var(--bg-color);
+    padding: 2rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-section {
+    margin-bottom: 2rem;
+  }
+
+  .sidebar-section:last-of-type {
+    margin-bottom: 0;
+  }
+
+  .sidebar-section h4 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .sidebar-property-static,
+  .sidebar-property-editable {
+    padding: 0.8rem 0;
+    font-size: 0.875rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .sidebar-property-static {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .sidebar-section .sidebar-property-static:last-of-type,
+  .sidebar-section .sidebar-property-editable:last-of-type {
+    border-bottom: none;
+  }
+
+  .prop-label {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  .prop-value {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .sidebar-property-editable .tag-editor,
+  .sidebar-property-editable .editable-field-wrapper,
+  .sidebar-property-editable select,
+  .sidebar-property-editable .searchable-dropdown-input,
+  .sidebar-property-editable .inline-editor[type="text"],
+  .sidebar-property-editable .inline-editor[type="date"] {
+    width: 100%;
+    padding: 0.5rem;
+  }
+  .sidebar-property-editable .tag-editor {
+    border: none;
+    padding: 0;
+    background-color: transparent;
+  }
+  .sidebar-property-editable .status-tag,
+  .sidebar-property-editable .type-tag {
+    justify-content: center;
+  }
+
+  /* --- LOADER, TOAST, PAGINATION --- */
+  .loader-container,
+  .error-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 4rem;
+    color: var(--text-secondary);
+  }
+  .spinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid var(--border-color);
+    border-top: 5px solid var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  .error-container p {
+    color: var(--danger-color);
+    font-weight: 500;
+  }
+  .toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 8px;
+    padding: 16px;
+    position: fixed;
+    z-index: 3000;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 30px;
+    font-size: 1rem;
+    opacity: 0;
+    transition: visibility 0s 0.5s, opacity 0.5s, bottom 0.5s;
+  }
+  .toast.show {
+    visibility: visible;
+    opacity: 1;
+    bottom: 50px;
+    transition: visibility 0s, opacity 0.5s, bottom 0.5s;
+  }
+  .toast.success {
+    background-color: var(--success-color);
+  }
+  .toast.error {
+    background-color: var(--danger-color);
+  }
+  .pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1.5rem 0;
+    gap: 0.75rem;
+    flex-shrink: 0;
+  }
+  .pagination-controls button {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    background-color: var(--surface-color);
+    color: var(--text-primary);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .pagination-controls button:hover:not(:disabled) {
+    background-color: var(--row-hover-color);
+  }
+  .pagination-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .page-info {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+  #page-jump-input {
+    width: 80px;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    text-align: center;
+    -moz-appearance: textfield;
+  }
+  #page-jump-input::-webkit-outer-spin-button,
+  #page-jump-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* --- BULK ACTIONS --- */
+  .bulk-actions-panel {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+  #selection-count {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  /* Find and REPLACE this entire rule in CSS.html */
+
+  .action-btn,
+  .cancel-btn,
+  .save-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    /* MODIFIED: Increased horizontal padding from 16px to 20px */
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px 0 var(--shadow-color);
+  }
+  .action-btn,
+  .save-btn {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+  }
+  .action-btn:hover,
+  .save-btn:hover {
+    opacity: 0.9;
+  }
+  .action-btn:disabled,
+  .save-btn:disabled {
+    background-color: var(--text-secondary);
+    border-color: var(--text-secondary);
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  #to-fix-btn.active {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+  }
+  .cancel-btn {
+    background-color: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+  }
+  .cancel-btn:hover {
+    background-color: var(--row-hover-color);
+    color: var(--text-primary);
+  }
+  .checkbox-cell {
+    width: 45px !important;
+    text-align: center !important;
+    padding: 0 !important;
+  }
+  .checkbox-cell input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    vertical-align: middle;
+  }
+  .action-btn.secondary-btn {
+    background-color: var(--surface-color);
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+  }
+  .action-btn.secondary-btn:hover {
+    background-color: var(--row-hover-color);
+    color: var(--text-primary);
+    opacity: 1;
+  }
+
+  /* --- NEW, MODERN GROUPING STYLES --- */
+  .project-group-header,
+  .epic-group-header {
+    background-color: transparent !important;
+  }
+
+  .project-group-header td,
+  .epic-group-header td {
+    padding: 0;
+    border: none;
+  }
+
+  .project-group-header:hover,
+  .epic-group-header:hover {
+    background-color: transparent;
+  }
+  .project-group-header .group-header-content:hover .project-name {
+    color: var(--accent-color);
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .group-header-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1.25rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    position: relative;
+  }
+
+  /* Project Header */
+  .project-group-header .group-header-content {
+    background-color: var(--row-alt-color);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+  }
+  .project-group-header:first-child .group-header-content {
+    margin-top: 0;
+  }
+
+  .project-group-header .project-icon {
+    color: var(--accent-color);
+    font-size: 0.9rem;
+  }
+
+  .project-group-header .project-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--header-color);
+  }
+
+  /* Epic Header */
+  .epic-group-header {
+    background-color: var(--nested-bg-color) !important;
+  }
+  .epic-group-header .group-header-content {
+    padding-left: 2.5rem; /* Indent epics */
+    border-bottom: 1px dashed var(--border-color);
+    margin-top: 0.5rem;
+  }
+
+  .epic-group-header .epic-icon {
+    color: #a78bfa; /* A nice violet for epics */
+    font-size: 0.9rem;
+  }
+
+  .epic-group-header .epic-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  /* Common Grouping Elements */
+  .group-header-content:hover {
+    background-color: var(--row-hover-color);
+  }
+
+  .group-count {
+    background-color: var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 5px;
+    margin-left: 0.75rem;
+  }
+
+  .toggle-icon {
+    color: var(--text-secondary);
+    transition: transform 0.2s ease-in-out;
+    width: 16px;
+    text-align: center;
+  }
+
+  .project-group-header.collapsed .toggle-icon,
+  .epic-group-header.collapsed .toggle-icon {
+    transform: rotate(-90deg);
+  }
+
+  /* Ticket Row Nesting Styles - REVISED */
+  tr.is-in-epic {
+    background-color: var(--nested-bg-color) !important;
+  }
+
+  tr.is-in-epic:hover {
+    background-color: var(--row-hover-color) !important;
+  }
+
+  tr.is-in-epic td:first-child {
+    padding-left: 4rem; /* Keep indentation */
+    border-left: 3px solid var(--accent-bg-light);
+  }
+
+  .dark tr.is-in-epic td:first-child {
+    border-left-color: rgba(129, 140, 248, 0.25);
+  }
+
+  /* Add these styles to CSS.html */
+  .group-header-content .group-actions {
+    margin-left: auto;
+    padding-left: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  .group-header-content:hover .group-actions {
+    opacity: 1;
+  }
+
+  .action-btn-inline {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .action-btn-inline:hover {
+    background-color: var(--row-hover-color);
+    color: var(--accent-color);
+  }
+
+  .inline-edit-row-class td {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    background-color: var(--accent-bg-light) !important;
+  }
+
+  .inline-edit-row-class td:last-child {
+    text-align: left;
+    padding-left: 0.75rem;
+  }
+
+  .inline-edit-row-class .action-btn-inline {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  /* --- Dropdown Button Styles --- */
+  .dropdown-container {
+    position: relative;
+    display: inline-block;
+  }
+
+  .dropdown-menu {
+    display: none;
+    position: absolute;
+    left: 0; /* CHANGED: Was 'right: 0' */
+    top: calc(100% + 5px);
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    z-index: 100;
+    min-width: 160px;
+    padding: 0.5rem;
+  }
+
+  .dropdown-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+
+  .dropdown-item:hover {
+    background-color: var(--row-alt-color);
+    color: var(--accent-color);
+  }
+
+  /* --- RESPONSIVENESS --- */
+  @media (max-width: 1024px) {
+    .main-content-wrapper {
+      padding: 1.5rem;
+    }
+    #task-detail-modal .modal-content {
+      flex-direction: column;
+      height: 90vh;
+      overflow: hidden;
+    }
+    .ticket-main-content {
+      border-right: none;
+      border-bottom: 1px solid var(--border-color);
+    }
+    .ticket-details-sidebar {
+      min-width: unset;
+      max-width: unset;
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 768px) {
+    html,
+    body {
+      height: auto;
+      overflow: auto;
+    }
+    .container {
+      padding: 0;
+      height: auto;
+      flex-direction: column;
+    }
+    .sidebar {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--border-color);
+      height: auto;
+      padding: 1rem;
+    }
+    .sidebar-header {
+      display: none;
+    }
+    .nav-panel {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+    .main-content-wrapper {
+      padding: 1rem;
+    }
+
+    .table-wrapper {
+      border: none;
+      max-height: none;
+      box-shadow: none;
+    }
+    table thead {
+      border: none;
+      clip: rect(0 0 0 0);
+      height: 1px;
+      margin: -1px;
+      overflow: hidden;
+      padding: 0;
+      position: absolute;
+      width: 1px;
+    }
+    table tr {
+      display: block;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 4px var(--shadow-color);
+      background-color: var(--surface-color) !important;
+    }
+    table td {
+      display: block;
+      text-align: right;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-left: 50%;
+      position: relative;
+    }
+    table td:last-child {
+      border-bottom: none;
+    }
+    table td::before {
+      content: attr(data-label);
+      position: absolute;
+      left: 1rem;
+      width: 45%;
+      padding-right: 10px;
+      white-space: nowrap;
+      text-align: left;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .task-cell,
+    .project-name-cell {
+      padding-left: 1rem;
+      text-align: left;
+    }
+    .task-cell::before,
+    .project-name-cell::before {
+      display: none;
+    }
+    .task-cell .task-icons {
+      justify-content: flex-start;
+      padding-top: 0.5rem;
+    }
+    td[data-label=""] {
+      padding: 0.75rem;
+      background-color: var(--row-alt-color);
+    }
+    td[data-label=""]::before {
+      display: none;
+    }
+    td[data-label=""] .task-icons {
+      justify-content: center;
+      gap: 24px;
+    }
+    select,
+    .searchable-dropdown-input {
+      text-align: right;
+    }
+    .searchable-dropdown-input {
+      padding-right: 0.5rem;
+    }
+    .id-container {
+      display: inline-flex;
+      justify-content: flex-end;
+      width: 100%;
+    }
+    td.checkbox-cell {
+      padding-left: 1rem !important;
+      text-align: left !important;
+    }
+    td.checkbox-cell::before {
+      display: none !important;
+    }
+    .new-ticket-row-header,
+    .new-ticket-row-body {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 480px) {
+    body {
+      font-size: 14px;
+    }
+    .modal-content {
+      width: 95%;
+      padding: 1.5rem 1rem;
+    }
+  }
+
+  /* --- Readme Modal Styles --- */
+  #readme-content {
+    line-height: 1.7;
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
+  #readme-content h1,
+  #readme-content h2,
+  #readme-content h3 {
+    color: var(--header-color);
+    margin: 2rem 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    line-height: 1.3;
+  }
+  #readme-content h1 {
+    font-size: 1.8em;
+  }
+  #readme-content h2 {
+    font-size: 1.5em;
+  }
+  #readme-content h3 {
+    font-size: 1.25em;
+  }
+  #readme-content h1:first-child,
+  #readme-content h2:first-child {
+    margin-top: 0;
+  }
+  #readme-content hr {
+    border: none;
+    border-top: 2px solid var(--border-color);
+    margin: 2.5rem 0;
+  }
+  #readme-content ul {
+    list-style-type: disc;
+    padding-left: 2rem;
+    margin-bottom: 1rem;
+  }
+  #readme-content li {
+    margin-bottom: 0.75rem;
+  }
+  #readme-content code {
+    background-color: var(--row-alt-color);
+    border: 1px solid var(--border-color);
+    padding: 0.2em 0.5em;
+    border-radius: 6px;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+  }
+  #readme-content p {
+    margin-bottom: 1rem;
+  }
+  #readme-content strong {
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  /* --- Specific Modal Sizing --- */
+  #readme-modal .modal-content {
+    max-width: 900px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #readme-modal .modal-body {
+    overflow-y: auto;
+  }
+
+  /* ===========================
+   COMPACT HEADER + WARNING BADGE (OVERRIDES)
+   =========================== */
+
+  /* keep the entire header on one row; allow horizontal scroll if needed */
+  .actions-container {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding-block: 0.25rem;
+  }
+  .left-actions {
+    flex: 1 1 auto;
+    min-width: 0;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+  }
+  .right-actions {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+  }
+  .right-actions > * {
+    flex-shrink: 0;
+  } /* prevent “Add New”, To Fix, etc. from wrapping */
+
+  /* tighter controls so everything fits */
+  .filter-panel {
+    gap: 0.5rem;
+  }
+  .filter-item {
+    gap: 0.4rem;
+  }
+  .filter-item label {
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  /* narrower selects and search inputs */
+  #status-filter-select,
+  #project-filter-select,
+  #epic-filter-select {
+    width: 100%;
+  }
+  .search-group {
+    gap: 0.5rem;
+  }
+  .search-wrapper {
+    width: 180px;
+  }
+  .search-wrapper:has(#ticket-number-filter) {
+    width: 110px;
+  }
+  .search-wrapper i {
+    left: 0.5rem;
+  }
+
+  /* consistent heights across inputs & buttons */
+  select.inline-editor,
+  input.inline-editor,
+  #task-search-input,
+  #ticket-number-filter,
+  .action-btn,
+  .cancel-btn,
+  .save-btn {
+    height: 36px;
+    line-height: 36px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  /* dropdown shouldn’t shrink so chevron stays visible */
+  .dropdown-container {
+    flex-shrink: 0;
+  }
+
+  /* warning badge that sits next to ticket age */
+  .ticket-warning {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--warning-color);
+    margin-left: 0.75rem; /* sits just after the age */
+  }
+  .ticket-warning i {
+    font-size: 0.85rem;
+  }
+
+  html {
+    font-size: 90%; /* Reduce everything (that uses rem/em) by 10% */
+  }
+
+  /* --- ADD THIS TO THE END OF YOUR CSS.html FILE --- */
+
+  /* User Controls in Sidebar */
+  .sidebar .user-controls {
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+  }
+
+  .theme-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+  }
+
+  .theme-toggle span {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+
+  /* Toggle Switch Styles */
+  .switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 26px;
+  }
+  .switch input {
+    display: none;
+  }
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--row-hover-color);
+    transition: 0.3s;
+    border-radius: 26px;
+    border: 1px solid var(--border-color);
+  }
+  .slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  body.dark .slider:before {
+    background-color: #4a4a4a;
+  }
+  input:checked + .slider {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+  }
+  input:checked + .slider:before {
+    transform: translateX(18px);
+  }
+
+  /* User Profile Details */
+  .user-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px;
+  }
+
+  .user-profile .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--border-color);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .user-profile .details {
+    flex-grow: 1;
+    min-width: 0; /* Prevents long text from pushing button out */
+  }
+
+  .user-profile .details .name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-profile .details .email {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Logout Button */
+  .logout-button {
+    cursor: pointer;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    transition: background-color 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .logout-button:hover {
+    background-color: var(--row-hover-color);
+    color: var(--danger-color);
+  }
+  .logout-button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* --- ADD THIS TO THE END OF YOUR CSS.html FILE --- */
+
+  .logout-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(17, 24, 39, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    color: white;
+    font-size: 1.2rem;
+  }
+
+  /* --- ADD THIS TO THE END OF YOUR CSS.html FILE --- */
+
+  /* Filter Dropdown Specific Styles */
+  #filter-menu {
+    min-width: 300px; /* Wider dropdown */
+    padding: 0.75rem;
+  }
+
+  .filter-menu-section {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .filter-menu-section:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .filter-menu-section:first-child {
+    padding-top: 0;
+  }
+
+  .filter-menu-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .filter-menu-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .filter-menu-item > label,
+  .filter-menu-item-checkbox > label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  .filter-menu-item select {
+    width: 100%;
+  }
+
+  .filter-menu-item-checkbox {
+    margin-bottom: 0.5rem;
+  }
+  .filter-menu-item-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+  }
+  .filter-menu-item-checkbox:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Style for the "To Fix" button when inside the dropdown */
+  #filter-menu #to-fix-btn {
+    width: 100%;
+    justify-content: flex-start;
+    font-weight: 500;
+    background: none;
+    border: 1px solid transparent; /* Add transparent border for consistent size */
+    box-shadow: none;
+    color: var(--text-primary);
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin: 0; /* REMOVED the negative margin */
+  }
+
+  #filter-menu #to-fix-btn:hover {
+    background-color: var(--row-alt-color);
+    color: var(--accent-color);
+    opacity: 1;
+  }
+
+  #filter-menu #to-fix-btn.active {
+    background-color: var(--accent-bg-light);
+    color: var(--accent-color);
+    font-weight: 600;
+    border-color: var(
+      --accent-color
+    ); /* ADDED: Use a border for the active state */
+  }
+
+  /* --- RECONCILE VIEW STYLES --- */
+
+  /* --- RECONCILE TABLE SIZING --- */
+  #reconcile-table {
+    table-layout: fixed; /* Crucial for respecting column widths */
+    width: 100%;
+  }
+
+  /* WITH this updated block */
+  #reconcile-table th:nth-child(1) {
+    width: 8%;
+  } /* Date */
+  #reconcile-table th:nth-child(2) {
+    width: 8%;
+  } /* Member */
+  #reconcile-table th:nth-child(3) {
+    width: 8%;
+  } /* Project */
+  #reconcile-table th:nth-child(4) {
+    width: 8%;
+  } /* Task */
+  #reconcile-table th:nth-child(5) {
+    width: 28%;
+  } /* Description */
+  #reconcile-table th:nth-child(6) {
+    width: 5%;
+  } /* Duration */
+  #reconcile-table th:nth-child(7) {
+    width: 10%;
+    text-align: center;
+  } /* Action */
+  #reconcile-table th:nth-child(8) {
+    width: 20%;
+  } /* Ticket Number */
+  #reconcile-table th:nth-child(9) {
+    width: 5%;
+  } /* Exclude */
+
+  /* --- RECONCILE VIEW STYLES --- */
+  #reconcile-table td,
+  #reconcile-table th {
+    padding: 0.4rem 0.75rem; /* Make padding smaller */
+    font-size: 0.8rem; /* Make font smaller */
+    vertical-align: middle; /* Align text vertically */
+  }
+
+  #reconcile-table tbody td {
+    cursor: cell;
+  }
+
+  #reconcile-table tbody td:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: -2px;
+  }
+
+  #reconcile-table .disabled-cell {
+    color: var(--text-secondary);
+    /* MODIFIED: Allow text wrapping */
+    white-space: normal;
+    word-break: break-word;
+  }
+  /* Custom styling for the ticket dropdown in Reconcile view */
+  .reconcile-ticket-dropdown .searchable-dropdown-list div {
+    padding: 0.5rem 0.75rem;
+    line-height: 1.4;
+  }
+  .reconcile-ticket-dropdown .searchable-dropdown-list strong {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-primary);
+  }
+  .reconcile-ticket-dropdown .searchable-dropdown-list small {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  /* --- RECONCILE VIEW REFINEMENTS --- */
+
+  /* 1. Add vertical spacing between the table and pagination */
+  #reconcile-pagination-controls {
+    padding-top: 1.5rem;
+    margin-top: 1rem; /* ADD THIS to create more space */
+    padding-bottom: 0.5rem; /* ADD THIS for better balance */
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+  /* 2. Styles for the 'approved' status icon */
+  /* 2. Styles for the 'approved' status icon */
+  .reconcile-status-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  /* Style for COMPLETED items */
+  .reconcile-status-indicator.done {
+    background-color: var(--success-bg-color);
+    color: var(--success-color);
+  }
+  .reconcile-status-indicator.done i {
+    font-size: 0.7rem;
+  }
+  /* Style for TO DO items */
+  .reconcile-status-indicator.todo {
+    background-color: #dbeafe; /* Light blue */
+    color: #3b82f6; /* Medium blue */
+  }
+  .reconcile-status-indicator.todo i {
+    font-size: 0.45rem; /* Make the circle icon smaller */
+  }
+  .reconcile-status-indicator i {
+    font-size: 0.7rem;
+  }
+
+  /* 3. Helper to align the icon and text in the first cell */
+  .reconcile-week-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* --- RECONCILE VIEW ALIGNMENT --- */
+  #reconcile-table th:nth-child(1), /* Week Header */
+#reconcile-table td:nth-child(1),   /* Week Cell */
+#reconcile-table th:nth-child(6), /* Duration Header */
+#reconcile-table td:nth-child(6),  /* Duration Cell */
+#reconcile-table th:nth-child(8) {
+    /* Exclude Header */
+    text-align: center;
+  }
+
+  .reconcile-week-cell {
+    justify-content: center; /* Horizontally center the icon and text */
+  }
+
+  /* --- NEW: Styles for the Exclude column --- */
+  .exclude-cell {
+    text-align: center;
+    vertical-align: middle;
+  }
+  .exclude-cell input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  /* --- RECONCILE VIEW FINAL REFINEMENTS --- */
+
+  /* 1. Force the flex container in the week cell to be centered */
+  #reconcile-table td:nth-child(1) .reconcile-week-cell {
+    justify-content: center;
+  }
+
+  /* 2. Style for the actively selected item in a dropdown via keyboard */
+  .searchable-dropdown-list > .dropdown-active {
+    background-color: var(--accent-bg-light) !important;
+    color: var(--accent-color);
+    font-weight: 500;
+  }
+
+  /* 3. New success indicator for a single cell */
+  @keyframes cell-success-fade {
+    from {
+      background-color: var(--success-bg-color);
+    }
+    to {
+      background-color: transparent;
+    }
+  }
+  .cell-success-highlight {
+    /* Use a 2-second animation as requested */
+    animation: cell-success-fade 2s ease-out;
+  }
+
+  /* --- HIGHLIGHT FOR REQUIRED/INCOMPLETE FIELDS IN MODAL --- */
+  .sidebar-property-editable.has-warning .prop-label {
+    color: var(--warning-color);
+    font-weight: 600; /* Make the label more prominent */
+  }
+
+  .sidebar-property-editable.has-warning select,
+  .sidebar-property-editable.has-warning input,
+  .sidebar-property-editable.has-warning .searchable-dropdown-input {
+    border-color: var(--warning-color) !important;
+    box-shadow: 0 0 0 1px var(--warning-color); /* Adds a subtle glow for better visibility */
+  }
+
+  /* REPLACE the existing style for the date field container */
+  .date-field-container {
+    display: flex;
+    flex-direction: column; /* This stacks the date input and clear button vertically */
+    align-items: flex-start; /* This aligns them to the left */
+    gap: 0.25rem; /* Adds a small space between them */
+  }
+
+  /* REPLACE the existing style for the clear date button */
+  .clear-date-btn {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 2px 8px; /* Compact padding */
+    border-radius: 4px;
+    line-height: 1.5;
+    transition: all 0.2s;
+    text-decoration: none; /* remove underline */
+  }
+
+  .clear-date-btn:hover {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+    background-color: var(--row-alt-color);
+  }
+
+  /* ADD this new style for the caption */
+  .date-field-caption {
+    display: block; /* Ensures it takes its own line */
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    font-style: italic;
+  }
+  .clear-date-btn.is-hidden {
+    visibility: hidden;
+  }
+
+  /* --- REPLACE these styles for the unsaved date warning --- */
+  .editable-field-wrapper {
+    position: relative; /* This is crucial for positioning the tooltip */
+  }
+
+  .date-field-warning-tooltip {
+    display: none; /* Hidden by default */
+    position: absolute;
+    bottom: calc(
+      100% + 8px
+    ); /* Position above the input field with some margin */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(
+      --warning-color
+    ); /* Use warning color for background */
+    color: #fff; /* White text for contrast */
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 10;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* This creates the little triangle/arrow pointing down */
+  .date-field-warning-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: var(--warning-color) transparent transparent transparent;
+  }
+
+  /* When the wrapper has the 'is-dirty' class, show the tooltip */
+  .editable-field-wrapper.is-dirty .date-field-warning-tooltip {
+    display: block;
+  }
+
+  /* 3. Make the ticket list the primary scrollable area */
+  #new-tickets-container {
+    overflow-y: auto; /* Adds a scrollbar only when needed */
+    flex-grow: 1; /* Allows the list to fill the available space */
+  }
+
+  /* --- ADD TASK MODAL: BULK SECTION --- */
+  .bulk-add-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--row-alt-color);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+  }
+
+  /* --- ADD TASK MODAL: ADVANCED TOGGLE IN TICKET ROW --- */
+  .new-ticket-row .advanced-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-top: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+  .new-ticket-row .advanced-toggle-btn:hover {
+    background-color: var(--row-hover-color);
+    color: var(--accent-color);
+  }
+  .new-ticket-row .advanced-toggle-btn .toggle-icon {
+    margin-right: 6px;
+    transition: transform 0.2s ease-in-out;
+  }
+  .new-ticket-row .advanced-fields-container.is-open .toggle-icon {
+    transform: rotate(90deg);
+  }
+
+  /* --- TICKET DETAIL MODAL: ADVANCED TOGGLE --- */
+  .sidebar-section.advanced-details-section {
+    border-top: 1px solid var(--border-color);
+    padding-top: 1.5rem;
+    margin-top: 1.5rem;
+  }
+  .advanced-details-toggle {
+    width: 100%;
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+    margin-bottom: 1rem;
+  }
+  .advanced-details-toggle:hover {
+    background-color: var(--row-hover-color);
+    color: var(--text-primary);
+  }
+  .advanced-details-toggle .toggle-icon {
+    transition: transform 0.2s ease-in-out;
+  }
+  .advanced-details-toggle.is-open .toggle-icon {
+    transform: rotate(180deg);
+  }
+  .advanced-details-content.is-hidden {
+    display: none;
+  }
+
+  .left-panel h3 {
+    margin: 0;
+    color: var(--header-color);
+  }
+  .left-panel .panel-description {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: -0.5rem;
+    line-height: 1.5;
+  }
+
+  #new-tickets-table-wrapper {
+    flex-grow: 1; /* Allows the wrapper to fill available space */
+    border: 1px solid var(--border-color); /* A border helps define the scroll area */
+    box-shadow: none;
+    border-radius: 8px; /* Rounded corners for a cleaner look */
+    overflow-y: auto; /* This is the key change: enables vertical scrolling */
+    min-height: 0; /* Prevents the container from overflowing its parent */
+  }
+  #new-tickets-table-wrapper table {
+    table-layout: fixed;
+  }
+  #new-tickets-table-wrapper th {
+    background-color: var(--row-alt-color);
+    font-size: 0.75rem;
+  }
+  #new-tickets-table-wrapper td {
+    padding: 0.25rem 0.5rem;
+    vertical-align: top;
+  }
+
+  #new-tickets-table-wrapper input,
+  #new-tickets-table-wrapper textarea,
+  #new-tickets-table-wrapper select {
+    background: transparent;
+    border: 1px solid transparent;
+    box-shadow: none;
+    padding: 0.5rem;
+    border-radius: 4px;
+    width: 100%;
+  }
+  #new-tickets-table-wrapper input:hover,
+  #new-tickets-table-wrapper textarea:hover,
+  #new-tickets-table-wrapper select:hover {
+    border-color: var(--border-color);
+  }
+  #new-tickets-table-wrapper input:focus,
+  #new-tickets-table-wrapper textarea:focus,
+  #new-tickets-table-wrapper select:focus {
+    border-color: var(--accent-color);
+    background-color: var(--surface-color);
+  }
+
+  /* ADD THIS: Style for the new icons in the labels */
+  .left-panel .detail-field label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+  }
+  .left-panel .detail-field label .fa-fw {
+    text-align: center; /* Ensures icons are aligned */
+    color: var(--text-secondary);
+  }
+
+  /* UPDATE THIS RULE for individual scrolling */
+  .left-panel {
+    flex: 1;
+    min-width: 320px;
+    max-width: 380px;
+    background-color: var(--row-alt-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    border: 1px solid var(--border-color);
+    overflow-y: auto; /* This line enables scrolling */
+  }
+
+  /* --- MODAL STYLES (REVISED) --- */
+
+  /* 1. A general style for all default modals */
+  .modal-content {
+    background-color: var(--surface-color);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 700px; /* Default max-width for smaller modals */
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+      0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Prevents content from spilling out */
+    max-height: 90vh; /* Good default for smaller modals */
+  }
+  .modal-content > .modal-body {
+    padding: 1rem 2rem;
+    overflow-y: auto;
+  }
+
+  /* 2. A specific, overriding set of rules JUST for the Add Task modal */
+  #add-task-modal .modal-content {
+    width: 95%;
+    max-width: 1600px;
+    height: 95vh;
+  }
+  #add-task-modal .modal-header,
+  #add-task-modal .modal-footer {
+    flex-shrink: 0; /* Prevents header/footer from shrinking */
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+  #add-task-modal .modal-footer {
+    border-bottom: none;
+    border-top: 1px solid var(--border-color);
+    padding: 1rem 2rem;
+  }
+  #add-task-modal .modal-body {
+    flex-grow: 1;
+    display: flex;
+    gap: 1.5rem;
+    padding: 1.5rem 2rem;
+    min-height: 0; /* Critical for flexbox scrolling */
+    overflow: hidden; /* This is key! */
+  }
+
+  /* 3. Re-apply styles for the panels within the Add Task Modal */
+  #add-task-modal .left-panel {
+    flex: 0 0 380px; /* Fixed width */
+    overflow-y: auto;
+    padding-right: 1.5rem; /* Space for the scrollbar */
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  #add-task-modal .right-panel {
+    flex-grow: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow-y: auto;
+  }
+  .advanced-details-toggle > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  /* Add this to CSS.html for icon alignment in the detail modal */
+  .ticket-details-sidebar .prop-label {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 500;
+  }
+  .ticket-details-sidebar .prop-label .fa-fw {
+    color: var(--text-secondary);
+  }
+
+  /* =======================================
+   REFINED DASHBOARD / MODERN WIZARD THEME
+   ======================================= */
+
+  /* --- New Color Palette Variables --- */
+  :root {
+    --wizard-glow-soft: rgba(129, 140, 248, 0.1);
+    --wizard-glow-hard: rgba(129, 140, 248, 0.3);
+    --wizard-gold: #f0e68c;
+    --wizard-purple: #a78bfa;
+    --wizard-deep-blue: #1e3a8a;
+  }
+  .dark {
+    --wizard-glow-soft: rgba(167, 139, 250, 0.15);
+    --wizard-glow-hard: rgba(167, 139, 250, 0.4);
+    --wizard-gold: #f0e68c;
+    --wizard-purple: #c4b5fd;
+    --wizard-deep-blue: #93c5fd;
+  }
+
+  #dashboard-view-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    height: 100%;
+    overflow-y: auto;
+    padding: 1.5rem; /* Increased padding */
+  }
+
+  /* --- Refined Header --- */
+  .dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(
+      135deg,
+      rgba(30, 41, 59, 0.9),
+      rgba(17, 24, 39, 0.95)
+    );
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+  .dark .dashboard-header {
+    background: linear-gradient(
+      135deg,
+      rgba(51, 65, 85, 0.9),
+      rgba(15, 23, 42, 0.95)
+    );
+  }
+  .dashboard-title {
+    font-family: "Lora", "Georgia", serif; /* More magical font */
+    font-size: 2rem;
+    color: var(--wizard-gold);
+    text-shadow: 0 0 5px rgba(240, 230, 140, 0.5),
+      0 0 10px rgba(240, 230, 140, 0.3);
+  }
+  .dashboard-filters {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .filter-group label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+  }
+  .filter-group select,
+  .filter-group input[type="date"] {
+    background-color: var(--bg-color);
+    border: 1px solid var(--border-color);
+    height: 36px;
+    padding: 0 0.5rem;
+    border-radius: 6px;
+  }
+
+  /* --- Refined Grid --- */
+  .dashboard-grid {
+    display: grid;
+    gap: 1.5rem;
+  }
+  .dashboard-grid.top-stats {
+    grid-template-columns: 1fr 2fr;
+  }
+  .dashboard-grid.mid-section {
+    grid-template-columns: 2.5fr 1fr;
+  }
+  .dashboard-grid.bottom-lists {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* --- Refined Cards --- */
+  .dashboard-card {
+    background-color: var(--surface-color);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    padding: 1.5rem;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07),
+      0 2px 4px -2px rgba(0, 0, 0, 0.07), 0 0 0 1px var(--border-color);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  .dark .dashboard-card {
+    background: radial-gradient(
+      circle,
+      rgba(30, 41, 59, 0.8) 0%,
+      rgba(15, 23, 42, 0.7) 100%
+    );
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -2px rgba(0, 0, 0, 0.1), 0 0 0 1px var(--border-color);
+  }
+  .dashboard-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 10px 15px -3px var(--wizard-glow-soft),
+      0 4px 6px -4px var(--wizard-glow-hard), 0 0 0 1px var(--accent-color);
+    z-index: 10;
+  }
+  .dashboard-card h3 {
+    font-family: "Lora", "Georgia", serif;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 600; /* Bolder title */
+  }
+  .dark .dashboard-card h3 {
+    color: #e5e7eb;
+  }
+
+  /* --- Card Content & Contrast --- */
+  .stat-number {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    line-height: 1;
+    text-shadow: 0 2px 10px var(--wizard-glow-soft);
+  }
+  .card-bg-icon {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    font-size: 6rem;
+    color: var(--text-primary);
+    opacity: 0.04;
+    transform: rotate(-10deg);
+  }
+  .dark .card-bg-icon {
+    color: white;
+    opacity: 0.08;
+  }
+
+  .at-risk-card .risk-breakdown {
+    display: flex;
+    justify-content: space-around;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .risk-item {
+    text-align: center;
+  }
+  .risk-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600; /* Bolder */
+    color: var(--text-secondary); /* Higher contrast */
+  }
+  .risk-count {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700; /* Bolder */
+    color: var(--text-primary);
+  }
+  .dark .risk-count {
+    color: white;
+  }
+
+  /* --- Side Stats Specific Colors --- */
+  .workload-card .stat-number {
+    color: var(--wizard-purple);
+  }
+  .to-fix-card .stat-number {
+    color: var(--warning-color);
+  }
+  .side-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  /* --- Chart --- */
+  .chart-card {
+    height: 400px;
+  }
+
+  /* --- Ticket Lists --- */
+  .list-card {
+    display: flex;
+    flex-direction: column;
+  }
+  .ticket-list-container {
+    overflow-y: auto;
+    flex-grow: 1;
+    margin: -0.5rem;
+    padding: 0.5rem;
+  }
+  .dashboard-ticket-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    background-color: transparent;
+    border: 1px solid var(--border-color); /* Add border */
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .dark .dashboard-ticket-item {
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+  .dashboard-ticket-item:hover {
+    background-color: var(--accent-bg-light);
+    border-color: var(--accent-color);
+    transform: translateX(5px);
+  }
+  .dashboard-ticket-item:hover .ticket-title {
+    color: var(--accent-color);
+  }
+
+  .ticket-info .ticket-id {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+  .ticket-info .ticket-title {
+    font-weight: 600; /* Bolder title */
+    color: var(--text-primary);
+    transition: color 0.2s;
+  }
+  .dark .ticket-info .ticket-title {
+    color: white;
+  }
+  .ticket-priority-tag {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+  }
+
+  /* --- ADD THESE STYLES TO THE END OF CSS.html --- */
+
+  /* General Modal Header Style Enhancement */
+  .modal-header h2 {
+    font-size: 1.25rem; /* Larger title */
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  /* Styles for "Create New Epic" Modal */
+  #new-epic-modal .modal-header h2::before {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    content: "\f0e7"; /* fas fa-bolt (lightning) */
+    font-size: 1rem;
+    color: var(--accent-color);
+  }
+  #new-epic-modal #new-epic-name-input {
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+
+  /* Styles for "Set Start Date" Modal */
+  #open-to-complete-modal .modal-header h2::before {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    content: "\f073"; /* fas fa-calendar-alt */
+    font-size: 1rem;
+    color: var(--accent-color);
+  }
+  #open-to-complete-modal .modal-body strong {
+    font-weight: 600;
+    color: var(--text-primary);
+    background-color: var(--row-alt-color);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+  }
+  /* This styles the new div we added to the HTML */
+  .date-picker-area {
+    background-color: var(--row-alt-color);
+    border: 1px solid var(--border-color);
+    padding: 1rem;
+    border-radius: 8px;
+  }
+  .date-picker-area label {
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+
+  .advanced-fields-row td {
+    padding: 0.5rem 1rem 1rem 1rem !important;
+    background-color: var(--nested-bg-color);
+  }
+
+  .advanced-fields-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px dashed var(--border-color);
+    border-radius: 6px;
+  }
+
+  .advanced-fields-container .detail-field label {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .advanced-toggle-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 0.9rem;
+    line-height: 1;
+    transition: all 0.2s ease;
+  }
+
+  .advanced-toggle-btn:hover {
+    background-color: var(--row-hover-color);
+  }
+
+  .advanced-toggle-btn.active {
+    background-color: var(--accent-bg-light);
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+  }
+
+  .advanced-fields-container .detail-field {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* This targets the new date containers we are adding */
+  .advanced-fields-container .override-assigned-date-container,
+  .advanced-fields-container .override-started-date-container,
+  .advanced-fields-container .override-completed-date-container {
+    display: none; /* Hidden by default */
+  }
+
+  .modal-header .bulk-settings-toggle-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    /* Position it between the title and the close button */
+    margin: 0 auto 0 2rem;
+  }
+
+  .modal-header .bulk-settings-toggle-container span {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  /* This class will be added by JavaScript to hide the left panel */
+  .add-task-layout.bulk-settings-off .left-panel {
+    display: none;
+  }
+
+  /* ADD this code to the end of your CSS.html file */
+  #reconcile-table .create-ticket-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    justify-content: center;
+  }
+
+  #reconcile-table .create-ticket-btn:hover {
+    background-color: var(--row-hover-color);
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+  }
+
+  #reconcile-create-ticket-modal .detail-field label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+  }
+
+  #reconcile-create-ticket-modal .detail-field label .fa-fw {
+    color: var(--text-secondary);
+  }
+
+  #reconcile-create-ticket-modal textarea {
+    resize: vertical;
+  }
+
+  #rct-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+
+  /* REPLACE the existing #reconcile-table th width styles with this block */
+  #reconcile-table th:nth-child(1) {
+    width: 8%;
+  } /* Date */
+  #reconcile-table th:nth-child(2) {
+    width: 8%;
+  } /* Member */
+  #reconcile-table th:nth-child(3) {
+    width: 8%;
+  } /* Project */
+  #reconcile-table th:nth-child(4) {
+    width: 8%;
+  } /* Task */
+  #reconcile-table th:nth-child(5) {
+    width: 28%;
+  } /* Description */
+  #reconcile-table th:nth-child(6) {
+    width: 5%;
+  } /* Duration */
+  #reconcile-table th:nth-child(7) {
+    width: 10%;
+  } /* Action */
+  #reconcile-table th:nth-child(8) {
+    width: 20%;
+  } /* Ticket Number */
+  #reconcile-table th:nth-child(9) {
+    width: 5%;
+  } /* Exclude */
+
+  /* ADD this new code to the end of your CSS.html file */
+  .date-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+  .date-input-wrapper input[type="date"] {
+    width: 100%;
+  }
+  .date-format-display {
+    position: absolute;
+    left: 12px;
+    pointer-events: none;
+    background-color: var(--surface-color);
+    padding: 0 4px;
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 0.875rem;
+    line-height: 1;
+  }
+  .dark .date-format-display {
+    background-color: var(--bg-color);
+  }
+
+  /* This trick hides the browser's default date text (e.g., mm/dd/yyyy) */
+  .date-input-wrapper input[type="date"]::-webkit-datetime-edit-text,
+  .date-input-wrapper input[type="date"]::-webkit-datetime-edit-month-field,
+  .date-input-wrapper input[type="date"]::-webkit-datetime-edit-day-field,
+  .date-input-wrapper input[type="date"]::-webkit-datetime-edit-year-field {
+    -webkit-appearance: none;
+    color: transparent;
+  }
+
+  /* ADD these new styles to the end of the file */
+  .required-indicator {
+    color: var(--danger-color);
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-left: 0.5rem;
+  }
+
+  #reconcile-table .action-cell {
+    text-align: center;
+  }
+</style>
