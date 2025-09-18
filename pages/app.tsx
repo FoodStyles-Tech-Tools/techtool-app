@@ -11,7 +11,7 @@ import { signOut } from "next-auth/react";
 
 const FAVICON_URL =
   process.env.FAVICON_URL ??
-  "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>";
+  "/favicons/favicon.svg?v=2";
 
 type AppPageProps = {
   appHtml: string;
