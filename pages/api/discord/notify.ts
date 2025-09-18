@@ -58,7 +58,7 @@ export default async function handler(
   let discordMap: Record<number, DiscordUserInfo> = {};
   if (assigneeIds.length > 0) {
     const { data, error } = await supabase
-      .from<DiscordUserInfo>("user")
+      .from("user")
       .select("id, discordId, name")
       .in("id", assigneeIds);
 
@@ -67,7 +67,7 @@ export default async function handler(
     } else if (data) {
       discordMap = data.reduce<Record<number, DiscordUserInfo>>(
         (acc, user) => {
-          acc[user.id] = user;
+          acc[user.id] = user as DiscordUserInfo;
           return acc;
         },
         {}
