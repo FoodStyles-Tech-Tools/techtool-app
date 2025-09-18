@@ -172,7 +172,7 @@ export default function AppPage({
         id="webapp-root"
         dangerouslySetInnerHTML={{ __html: appHtml }}
       />
-      <Script src="/js/app.js" strategy="afterInteractive" />
+      <Script src="/js/app.js?v=3" strategy="afterInteractive" />
     </>
   );
 }
