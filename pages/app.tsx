@@ -138,10 +138,10 @@ export default function AppPage({
       </Head>
       <Script
         src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
-        strategy="beforeInteractive"
+        strategy="afterInteractive"
       />
-      <Script src="https://cdn.jsdelivr.net/npm/chart.js" strategy="beforeInteractive" />
-      <Script id="supabase-init" strategy="beforeInteractive">
+      <Script src="https://cdn.jsdelivr.net/npm/chart.js" strategy="afterInteractive" />
+      <Script id="supabase-init" strategy="afterInteractive">
         {`
           console.log("Setting up Supabase environment variables...");
           window.SUPABASE_URL = ${JSON.stringify(supabaseUrl)};
