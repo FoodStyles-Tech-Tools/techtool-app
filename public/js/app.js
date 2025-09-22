@@ -347,7 +347,9 @@
       }
 
       tableWrapper.style.display = "block";
-      addNavListeners();
+      
+      // Add navigation listeners with retry mechanism for production
+      addNavListenersWithRetry();
       addBulkEditListeners();
       addFilterListeners();
       addModalEventListeners();
@@ -1680,26 +1682,72 @@
     const clearUrlFilterBtn = document.getElementById("clear-url-filter-btn");
     if (clearUrlFilterBtn) clearUrlFilterBtn.style.display = "none";
   }
+
+  function addNavListenersWithRetry(retryCount = 0) {
+    const maxRetries = 5;
+    const retryDelay = 100; // 100ms delay between retries
+    
+    // Try to add navigation listeners
+    addNavListeners();
+    
+    // Check if elements were found
+    const ticketsButton = document.getElementById("nav-tickets");
+    const ticketsDropdown = document.getElementById("nav-tickets-dropdown");
+    
+    // If elements not found and we haven't exceeded max retries, try again
+    if ((!ticketsButton || !ticketsDropdown) && retryCount < maxRetries) {
+      console.log(`Navigation elements not ready, retrying... (${retryCount + 1}/${maxRetries})`);
+      setTimeout(() => {
+        addNavListenersWithRetry(retryCount + 1);
+      }, retryDelay);
+    } else if (!ticketsButton || !ticketsDropdown) {
+      console.error("Failed to initialize navigation after maximum retries");
+    } else {
+      console.log("Navigation listeners successfully initialized");
+    }
+  }
+
   function addNavListeners() {
     // Handle Tickets dropdown
     const ticketsDropdown = document.getElementById("nav-tickets-dropdown");
     const ticketsButton = document.getElementById("nav-tickets");
     const dropdownContent = document.getElementById("tickets-dropdown-content");
     
-    if (ticketsButton) {
-      ticketsButton.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const isActive = ticketsDropdown.classList.contains("active");
-        
-        if (isActive) {
-          // Collapse
-          ticketsDropdown.classList.remove("active");
-        } else {
-          // Expand
-          ticketsDropdown.classList.add("active");
-        }
+    console.log("Navigation elements found:", {
+      ticketsDropdown: !!ticketsDropdown,
+      ticketsButton: !!ticketsButton,
+      dropdownContent: !!dropdownContent
+    });
+    
+    if (ticketsButton && ticketsDropdown) {
+      // Prevent duplicate event listeners
+      if (!ticketsButton.hasAttribute('data-listener-added')) {
+        ticketsButton.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const isActive = ticketsDropdown.classList.contains("active");
+          console.log("Ticket button clicked, isActive:", isActive);
+          
+          if (isActive) {
+            // Collapse
+            ticketsDropdown.classList.remove("active");
+            console.log("Collapsing tickets dropdown");
+          } else {
+            // Expand
+            ticketsDropdown.classList.add("active");
+            console.log("Expanding tickets dropdown");
+          }
+        });
+        ticketsButton.setAttribute('data-listener-added', 'true');
+        console.log("Navigation event listener added successfully");
+      } else {
+        console.log("Navigation event listener already added");
+      }
+    } else {
+      console.error("Missing navigation elements:", {
+        ticketsButton: !!ticketsButton,
+        ticketsDropdown: !!ticketsDropdown
       });
     }
 
@@ -6313,6 +6361,17 @@
   // Run cleanup immediately and on DOM ready
   cleanupModals();
   document.addEventListener('DOMContentLoaded', cleanupModals);
+  
+  // Ensure navigation is initialized on DOM ready (production fallback)
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check if navigation is already initialized
+    const ticketsButton = document.getElementById("nav-tickets");
+    if (ticketsButton && !ticketsButton.hasAttribute('data-listener-added')) {
+      console.log("Initializing navigation on DOMContentLoaded (production fallback)");
+      addNavListeners();
+      ticketsButton.setAttribute('data-listener-added', 'true');
+    }
+  });
 
   function showProjectDetailModal(projectId) {
     const project = appData.allProjects.find((p) => p.id == projectId);
