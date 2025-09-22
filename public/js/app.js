@@ -314,8 +314,8 @@
       appData.allProjects = projectData;
       appData.displayProjects = projectData;
       appData.projects = projectData.map((p) => ({
-        id: p.id,
-        name: p.projectName,
+        ...p,
+        name: p.projectName, // Add name property for backward compatibility
       }));
       appData.users = memberData.map((m) => m.clockify_name);
       appData.teamMembers = userData.map((u) => ({ id: u.id, name: u.name }));
@@ -1453,17 +1453,23 @@
       });
 
     const addProjectModal = document.getElementById("add-project-modal");
-    addProjectModal.addEventListener("click", handleAddProjectModalClick);
-    addProjectModal.addEventListener("change", handleAddProjectModalChange);
-    document
-      .getElementById("submit-new-project-btn")
-      .addEventListener("click", submitNewProject);
-    document
-      .getElementById("update-selected-btn")
-      .addEventListener("click", openBulkUpdateModal);
-    document
-      .getElementById("confirm-bulk-update-btn")
-      .addEventListener("click", () => {
+    if (addProjectModal) {
+      addProjectModal.addEventListener("click", handleAddProjectModalClick);
+      addProjectModal.addEventListener("change", handleAddProjectModalChange);
+    }
+    
+    const submitNewProjectBtn = document.getElementById("submit-new-project-btn");
+    if (submitNewProjectBtn) {
+      submitNewProjectBtn.addEventListener("click", submitNewProject);
+    }
+    const updateSelectedBtn = document.getElementById("update-selected-btn");
+    if (updateSelectedBtn) {
+      updateSelectedBtn.addEventListener("click", openBulkUpdateModal);
+    }
+    
+    const confirmBulkUpdateBtn = document.getElementById("confirm-bulk-update-btn");
+    if (confirmBulkUpdateBtn) {
+      confirmBulkUpdateBtn.addEventListener("click", () => {
         const updates = {};
         const fields = {
           projectId: document.querySelector(
@@ -1484,6 +1490,8 @@
         if (Object.keys(updates).length > 0) executeBulkUpdate(updates);
         else showToast("No changes were selected.", "error");
       });
+    }
+    
     document.querySelectorAll(".cancel-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.target.closest(".modal-overlay");
@@ -1726,6 +1734,13 @@
         document
           .getElementById("readme-btn")
           .addEventListener("click", showReadmeModal);
+
+        const addProjectBtn = document.getElementById("add-project-btn");
+        if (addProjectBtn) {
+          // Remove existing listener to prevent duplicates
+          addProjectBtn.removeEventListener("click", showAddProjectModal);
+          addProjectBtn.addEventListener("click", showAddProjectModal);
+        }
 
         currentView = view;
         console.log("🎯 currentView set to:", currentView); // Debug log
@@ -1976,6 +1991,7 @@
     // Hide all view wrappers and the main action bar initially
     mainTableWrapper.style.display = "none";
     document.getElementById("simple-incomplete-wrapper").style.display = "none";
+    document.getElementById("projects-view-wrapper").style.display = "none";
     const integratedFilters = document.getElementById("integrated-filters");
     if (integratedFilters) integratedFilters.style.display = "none";
     reconcileWrapper.style.display = "none";
@@ -2010,6 +2026,14 @@
       // Handle simple incomplete rendering
       renderSimpleIncompleteView();
       return; // Exit early for incomplete view
+    } else if (currentView === "projects") {
+      // --- Projects View ---
+      document.getElementById("projects-view-wrapper").style.display = "block";
+      rightActions.style.display = "none"; // Hide main action buttons for projects view
+      
+      // Handle projects rendering
+      renderProjectsView();
+      return; // Exit early for projects view
     } else if (currentView === "reconcile") {
       // --- Reconcile View ---
       reconcileWrapper.style.display = "block";
@@ -2190,6 +2214,167 @@
 
   // Track if this is the first time loading the incomplete view
   let isFirstIncompleteLoad = true;
+
+  // Projects view rendering function
+  function renderProjectsView() {
+    const projectsList = document.getElementById("projects-list");
+    if (!projectsList) {
+      console.error("Projects list container not found");
+      return;
+    }
+
+    // Check if projects data exists
+    if (!appData.projects || appData.projects.length === 0) {
+      console.warn("No projects data available");
+      projectsList.innerHTML = '<div class="no-projects">No projects available. Click "Add Project" to create your first project.</div>';
+      return;
+    }
+
+    console.log("Rendering projects view with", appData.projects.length, "projects");
+    console.log("Projects data:", appData.projects);
+    console.log("First project sample:", appData.projects[0]);
+
+    // Get project statistics
+    const projectStats = appData.projects.map(project => {
+      const projectTickets = appData.allTickets.filter(ticket => ticket.projectId == project.id);
+      const completedTickets = projectTickets.filter(ticket => ticket.status === "Completed").length;
+      const inProgressTickets = projectTickets.filter(ticket => ticket.status === "In Progress").length;
+      const totalTickets = projectTickets.length;
+      
+      return {
+        ...project,
+        name: project.projectName, // Add name property for backward compatibility
+        totalTickets,
+        completedTickets,
+        inProgressTickets,
+        completionRate: totalTickets > 0 ? Math.round((completedTickets / totalTickets) * 100) : 0
+      };
+    });
+
+    // Sort projects by name
+    projectStats.sort((a, b) => (a.projectName || '').localeCompare(b.projectName || ''));
+
+    projectsList.innerHTML = projectStats.map(project => `
+      <div class="project-card" data-project-id="${project.id}">
+        <div class="project-actions">
+          <button class="project-action-btn" onclick="editProject(${project.id})" title="Edit Project">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="project-action-btn" onclick="deleteProject(${project.id})" title="Delete Project">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+        
+        <div class="project-card-header">
+          <div>
+            <h3 class="project-name">${escapeHtml(project.name)}</h3>
+            <p class="project-owner">Owner: ${escapeHtml(project.projectOwner || 'Unassigned')}</p>
+          </div>
+        </div>
+        
+        <div class="project-stats">
+          <div class="project-stat">
+            <i class="fas fa-tasks"></i>
+            <span>${project.totalTickets} tickets</span>
+          </div>
+          <div class="project-stat">
+            <i class="fas fa-check-circle"></i>
+            <span>${project.completedTickets} completed</span>
+          </div>
+          <div class="project-stat">
+            <i class="fas fa-clock"></i>
+            <span>${project.inProgressTickets} in progress</span>
+          </div>
+          <div class="project-stat">
+            <i class="fas fa-percentage"></i>
+            <span>${project.completionRate}% complete</span>
+          </div>
+        </div>
+        
+        <p class="project-description">${escapeHtml(project.description || 'No description available')}</p>
+      </div>
+    `).join('');
+
+    // Add click event listeners to project cards
+    document.querySelectorAll('.project-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        // Don't trigger if clicking on action buttons
+        if (e.target.closest('.project-actions')) return;
+        
+        const projectId = card.dataset.projectId;
+        showProjectTickets(projectId);
+      });
+    });
+  }
+
+  // Show tickets for a specific project
+  function showProjectTickets(projectId) {
+    const project = appData.projects.find(p => p.id == projectId);
+    if (!project) return;
+
+    // Filter tickets for this project
+    const projectTickets = appData.allTickets.filter(ticket => ticket.projectId == projectId);
+    
+    // Switch to all tickets view and filter by project
+    currentView = "all";
+    document.getElementById("project-filter-select").value = projectId;
+    selectedProjectFilter = projectId;
+    
+    // Re-render the view
+    applyFilterAndRender();
+    
+    showToast(`Showing tickets for project: ${project.name}`, "info");
+  }
+
+  // Edit project function
+  function editProject(projectId) {
+    const project = appData.projects.find(p => p.id == projectId);
+    if (!project) return;
+
+    // Open the existing project detail modal
+    showProjectDetailModal(projectId);
+  }
+
+  // Delete project function
+  async function deleteProject(projectId) {
+    const project = appData.projects.find(p => p.id == projectId);
+    if (!project) return;
+
+    // Check if project has tickets
+    const projectTickets = appData.allTickets.filter(ticket => ticket.projectId == projectId);
+    if (projectTickets.length > 0) {
+      showToast(`Cannot delete project "${project.projectName}" - it has ${projectTickets.length} tickets. Please reassign or delete tickets first.`, "error");
+      return;
+    }
+
+    // Confirm deletion
+    if (confirm(`Are you sure you want to delete project "${project.projectName}"?`)) {
+      try {
+        // Delete from database
+        const { error } = await window.supabaseClient
+          .from("project")
+          .delete()
+          .eq("id", projectId);
+          
+        if (error) {
+          showToast(`Error deleting project: ${error.message}`, "error");
+          return;
+        }
+        
+        // Remove from local data
+        appData.projects = appData.projects.filter(p => p.id != projectId);
+        
+        // Re-render projects view
+        renderProjectsView();
+        
+        showToast(`Project "${project.projectName}" deleted successfully`, "success");
+        
+      } catch (error) {
+        console.error("Error deleting project:", error);
+        showToast("Error deleting project. Please try again.", "error");
+      }
+    }
+  }
 
   // Simple rendering function for incomplete tickets
   function renderSimpleIncompleteView() {
@@ -5914,6 +6099,220 @@
       cancelBtn.onclick = () => close(null);
     });
   }
+
+  function showAddProjectModal() {
+    console.log("Add Project button clicked");
+    
+    // Remove any existing modal first
+    const existingModal = document.getElementById('add-project-modal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Create modal HTML
+    const modalHTML = `
+      <div id="add-project-modal" class="modal" style="display: flex;">
+        <div class="modal-content" style="max-width: 600px;">
+          <div class="modal-header">
+            <h3>Add New Project</h3>
+            <button class="modal-close" id="close-add-project-modal">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="new-project-name">Project Name *</label>
+              <input type="text" id="new-project-name" class="form-input" placeholder="Enter project name" required>
+            </div>
+            <div class="form-group">
+              <label for="new-project-description">Description</label>
+              <textarea id="new-project-description" class="form-textarea" placeholder="Enter project description" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="new-project-owner">Project Owner</label>
+              <select id="new-project-owner" class="form-select">
+                <option value="">Select owner...</option>
+                ${appData.teamMembers.map(member => 
+                  `<option value="${member.id}">${member.name}</option>`
+                ).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="cancel-btn" onclick="closeAddProjectModal()">Cancel</button>
+            <button class="primary-btn" onclick="saveNewProject()">Create Project</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Add modal to body
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    console.log("Modal added to DOM");
+    
+    // Add click-outside-to-close functionality
+    const modal = document.getElementById('add-project-modal');
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          closeAddProjectModal();
+        }
+      });
+      
+      // Add close button event listener
+      const closeBtn = document.getElementById('close-add-project-modal');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          closeAddProjectModal();
+        });
+      }
+      
+      // Add ESC key listener
+      const escHandler = (e) => {
+        if (e.key === 'Escape') {
+          closeAddProjectModal();
+          document.removeEventListener('keydown', escHandler);
+        }
+      };
+      document.addEventListener('keydown', escHandler);
+    }
+    
+    // Focus on project name input
+    setTimeout(() => {
+      const nameInput = document.getElementById('new-project-name');
+      if (nameInput) {
+        nameInput.focus();
+        console.log("Focused on name input");
+      } else {
+        console.error("Name input not found");
+      }
+    }, 100);
+  }
+
+  function closeAddProjectModal() {
+    console.log("Closing Add Project modal");
+    const modal = document.getElementById('add-project-modal');
+    if (modal) {
+      modal.remove();
+      console.log("Modal removed from DOM");
+    } else {
+      console.log("Modal not found");
+    }
+  }
+
+  async function saveNewProject() {
+    console.log("Save new project called");
+    
+    const name = document.getElementById('new-project-name').value.trim();
+    const description = document.getElementById('new-project-description').value.trim();
+    const ownerId = document.getElementById('new-project-owner').value;
+
+    console.log("Project data:", { name, description, ownerId });
+
+    if (!name) {
+      showToast('Project name is required', 'error');
+      return;
+    }
+
+    // Check if project name already exists
+    const existingProject = appData.projects.find(p => p.name && p.name.toLowerCase() === name.toLowerCase());
+    if (existingProject) {
+      showToast('A project with this name already exists', 'error');
+      return;
+    }
+
+    try {
+      // Get the next available project ID
+      const { data: lastProject, error: idError } = await window.supabaseClient
+        .from("project")
+        .select("id")
+        .order("id", { ascending: false })
+        .limit(1)
+        .single();
+        
+      if (idError && idError.code !== "PGRST116") {
+        showToast(`Error getting last project ID: ${idError.message}`, "error");
+        return;
+      }
+      
+      const newProjectId = (lastProject?.id || 0) + 1;
+      
+      const projectData = {
+        id: newProjectId,
+        projectName: name,
+        description: description,
+        projectOwner: ownerId || null,
+        priority: 'Medium', // Default priority
+        collaborators: '', // Default empty
+        createdAt: new Date().toISOString()
+      };
+      
+      // Save to database
+      const { data: newProject, error } = await window.supabaseClient
+        .from("project")
+        .insert(projectData)
+        .select()
+        .single();
+        
+      if (error) {
+        showToast(`Error creating project: ${error.message}`, "error");
+        return;
+      }
+      
+      // Add to local data with name property for consistency
+      const projectWithName = {
+        ...newProject,
+        name: newProject.projectName
+      };
+      appData.projects.push(projectWithName);
+
+      // Close modal
+      closeAddProjectModal();
+
+      // Show success message
+      showToast(`Project "${name}" created successfully`, 'success');
+
+      // Re-render projects view if currently viewing projects
+      if (currentView === 'projects') {
+        renderProjectsView();
+      }
+      
+    } catch (error) {
+      console.error("Error creating project:", error);
+      showToast("Error creating project. Please try again.", "error");
+    }
+  }
+
+  // Make functions globally available
+  window.showAddProjectModal = showAddProjectModal;
+  window.closeAddProjectModal = closeAddProjectModal;
+  window.saveNewProject = saveNewProject;
+
+  // Global event listener for Add Project button (delegated event handling)
+  document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'add-project-btn') {
+      console.log("Add Project button clicked (global listener)");
+      e.preventDefault();
+      e.stopPropagation();
+      showAddProjectModal();
+    }
+  });
+
+  // Clean up any existing modals on page load
+  function cleanupModals() {
+    const existingModal = document.getElementById('add-project-modal');
+    if (existingModal) {
+      existingModal.remove();
+      console.log("Cleaned up existing modal on page load");
+    }
+  }
+
+  // Run cleanup immediately and on DOM ready
+  cleanupModals();
+  document.addEventListener('DOMContentLoaded', cleanupModals);
 
   function showProjectDetailModal(projectId) {
     const project = appData.allProjects.find((p) => p.id == projectId);
