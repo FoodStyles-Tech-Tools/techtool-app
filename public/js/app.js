@@ -2927,6 +2927,31 @@
         });
       }
       
+      // Close searchable dropdowns when clicking on other interactive elements
+      const isClickingOnOtherDropdown = e.target.closest("select") || 
+                                       e.target.closest(".jira-dropdown") ||
+                                       e.target.closest(".tag-editor") ||
+                                       e.target.closest(".status-tag") ||
+                                       e.target.closest(".priority-tag") ||
+                                       e.target.closest(".type-tag") ||
+                                       e.target.closest(".jira-option") ||
+                                       e.target.closest(".jira-dropdown-list") ||
+                                       e.target.closest(".priority-dropdown") ||
+                                       e.target.closest(".status-dropdown");
+      
+      // Also check if clicking on any dropdown-related element that's not a searchable dropdown
+      const isClickingOnDropdownElement = e.target.classList.contains("jira-option") ||
+                                        e.target.classList.contains("priority-tag") ||
+                                        e.target.classList.contains("status-tag") ||
+                                        e.target.classList.contains("type-tag") ||
+                                        e.target.closest(".tag-editor.jira-style") ||
+                                        e.target.closest(".dropdown-list");
+      
+      if (isClickingOnOtherDropdown || isClickingOnDropdownElement) {
+        console.log("Clicking on other dropdown element, closing searchable dropdowns");
+        closeAllDropdowns();
+      }
+      
       // Close searchable dropdowns when clicking outside
       if (!e.target.closest(".searchable-dropdown") && !e.target.closest(".searchable-dropdown-list")) {
         console.log("Clicking outside dropdown, closing all searchable dropdowns");
@@ -2979,17 +3004,30 @@
       });
     };
     
-    window.addEventListener("scroll", closeAllDropdowns, true); // Use capture phase to catch all scroll events
+    window.addEventListener("scroll", (e) => {
+      // Don't close dropdowns if scrolling within a dropdown list
+      if (!e.target.closest(".searchable-dropdown-list")) {
+        closeAllDropdowns();
+      }
+    }, true);
     
     // Also listen for scroll events on table containers and other scrollable elements
     const tableWrapper = document.querySelector(".table-wrapper");
     if (tableWrapper) {
-      tableWrapper.addEventListener("scroll", closeAllDropdowns);
+      tableWrapper.addEventListener("scroll", (e) => {
+        if (!e.target.closest(".searchable-dropdown-list")) {
+          closeAllDropdowns();
+        }
+      });
     }
     
     // Listen for scroll on any scrollable parent containers
     document.querySelectorAll(".ticket-main-content, .ticket-details-sidebar").forEach(container => {
-      container.addEventListener("scroll", closeAllDropdowns);
+      container.addEventListener("scroll", (e) => {
+        if (!e.target.closest(".searchable-dropdown-list")) {
+          closeAllDropdowns();
+        }
+      });
     });
 
     // ✅ attach checkbox click
@@ -3072,9 +3110,26 @@
           e.stopPropagation();
           const dropdown = editor.querySelector(".jira-dropdown");
           if (dropdown) {
-            // Close all other dropdowns first
+            // Close all other dropdowns first (both Jira and searchable)
             document.querySelectorAll(".jira-dropdown").forEach(d => {
               if (d !== dropdown) d.style.display = "none";
+            });
+            // Close all searchable dropdowns
+            document.querySelectorAll(".searchable-dropdown-list").forEach(searchableDropdown => {
+              if (searchableDropdown.style.display === "block") {
+                searchableDropdown.style.display = "none";
+                // Return dropdown to its original parent if it was moved to body
+                if (searchableDropdown.parentNode === document.body) {
+                  const inputs = document.querySelectorAll(".searchable-dropdown-input");
+                  for (let input of inputs) {
+                    const container = input.closest(".searchable-dropdown");
+                    if (container && !container.querySelector(".searchable-dropdown-list")) {
+                      container.appendChild(searchableDropdown);
+                      break;
+                    }
+                  }
+                }
+              }
             });
             // Toggle current dropdown
             dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
@@ -3083,6 +3138,82 @@
           // Handle old-style dropdown
         editor.classList.add("is-editing");
         editor.querySelector("select")?.focus();
+        }
+      }
+      return;
+    }
+    
+    // Handle priority-tag clicks
+    if (target.classList.contains("priority-tag")) {
+      const editor = target.closest(".tag-editor");
+      if (editor && !editor.classList.contains("is-editing")) {
+        // Handle Jira-style dropdown
+        if (editor.classList.contains("jira-style")) {
+          e.stopPropagation();
+          const dropdown = editor.querySelector(".jira-dropdown");
+          if (dropdown) {
+            // Close all other dropdowns first (both Jira and searchable)
+            document.querySelectorAll(".jira-dropdown").forEach(d => {
+              if (d !== dropdown) d.style.display = "none";
+            });
+            // Close all searchable dropdowns
+            document.querySelectorAll(".searchable-dropdown-list").forEach(searchableDropdown => {
+              if (searchableDropdown.style.display === "block") {
+                searchableDropdown.style.display = "none";
+                // Return dropdown to its original parent if it was moved to body
+                if (searchableDropdown.parentNode === document.body) {
+                  const inputs = document.querySelectorAll(".searchable-dropdown-input");
+                  for (let input of inputs) {
+                    const container = input.closest(".searchable-dropdown");
+                    if (container && !container.querySelector(".searchable-dropdown-list")) {
+                      container.appendChild(searchableDropdown);
+                      break;
+                    }
+                  }
+                }
+              }
+            });
+            // Toggle current dropdown
+            dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+          }
+        }
+      }
+      return;
+    }
+    
+    // Handle type-tag clicks
+    if (target.classList.contains("type-tag")) {
+      const editor = target.closest(".tag-editor");
+      if (editor && !editor.classList.contains("is-editing")) {
+        // Handle Jira-style dropdown
+        if (editor.classList.contains("jira-style")) {
+          e.stopPropagation();
+          const dropdown = editor.querySelector(".jira-dropdown");
+          if (dropdown) {
+            // Close all other dropdowns first (both Jira and searchable)
+            document.querySelectorAll(".jira-dropdown").forEach(d => {
+              if (d !== dropdown) d.style.display = "none";
+            });
+            // Close all searchable dropdowns
+            document.querySelectorAll(".searchable-dropdown-list").forEach(searchableDropdown => {
+              if (searchableDropdown.style.display === "block") {
+                searchableDropdown.style.display = "none";
+                // Return dropdown to its original parent if it was moved to body
+                if (searchableDropdown.parentNode === document.body) {
+                  const inputs = document.querySelectorAll(".searchable-dropdown-input");
+                  for (let input of inputs) {
+                    const container = input.closest(".searchable-dropdown");
+                    if (container && !container.querySelector(".searchable-dropdown-list")) {
+                      container.appendChild(searchableDropdown);
+                      break;
+                    }
+                  }
+                }
+              }
+            });
+            // Toggle current dropdown
+            dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+          }
         }
       }
       return;
