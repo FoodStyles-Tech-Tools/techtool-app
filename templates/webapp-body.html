@@ -3,29 +3,77 @@
         <h1 class="sidebar-header">TechTool</h1>
         <div class="nav-panel">
           <button id="nav-home" class="nav-btn active">
-            <i class="fas fa-home" style="width: 1.2em"></i> Home
+            <i class="fas fa-home"></i> 
+            <span>Dashboard</span>
           </button>
-          <button id="nav-my-ticket" class="nav-btn">
-            <i class="fas fa-user" style="width: 1.2em"></i> My Ticket
-            <span
-              id="my-ticket-count"
-              class="nav-badge"
-              style="display: none"
-            ></span>
-          </button>
-          <button id="nav-unassigned" class="nav-btn">
-            <i class="fas fa-inbox" style="width: 1.2em"></i> Unassigned
-            <span
-              id="unassigned-count"
-              class="nav-badge"
-              style="display: none"
-            ></span>
-          </button>
-          <button id="nav-all" class="nav-btn">
-            <i class="fas fa-list-ul" style="width: 1.2em"></i> All Tickets
-          </button>
+          
+          <div class="nav-dropdown" id="nav-tickets-dropdown">
+            <button id="nav-tickets" class="nav-btn nav-parent">
+              <i class="fas fa-ticket-alt"></i> 
+              <span>Ticket</span>
+              <i class="fas fa-chevron-down nav-arrow"></i>
+            </button>
+            <div class="nav-dropdown-content" id="tickets-dropdown-content">
+              <button id="nav-all" class="nav-btn nav-child">
+                <i class="fas fa-list-ul"></i> 
+                <span>All Tickets</span>
+                <span
+                  id="all-tickets-count"
+                  class="nav-badge"
+                  style="display: none"
+                ></span>
+              </button>
+              <button id="nav-my-ticket" class="nav-btn nav-child">
+                <i class="fas fa-user"></i> 
+                <span>My Tickets</span>
+                <span
+                  id="my-ticket-count"
+                  class="nav-badge"
+                  style="display: none"
+                ></span>
+              </button>
+              <button id="nav-critical" class="nav-btn nav-child">
+                <i class="fas fa-exclamation-circle"></i> 
+                <span>Critical</span>
+                <span
+                  id="critical-count"
+                  class="nav-badge"
+                  style="display: none"
+                ></span>
+              </button>
+              <button id="nav-stalled" class="nav-btn nav-child">
+                <i class="fas fa-pause-circle"></i> 
+                <span>Stalled</span>
+                <span
+                  id="stalled-count"
+                  class="nav-badge"
+                  style="display: none"
+                ></span>
+              </button>
+              <button id="nav-unassigned" class="nav-btn nav-child">
+                <i class="fas fa-inbox"></i> 
+                <span>Unassigned</span>
+                <span
+                  id="unassigned-count"
+                  class="nav-badge"
+                  style="display: none"
+                ></span>
+              </button>
+              <button id="nav-incomplete" class="nav-btn nav-child">
+                <i class="fas fa-exclamation-triangle"></i> 
+                <span>Incomplete</span>
+                <span
+                  id="incomplete-count"
+                  class="nav-badge"
+                  style="display: none"
+                ></span>
+              </button>
+            </div>
+          </div>
+          
           <button id="nav-reconcile" class="nav-btn">
-            <i class="far fa-clock" style="width: 1.2em"></i> Reconcile Hours
+            <i class="far fa-clock"></i> 
+            <span>Reconcile Hours</span>
           </button>
         </div>
 
@@ -65,90 +113,209 @@
       <div class="main-content-wrapper">
         <main>
           <div id="dashboard-view-wrapper" style="display: none">
-            <div class="dashboard-header">
-              <h2 class="dashboard-title">Enchantment Dashboard</h2>
-              <div id="dashboard-filters" class="dashboard-filters">
-                <div class="filter-group">
-                  <label for="dashboard-assignee-filter"
-                    ><i class="fas fa-user-circle"></i> Wizard</label
-                  >
-                  <select id="dashboard-assignee-filter"></select>
+            <!-- Modern Dashboard Header -->
+            <div class="dashboard-header-modern">
+              <div class="header-content">
+                <div class="header-text">
+                  <h1 class="dashboard-title-modern">Analytics Dashboard</h1>
+                  <p class="dashboard-subtitle-modern">Real-time insights and performance metrics</p>
                 </div>
-                <div class="filter-group">
-                  <label for="dashboard-start-date"
-                    ><i class="fas fa-calendar-alt"></i> Spell Start</label
-                  >
-                  <input type="date" id="dashboard-start-date" />
-                </div>
-                <div class="filter-group">
-                  <label for="dashboard-end-date"
-                    ><i class="fas fa-calendar-alt"></i> Spell End</label
-                  >
-                  <input type="date" id="dashboard-end-date" />
+                <div class="header-filters-modern">
+                  <div class="filter-group-modern">
+                    <label for="dashboard-assignee-filter">Team</label>
+                    <select id="dashboard-assignee-filter" class="filter-select-modern">
+                      <option value="all">All Members</option>
+                    </select>
+                  </div>
+                  <div class="filter-group-modern">
+                    <label for="dashboard-start-date">From</label>
+                    <input type="date" id="dashboard-start-date" class="filter-input-modern" />
+                  </div>
+                  <div class="filter-group-modern">
+                    <label for="dashboard-end-date">To</label>
+                    <input type="date" id="dashboard-end-date" class="filter-input-modern" />
+                  </div>
+                  <button class="refresh-btn" onclick="renderDashboard()">
+                    <i class="fas fa-sync-alt"></i>
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div class="dashboard-grid top-stats">
-              <div class="dashboard-card total-tickets-card">
-                <h3>Total Quests</h3>
-                <p id="total-tickets-count" class="stat-number">0</p>
-                <i class="fas fa-scroll card-bg-icon"></i>
-              </div>
-              <div class="dashboard-card at-risk-card">
-                <h3>Perilous Quests</h3>
-                <div class="risk-breakdown">
-                  <div class="risk-item">
-                    <span class="risk-label">Blocked</span>
-                    <span id="blocked-tickets-count" class="risk-count">0</span>
+
+            <!-- Enhanced Metrics Grid -->
+            <div class="metrics-grid-modern">
+              <div class="metric-card-modern primary-gradient">
+                <div class="metric-header">
+                  <div class="metric-icon-modern">
+                    <i class="fas fa-chart-line"></i>
                   </div>
-                  <div class="risk-item">
-                    <span class="risk-label">On Hold</span>
-                    <span id="on-hold-tickets-count" class="risk-count">0</span>
-                  </div>
-                  <div class="risk-item">
-                    <span class="risk-label">Extreme</span>
-                    <span id="extreme-tickets-count" class="risk-count">0</span>
+                  <div class="metric-trend positive" id="tickets-trend">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="tickets-change">+12%</span>
                   </div>
                 </div>
-                <i class="fas fa-skull-crossbones card-bg-icon"></i>
+                <div class="metric-content-modern">
+                  <div class="metric-value-modern" id="total-tickets-count">0</div>
+                  <div class="metric-label-modern">Total Tickets</div>
+                  <div class="metric-description">All time tickets created</div>
+                </div>
+                <div class="metric-chart-mini" id="total-chart-mini"></div>
+              </div>
+              
+              <div class="metric-card-modern success-gradient">
+                <div class="metric-header">
+                  <div class="metric-icon-modern">
+                    <i class="fas fa-check-circle"></i>
+                  </div>
+                  <div class="metric-trend positive" id="completed-trend">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="completed-change">+8%</span>
+                  </div>
+                </div>
+                <div class="metric-content-modern">
+                  <div class="metric-value-modern" id="completed-tickets-count">0</div>
+                  <div class="metric-label-modern">Completed</div>
+                  <div class="metric-description">Successfully resolved</div>
+                </div>
+                <div class="metric-chart-mini" id="completed-chart-mini"></div>
+              </div>
+              
+              <div class="metric-card-modern warning-gradient">
+                <div class="metric-header">
+                  <div class="metric-icon-modern">
+                    <i class="fas fa-clock"></i>
+                  </div>
+                  <div class="metric-trend positive" id="progress-trend">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="progress-change">+5%</span>
+                  </div>
+                </div>
+                <div class="metric-content-modern">
+                  <div class="metric-value-modern" id="in-progress-count">0</div>
+                  <div class="metric-label-modern">In Progress</div>
+                  <div class="metric-description">Currently being worked on</div>
+                </div>
+                <div class="metric-chart-mini" id="progress-chart-mini"></div>
+              </div>
+              
+              <div class="metric-card-modern danger-gradient">
+                <div class="metric-header">
+                  <div class="metric-icon-modern">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </div>
+                  <div class="metric-trend negative" id="blocked-trend">
+                    <i class="fas fa-arrow-down"></i>
+                    <span id="blocked-change">-3%</span>
+                  </div>
+                </div>
+                <div class="metric-content-modern">
+                  <div class="metric-value-modern" id="blocked-count">0</div>
+                  <div class="metric-label-modern">Blocked</div>
+                  <div class="metric-description">Requiring attention</div>
+                </div>
+                <div class="metric-chart-mini" id="blocked-chart-mini"></div>
               </div>
             </div>
 
-            <div class="dashboard-grid mid-section">
-              <div class="dashboard-card chart-card">
-                <h3>Weekly Magic Flow</h3>
-                <canvas id="trends-chart"></canvas>
-              </div>
-              <div class="side-stats">
-                <div class="dashboard-card workload-card">
-                  <h3>Current Workload</h3>
-                  <p id="current-workload-count" class="stat-number">0</p>
-                  <i class="fas fa-magic card-bg-icon"></i>
+            <!-- Advanced Analytics Section -->
+            <div class="analytics-section">
+              <div class="chart-container-modern">
+                <div class="chart-header-modern">
+                  <div class="chart-title-section">
+                    <h3>Performance Trends</h3>
+                    <p>Ticket creation and completion over time</p>
+                  </div>
                 </div>
-                <div class="dashboard-card to-fix-card">
-                  <h3>Fix Corrupted Spells</h3>
-                  <p id="to-fix-count" class="stat-number">0</p>
-                  <i class="fas fa-exclamation-triangle card-bg-icon"></i>
+                <div class="chart-wrapper">
+                  <canvas id="trends-chart"></canvas>
+                </div>
+                
+                <!-- Extended Chart Metrics -->
+                <div class="chart-metrics-section">
+                  <div class="chart-metrics-grid">
+                    <div class="chart-metric-item">
+                      <div class="metric-label">Peak Week</div>
+                      <div class="metric-value" id="peak-week">Week 36</div>
+                    </div>
+                    <div class="chart-metric-item">
+                      <div class="metric-label">Avg Created/Day</div>
+                      <div class="metric-value" id="avg-created-per-day">3.2</div>
+                    </div>
+                    <div class="chart-metric-item">
+                      <div class="metric-label">Avg Completed/Day</div>
+                      <div class="metric-value" id="avg-completed-per-day">2.8</div>
+                    </div>
+                    <div class="chart-metric-item">
+                      <div class="metric-label">Backlog Trend</div>
+                      <div class="metric-value" id="backlog-trend">+12%</div>
+                    </div>
+                    <div class="chart-metric-item">
+                      <div class="metric-label">Velocity Score</div>
+                      <div class="metric-value" id="velocity-score">High</div>
+                    </div>
+                  </div>
+                </div>
+                </div>
+              
+              <div class="insights-panel">
+                <div class="insight-card">
+                  <div class="insight-header">
+                    <h4>Priority Distribution</h4>
+                    <div class="insight-value" id="priority-insight">Medium Heavy</div>
+                </div>
+                  <div class="priority-chart-modern">
+                    <canvas id="priority-chart"></canvas>
+              </div>
+                  <div class="priority-legend-modern" id="priority-legend"></div>
+            </div>
+
+                <div class="insight-card">
+                  <div class="insight-header">
+                    <h4>Velocity Metrics</h4>
+                    <div class="insight-value" id="velocity-insight">High</div>
+              </div>
+                  <div class="velocity-metrics">
+                    <div class="velocity-item">
+                      <span class="velocity-label">Avg. Response</span>
+                      <span class="velocity-value" id="avg-response-time">0d</span>
+                    </div>
+                    <div class="velocity-item">
+                      <span class="velocity-label">Avg. Resolution</span>
+                      <span class="velocity-value" id="avg-resolution-time">0d</span>
+                    </div>
+                    <div class="velocity-item">
+                      <span class="velocity-label">Completion Rate</span>
+                      <span class="velocity-value" id="completion-rate">0%</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="dashboard-grid bottom-lists">
-              <div class="dashboard-card list-card">
-                <h3><i class="fas fa-fire"></i> Urgent & High Priority</h3>
-                <div
-                  id="urgent-tickets-list"
-                  class="ticket-list-container"
-                ></div>
+            <!-- Status Overview with Enhanced Design -->
+            <div class="status-section-modern">
+              <div class="status-card-modern">
+                <div class="status-header">
+                  <h3>Status Breakdown</h3>
+                  <div class="status-summary" id="status-summary">All systems operational</div>
+                </div>
+                <div class="status-grid" id="status-bars"></div>
               </div>
-              <div class="dashboard-card list-card">
-                <h3><i class="fas fa-tasks"></i> To-Do List</h3>
-                <div id="todo-tickets-list" class="ticket-list-container"></div>
+              
+              <div class="activity-feed-modern">
+                <div class="activity-header">
+                  <h3>Recent Activity</h3>
+                  <span class="activity-count" id="activity-count">0 events</span>
+                </div>
+                <div class="activity-list-modern" id="recent-activity-list"></div>
               </div>
             </div>
+
           </div>
-          <div class="actions-container">
+
+
+          <div class="actions-container" style="display: none;">
             <div class="left-actions">
               <div
                 id="reconcile-filters"
@@ -186,76 +353,11 @@
                 </button>
                 <div id="filter-menu" class="dropdown-menu">
                   <div class="filter-menu-section">
-                    <div class="filter-menu-item">
-                      <label for="project-filter-select">Project</label>
-                      <select
-                        id="project-filter-select"
-                        class="inline-editor"
-                      ></select>
+                    <p style="color: var(--text-secondary); padding: 1rem; text-align: center;">
+                      Filters have been moved to the main interface above.
+                    </p>
                     </div>
-                    <div class="filter-menu-item">
-                      <label for="epic-filter-select">Epic</label>
-                      <select
-                        id="epic-filter-select"
-                        class="inline-editor"
-                      ></select>
                     </div>
-                  </div>
-                  <div class="filter-menu-section">
-                    <div class="filter-menu-item-checkbox">
-                      <label
-                        ><input
-                          type="checkbox"
-                          id="group-by-project-checkbox"
-                          checked
-                        />
-                        Group by Project</label
-                      >
-                    </div>
-                    <div class="filter-menu-item-checkbox">
-                      <label
-                        ><input
-                          type="checkbox"
-                          id="group-by-epic-checkbox"
-                          checked
-                        />
-                        Group by Epic</label
-                      >
-                    </div>
-                  </div>
-                  <div
-                    class="filter-menu-section"
-                    id="my-ticket-filters"
-                    style="display: none"
-                  >
-                    <div class="filter-menu-item">
-                      <label for="status-filter-select">Status</label>
-                      <select
-                        id="status-filter-select"
-                        class="inline-editor"
-                      ></select>
-                    </div>
-                    <div class="filter-menu-item-checkbox">
-                      <label
-                        ><input
-                          type="checkbox"
-                          id="exclude-done-checkbox"
-                          checked
-                        />
-                        Exclude Done</label
-                      >
-                    </div>
-                  </div>
-                  <div class="filter-menu-section">
-                    <button id="to-fix-btn" class="dropdown-item">
-                      <i
-                        class="fas fa-exclamation-triangle"
-                        style="color: var(--warning-color)"
-                      ></i>
-                      <span>Incomplete Data Only</span>
-                    </button>
-                  </div>
-                </div>
                 <button
                   id="clear-url-filter-btn"
                   class="action-btn secondary-btn"
@@ -264,65 +366,10 @@
                   <i class="fas fa-times"></i>
                   <span>Clear Search</span>
                 </button>
-              </div>
-            </div>
+                    </div>
+                    </div>
 
-            <div class="right-actions">
-              <div class="search-group">
-                <div class="search-wrapper">
-                  <i class="fas fa-hashtag"></i>
-                  <input
-                    type="number"
-                    id="ticket-number-filter"
-                    placeholder="Ticket #"
-                  />
-                </div>
-                <div class="search-wrapper">
-                  <i class="fas fa-search"></i>
-                  <input
-                    type="text"
-                    id="task-search-input"
-                    placeholder="Search Title/Description..."
-                  />
-                </div>
-              </div>
-
-              <button
-                id="readme-btn"
-                class="action-btn secondary-btn"
-                title="Show Guidelines"
-              >
-                <i class="fas fa-book"></i>
-              </button>
-              <button id="bulk-edit-btn" class="action-btn secondary-btn">
-                <i class="fas fa-layer-group"></i>
-              </button>
-
-              <div id="add-new-dropdown" class="dropdown-container">
-                <button id="add-new-btn" class="action-btn">
-                  <span>Add New</span>
-                  <i
-                    class="fas fa-chevron-down"
-                    style="font-size: 0.8em; margin-left: 8px"
-                  ></i>
-                </button>
-                <div id="add-new-menu" class="dropdown-menu">
-                  <div id="add-new-task-option" class="dropdown-item">
-                    <i class="fas fa-tasks"></i> Add Task
-                  </div>
-                  <div id="add-new-project-option" class="dropdown-item">
-                    <i class="fas fa-folder"></i> Add Project
-                  </div>
-                </div>
-              </div>
-
-              <button
-                id="quick-add-btn"
-                class="action-btn secondary-btn"
-                title="Quick Add Task"
-              >
-                <i class="fas fa-plus"></i>
-              </button>
+            <div class="right-actions" style="display: none;">
             </div>
           </div>
 
@@ -353,20 +400,168 @@
           </div>
 
           <div id="loader" class="loader-container">
-            <div class="spinner"></div>
-            <p>Loading Data...</p>
+            <div class="loading-content">
+              <div class="loading-header">
+                <div class="loading-logo">
+                  <div class="loading-shimmer"></div>
+                </div>
+                <div class="loading-text">
+                  <div class="loading-shimmer" style="width: 120px; height: 20px; margin-bottom: 8px;"></div>
+                  <div class="loading-shimmer" style="width: 80px; height: 16px;"></div>
+                </div>
+              </div>
+              <div class="loading-filters">
+                <div class="loading-filter-item">
+                  <div class="loading-shimmer" style="width: 60px; height: 16px; margin-bottom: 4px;"></div>
+                  <div class="loading-shimmer" style="width: 100px; height: 32px; border-radius: 6px;"></div>
+                </div>
+                <div class="loading-filter-item">
+                  <div class="loading-shimmer" style="width: 40px; height: 16px; margin-bottom: 4px;"></div>
+                  <div class="loading-shimmer" style="width: 100px; height: 32px; border-radius: 6px;"></div>
+                </div>
+                <div class="loading-filter-item">
+                  <div class="loading-shimmer" style="width: 50px; height: 16px; margin-bottom: 4px;"></div>
+                  <div class="loading-shimmer" style="width: 100px; height: 32px; border-radius: 6px;"></div>
+                </div>
+                <div class="loading-filter-item">
+                  <div class="loading-shimmer" style="width: 80px; height: 20px; border-radius: 4px;"></div>
+                </div>
+              </div>
+              <div class="loading-table">
+                <div class="loading-table-header">
+                  <div class="loading-shimmer" style="width: 40px; height: 16px;"></div>
+                  <div class="loading-shimmer" style="width: 200px; height: 16px;"></div>
+                  <div class="loading-shimmer" style="width: 60px; height: 16px;"></div>
+                  <div class="loading-shimmer" style="width: 80px; height: 16px;"></div>
+                  <div class="loading-shimmer" style="width: 70px; height: 16px;"></div>
+                  <div class="loading-shimmer" style="width: 100px; height: 16px;"></div>
+                  <div class="loading-shimmer" style="width: 80px; height: 16px;"></div>
+                </div>
+                <div class="loading-table-rows">
+                  <div class="loading-table-row">
+                    <div class="loading-shimmer" style="width: 60px; height: 20px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 250px; height: 20px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 80px; height: 24px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 70px; height: 24px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 90px; height: 24px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 120px; height: 20px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 100px; height: 20px; border-radius: 4px;"></div>
+                  </div>
+                  <div class="loading-table-row">
+                    <div class="loading-shimmer" style="width: 60px; height: 20px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 200px; height: 20px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 80px; height: 24px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 70px; height: 24px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 90px; height: 24px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 120px; height: 20px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 100px; height: 20px; border-radius: 4px;"></div>
+                  </div>
+                  <div class="loading-table-row">
+                    <div class="loading-shimmer" style="width: 60px; height: 20px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 180px; height: 20px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 80px; height: 24px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 70px; height: 24px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 90px; height: 24px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 120px; height: 20px; border-radius: 4px;"></div>
+                    <div class="loading-shimmer" style="width: 100px; height: 20px; border-radius: 4px;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           <div id="error-message" class="error-container" style="display: none">
             <p>Could not load data. Please try again later.</p>
           </div>
 
           <div class="table-wrapper" style="display: none">
+            
+            <!-- Clean Integrated Controls -->
+            <div id="integrated-filters" class="clean-controls-panel">
+              <div class="controls-header">
+                <div class="filters-section">
+                  <select id="project-filter-select" class="compact-select">
+                    <option>All Projects</option>
+                  </select>
+                  <select id="epic-filter-select" class="compact-select">
+                    <option>All Epics</option>
+                  </select>
+                  <select id="status-filter-select" class="compact-select">
+                    <option>All Statuses</option>
+                  </select>
+                  <label class="checkbox-label">
+                    <input type="checkbox" id="exclude-done-checkbox" checked />
+                    Exclude Done
+                  </label>
+                </div>
+                
+                <div class="search-section">
+                  <div class="search-input">
+                    <i class="fas fa-hashtag"></i>
+                    <input type="number" id="ticket-number-filter" placeholder="Ticket #" />
+                  </div>
+                  <div class="search-input">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="task-search-input" placeholder="Search..." />
+                  </div>
+                </div>
+                
+                <div class="action-section">
+                  <button id="add-new-btn" class="primary-btn">
+                    <i class="fas fa-folder-plus"></i>
+                    Add New
+                  </button>
+                  <button id="quick-add-btn" class="compact-btn" title="Quick Add Row">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                  <button id="bulk-edit-btn" class="compact-btn" title="Bulk Edit">
+                    <i class="fas fa-layer-group"></i>
+                  </button>
+                  <button id="readme-btn" class="compact-btn" title="Guidelines">
+                    <i class="fas fa-book"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
             <table>
               <thead>
                 <tr></tr>
               </thead>
               <tbody></tbody>
             </table>
+          </div>
+
+          <!-- Simple Incomplete Table -->
+          <div id="simple-incomplete-wrapper" style="display: none;">
+            <div class="simple-header">
+              <h2>Incomplete Tickets</h2>
+              <span id="simple-incomplete-count">0 tickets</span>
+            </div>
+            
+            <div class="simple-filter">
+              <label>Member:</label>
+              <select id="simple-member-filter">
+                <option value="all">All Members</option>
+              </select>
+            </div>
+            
+            <div class="simple-table-container">
+              <table id="simple-incomplete-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Task</th>
+                    <th>Created</th>
+                    <th>Assigned</th>
+                    <th>Started</th>
+                    <th>Completed</th>
+                    <th>Complexity</th>
+                    <th>Skills</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
           </div>
 
           <div
@@ -548,14 +743,8 @@
             </div>
             <button
               id="add-another-ticket-btn"
-              class="action-btn"
-              style="
-                background-color: transparent;
-                color: var(--accent-color);
-                border: 1px solid var(--accent-color);
-                margin-top: 1rem;
-                align-self: flex-start;
-              "
+              class="add-ticket-btn"
+              style="margin-top: 1rem;"
             >
               <i class="fas fa-plus"></i> Add Another Ticket
             </button>
@@ -563,7 +752,7 @@
         </div>
         <div class="modal-footer">
           <button id="submit-new-tickets-btn" class="save-btn">
-            Submit Tickets
+            <i class="fas fa-save"></i> Submit Tickets
           </button>
         </div>
       </div>

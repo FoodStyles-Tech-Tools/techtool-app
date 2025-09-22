@@ -38,16 +38,22 @@
   let selectedTickets = new Set();
   let initialProjectData = null;
   let selectedStatus = "all",
-    excludeDone = true,
     textSearchTerm = "",
     ticketNumberFilter = "",
-    showOnlyTicketsToFix = false,
     selectedProjectFilter = "all",
     selectedEpicFilter = "all",
-    groupByProject = true,
-    groupByEpic = true,
     reconcileExcludeDone = true,
-    reconcileCurrentPage = 1;
+    reconcileCurrentPage = 1,
+    selectedIncompleteMemberFilter = "all";
+  
+  // Per-tab exclude done settings
+  let excludeDoneSettings = {
+    'all': true,
+    'my-ticket': true,
+    'critical': true,
+    'stalled': true,
+    'unassigned': true
+  };
   // --- ADD THESE NEW VARIABLES AT THE TOP ---
   let trendsChart = null;
   let dashboardAssigneeId = null;
@@ -344,8 +350,9 @@
       addNavListeners();
       addBulkEditListeners();
       addFilterListeners();
-      addDashboardFilterListeners();
       addModalEventListeners();
+      // Add dashboard filter listeners after data is loaded
+      addDashboardFilterListeners();
 
       const scriptUrl = document.getElementById("script-url").value;
       const clearUrlFilterBtn = document.getElementById("clear-url-filter-btn");
@@ -377,11 +384,17 @@
         document.getElementById("nav-home").classList.add("active");
       }
 
+      // Hide loader and show main content
+      loader.style.display = "none";
+      const actionsContainer = document.querySelector(".actions-container");
+      if (actionsContainer) {
+        actionsContainer.style.display = "block";
+      }
+
       applyFilterAndRender();
       addPaginationListeners();
       addReconcilePaginationListeners();
       subscribeToTicketChanges();
-      loader.style.display = "none";
     } catch (error) {
       console.error("Error during initialization:", error);
       console.error("Error stack:", error.stack);
@@ -581,14 +594,23 @@
 
     const field = element.dataset.field;
     const oldValue = element.dataset.oldValue;
-    let newValue =
-      newValueFromSearchable !== undefined
+    let newValue;
+    
+    // Handle searchable dropdowns (Requested By, Assignee, etc.)
+    if (element.classList.contains("searchable-dropdown-input")) {
+      newValue = newValueFromSearchable !== undefined 
+        ? newValueFromSearchable 
+        : element.dataset.value || null;
+    } else {
+      // Handle regular inputs and selects
+      newValue = newValueFromSearchable !== undefined
         ? newValueFromSearchable
         : element.value === ""
         ? null
         : element.value;
+    }
 
-    if ((field === "assigneeId" || field === "skillsId") && newValue) {
+    if ((field === "assigneeId" || field === "skillsId") && newValue && newValue !== "") {
       newValue = parseInt(newValue, 10);
     }
 
@@ -676,7 +698,22 @@
       showToast("Update failed: " + error.message, "error");
       element.value = oldValue;
     } else {
+      // Update local data
+      ticket[field] = newValue;
+      
       element.dataset.oldValue = newValue;
+      element.dataset.value = newValue;
+      
+      // For Jira-style dropdowns, also update the tag element's oldValue and text
+      if (element.classList.contains("status-tag")) {
+        element.dataset.oldValue = newValue;
+        // Update the tag text content
+        element.textContent = newValue;
+        // Update the tag classes based on the new value
+        const tagInfo = getTagInfo(element.dataset.field, newValue);
+        element.className = `status-tag ${tagInfo.className}`;
+      }
+      
       parentContainer.classList.add("is-successful");
       if (fieldWrapper) {
         fieldWrapper.classList.remove("is-dirty");
@@ -788,6 +825,19 @@
 
   // REPLACE the existing prepareAndConfirmTickets function
   async function prepareAndConfirmTickets() {
+    // Check if we're in Jira mode (bulk settings OFF)
+    const isBulkOn = document.getElementById("bulk-settings-toggle").checked;
+    
+    if (!isBulkOn) {
+      // Handle Jira form submission
+      const jiraForm = document.getElementById("jira-style-form");
+      if (jiraForm && jiraForm.style.display !== "none") {
+        submitJiraForm();
+        return;
+      }
+    }
+    
+    // Handle bulk settings submission
     // NEW: Run validation logic at the beginning
     const validationErrors = validateTicketRows();
     if (validationErrors.length > 0) {
@@ -1169,7 +1219,14 @@
     }
 
     const payload = ticketIds.map((id) => {
-      const ticket = appData.allTickets.find((t) => t.id === id);
+      const ticket = appData.allTickets.find((t) => t.id == id); // Use == instead of === for type flexibility
+      
+      // Skip tickets that don't exist
+      if (!ticket) {
+        console.warn(`Ticket with ID ${id} not found in allTickets`);
+        return null;
+      }
+      
       const ticketUpdates = { ...updates };
 
       if (
@@ -1182,12 +1239,35 @@
         ticketUpdates.startedAt = nowIso;
       }
 
+      // Create a readable summary of the bulk update
+      const fieldDisplayNames = {
+        status: "Status",
+        priority: "Priority", 
+        assignee: "Assignee",
+        requestedBy: "Requested By",
+        projectId: "Project",
+        skillsId: "Skills",
+        type: "Type",
+        complexity: "Complexity",
+        assignedAt: "Assigned At",
+        startedAt: "Started At",
+        completedAt: "Completed At"
+      };
+      
+      const updateSummary = Object.entries(ticketUpdates)
+        .filter(([key, value]) => value !== undefined && value !== null && value !== "")
+        .map(([key, value]) => {
+          const displayName = fieldDisplayNames[key] || key;
+          return `${displayName}: ${value}`;
+        })
+        .join(", ");
+
       const newLogEntry = {
         user: appData.currentUserEmail,
         timestamp: nowIso,
         field: "bulk-update",
-        oldValue: "multiple",
-        newValue: ticketUpdates,
+        oldValue: "multiple tickets",
+        newValue: updateSummary || "no changes",
         reason: reason,
       };
 
@@ -1197,8 +1277,18 @@
       };
     });
 
+    // Filter out null values (tickets that don't exist)
+    const validPayload = payload.filter(item => item !== null);
+    
+    if (validPayload.length === 0) {
+      showToast("No valid tickets found to update.", "error");
+      confirmBtn.textContent = originalBtnText;
+      confirmBtn.disabled = false;
+      return;
+    }
+
     const { data, error } = await window.supabaseClient.rpc("bulk_update_tickets", {
-      updates_payload: payload,
+      updates_payload: validPayload,
     });
 
     confirmBtn.textContent = originalBtnText;
@@ -1207,7 +1297,7 @@
     if (error) {
       showToast("Bulk update failed: " + error.message, "error");
     } else {
-      showToast(`${ticketIds.length} tickets updated successfully.`, "success");
+      showToast(`${validPayload.length} tickets updated successfully.`, "success");
       if (modal) modal.style.display = "none";
       exitBulkEditMode(true);
     }
@@ -1320,10 +1410,8 @@
     if (addNewBtn) {
       addNewBtn.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (addNewMenu) {
-          addNewMenu.style.display =
-            addNewMenu.style.display === "block" ? "none" : "block";
-        }
+        // Since we simplified the button, just open the task modal directly
+        openAddTaskModal();
       });
     }
     document.addEventListener("click", (e) => {
@@ -1333,14 +1421,6 @@
         !e.target.closest("#add-new-dropdown")
       ) {
         addNewMenu.style.display = "none";
-      }
-      const filterMenu = document.getElementById("filter-menu");
-      if (
-        filterMenu.style.display === "block" &&
-        !e.target.closest("#filter-btn") &&
-        !e.target.closest("#filter-menu")
-      ) {
-        filterMenu.style.display = "none";
       }
     });
 
@@ -1574,7 +1654,6 @@
     selectedEpicFilter = "all";
     textSearchTerm = "";
     ticketNumberFilter = "";
-    showOnlyTicketsToFix = false;
 
     // Reset UI elements to match the state
     const projectSelect = document.getElementById("project-filter-select");
@@ -1589,22 +1668,51 @@
     const ticketNumInput = document.getElementById("ticket-number-filter");
     if (ticketNumInput) ticketNumInput.value = "";
 
-    const toFixBtn = document.getElementById("to-fix-btn");
-    if (toFixBtn) toFixBtn.classList.remove("active");
-
     // Hide the "Clear Search" button related to URL parameters
     const clearUrlFilterBtn = document.getElementById("clear-url-filter-btn");
     if (clearUrlFilterBtn) clearUrlFilterBtn.style.display = "none";
   }
   function addNavListeners() {
+    // Handle Tickets dropdown
+    const ticketsDropdown = document.getElementById("nav-tickets-dropdown");
+    const ticketsButton = document.getElementById("nav-tickets");
+    const dropdownContent = document.getElementById("tickets-dropdown-content");
+    
+    if (ticketsButton) {
+      ticketsButton.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const isActive = ticketsDropdown.classList.contains("active");
+        
+        if (isActive) {
+          // Collapse
+          ticketsDropdown.classList.remove("active");
+        } else {
+          // Expand
+          ticketsDropdown.classList.add("active");
+        }
+      });
+    }
+
+    // Remove global click listener - dropdown only controlled by Ticket button click
+
+    // Prevent dropdown from closing when clicking inside it
+    if (dropdownContent) {
+      dropdownContent.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+    }
+
     const navButtons = document.querySelectorAll(".nav-panel .nav-btn");
     navButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
         // Ignore special buttons that don't change the main view
-        if (btn.id === "bulk-edit-btn" || btn.id === "readme-btn") {
+        if (btn.id === "bulk-edit-btn" || btn.id === "readme-btn" || btn.id === "nav-tickets") {
           return;
         }
         const view = btn.id.replace("nav-", "");
+        console.log("🔄 Navigation clicked:", btn.id, "-> view:", view); // Debug log
         if (currentView === view) return; // Do nothing if already on this view
 
         // Only reset the main filters when switching to a view that uses them
@@ -1620,12 +1728,25 @@
           .addEventListener("click", showReadmeModal);
 
         currentView = view;
+        console.log("🎯 currentView set to:", currentView); // Debug log
         currentPage = 1;
         reconcileCurrentPage = 1;
+
+        // Only close dropdown if clicking outside the tickets section
+        if (ticketsDropdown && !ticketsDropdown.contains(btn)) {
+          ticketsDropdown.classList.remove("active");
+        }
 
         // Update the active button style
         navButtons.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
+
+        // Update child button active state
+        const childButtons = document.querySelectorAll(".nav-child");
+        childButtons.forEach((child) => child.classList.remove("active"));
+        if (btn.classList.contains("nav-child")) {
+          btn.classList.add("active");
+        }
 
         // Exit bulk edit mode if it's active
         if (isBulkEditMode) exitBulkEditMode(false);
@@ -1661,23 +1782,60 @@
         document.getElementById("assignee-modal").style.display = "none";
       });
   }
+
+  function updateEpicFilterOptions(selectedProjectId) {
+    const epicFilterSelect = document.getElementById("epic-filter-select");
+    if (!epicFilterSelect) return;
+
+    // Reset epic filter to "all" when project changes
+    epicFilterSelect.value = "all";
+    selectedEpicFilter = "all";
+
+    if (selectedProjectId === "all") {
+      // Show all epics when no specific project is selected
+      epicFilterSelect.innerHTML =
+        '<option value="all">All Epics</option>' +
+        appData.epics
+          .map(
+            (e) => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`
+          )
+          .join("");
+    } else {
+      // Filter epics based on tickets that belong to the selected project
+      const projectEpics = [
+        ...new Set(
+          appData.allTickets
+            .filter(ticket => ticket.projectId == selectedProjectId && ticket.epic)
+            .map(ticket => ticket.epic)
+        )
+      ].sort();
+
+      if (projectEpics.length > 0) {
+        epicFilterSelect.innerHTML =
+          '<option value="all">All Epics</option>' +
+          projectEpics
+            .map(
+              (e) => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`
+            )
+            .join("");
+      } else {
+        // If no epics found for this project, show "No epics available"
+        epicFilterSelect.innerHTML = '<option value="all">No epics available</option>';
+      }
+    }
+  }
+
   function addFilterListeners() {
     const statusSelect = document.getElementById("status-filter-select");
     const projectFilterSelect = document.getElementById(
       "project-filter-select"
     );
     const epicFilterSelect = document.getElementById("epic-filter-select");
-    const filterBtn = document.getElementById("filter-btn");
-    const filterMenu = document.getElementById("filter-menu");
 
-    filterBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      // Close other dropdowns if open
-      document.getElementById("add-new-menu").style.display = "none";
-      // Toggle current dropdown
-      filterMenu.style.display =
-        filterMenu.style.display === "block" ? "none" : "block";
-    });
+    if (!statusSelect || !projectFilterSelect || !epicFilterSelect) {
+      console.warn("Some filter elements not found, skipping filter listeners setup");
+      return;
+    }
 
     statusSelect.innerHTML = [
       "All Statuses",
@@ -1709,65 +1867,73 @@
         )
         .join("");
 
-    document
-      .getElementById("status-filter-select")
-      .addEventListener("change", (e) => {
+    // Populate incomplete member filter
+    const incompleteMemberFilter = document.getElementById("incomplete-member-filter");
+    if (incompleteMemberFilter) {
+      incompleteMemberFilter.innerHTML =
+        '<option value="all">All Members</option>' +
+        appData.teamMembers
+          .map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`)
+          .join("");
+      // Default to current user
+      incompleteMemberFilter.value = appData.currentUserId || "all";
+      selectedIncompleteMemberFilter = appData.currentUserId || "all";
+    }
+
+    if (statusSelect) {
+      statusSelect.addEventListener("change", (e) => {
         selectedStatus = e.target.value;
         applyFilterAndRender();
       });
-    document
-      .getElementById("exclude-done-checkbox")
-      .addEventListener("change", (e) => {
-        excludeDone = e.target.checked;
+    }
+    const excludeDoneCheckbox = document.getElementById("exclude-done-checkbox");
+    if (excludeDoneCheckbox) {
+      excludeDoneCheckbox.addEventListener("change", (e) => {
+        excludeDoneSettings[currentView] = e.target.checked;
         applyFilterAndRender();
       });
-    document
-      .getElementById("task-search-input")
-      .addEventListener("input", (e) => {
+    }
+    const taskSearchInput = document.getElementById("task-search-input");
+    if (taskSearchInput) {
+      taskSearchInput.addEventListener("input", (e) => {
         textSearchTerm = e.target.value;
         applyFilterAndRender();
       });
-    document
-      .getElementById("ticket-number-filter")
-      .addEventListener("input", (e) => {
+    }
+
+    const ticketNumberFilterInput = document.getElementById("ticket-number-filter");
+    if (ticketNumberFilterInput) {
+      ticketNumberFilterInput.addEventListener("input", (e) => {
         ticketNumberFilter = e.target.value;
         applyFilterAndRender();
       });
-    document.getElementById("to-fix-btn").addEventListener("click", (e) => {
-      showOnlyTicketsToFix = !showOnlyTicketsToFix;
-      e.target.classList.toggle("active");
-      applyFilterAndRender();
-    });
-    document
-      .getElementById("project-filter-select")
-      .addEventListener("change", (e) => {
+    }
+
+    if (projectFilterSelect) {
+      projectFilterSelect.addEventListener("change", (e) => {
         selectedProjectFilter = e.target.value;
+        
+        // Update epic filter options based on selected project
+        updateEpicFilterOptions(e.target.value);
+        
         applyFilterAndRender();
       });
-    document
-      .getElementById("epic-filter-select")
-      .addEventListener("change", (e) => {
+    }
+
+    if (epicFilterSelect) {
+      epicFilterSelect.addEventListener("change", (e) => {
         selectedEpicFilter = e.target.value;
         applyFilterAndRender();
       });
-    document
-      .getElementById("group-by-project-checkbox")
-      .addEventListener("change", (e) => {
-        groupByProject = e.target.checked;
-        applyFilterAndRender();
-      });
-    document
-      .getElementById("group-by-epic-checkbox")
-      .addEventListener("change", (e) => {
-        groupByEpic = e.target.checked;
-        applyFilterAndRender();
-      });
-    document
-      .getElementById("reconcile-exclude-done")
-      .addEventListener("change", (e) => {
+    }
+
+    const reconcileExcludeDoneCheckbox = document.getElementById("reconcile-exclude-done");
+    if (reconcileExcludeDoneCheckbox) {
+      reconcileExcludeDoneCheckbox.addEventListener("change", (e) => {
         reconcileExcludeDone = e.target.checked;
         applyFilterAndRender();
       });
+    }
     // ... at the end of the addFilterListeners function
     const reconcileUserSelect = document.getElementById(
       "reconcile-user-select"
@@ -1809,6 +1975,9 @@
 
     // Hide all view wrappers and the main action bar initially
     mainTableWrapper.style.display = "none";
+    document.getElementById("simple-incomplete-wrapper").style.display = "none";
+    const integratedFilters = document.getElementById("integrated-filters");
+    if (integratedFilters) integratedFilters.style.display = "none";
     reconcileWrapper.style.display = "none";
     dashboardWrapper.style.display = "none";
     actionsContainer.style.display = "none";
@@ -1817,7 +1986,11 @@
     // Home View Logic
     if (currentView === "home") {
       dashboardWrapper.style.display = "flex";
+      // Add a small delay to ensure DOM is ready
+      setTimeout(() => {
+        console.log('Rendering dashboard with delay...');
       renderDashboard();
+      }, 50);
       return;
     }
 
@@ -1829,7 +2002,15 @@
     reconcileFilters.style.display = "none";
     mainPagination.style.display = "none";
 
-    if (currentView === "reconcile") {
+    if (currentView === "incomplete") {
+      // --- Simple Incomplete View ---
+      document.getElementById("simple-incomplete-wrapper").style.display = "block";
+      rightActions.style.display = "none"; // Hide main action buttons for incomplete view
+      
+      // Handle simple incomplete rendering
+      renderSimpleIncompleteView();
+      return; // Exit early for incomplete view
+    } else if (currentView === "reconcile") {
       // --- Reconcile View ---
       reconcileWrapper.style.display = "block";
       reconcileFilters.style.display = "flex";
@@ -1865,11 +2046,24 @@
     } else {
       // --- All Other Ticket Views ---
       mainTableWrapper.style.display = "block";
-      defaultFilterBtn.style.display = "block"; // Show the main filter button
-      rightActions.style.display = "flex"; // Show all right-side action buttons
+      // Hide the entire actions container since filters are now integrated
+      actionsContainer.style.display = "none";
 
-      document.getElementById("my-ticket-filters").style.display =
-        currentView === "my-ticket" ? "block" : "none";
+      // Show integrated filters for all standard ticket views
+      const integratedFilters = document.getElementById("integrated-filters");
+      if (integratedFilters) {
+        integratedFilters.style.display = "block";
+      }
+      
+      // Show/hide Exclude Done checkbox based on current view and update its state
+      const excludeDoneCheckbox = document.getElementById("exclude-done-checkbox");
+      const excludeDoneLabel = excludeDoneCheckbox?.parentElement;
+      if (excludeDoneCheckbox && excludeDoneLabel) {
+        // Always show the checkbox for all views
+        excludeDoneLabel.style.display = "block";
+        // Set checkbox state to the current tab's setting
+        excludeDoneCheckbox.checked = excludeDoneSettings[currentView];
+      }
 
       let baseTickets;
       switch (currentView) {
@@ -1877,7 +2071,7 @@
           baseTickets = appData.allTickets.filter(
             (t) => t.assigneeId == appData.currentUserId
           );
-          if (excludeDone) {
+          if (excludeDoneSettings[currentView]) {
             baseTickets = baseTickets.filter(
               (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
             );
@@ -1890,9 +2084,49 @@
           break;
         case "unassigned":
           baseTickets = appData.allTickets.filter((t) => t.assigneeId == null);
+          if (excludeDoneSettings[currentView]) {
+            baseTickets = baseTickets.filter(
+              (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
+            );
+          }
+          break;
+        case "critical":
+          // Filter tickets that are Urgent or High priority
+          // AND assigned to the current user
+          baseTickets = appData.allTickets.filter((t) => {
+            const isHighPriority = t.priority === "Urgent" || t.priority === "High";
+            const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
+            return isHighPriority && isAssignedToCurrentUser;
+          });
+          // Apply excludeDone filter if enabled for this tab
+          if (excludeDoneSettings[currentView]) {
+            baseTickets = baseTickets.filter(
+              (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
+            );
+          }
+          break;
+        case "stalled":
+          // Filter tickets that are On Hold or Blocked
+          // AND assigned to the current user
+          baseTickets = appData.allTickets.filter((t) => {
+            const isStalledStatus = t.status === "On Hold" || t.status === "Blocked";
+            const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
+            return isStalledStatus && isAssignedToCurrentUser;
+          });
+          // Apply excludeDone filter if enabled for this tab
+          if (excludeDoneSettings[currentView]) {
+            baseTickets = baseTickets.filter(
+              (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
+            );
+          }
           break;
         default:
           baseTickets = [...appData.allTickets];
+          if (excludeDoneSettings[currentView]) {
+            baseTickets = baseTickets.filter(
+              (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
+            );
+          }
           break;
       }
 
@@ -1929,26 +2163,17 @@
               .includes(lower)
         );
       }
-      if (showOnlyTicketsToFix) {
-        finalFilteredTickets = finalFilteredTickets.filter(
-          (t) => getTicketWarnings(t).length > 0
-        );
-      }
 
+      // Sort by priority (Urgent, High, Medium, Low) then by ID descending
       finalFilteredTickets.sort((a, b) => {
-        if (groupByProject) {
-          const projectA = a.projectName || "Unassigned";
-          const projectB = b.projectName || "Unassigned";
-          if (projectA < projectB) return -1;
-          if (projectA > projectB) return 1;
+        const priorityOrder = { 'Urgent': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
+        const aPriority = priorityOrder[a.priority] ?? 4; // Unknown priorities go last
+        const bPriority = priorityOrder[b.priority] ?? 4;
+        
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority; // Sort by priority first
         }
-        if (groupByEpic) {
-          const epicA = a.epic || "No Epic";
-          const epicB = b.epic || "No Epic";
-          if (epicA < epicB) return -1;
-          if (epicA > epicB) return 1;
-        }
-        return b.id - a.id;
+        return b.id - a.id; // Then by ID descending (newest first)
       });
 
       appData.tickets = finalFilteredTickets;
@@ -1962,27 +2187,307 @@
     }
     updateNavBadgeCounts();
   }
+
+  // Track if this is the first time loading the incomplete view
+  let isFirstIncompleteLoad = true;
+
+  // Simple rendering function for incomplete tickets
+  function renderSimpleIncompleteView() {
+    // Always populate member filter FIRST to ensure proper setup
+    populateSimpleMemberFilter();
+
+    // Filter tickets with incomplete data
+    let incompleteTickets = appData.allTickets.filter((t) => {
+      const warnings = getTicketWarnings(t);
+      return warnings.length > 0;
+    });
+
+    // Apply member filter (get value AFTER population)
+    const memberFilterElement = document.getElementById("simple-member-filter");
+    const selectedMember = memberFilterElement?.value || "all";
+    console.log("Member filter value:", selectedMember, "Total incomplete tickets:", incompleteTickets.length);
+    
+    if (selectedMember !== "all") {
+      console.log("Filtering tickets for assigneeId:", selectedMember);
+      const beforeFilter = incompleteTickets.length;
+      incompleteTickets = incompleteTickets.filter(t => {
+        console.log(`Ticket ${t.id}: assigneeId = ${t.assigneeId}, matches filter: ${t.assigneeId == selectedMember}`);
+        return t.assigneeId == selectedMember;
+      });
+      console.log(`After member filter: ${incompleteTickets.length} tickets (was ${beforeFilter})`);
+    }
+
+    // Update count
+    document.getElementById("simple-incomplete-count").textContent = `${incompleteTickets.length} tickets`;
+
+    // Render table
+    renderSimpleIncompleteTable(incompleteTickets);
+  }
+
+  function populateSimpleMemberFilter() {
+    const memberFilter = document.getElementById("simple-member-filter");
+    if (!memberFilter) return;
+
+    // Store the current selection before repopulating
+    const currentSelection = memberFilter.value;
+
+    memberFilter.innerHTML = '<option value="all">All Members</option>';
+    appData.teamMembers.forEach(member => {
+      const option = document.createElement("option");
+      option.value = member.id;
+      option.textContent = member.name;
+      memberFilter.appendChild(option);
+    });
+
+    // Set the default selection
+    if (isFirstIncompleteLoad && appData.currentUserId) {
+      // First time loading - default to current logged-in user
+      memberFilter.value = appData.currentUserId;
+      isFirstIncompleteLoad = false;
+      console.log("First load: Setting default member filter to current user:", appData.currentUserId);
+    } else if (currentSelection && currentSelection !== "") {
+      // Restore previous selection
+      memberFilter.value = currentSelection;
+      console.log("Restoring previous selection:", currentSelection);
+    }
+  }
+
+  function renderSimpleIncompleteTable(tickets) {
+    const tableBody = document.querySelector("#simple-incomplete-table tbody");
+    tableBody.innerHTML = "";
+
+    if (tickets.length === 0) {
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 2rem; color: #6b7280;">
+            No incomplete tickets found.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tickets.forEach(ticket => {
+      const row = tableBody.insertRow();
+      
+      // Use the same logic as getTicketWarnings for consistency
+      const warnings = getTicketWarnings(ticket);
+      const errorCount = warnings.length;
+
+      // Helper to check if field is missing - use warnings to determine this
+      const isMissing = (field) => {
+        return warnings.some(warning => warning.field === field);
+      };
+
+      // Get options for dropdowns
+      const skillOptions = appData.skills?.map(s => ({ value: s.id, text: s.name })) || [];
+      const complexityOptions = [
+        { value: "Easy", text: "Easy" },
+        { value: "Moderate", text: "Moderate" },
+        { value: "Complex", text: "Complex" }
+      ];
+
+      row.innerHTML = `
+        <td><span class="simple-ticket-id">HRB-${ticket.id}</span></td>
+        <td>
+          <div class="simple-task-title">${escapeHtml(ticket.title || '')}</div>
+          ${errorCount > 0 ? `<div class="simple-error-count">${errorCount} errors</div>` : ''}
+          ${ticket.status ? `<div class="simple-status-badge status-${ticket.status.toLowerCase().replace(/\s+/g, '-')}">${ticket.status}</div>` : ''}
+        </td>
+        <td>
+          <input type="date" value="${ticket.createdAt ? new Date(ticket.createdAt).toISOString().split('T')[0] : ''}" 
+                 class="simple-input ${isMissing('createdAt') ? 'missing' : ''}"
+                 data-field="createdAt" data-ticket-id="${ticket.id}">
+        </td>
+        <td>
+          <input type="date" value="${ticket.assignedAt ? new Date(ticket.assignedAt).toISOString().split('T')[0] : ''}" 
+                 class="simple-input ${isMissing('assignedAt') ? 'missing' : ''}"
+                 data-field="assignedAt" data-ticket-id="${ticket.id}">
+        </td>
+        <td>
+          <input type="date" value="${ticket.startedAt ? new Date(ticket.startedAt).toISOString().split('T')[0] : ''}" 
+                 class="simple-input ${isMissing('startedAt') ? 'missing' : ''}"
+                 data-field="startedAt" data-ticket-id="${ticket.id}">
+        </td>
+        <td>
+          <input type="date" value="${ticket.completedAt ? new Date(ticket.completedAt).toISOString().split('T')[0] : ''}" 
+                 class="simple-input ${isMissing('completedAt') ? 'missing' : ''}"
+                 data-field="completedAt" data-ticket-id="${ticket.id}">
+        </td>
+        <td>
+          <select class="simple-select ${isMissing('complexity') ? 'missing' : ''}"
+                  data-field="complexity" data-ticket-id="${ticket.id}">
+            <option value="">Select...</option>
+            ${complexityOptions.map(opt => 
+              `<option value="${opt.value}" ${opt.value === ticket.complexity ? 'selected' : ''}>${opt.text}</option>`
+            ).join('')}
+          </select>
+        </td>
+        <td>
+          <div class="searchable-dropdown-container" id="skills-container-${ticket.id}">
+            <input type="text" 
+                   class="searchable-dropdown-input ${isMissing('skillsId') ? 'missing' : ''}"
+                   data-field="skillsId" 
+                   data-ticket-id="${ticket.id}"
+                   placeholder="Select Skills..."
+                   value="${ticket.skillsId ? skillOptions.find(s => s.value == ticket.skillsId)?.text || '' : ''}"
+                   data-value="${ticket.skillsId || ''}"
+                   data-old-value="${ticket.skillsId || ''}"
+                   readonly>
+          </div>
+        </td>
+      `;
+    });
+
+    // Add event listeners
+    addSimpleIncompleteEventListeners();
+    
+    // Create searchable dropdowns for Skills
+    tickets.forEach(ticket => {
+      const skillsContainer = document.getElementById(`skills-container-${ticket.id}`);
+      if (skillsContainer) {
+        const skillOptions = appData.skills?.map(s => ({ value: s.id, text: s.name })) || [];
+        createSearchableDropdown(
+          skillsContainer,
+          skillOptions,
+          ticket.skillsId,
+          "skillsId",
+          ticket.id
+        );
+      }
+    });
+  }
+
+  function addSimpleIncompleteEventListeners() {
+    // Member filter change
+    const memberFilter = document.getElementById("simple-member-filter");
+    if (memberFilter) {
+      // Remove any existing listeners
+      memberFilter.removeEventListener("change", renderSimpleIncompleteView);
+      
+      // Add new listener with explicit function
+      memberFilter.addEventListener("change", function(e) {
+        console.log("Member filter changed to:", e.target.value);
+        renderSimpleIncompleteView();
+      });
+    } else {
+      console.error("simple-member-filter element not found!");
+    }
+
+    // Input field changes
+    document.querySelectorAll("#simple-incomplete-table .simple-input, #simple-incomplete-table .simple-select").forEach(input => {
+      input.addEventListener("change", async (e) => {
+        const ticketId = e.target.dataset.ticketId;
+        const field = e.target.dataset.field;
+        const ticket = appData.allTickets.find(t => t.id == ticketId);
+        const oldValue = ticket[field];
+        let newValue = e.target.value === "" ? null : e.target.value;
+        
+        if ((field === "assigneeId" || field === "skillsId") && newValue && newValue !== "") {
+          newValue = parseInt(newValue, 10);
+        }
+        
+        if (ticket && field && oldValue !== newValue) {
+          // Show saving indicator
+          e.target.style.borderColor = "#f59e0b";
+          e.target.style.background = "rgba(245, 158, 11, 0.1)";
+          
+          try {
+            // Save to database
+            const { error } = await window.supabaseClient
+              .from("ticket")
+              .update({ [field]: newValue })
+              .eq("id", ticketId);
+              
+            if (error) {
+              throw error;
+            }
+            
+            // Update local data
+            ticket[field] = newValue;
+            
+            // Show success indicator
+            e.target.style.borderColor = "#10b981";
+            e.target.style.background = "rgba(16, 185, 129, 0.1)";
+            
+            // Create and show success toast
+            showToast(`${field} updated successfully`, "success");
+            
+            // Reset styling after 2 seconds
+            setTimeout(() => {
+              e.target.style.borderColor = "";
+              e.target.style.background = "";
+            }, 2000);
+            
+          } catch (error) {
+            console.error("Failed to save:", error);
+            
+            // Show error indicator
+            e.target.style.borderColor = "#ef4444";
+            e.target.style.background = "rgba(239, 68, 68, 0.1)";
+            
+            // Revert the value
+            e.target.value = oldValue || "";
+            
+            showToast(`Failed to update ${field}`, "error");
+            
+            // Reset styling after 3 seconds
+            setTimeout(() => {
+              e.target.style.borderColor = "";
+              e.target.style.background = "";
+            }, 3000);
+          }
+          
+          // Update styling based on whether field is still missing using getTicketWarnings
+          const updatedWarnings = getTicketWarnings(ticket);
+          const fieldHasWarning = updatedWarnings.some(warning => warning.field === field);
+
+          if (fieldHasWarning) {
+            e.target.classList.add('missing');
+          } else {
+            e.target.classList.remove('missing');
+          }
+
+          // Re-render to update error counts
+          setTimeout(() => renderSimpleIncompleteView(), 100);
+        }
+      });
+    });
+  }
+
+  function updateSectionHeader() {
+    // Section header has been removed - this function is now empty
+    // but kept for compatibility with existing code that might call it
+  }
+
   function renderPage(page) {
     if (!tableWrapper) return; // Safety check
     const scrollPosition = tableWrapper.scrollTop; // Store position
     const tableHead = document.querySelector("table thead tr");
     const tableBody = document.querySelector("table tbody");
 
-    tableHead.innerHTML = isBulkEditMode
-      ? '<th class="checkbox-cell"><input type="checkbox" id="select-all-checkbox" title="Select all on this page"></th>'
-      : "";
-    tableHead.innerHTML += [
-      "ID",
-      "Task",
-      "Type",
-      "Requested By",
-      "Status",
-      "Assignee",
-      "Priority",
-      "",
-    ]
-      .map((h) => `<th>${h}</th>`)
+    console.log("🔍 renderPage called with currentView:", currentView); // Debug log
+
+    // Update section header
+    updateSectionHeader();
+
+    // Define columns for standard ticket views (incomplete has its own separate rendering)
+    const columns = isBulkEditMode
+      ? ["", "ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee", ""]
+      : ["ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee", ""];
+    
+    tableHead.innerHTML = columns
+      .map((h, index) => {
+        if (index === 0 && isBulkEditMode) {
+          return '<th class="checkbox-cell"><input type="checkbox" id="select-all-checkbox" title="Select all on this page"></th>';
+        }
+        return `<th>${h}</th>`;
+      })
       .join("");
+    
+    // Remove incomplete view styling (incomplete view has its own table now)
+    const table = document.querySelector('table');
+    table.classList.remove('incomplete-view-table');
 
     tableBody.innerHTML = "";
     const paginatedTickets = appData.tickets.slice(
@@ -1991,109 +2496,33 @@
     );
 
     if (paginatedTickets.length === 0) {
-      const colCount = isBulkEditMode ? 9 : 8;
-      tableBody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; padding: 2rem;">No tickets found.</td></tr>`;
+      // Calculate column count for standard ticket views
+      const baseColCount = 8; // ID, Task, Type, Priority, Status, Requested By, Assignee, Actions
+      const colCount = isBulkEditMode ? baseColCount + 1 : baseColCount;
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="${colCount}" class="empty-state">
+            <div class="empty-state-content">
+              <div class="empty-state-icon">
+                <i class="fas fa-search"></i>
+              </div>
+              <h3>No tickets found</h3>
+              <p>Try adjusting your filters or search terms to find what you're looking for.</p>
+            </div>
+          </td>
+        </tr>
+      `;
       updatePaginationControls(page, 0);
       return;
     }
 
-    let lastProjectTitle = null;
-    let lastEpicTitle = null;
 
+    // Standard table view for other views
     paginatedTickets.forEach((ticket) => {
       const colCount = isBulkEditMode ? 9 : 8;
 
-      if (
-        groupByProject &&
-        (ticket.projectName || "Unassigned") !== lastProjectTitle
-      ) {
-        lastProjectTitle = ticket.projectName || "Unassigned";
-        const projectTickets = appData.tickets.filter(
-          (t) => (t.projectName || "Unassigned") === lastProjectTitle
-        );
-        const groupTicketCount = projectTickets.length;
-        const projectId = projectTickets[0]?.projectId || "null";
-
-        // --- NEW: Calculate epic and task counts ---
-        const epicsInProject = new Set(
-          projectTickets.map((t) => t.epic).filter(Boolean)
-        );
-        const epicCount = epicsInProject.size;
-
-        // Build the count display string with icons
-        const epicIcon = `<i class="fas fa-bolt epic-icon" style="font-size: 0.85em;"></i>`;
-        const taskIcon = `<i class="fas fa-tasks" style="font-size: 0.85em; color: var(--text-secondary);"></i>`;
-        const countDisplay = `
-                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">${epicIcon} ${epicCount} ${
-          epicCount === 1 ? "epic" : "epics"
-        }</span>
-                <span style="margin: 0 0.25rem; color: var(--border-color);">•</span>
-                <span style="display: inline-flex; align-items: center; gap: 0.35rem;">${taskIcon} ${groupTicketCount} ${
-          groupTicketCount === 1 ? "task" : "tasks"
-        }</span>
-            `;
-
-        tableBody.innerHTML += `
-                <tr class="project-group-header">
-                    <td colspan="${colCount}">
-                        <div class="group-header-content">
-                            <i class="fas fa-chevron-down toggle-icon"></i>
-                            <i class="fas fa-folder project-icon"></i>
-                            <div style="display: flex; align-items: center;">
-                                <span class="project-name">${escapeHtml(
-                                  lastProjectTitle
-                                )}</span>
-                                <span class="group-count">${countDisplay}</span>
-                            </div>
-                            <div class="group-actions">
-                                <button class="action-btn-inline add-epic-inline-btn" data-project-id="${projectId}" title="Add New Epic"><i class="fas fa-bolt"></i></button>
-                                <button class="action-btn-inline add-task-inline-btn" data-project-id="${projectId}" title="Add Task to Project"><i class="fas fa-plus"></i></button>
-                            </div>
-                        </div>
-                    </td>
-                </tr>`;
-        lastEpicTitle = null;
-      }
-
-      if (groupByEpic && (ticket.epic || "No Epic") !== lastEpicTitle) {
-        lastEpicTitle = ticket.epic || "No Epic";
-        const projectFilter = (t) =>
-          (t.projectName || "Unassigned") === lastProjectTitle;
-        const epicFilter = (t) => (t.epic || "No Epic") === lastEpicTitle;
-        const epicTickets = appData.tickets.filter(
-          (t) => projectFilter(t) && epicFilter(t)
-        );
-        const groupTicketCount = epicTickets.length;
-        const projectId = epicTickets[0]?.projectId || "null";
-
-        tableBody.innerHTML += `
-                <tr class="epic-group-header">
-                    <td colspan="${colCount}">
-                        <div class="group-header-content">
-                            <div class="nesting-line"></div>
-                            <i class="fas fa-chevron-down toggle-icon"></i>
-                            <i class="fas fa-bolt epic-icon"></i>
-                             <div style="display: flex; align-items: center;">
-                                <span class="epic-name">${escapeHtml(
-                                  lastEpicTitle
-                                )}</span>
-                                <span class="group-count">${groupTicketCount}</span>
-                            </div>
-                            <div class="group-actions">
-                                <button class="action-btn-inline add-task-inline-btn" data-project-id="${projectId}" data-epic-name="${escapeHtml(
-          lastEpicTitle
-        )}" title="Add Task to Epic"><i class="fas fa-plus"></i></button>
-                            </div>
-                        </div>
-                    </td>
-                </tr>`;
-      }
-
       const row = tableBody.insertRow();
       row.id = `ticket-row-${ticket.id}`;
-      if (groupByEpic && lastEpicTitle) {
-        row.classList.add("is-in-epic");
-      }
 
       let safeTitle = escapeHtml(ticket.title || "");
       let safeDescription = escapeHtml(ticket.description || "");
@@ -2123,7 +2552,10 @@
         subtaskCountHtml = `<span style="color: var(--border-color); margin: 0 8px;">|</span><div class="ticket-age"><i class="fas fa-check-square" style="font-size: 0.8rem;"></i><span>${completedSubtasks}/${totalSubtasks}</span></div>`;
       }
 
-      row.innerHTML = `
+      // Generate row content based on view type
+      let rowContent;
+      // Standard view
+      rowContent = `
             ${
               isBulkEditMode
                 ? `<td class="checkbox-cell"><input type="checkbox" class="ticket-checkbox" data-id="${
@@ -2135,7 +2567,7 @@
             }
             <td data-label="ID"><div class="id-container"><i class="fas fa-copy copy-icon" data-ticket-id="${
               ticket.id
-            }" title="Copy summary"></i><span>${
+            }" title="Copy summary"></i><span>HRB-${
         ticket.id || ""
       }</span></div></td>
             <td data-label="Task"><div class="task-content"><strong>${safeTitle}</strong><br><small style="color: var(--text-secondary);">${safeDescription}</small>
@@ -2148,11 +2580,11 @@
    ${subtaskCountHtml}
  </div></div></td>
             <td data-label="Type">${createTypeTag(ticket.type)}</td>
-            <td data-label="Requested By">${createSearchableDropdown(
-              appData.users.map((u) => ({ value: u, text: u })),
-              ticket.requestedBy,
+            <td data-label="Priority">${createTagEditor(
+              ["Urgent", "High", "Medium", "Low"],
+              ticket.priority,
               ticket.id,
-              "requestedBy"
+              "priority"
             )}</td>
             <td data-label="Status">${createTagEditor(
               [
@@ -2168,17 +2600,17 @@
               ticket.id,
               "status"
             )}</td>
-            <td data-label="Assignee">${createSearchableDropdown(
-              appData.teamMembers.map((m) => ({ value: m, text: m })),
-              ticket.assignee,
+            <td data-label="Requested By">${createSearchableDropdown(
+              appData.users.map((u) => ({ value: u, text: u })),
+              ticket.requestedBy,
               ticket.id,
-              "assignee"
+              "requestedBy"
             )}</td>
-            <td data-label="Priority">${createTagEditor(
-              ["Urgent", "High", "Medium", "Low"],
-              ticket.priority,
+            <td data-label="Assignee">${createSearchableDropdown(
+              appData.teamMembers.map((m) => ({ value: m.id, text: m.name })),
+              ticket.assigneeId,
               ticket.id,
-              "priority"
+              "assigneeId"
             )}</td>
             <td data-label=""><div class="task-icons">${
               ticket.relevantLink
@@ -2188,6 +2620,8 @@
         ticket.id
       }"></i></div></td>
         `;
+      
+      row.innerHTML = rowContent;
     });
 
     addTableEventListeners();
@@ -2252,6 +2686,97 @@
     newBody.addEventListener("focusin", handleTableFocusIn);
     newBody.addEventListener("focusout", handleTableFocusOut);
     newBody.addEventListener("keyup", handleTableKeyUp);
+    
+    // Add click handler for searchable dropdown inputs
+    newBody.addEventListener("click", handleSearchableDropdownClick);
+
+    // Add global click listener for dropdown items (since they're moved to document.body)
+    document.addEventListener("click", (e) => {
+      // Check if clicking on a dropdown item
+      if (e.target.hasAttribute('data-value') && e.target.closest('.searchable-dropdown-list')) {
+        console.log("Global dropdown item click detected");
+        handleDropdownItemClick(e);
+        return;
+      }
+    });
+
+    // Add global click listener to close Jira dropdowns when clicking outside
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".tag-editor.jira-style")) {
+        document.querySelectorAll(".jira-dropdown").forEach(dropdown => {
+          dropdown.style.display = "none";
+        });
+      }
+      
+      // Close searchable dropdowns when clicking outside
+      if (!e.target.closest(".searchable-dropdown") && !e.target.closest(".searchable-dropdown-list")) {
+        document.querySelectorAll(".searchable-dropdown-list").forEach(dropdown => {
+          if (dropdown.style.display === "block") {
+            dropdown.style.display = "none";
+            // Return dropdown to its original parent if it was moved to body
+            if (dropdown.parentNode === document.body) {
+              // Find the input that corresponds to this dropdown
+              const inputs = document.querySelectorAll(".searchable-dropdown-input");
+              for (let input of inputs) {
+                const container = input.closest(".searchable-dropdown");
+                if (container && !container.querySelector(".searchable-dropdown-list")) {
+                  // This container doesn't have its dropdown, so this must be it
+                  container.appendChild(dropdown);
+                  break;
+                }
+              }
+            }
+          }
+        });
+      }
+    });
+    
+    // Handle window resize to reposition dropdowns
+    window.addEventListener("resize", () => {
+      document.querySelectorAll(".searchable-dropdown-list").forEach(dropdown => {
+        if (dropdown.style.display === "block") {
+          const input = dropdown.previousElementSibling;
+          if (input && input.classList.contains("searchable-dropdown-input")) {
+            positionDropdownFixed(input, dropdown);
+          }
+        }
+      });
+    });
+    
+    // Handle scroll events to close dropdowns
+    const closeAllDropdowns = () => {
+      document.querySelectorAll(".searchable-dropdown-list").forEach(dropdown => {
+        if (dropdown.style.display === "block") {
+          dropdown.style.display = "none";
+          // Return dropdown to its original parent if it was moved to body
+          if (dropdown.parentNode === document.body) {
+            // Find the input that corresponds to this dropdown
+            const inputs = document.querySelectorAll(".searchable-dropdown-input");
+            for (let input of inputs) {
+              const container = input.closest(".searchable-dropdown");
+              if (container && !container.querySelector(".searchable-dropdown-list")) {
+                // This container doesn't have its dropdown, so this must be it
+                container.appendChild(dropdown);
+                break;
+              }
+            }
+          }
+        }
+      });
+    };
+    
+    window.addEventListener("scroll", closeAllDropdowns, true); // Use capture phase to catch all scroll events
+    
+    // Also listen for scroll events on table containers and other scrollable elements
+    const tableWrapper = document.querySelector(".table-wrapper");
+    if (tableWrapper) {
+      tableWrapper.addEventListener("scroll", closeAllDropdowns);
+    }
+    
+    // Listen for scroll on any scrollable parent containers
+    document.querySelectorAll(".ticket-main-content, .ticket-details-sidebar").forEach(container => {
+      container.addEventListener("scroll", closeAllDropdowns);
+    });
 
     // ✅ attach checkbox click
     newBody.querySelectorAll(".ticket-checkbox").forEach((cb) => {
@@ -2263,8 +2788,45 @@
       selectAllCheckbox.addEventListener("change", toggleSelectAll);
   }
 
+  function handleJiraDropdownUpdate(id, field, value, type) {
+    const handler = type === "project" ? handleProjectUpdate : handleUpdate;
+    
+    // Find the actual DOM element to get the parent container and old value
+    const actualElement = document.querySelector(`[data-id="${id}"][data-field="${field}"]`);
+    const parentContainer = actualElement ? actualElement.closest("td, .sidebar-property-editable") : null;
+    const oldValue = actualElement ? actualElement.dataset.oldValue || "" : "";
+    
+    // Create a fake event object to match the expected format
+    const fakeEvent = {
+      target: {
+        dataset: {
+          id: id,
+          field: field,
+          type: type,
+          oldValue: oldValue,
+          value: value // Add the actual value for searchable dropdowns
+        },
+        value: value,
+        classList: actualElement ? actualElement.classList : { contains: () => false },
+        closest: function(selector) {
+          return parentContainer;
+        }
+      }
+    };
+    
+    // For searchable dropdowns, pass the value as newValueFromSearchable
+    if (actualElement && actualElement.classList.contains("searchable-dropdown-input")) {
+      handler(fakeEvent, value); // Pass as second parameter for newValueFromSearchable
+    } else {
+      handler(fakeEvent);
+    }
+  }
+
   function handleTableClick(e) {
     const target = e.target;
+    console.log("handleTableClick - target:", target);
+    console.log("handleTableClick - target classes:", target.className);
+    console.log("handleTableClick - target closest dropdown item:", target.closest(".searchable-dropdown-list div[data-value]"));
 
     // --- Specific Action Handlers (These take priority) ---
     const addTaskBtn = target.closest(".add-task-inline-btn");
@@ -2291,9 +2853,41 @@
     if (target.classList.contains("status-tag")) {
       const editor = target.closest(".tag-editor");
       if (editor && !editor.classList.contains("is-editing")) {
+        // Handle Jira-style dropdown
+        if (editor.classList.contains("jira-style")) {
+          e.stopPropagation();
+          const dropdown = editor.querySelector(".jira-dropdown");
+          if (dropdown) {
+            // Close all other dropdowns first
+            document.querySelectorAll(".jira-dropdown").forEach(d => {
+              if (d !== dropdown) d.style.display = "none";
+            });
+            // Toggle current dropdown
+            dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+          }
+        } else {
+          // Handle old-style dropdown
         editor.classList.add("is-editing");
         editor.querySelector("select")?.focus();
+        }
       }
+      return;
+    }
+    
+    // Handle Jira dropdown option clicks
+    if (target.classList.contains("jira-option") || target.closest(".jira-option")) {
+      e.stopPropagation();
+      const option = target.classList.contains("jira-option") ? target : target.closest(".jira-option");
+      const value = option.dataset.value;
+      const id = option.dataset.id;
+      const field = option.dataset.field;
+      const type = option.dataset.type;
+      
+      // Close dropdown
+      option.closest(".jira-dropdown").style.display = "none";
+      
+      // Update the value
+      handleJiraDropdownUpdate(id, field, value, type);
       return;
     }
     if (target.classList.contains("project-name")) {
@@ -2327,14 +2921,51 @@
     }
 
     // --- FIX: Correctly handle dropdown selection for both new and existing rows ---
-    const dropdownItem = target.closest(
-      ".searchable-dropdown-list div[data-value]"
-    );
+    let dropdownItem = null;
+    
+    // Check if the target itself is a dropdown item
+    if (target.hasAttribute('data-value') && target.closest('.searchable-dropdown-list')) {
+      dropdownItem = target;
+      console.log("Target itself is dropdown item:", dropdownItem);
+    }
+    
+    // If not, try closest search
+    if (!dropdownItem) {
+      dropdownItem = target.closest(".searchable-dropdown-list div[data-value]");
+      console.log("First attempt dropdown item:", dropdownItem);
+    }
+    
+    // If still not found, try a more specific selector
+    if (!dropdownItem) {
+      dropdownItem = target.closest("div[data-value]");
+      console.log("Second attempt dropdown item:", dropdownItem);
+      // Make sure it's within a searchable dropdown list
+      if (dropdownItem && !dropdownItem.closest(".searchable-dropdown-list")) {
+        console.log("Dropdown item not in searchable dropdown list, setting to null");
+        dropdownItem = null;
+      }
+    }
+    
+    console.log("Final dropdown item:", dropdownItem);
     if (dropdownItem) {
+      e.stopPropagation(); // Prevent event bubbling
+      e.preventDefault(); // Prevent default behavior
+      
+      // Use setTimeout to ensure this is processed before global click handlers
+      setTimeout(() => {
+        console.log("Processing dropdown item selection");
       const input = dropdownItem
         .closest(".searchable-dropdown")
         .querySelector("input");
       const newValue = dropdownItem.dataset.value;
+        
+        console.log("Input element:", input);
+        console.log("New value:", newValue);
+
+        // Store the current value as oldValue before updating
+        if (!input.dataset.oldValue) {
+          input.dataset.oldValue = input.dataset.value || "";
+        }
 
       // Set the display text and the underlying ID value
       input.value = dropdownItem.textContent.trim();
@@ -2347,8 +2978,18 @@
         handler({ target: input }, newValue);
       }
 
-      // Hide the dropdown list after selection
-      dropdownItem.closest(".searchable-dropdown-list").style.display = "none";
+        // Hide the dropdown list after selection and return to original parent
+        const dropdown = dropdownItem.closest(".searchable-dropdown-list");
+        dropdown.style.display = "none";
+        
+        // Return dropdown to original parent if it was moved to body
+        if (dropdown.parentNode === document.body) {
+          const container = input.closest(".searchable-dropdown");
+          if (container && !container.querySelector(".searchable-dropdown-list")) {
+            container.appendChild(dropdown);
+          }
+        }
+      }, 10);
       return;
     }
 
@@ -2403,9 +3044,186 @@
       handler(e);
     }
   }
+  // Position dropdown using fixed positioning and move to body to escape all stacking contexts
+  function positionDropdownFixed(input, dropdown) {
+    const inputRect = input.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    // Close all other dropdowns first
+    document.querySelectorAll(".searchable-dropdown-list").forEach(otherDropdown => {
+      if (otherDropdown !== dropdown && otherDropdown.style.display === "block") {
+        otherDropdown.style.display = "none";
+        // Return other dropdowns to their original parents
+        if (otherDropdown.parentNode === document.body) {
+          const inputs = document.querySelectorAll(".searchable-dropdown-input");
+          for (let otherInput of inputs) {
+            const container = otherInput.closest(".searchable-dropdown");
+            if (container && !container.querySelector(".searchable-dropdown-list")) {
+              container.appendChild(otherDropdown);
+              break;
+            }
+          }
+        }
+      }
+    });
+    
+    // Move dropdown to body to escape any container stacking contexts
+    if (dropdown.parentNode !== document.body) {
+      document.body.appendChild(dropdown);
+    }
+    
+    // Show dropdown first to get its dimensions
+    dropdown.style.display = "block";
+    
+    // Force a reflow to get accurate dimensions
+    dropdown.offsetHeight;
+    
+    const dropdownHeight = dropdown.offsetHeight;
+    const dropdownWidth = Math.max(inputRect.width, 200); // Minimum width of 200px
+    
+    // Calculate position
+    let top, left;
+    
+    // Check if there's enough space below
+    if (inputRect.bottom + dropdownHeight <= viewportHeight - 20) {
+      // Position below
+      top = inputRect.bottom + 2;
+      dropdown.classList.remove("dropdown-up");
+    } else {
+      // Position above
+      top = inputRect.top - dropdownHeight - 2;
+      dropdown.classList.add("dropdown-up");
+    }
+    
+    // Calculate horizontal position
+    left = inputRect.left;
+    
+    // Adjust if dropdown would extend beyond viewport
+    if (left + dropdownWidth > viewportWidth - 20) {
+      left = viewportWidth - dropdownWidth - 20;
+    }
+    if (left < 20) {
+      left = 20;
+    }
+    
+    // Apply the calculated position with maximum z-index
+    dropdown.style.top = `${top}px`;
+    dropdown.style.left = `${left}px`;
+    dropdown.style.width = `${dropdownWidth}px`;
+    dropdown.style.zIndex = "999999"; // Ensure maximum z-index
+    dropdown.style.position = "fixed"; // Ensure fixed positioning
+    dropdown.style.isolation = "isolate"; // Force new stacking context
+    dropdown.style.transform = "translateZ(0) scale(1)"; // Force hardware acceleration
+    dropdown.style.pointerEvents = "auto"; // Ensure dropdown is interactive
+    
+    // Force a repaint to ensure the dropdown is visible
+    dropdown.style.opacity = "0.99";
+    requestAnimationFrame(() => {
+      dropdown.style.opacity = "1";
+      // Double-check z-index after repaint
+      dropdown.style.zIndex = "999999";
+    });
+  }
+
   function handleTableFocusIn(e) {
-    if (e.target.classList.contains("searchable-dropdown-input"))
-      e.target.nextElementSibling.style.display = "block";
+    if (e.target.classList.contains("searchable-dropdown-input")) {
+      // Find the dropdown - it might be a sibling or already moved to body
+      let dropdown = e.target.nextElementSibling;
+      if (!dropdown || !dropdown.classList.contains("searchable-dropdown-list")) {
+        // If not found as sibling, look for it in the same searchable dropdown container
+        const container = e.target.closest(".searchable-dropdown");
+        dropdown = container ? container.querySelector(".searchable-dropdown-list") : null;
+      }
+      
+      if (dropdown) {
+        positionDropdownFixed(e.target, dropdown);
+      }
+    }
+  }
+  
+  // Add click handler for searchable dropdown inputs
+  function handleSearchableDropdownClick(e) {
+    if (e.target.classList.contains("searchable-dropdown-input")) {
+      // Find the dropdown - it might be a sibling or already moved to body
+      let dropdown = e.target.nextElementSibling;
+      if (!dropdown || !dropdown.classList.contains("searchable-dropdown-list")) {
+        // If not found as sibling, look for it in the same searchable dropdown container
+        const container = e.target.closest(".searchable-dropdown");
+        dropdown = container ? container.querySelector(".searchable-dropdown-list") : null;
+      }
+      
+      if (dropdown) {
+        positionDropdownFixed(e.target, dropdown);
+        e.target.focus();
+        
+        // Add direct event listeners to dropdown items since they're now in document.body
+        const dropdownItems = dropdown.querySelectorAll('div[data-value]');
+        dropdownItems.forEach(item => {
+          // Remove any existing listeners first
+          item.removeEventListener('click', handleDropdownItemClick);
+          // Add new listener
+          item.addEventListener('click', handleDropdownItemClick);
+        });
+      }
+    }
+  }
+  
+  // Handle dropdown item clicks directly
+  function handleDropdownItemClick(e) {
+    console.log("Direct dropdown item click handler called");
+    e.stopPropagation();
+    e.preventDefault();
+    
+    const dropdownItem = e.target;
+    const dropdown = dropdownItem.closest('.searchable-dropdown-list');
+    
+    // Find the input - it might be in the original container
+    let input = null;
+    const inputs = document.querySelectorAll('.searchable-dropdown-input');
+    for (let inp of inputs) {
+      const container = inp.closest('.searchable-dropdown');
+      if (container && !container.querySelector('.searchable-dropdown-list')) {
+        // This container is missing its dropdown, so this must be the right input
+        input = inp;
+        break;
+      }
+    }
+    
+    if (!input || !dropdownItem) {
+      console.log("Could not find input or dropdown item");
+      return;
+    }
+    
+    const newValue = dropdownItem.dataset.value;
+    console.log("Processing dropdown item with value:", newValue);
+    
+    // Store the current value as oldValue before updating
+    if (!input.dataset.oldValue) {
+      input.dataset.oldValue = input.dataset.value || "";
+    }
+
+    // Set the display text and the underlying ID value
+    input.value = dropdownItem.textContent.trim();
+    input.dataset.value = newValue;
+
+    // ONLY trigger the database update if it's an existing ticket row
+    if (input.dataset.id !== "new-inline") {
+      const handler =
+        input.dataset.type === "project" ? handleProjectUpdate : handleUpdate;
+      handler({ target: input }, newValue);
+    }
+
+    // Hide the dropdown list after selection and return to original parent
+    dropdown.style.display = "none";
+    
+    // Return dropdown to original parent if it was moved to body
+    if (dropdown.parentNode === document.body) {
+      const container = input.closest(".searchable-dropdown");
+      if (container && !container.querySelector(".searchable-dropdown-list")) {
+        container.appendChild(dropdown);
+      }
+    }
   }
   function handleTableFocusOut(e) {
     if (
@@ -2413,16 +3231,40 @@
       e.target.closest(".tag-editor")
     )
       e.target.closest(".tag-editor").classList.remove("is-editing");
-    else if (e.target.classList.contains("searchable-dropdown-input"))
-      setTimeout(
-        () => (e.target.nextElementSibling.style.display = "none"),
-        200
-      );
+    else if (e.target.classList.contains("searchable-dropdown-input")) {
+      // Add a small delay to prevent race condition with click events
+      setTimeout(() => {
+        // Find the dropdown - it might be a sibling or already moved to body
+        let dropdown = e.target.nextElementSibling;
+        if (!dropdown || !dropdown.classList.contains("searchable-dropdown-list")) {
+          // If not found as sibling, look for it in the same searchable dropdown container
+          const container = e.target.closest(".searchable-dropdown");
+          dropdown = container ? container.querySelector(".searchable-dropdown-list") : null;
+        }
+        
+        if (dropdown && dropdown.style.display === "block") {
+          dropdown.style.display = "none";
+          // Return dropdown to its original parent if it was moved to body
+          const originalParent = e.target.closest(".searchable-dropdown");
+          if (dropdown.parentNode === document.body && originalParent) {
+            originalParent.appendChild(dropdown);
+          }
+        }
+      }, 150);
+    }
   }
   function handleTableKeyUp(e) {
     if (e.target.classList.contains("searchable-dropdown-input")) {
       const filter = e.target.value.toLowerCase();
-      const list = e.target.nextElementSibling;
+      // Find the dropdown - it might be a sibling or already moved to body
+      let list = e.target.nextElementSibling;
+      if (!list || !list.classList.contains("searchable-dropdown-list")) {
+        // If not found as sibling, look for it in the same searchable dropdown container
+        const container = e.target.closest(".searchable-dropdown");
+        list = container ? container.querySelector(".searchable-dropdown-list") : null;
+      }
+      
+      if (list) {
       list
         .querySelectorAll("div")
         .forEach(
@@ -2433,6 +3275,7 @@
               ? ""
               : "none")
         );
+      }
     }
   }
 
@@ -2463,20 +3306,141 @@
   }
   function toggleSelectAll(event) {
     const isChecked = event.target.checked;
-    document.querySelectorAll(".ticket-checkbox").forEach((checkbox) => {
+    const checkboxes = document.querySelectorAll(".ticket-checkbox");
+    
+    // Update all checkboxes
+    checkboxes.forEach((checkbox) => {
       const id = checkbox.dataset.id;
       checkbox.checked = isChecked;
-      if (isChecked) selectedTickets.add(id);
-      else selectedTickets.delete(id);
+      if (isChecked) {
+        selectedTickets.add(id);
+      } else {
+        selectedTickets.delete(id);
+      }
     });
+    
+    // Update the select all checkbox state based on current selection
+    updateSelectAllCheckboxState();
     updateBulkActionControls();
   }
   function handleCheckboxClick(event) {
     const id = event.target.dataset.id;
-    if (event.target.checked) selectedTickets.add(id);
-    else selectedTickets.delete(id);
+    if (event.target.checked) {
+      selectedTickets.add(id);
+    } else {
+      selectedTickets.delete(id);
+    }
+    
+    // Update the select all checkbox state
+    updateSelectAllCheckboxState();
     updateBulkActionControls();
   }
+
+  function updateSelectAllCheckboxState() {
+    const selectAllCheckbox = document.getElementById("select-all-checkbox");
+    const incompleteSelectAllCheckbox = document.getElementById("incomplete-select-all-checkbox");
+    const activeSelectAll = selectAllCheckbox || incompleteSelectAllCheckbox;
+    
+    if (!activeSelectAll) return;
+    
+    const checkboxes = document.querySelectorAll(".ticket-checkbox");
+    const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+    
+    if (checkedCount === 0) {
+      activeSelectAll.checked = false;
+      activeSelectAll.indeterminate = false;
+    } else if (checkedCount === checkboxes.length) {
+      activeSelectAll.checked = true;
+      activeSelectAll.indeterminate = false;
+    } else {
+      activeSelectAll.checked = false;
+      activeSelectAll.indeterminate = true;
+    }
+  }
+
+  function addIncompleteEventListeners() {
+    // Handle table input changes with proper validation
+    document.querySelectorAll(".table-input").forEach((input) => {
+      input.addEventListener("change", (e) => {
+        const ticketId = e.target.dataset.ticketId;
+        const field = e.target.dataset.field;
+        const ticket = appData.allTickets.find(t => t.id == ticketId);
+        
+        if (ticket && field) {
+          ticket[field] = e.target.value;
+          
+          // Re-validate this field based on status
+          const isRequired = isFieldRequired(field, ticket.status);
+          const isMissing = isRequired && (!e.target.value || e.target.value === "");
+          
+          if (isMissing) {
+            e.target.classList.add('missing-field');
+          } else {
+            e.target.classList.remove('missing-field');
+          }
+          
+          // Update error count for this ticket
+          updateTicketErrorCount(ticketId);
+        }
+      });
+    });
+  }
+
+
+  // Helper function to determine if field is required (global scope)
+  function isFieldRequired(field, status) {
+    switch (field) {
+      case 'createdAt':
+      case 'complexity':
+      case 'skillsId':
+        return true; // Always required
+      case 'assignedAt':
+        return status !== "Open";
+      case 'startedAt':
+        return status === "In Progress" || status === "Completed";
+      case 'completedAt':
+        return status === "Completed";
+      default:
+        return false;
+    }
+  }
+
+  function updateTicketErrorCount(ticketId) {
+    const ticket = appData.allTickets.find(t => t.id == ticketId);
+    if (!ticket) return;
+    
+    // Recalculate missing fields
+    let missingFieldCount = 0;
+    if (!ticket.complexity || ticket.complexity === "") missingFieldCount++;
+    if (!ticket.skillsId || ticket.skillsId === "") missingFieldCount++;
+    if (!ticket.createdAt) missingFieldCount++;
+    if (!ticket.assignedAt && ticket.status !== "Open") missingFieldCount++;
+    if (!ticket.startedAt && (ticket.status === "In Progress" || ticket.status === "Completed")) missingFieldCount++;
+    if (!ticket.completedAt && ticket.status === "Completed") missingFieldCount++;
+    
+    // Update the error badge
+    const errorBadge = document.querySelector(`[data-ticket-id="${ticketId}"] .error-badge`);
+    if (errorBadge) {
+      if (missingFieldCount > 0) {
+        errorBadge.textContent = `${missingFieldCount} errors`;
+        errorBadge.style.display = 'inline-block';
+      } else {
+        errorBadge.style.display = 'none';
+      }
+    }
+  }
+
+  function updateIncompleteBulkButtons() {
+    const assignBtn = document.getElementById("incomplete-bulk-assign");
+    const updateBtn = document.getElementById("incomplete-bulk-update");
+    const count = selectedTickets.size;
+    
+    if (assignBtn) assignBtn.disabled = count === 0;
+    if (updateBtn) updateBtn.disabled = count === 0;
+  }
+
+  // Bulk actions are handled by the main bulk actions panel
+  // No need for separate handlers in incomplete tab
   function openAssigneeModal() {
     const select = document.getElementById("assignee-select");
     select.innerHTML =
@@ -2555,8 +3519,38 @@
       modalBody.innerHTML = [...ticket.log]
         .reverse()
         .map((entry) => {
-          const oldVal = entry.oldValue || "empty";
-          const newVal = entry.newValue || "empty";
+          // Handle different types of values for better display
+          const formatValue = (value) => {
+            if (value === null || value === undefined || value === "" || value === "null") {
+              return "(empty)";
+            }
+            if (typeof value === "object") {
+              return JSON.stringify(value);
+            }
+            return String(value);
+          };
+          
+          const oldVal = formatValue(entry.oldValue);
+          const newVal = formatValue(entry.newValue);
+          
+          // Convert field names to user-friendly display names
+          const fieldDisplayNames = {
+            status: "Status",
+            priority: "Priority", 
+            assignee: "Assignee",
+            assigneeId: "Assignee",
+            requestedBy: "Requested By",
+            projectId: "Project",
+            skillsId: "Skills",
+            type: "Type",
+            complexity: "Complexity",
+            assignedAt: "Assigned At",
+            startedAt: "Started At",
+            completedAt: "Completed At",
+            "bulk-update": "Bulk Update"
+          };
+          
+          const fieldName = fieldDisplayNames[entry.field] || entry.field;
           return `<div class="history-entry">
                     <div class="history-meta"><strong>${escapeHtml(
                       entry.user
@@ -2564,7 +3558,7 @@
             entry.timestamp
           ).toLocaleString()}</div>
                     <div class="history-change">Changed <strong>${escapeHtml(
-                      entry.field
+                      fieldName
                     )}</strong> from "<em>${escapeHtml(
             oldVal
           )}</em>" to "<em>${escapeHtml(newVal)}</em>"</div>
@@ -2691,7 +3685,7 @@
         <div class="ticket-main-content" data-ticket-id="${ticket.id}">
             <div class="ticket-main-header">
                 <div>
-                    <span class="ticket-id-tag">${escapeHtml(ticket.id)}</span>
+                    <span class="ticket-id-tag">HRB-${escapeHtml(ticket.id)}</span>
                     <textarea id="modal-edit-title" class="modal-title-textarea" rows="1" placeholder="Ticket Title...">${escapeHtml(
                       ticket.title || ""
                     )}</textarea>
@@ -2920,18 +3914,44 @@
 
   function createTagEditor(options, selectedValue, id, field, type = "ticket") {
     const tagInfo = getTagInfo(field, selectedValue);
-    const tagHTML = `<span class="status-tag ${tagInfo.className}">${escapeHtml(
+    const tagHTML = `<span class="status-tag ${tagInfo.className}" 
+                           data-id="${id}" 
+                           data-field="${field}" 
+                           data-type="${type}" 
+                           data-old-value="${selectedValue !== null && selectedValue !== undefined ? escapeHtml(selectedValue) : 'null'}">${escapeHtml(
       tagInfo.text
     )}</span>`;
-    const dropdownHTML = createDropdown(
+    const dropdownHTML = createJiraStyleDropdown(
       options,
       selectedValue,
       id,
       field,
-      type,
-      false
+      type
     );
-    return `<div class="tag-editor">${tagHTML}${dropdownHTML}</div>`;
+    return `<div class="tag-editor jira-style">${tagHTML}${dropdownHTML}</div>`;
+  }
+
+  function createJiraStyleDropdown(options, selectedValue, id, field, type = "ticket") {
+    const dropdownId = `jira-dropdown-${id}-${field}`;
+    const optionsHTML = options
+      .map((option) => {
+        const tagInfo = getTagInfo(field, option);
+        const isSelected = option === selectedValue;
+        return `<div class="jira-option ${isSelected ? 'selected' : ''}" 
+                        data-value="${escapeHtml(option)}" 
+                        data-id="${id}" 
+                        data-field="${field}" 
+                        data-type="${type}">
+                  <span class="jira-tag ${tagInfo.className}">${escapeHtml(option)}</span>
+                </div>`;
+      })
+      .join("");
+    
+    return `<div class="jira-dropdown-container">
+              <div class="jira-dropdown" id="${dropdownId}" style="display: none;">
+                ${optionsHTML}
+              </div>
+            </div>`;
   }
   function createTypeTag(type) {
     const tagInfo = getTagInfo("type", type);
@@ -3177,21 +4197,54 @@
   function updateNavBadgeCounts() {
     const myTicketCountEl = document.getElementById("my-ticket-count");
     const unassignedCountEl = document.getElementById("unassigned-count");
-    if (!myTicketCountEl || !unassignedCountEl) return;
+    const incompleteCountEl = document.getElementById("incomplete-count");
+    const criticalCountEl = document.getElementById("critical-count");
+    const stalledCountEl = document.getElementById("stalled-count");
+    const allTicketsCountEl = document.getElementById("all-tickets-count");
+    
+    if (!myTicketCountEl || !unassignedCountEl || !incompleteCountEl) return;
 
     const doneStatuses = ["Completed", "Rejected", "Cancelled"];
 
     // MODIFIED: Filter by assigneeId and the current user's ID
-    const myTicketCount = appData.allTickets.filter(
-      (t) =>
-        t.assigneeId == appData.currentUserId &&
-        !doneStatuses.includes(t.status)
-    ).length;
+    const myTicketCount = appData.allTickets.filter((t) => {
+      const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
+      const isNotCompleted = excludeDoneSettings['my-ticket'] ? !doneStatuses.includes(t.status) : true;
+      return isAssignedToCurrentUser && isNotCompleted;
+    }).length;
 
     // MODIFIED: Filter where assigneeId is null or undefined
-    const unassignedCount = appData.allTickets.filter(
-      (t) => t.assigneeId == null
-    ).length;
+    const unassignedCount = appData.allTickets.filter((t) => {
+      const isUnassigned = t.assigneeId == null;
+      const isNotCompleted = excludeDoneSettings['unassigned'] ? !doneStatuses.includes(t.status) : true;
+      return isUnassigned && isNotCompleted;
+    }).length;
+
+    // Count tickets with incomplete data (default to current user)
+    const incompleteCount = appData.allTickets.filter((t) => {
+      const warnings = getTicketWarnings(t);
+      return warnings.length > 0 && t.assigneeId == appData.currentUserId;
+    }).length;
+
+    // Count critical tickets (Urgent or High priority assigned to current user)
+    const criticalCount = appData.allTickets.filter((t) => {
+      const isHighPriority = t.priority === "Urgent" || t.priority === "High";
+      const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
+      const isNotCompleted = excludeDoneSettings['critical'] ? !doneStatuses.includes(t.status) : true;
+      return isHighPriority && isAssignedToCurrentUser && isNotCompleted;
+    }).length;
+
+    // Count stalled tickets (On Hold or Blocked assigned to current user)
+    const stalledCount = appData.allTickets.filter((t) => {
+      const isStalledStatus = t.status === "On Hold" || t.status === "Blocked";
+      const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
+      return isStalledStatus && isAssignedToCurrentUser;
+    }).length;
+
+    // Count all tickets (respecting excludeDone for consistency)
+    const allTicketsCount = excludeDoneSettings['all'] 
+      ? appData.allTickets.filter((t) => !doneStatuses.includes(t.status)).length
+      : appData.allTickets.length;
 
     myTicketCountEl.textContent = myTicketCount;
     myTicketCountEl.style.display = myTicketCount > 0 ? "inline-block" : "none";
@@ -3199,6 +4252,25 @@
     unassignedCountEl.textContent = unassignedCount;
     unassignedCountEl.style.display =
       unassignedCount > 0 ? "inline-block" : "none";
+
+    incompleteCountEl.textContent = incompleteCount;
+    incompleteCountEl.style.display =
+      incompleteCount > 0 ? "inline-block" : "none";
+
+    if (criticalCountEl) {
+      criticalCountEl.textContent = criticalCount;
+      criticalCountEl.style.display = criticalCount > 0 ? "inline-block" : "none";
+    }
+
+    if (stalledCountEl) {
+      stalledCountEl.textContent = stalledCount;
+      stalledCountEl.style.display = stalledCount > 0 ? "inline-block" : "none";
+    }
+
+    if (allTicketsCountEl) {
+      allTicketsCountEl.textContent = allTicketsCount;
+      allTicketsCountEl.style.display = allTicketsCount > 0 ? "inline-block" : "none";
+    }
   }
 
   function createSearchableDropdown(
@@ -3212,19 +4284,27 @@
     const hasValueClass =
       selectedValue || selectedValue === 0 ? "has-value" : "";
     const selectedOption = options.find((opt) => opt.value == selectedValue);
-    const selectedText = selectedOption ? selectedOption.text : "";
+    const selectedText = selectedOption ? selectedOption.text : selectedValue || "";
     const clearIconHTML = isClearable
       ? '<i class="fas fa-times-circle clear-icon"></i>'
       : "";
+    
+    // Create a combined options list that includes the current value even if not in options
+    const combinedOptions = [...options];
+    if (selectedValue && selectedValue !== "" && !selectedOption) {
+      // Add the current value to options if it's not already there (for inactive users)
+      combinedOptions.unshift({ value: selectedValue, text: selectedValue });
+    }
+    
     let html = `<div class="editable-field-wrapper ${hasValueClass}">
                     <div class="searchable-dropdown">
                         <input type="text" class="searchable-dropdown-input" value="${escapeHtml(
                           selectedText
                         )}" placeholder="Search..." data-id="${id}" data-field="${field}" data-type="${type}" data-old-value="${escapeHtml(
       selectedValue || ""
-    )}" autocomplete="off">
+    )}" data-value="${escapeHtml(selectedValue || "")}" autocomplete="off">
                         <div class="searchable-dropdown-list">`;
-    options.forEach((opt) => {
+    combinedOptions.forEach((opt) => {
       html += `<div data-value="${escapeHtml(opt.value)}">${escapeHtml(
         opt.text
       )}</div>`;
@@ -3233,201 +4313,6 @@
     return html;
   }
 
-  function renderPage(page) {
-    if (!tableWrapper) return;
-    const scrollPosition = tableWrapper.scrollTop;
-    const tableHead = document.querySelector("table thead tr");
-    const tableBody = document.querySelector("table tbody");
-
-    tableHead.innerHTML = isBulkEditMode
-      ? '<th class="checkbox-cell"><input type="checkbox" id="select-all-checkbox" title="Select all on this page"></th>'
-      : "";
-    tableHead.innerHTML += [
-      "ID",
-      "Task",
-      "Type",
-      "Requested By",
-      "Status",
-      "Assignee",
-      "Priority",
-      "",
-    ]
-      .map((h) => `<th>${h}</th>`)
-      .join("");
-
-    tableBody.innerHTML = "";
-    const paginatedTickets = appData.tickets.slice(
-      (page - 1) * ticketsPerPage,
-      page * ticketsPerPage
-    );
-
-    if (paginatedTickets.length === 0) {
-      const colCount = isBulkEditMode ? 9 : 8;
-      tableBody.innerHTML = `<tr><td colspan="${colCount}" style="text-align: center; padding: 2rem;">No tickets found.</td></tr>`;
-      updatePaginationControls(page, 0);
-      return;
-    }
-
-    let lastProjectTitle = null;
-    let lastEpicTitle = null;
-
-    paginatedTickets.forEach((ticket) => {
-      // ... (The entire group header logic remains unchanged) ...
-      const colCount = isBulkEditMode ? 9 : 8;
-
-      if (
-        groupByProject &&
-        (ticket.projectName || "Unassigned") !== lastProjectTitle
-      ) {
-        lastProjectTitle = ticket.projectName || "Unassigned";
-        const projectTickets = appData.tickets.filter(
-          (t) => (t.projectName || "Unassigned") === lastProjectTitle
-        );
-        const groupTicketCount = projectTickets.length;
-        const projectId = projectTickets[0]?.projectId || "null";
-        const epicsInProject = new Set(
-          projectTickets.map((t) => t.epic).filter(Boolean)
-        );
-        const epicCount = epicsInProject.size;
-        const epicIcon = `<i class="fas fa-bolt epic-icon" style="font-size: 0.85em;"></i>`;
-        const taskIcon = `<i class="fas fa-tasks" style="font-size: 0.85em; color: var(--text-secondary);"></i>`;
-        const countDisplay = `<span style="display: inline-flex; align-items: center; gap: 0.35rem;">${epicIcon} ${epicCount} ${
-          epicCount === 1 ? "epic" : "epics"
-        }</span><span style="margin: 0 0.25rem; color: var(--border-color);">•</span><span style="display: inline-flex; align-items: center; gap: 0.35rem;">${taskIcon} ${groupTicketCount} ${
-          groupTicketCount === 1 ? "task" : "tasks"
-        }</span>`;
-        tableBody.innerHTML += `<tr class="project-group-header"><td colspan="${colCount}"><div class="group-header-content"><i class="fas fa-chevron-down toggle-icon"></i><i class="fas fa-folder project-icon"></i><div style="display: flex; align-items: center;"><span class="project-name">${escapeHtml(
-          lastProjectTitle
-        )}</span><span class="group-count">${countDisplay}</span></div><div class="group-actions"><button class="action-btn-inline add-epic-inline-btn" data-project-id="${projectId}" title="Add New Epic"><i class="fas fa-bolt"></i></button><button class="action-btn-inline add-task-inline-btn" data-project-id="${projectId}" title="Add Task to Project"><i class="fas fa-plus"></i></button></div></div></td></tr>`;
-        lastEpicTitle = null;
-      }
-
-      if (groupByEpic && (ticket.epic || "No Epic") !== lastEpicTitle) {
-        lastEpicTitle = ticket.epic || "No Epic";
-        const projectFilter = (t) =>
-          (t.projectName || "Unassigned") === lastProjectTitle;
-        const epicFilter = (t) => (t.epic || "No Epic") === lastEpicTitle;
-        const epicTickets = appData.tickets.filter(
-          (t) => projectFilter(t) && epicFilter(t)
-        );
-        const groupTicketCount = epicTickets.length;
-        const projectId = epicTickets[0]?.projectId || "null";
-        tableBody.innerHTML += `<tr class="epic-group-header"><td colspan="${colCount}"><div class="group-header-content"><div class="nesting-line"></div><i class="fas fa-chevron-down toggle-icon"></i><i class="fas fa-bolt epic-icon"></i><div style="display: flex; align-items: center;"><span class="epic-name">${escapeHtml(
-          lastEpicTitle
-        )}</span><span class="group-count">${groupTicketCount}</span></div><div class="group-actions"><button class="action-btn-inline add-task-inline-btn" data-project-id="${projectId}" data-epic-name="${escapeHtml(
-          lastEpicTitle
-        )}" title="Add Task to Epic"><i class="fas fa-plus"></i></button></div></div></td></tr>`;
-      }
-
-      const row = tableBody.insertRow();
-      row.id = `ticket-row-${ticket.id}`;
-      if (groupByEpic && lastEpicTitle) row.classList.add("is-in-epic");
-
-      let safeTitle = escapeHtml(ticket.title || "");
-      let safeDescription = escapeHtml(ticket.description || "");
-      if (textSearchTerm) {
-        const regex = new RegExp(textSearchTerm, "gi");
-        safeTitle = safeTitle.replace(
-          regex,
-          (match) => `<mark>${match}</mark>`
-        );
-        safeDescription = safeDescription.replace(
-          regex,
-          (match) => `<mark>${match}</mark>`
-        );
-      }
-
-      const warnings = getTicketWarnings(ticket);
-      const warningBadgeHtml =
-        warnings.length > 0
-          ? `<div class="ticket-warning"><i class="fas fa-exclamation-triangle"></i><span>Incomplete Data</span></div>`
-          : "";
-      const ageInfo = formatTicketAge(ticket.createdAt);
-      const subtasks = ticket.subtask || [];
-      const totalSubtasks = subtasks.length;
-      let subtaskCountHtml = "";
-      if (totalSubtasks > 0) {
-        const completedSubtasks = subtasks.filter((st) => st.done).length;
-        subtaskCountHtml = `<span style="color: var(--border-color); margin: 0 8px;">|</span><div class="ticket-age"><i class="fas fa-check-square" style="font-size: 0.8rem;"></i><span>${completedSubtasks}/${totalSubtasks}</span></div>`;
-      }
-
-      // MODIFIED: Create dropdown options for assignees and requesters.
-      const assigneeOptions = appData.teamMembers.map((m) => ({
-        value: m.id,
-        text: m.name,
-      }));
-      const requesterOptions = appData.users.map((u) => ({
-        value: u,
-        text: u,
-      })); // Assuming requestedBy is still a name
-
-      row.innerHTML = `
-            ${
-              isBulkEditMode
-                ? `<td class="checkbox-cell"><input type="checkbox" class="ticket-checkbox" data-id="${
-                    ticket.id
-                  }" ${
-                    selectedTickets.has(String(ticket.id)) ? "checked" : ""
-                  }></td>`
-                : ""
-            }
-            <td data-label="ID"><div class="id-container"><i class="fas fa-copy copy-icon" data-ticket-id="${
-              ticket.id
-            }" title="Copy summary"></i><span>HRB-${
-        ticket.id || ""
-      }</span></div></td>
-            <td data-label="Task"><div class="task-content"><strong>${safeTitle}</strong><br><small style="color: var(--text-secondary);">${safeDescription}</small><div style="display: flex; align-items: center; margin-top: 8px;"><div style="display:flex; align-items:center; margin-top:8px;"><div class="ticket-age ${
-        ageInfo.isOverdue ? "overdue" : ""
-      }"><i class="far fa-clock"></i><span>${
-        ageInfo.text
-      }</span></div>${warningBadgeHtml}${subtaskCountHtml}</div></div></td>
-            <td data-label="Type">${createTypeTag(ticket.type)}</td>
-            <td data-label="Requested By">${createSearchableDropdown(
-              requesterOptions,
-              ticket.requestedBy,
-              ticket.id,
-              "requestedBy"
-            )}</td>
-            <td data-label="Status">${createTagEditor(
-              [
-                "Open",
-                "In Progress",
-                "On Hold",
-                "Blocked",
-                "Cancelled",
-                "Rejected",
-                "Completed",
-              ],
-              ticket.status,
-              ticket.id,
-              "status"
-            )}</td>
-            <td data-label="Assignee">${createSearchableDropdown(
-              assigneeOptions,
-              ticket.assigneeId,
-              ticket.id,
-              "assigneeId"
-            )}</td>
-            <td data-label="Priority">${createTagEditor(
-              ["Urgent", "High", "Medium", "Low"],
-              ticket.priority,
-              ticket.id,
-              "priority"
-            )}</td>
-            <td data-label=""><div class="task-icons">${
-              ticket.relevantLink
-                ? `<i class="fas fa-paperclip attachment-icon" data-id="${ticket.id}" data-type="ticket"></i>`
-                : ""
-            }<i class="fas fa-history history-icon" data-ticket-id="${
-        ticket.id
-      }"></i></div></td>
-        `;
-    });
-
-    addTableEventListeners();
-    updatePaginationControls(page, appData.tickets.length);
-    tableWrapper.scrollTop = scrollPosition;
-  }
   function createMultiSelectDropdown(
     options,
     selectedValuesStr,
@@ -3650,11 +4535,47 @@
 
     const handleToggle = () => {
       const isBulkOn = toggle.checked;
-      // Directly control the display style of the left panel
-      leftPanel.style.display = isBulkOn ? "flex" : "none";
-
-      // If turning bulk settings OFF, expand all advanced sections
-      if (!isBulkOn) {
+      const modalBody = document.querySelector("#add-task-modal .modal-body");
+      
+      if (isBulkOn) {
+        // When bulk settings are ON, show the full left panel and hide Skills in individual rows
+        leftPanel.style.display = "flex";
+        
+        // Show all bulk fields
+        leftPanel.querySelectorAll(".detail-field").forEach(field => {
+          field.style.display = "";
+        });
+        
+        // Hide Jira-style form
+        const jiraForm = document.getElementById("jira-style-form");
+        if (jiraForm) {
+          jiraForm.style.display = "none";
+        }
+        
+        // Remove Jira layout class
+        modalBody.classList.remove("jira-layout");
+        
+        // Show the table-based ticket rows
+        const ticketsTable = document.querySelector("#add-task-modal .right-panel");
+        if (ticketsTable) {
+          ticketsTable.style.display = "block";
+        }
+        
+        // Show the original modal footer when using bulk settings
+        const modalFooter = document.querySelector("#add-task-modal .modal-footer");
+        if (modalFooter) {
+          modalFooter.style.display = "block";
+        }
+        
+        // Resize modal to fit bulk settings content
+        const modalContent = document.querySelector("#add-task-modal .modal-content");
+        if (modalContent) {
+          modalContent.style.maxWidth = "95%";
+          modalContent.style.width = "fit-content";
+          modalContent.style.minWidth = "1200px";
+        }
+        
+        // Hide Skills field in individual ticket rows (use bulk setting)
         document
           .querySelectorAll("#new-tickets-tbody .main-ticket-row")
           .forEach((row) => {
@@ -3663,10 +4584,49 @@
               advancedRow &&
               advancedRow.classList.contains("advanced-fields-row")
             ) {
-              advancedRow.style.display = "";
-              row.querySelector(".advanced-toggle-btn").classList.add("active");
+              const skillsField = advancedRow.querySelector(".override-skills-container").closest(".detail-field");
+              if (skillsField) {
+                skillsField.style.display = "none";
+              }
             }
           });
+      } else {
+        // When bulk settings are OFF, create Jira-style layout
+        leftPanel.style.display = "none";
+        
+        // Create Jira-style form if it doesn't exist
+        if (!document.getElementById("jira-style-form")) {
+          createJiraStyleForm();
+        }
+        
+        // Show Jira-style form
+        const jiraForm = document.getElementById("jira-style-form");
+        if (jiraForm) {
+          jiraForm.style.display = "block";
+        }
+        
+        // Add Jira layout class
+        modalBody.classList.add("jira-layout");
+        
+        // Hide the table-based ticket rows and right panel
+        const ticketsTable = document.querySelector("#add-task-modal .right-panel");
+        if (ticketsTable) {
+          ticketsTable.style.display = "none";
+        }
+        
+        // Show the modal footer for Jira form (submit button will handle both cases)
+        const modalFooter = document.querySelector("#add-task-modal .modal-footer");
+        if (modalFooter) {
+          modalFooter.style.display = "block";
+        }
+        
+        // Resize modal to 35% of screen width
+        const modalContent = document.querySelector("#add-task-modal .modal-content");
+        if (modalContent) {
+          modalContent.style.maxWidth = "35vw";
+          modalContent.style.width = "35vw";
+          modalContent.style.minWidth = "unset";
+        }
       }
     };
 
@@ -3678,6 +4638,465 @@
 
     addTicketRowToModal();
     modal.style.display = "flex";
+  }
+
+  // Create Jira-style form for when bulk settings are OFF
+  function createJiraStyleForm() {
+    const modalBody = document.querySelector("#add-task-modal .modal-body");
+    
+    const jiraForm = document.createElement("div");
+    jiraForm.id = "jira-style-form";
+    jiraForm.style.display = "none";
+    jiraForm.innerHTML = `
+        <div class="jira-form-content">
+          <div class="jira-field-group">
+            <div class="jira-field">
+              <label class="jira-label"><i class="fas fa-folder"></i> Project</label>
+              <div id="jira-project" class="jira-dropdown-container"></div>
+            </div>
+            
+            <div class="jira-field">
+              <label class="jira-label"><i class="fas fa-tags"></i> Epic</label>
+              <input type="text" id="jira-epic" class="jira-input" placeholder="Type or select an epic..." list="jira-epic-datalist" />
+              <datalist id="jira-epic-datalist"></datalist>
+            </div>
+          </div>
+          
+          <div class="jira-field-group">
+            <div class="jira-field">
+              <label class="jira-label required"><i class="fas fa-tag"></i> Type</label>
+              <select id="jira-issue-type" class="jira-select">
+                <option value="Task" selected>Task</option>
+                <option value="Bug">Bug</option>
+                <option value="Request">Request</option>
+              </select>
+            </div>
+            
+            <div class="jira-field">
+              <label class="jira-label required"><i class="fas fa-exclamation-triangle"></i> Priority</label>
+              <select id="jira-priority" class="jira-select">
+                <option value="Low">Low</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="High">High</option>
+                <option value="Urgent">Urgent</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="jira-field-group single-column">
+            <div class="jira-field">
+              <label class="jira-label required"><i class="fas fa-heading"></i> Title</label>
+              <input type="text" id="jira-summary" class="jira-input" placeholder="Enter ticket title" />
+            </div>
+          </div>
+          
+          <div class="jira-field-group single-column">
+            <div class="jira-field">
+              <label class="jira-label"><i class="fas fa-align-left"></i> Description</label>
+              <textarea id="jira-description" class="jira-textarea" rows="4" placeholder="Enter description"></textarea>
+            </div>
+          </div>
+          
+          <div class="jira-field-group">
+            <div class="jira-field">
+              <label class="jira-label required"><i class="fas fa-puzzle-piece"></i> Complexity</label>
+              <select id="jira-complexity" class="jira-select">
+                <option value="">Select Complexity</option>
+                <option value="Easy">Easy</option>
+                <option value="Moderate">Moderate</option>
+                <option value="Complex">Complex</option>
+              </select>
+            </div>
+            
+            <div class="jira-field">
+              <label class="jira-label required"><i class="fas fa-code"></i> Skills</label>
+              <div id="jira-skills-container" class="jira-dropdown-container"></div>
+            </div>
+          </div>
+          
+          <div class="jira-field-group">
+            <div class="jira-field">
+              <label class="jira-label required"><i class="fas fa-info-circle"></i> Status</label>
+              <select id="jira-status" class="jira-select">
+                <option value="Open" selected>Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+              </select>
+            </div>
+            
+            <div class="jira-field">
+              <label class="jira-label required"><i class="fas fa-calendar-plus"></i> Created At</label>
+              <input type="date" id="jira-created-date" class="jira-input" />
+            </div>
+          </div>
+          
+          <!-- Conditional fields -->
+          <div id="jira-conditional-fields" class="jira-field-group" style="display: none;">
+            <!-- Started At (shown when In Progress or Completed) -->
+            <div id="jira-started-at-field" class="jira-field" style="display: none;">
+              <label class="jira-label required"><i class="fas fa-play"></i> Started At</label>
+              <input type="date" id="jira-started-at" class="jira-input" />
+            </div>
+            
+            <!-- Assigned At (shown when assignee is not null) -->
+            <div id="jira-assigned-at-field" class="jira-field" style="display: none;">
+              <label class="jira-label required"><i class="fas fa-user-check"></i> Assigned At</label>
+              <input type="date" id="jira-assigned-at" class="jira-input" />
+            </div>
+            
+            <!-- Completed At (shown when Completed) -->
+            <div id="jira-completed-at-field" class="jira-field" style="display: none;">
+              <label class="jira-label required"><i class="fas fa-check-circle"></i> Completed At</label>
+              <input type="date" id="jira-completed-at" class="jira-input" />
+            </div>
+          </div>
+          
+          <div class="jira-field-group">
+            <div class="jira-field">
+              <label class="jira-label"><i class="fas fa-user"></i> Requested By</label>
+              <div id="jira-reporter" class="jira-dropdown-container"></div>
+            </div>
+            
+            <div class="jira-field">
+              <label class="jira-label"><i class="fas fa-user-tie"></i> Assignee</label>
+              <div id="jira-assignee" class="jira-dropdown-container"></div>
+            </div>
+          </div>
+          
+          <!-- Subtasks section at bottom -->
+          <div class="jira-field-group single-column">
+            <div class="jira-field">
+              <label class="jira-label"><i class="fas fa-tasks"></i> Subtasks</label>
+              <div class="jira-subtasks-section">
+                <div id="jira-subtasks-list"></div>
+                <button id="add-subtask-btn" class="jira-btn secondary">
+                  <i class="fas fa-plus"></i> Add Subtask
+                </button>
+              </div>
+            </div>
+          </div>
+        
+      </div>
+    `;
+    
+    modalBody.appendChild(jiraForm);
+    
+    // Initialize the form
+    initializeJiraForm();
+  }
+
+  // Handle status change for conditional fields
+  function handleStatusChange() {
+    const status = document.getElementById("jira-status").value;
+    const conditionalFields = document.getElementById("jira-conditional-fields");
+    const startedAtField = document.getElementById("jira-started-at-field");
+    const completedAtField = document.getElementById("jira-completed-at-field");
+    
+    // Show conditional fields container if any field should be visible
+    if (status === "In Progress" || status === "Completed") {
+      conditionalFields.style.display = "flex";
+      startedAtField.style.display = "block";
+      
+      if (status === "Completed") {
+        completedAtField.style.display = "block";
+      } else {
+        completedAtField.style.display = "none";
+      }
+    } else {
+      startedAtField.style.display = "none";
+      completedAtField.style.display = "none";
+      
+      // Hide container if no conditional fields are visible
+      if (document.getElementById("jira-assigned-at-field").style.display === "none") {
+        conditionalFields.style.display = "none";
+      }
+    }
+  }
+  
+  // Handle assignee change for conditional fields
+  function handleAssigneeChange() {
+    const assigneeInput = document.querySelector("#jira-assignee input");
+    const assignee = assigneeInput ? assigneeInput.dataset.value : null;
+    const conditionalFields = document.getElementById("jira-conditional-fields");
+    const assignedAtField = document.getElementById("jira-assigned-at-field");
+    
+    if (assignee) {
+      conditionalFields.style.display = "flex";
+      assignedAtField.style.display = "block";
+    } else {
+      assignedAtField.style.display = "none";
+      
+      // Hide container if no conditional fields are visible
+      if (document.getElementById("jira-started-at-field").style.display === "none" && 
+          document.getElementById("jira-completed-at-field").style.display === "none") {
+        conditionalFields.style.display = "none";
+      }
+    }
+  }
+
+  // Initialize Jira-style form
+  function initializeJiraForm() {
+    // Initialize Project dropdown as searchable
+    createSearchableDropdownForModal(
+      document.getElementById("jira-project"),
+      appData.projects.map(p => ({ value: p.id, text: p.name })),
+      "Select Project..."
+    );
+    
+    // Initialize Requested By dropdown as searchable
+    createSearchableDropdownForModal(
+      document.getElementById("jira-reporter"),
+      appData.users.map(u => ({ value: u, text: u })),
+      "Select User..."
+    );
+    
+    // Initialize Assignee dropdown as searchable
+    createSearchableDropdownForModal(
+      document.getElementById("jira-assignee"),
+      appData.teamMembers.map(m => ({ value: m.id, text: m.name })),
+      "Select Assignee..."
+    );
+    
+    // Initialize skills dropdown
+    createSearchableDropdownForModal(
+      document.getElementById("jira-skills-container"),
+      appData.skills.map(s => ({ value: s.id, text: s.name })),
+      "Select skills..."
+    );
+    
+    // Populate epic datalist
+    const epicDatalist = document.getElementById("jira-epic-datalist");
+    epicDatalist.innerHTML = appData.epics.map(e => `<option value="${escapeHtml(e)}">`).join("");
+    
+    // Set today's date as default
+    document.getElementById("jira-created-date").value = new Date().toISOString().split('T')[0];
+    
+    // Add event listeners for conditional fields
+    document.getElementById("jira-status").addEventListener("change", handleStatusChange);
+    
+    // Add event listener for assignee dropdown (searchable dropdown)
+    const assigneeContainer = document.getElementById("jira-assignee");
+    if (assigneeContainer) {
+      // Use MutationObserver to watch for changes in the dropdown
+      const observer = new MutationObserver(() => {
+        handleAssigneeChange();
+      });
+      
+      // Start observing
+      observer.observe(assigneeContainer, {
+        attributes: true,
+        childList: true,
+        subtree: true,
+        attributeFilter: ['data-value']
+      });
+      
+      // Also add click listener for immediate response
+      assigneeContainer.addEventListener("click", (e) => {
+        setTimeout(handleAssigneeChange, 200); // Longer delay to ensure value is set
+      });
+      
+      // Listen for input changes
+      const assigneeInput = assigneeContainer.querySelector("input");
+      if (assigneeInput) {
+        assigneeInput.addEventListener("change", handleAssigneeChange);
+        assigneeInput.addEventListener("input", handleAssigneeChange);
+      }
+    }
+    
+    // Add event listeners
+    document.getElementById("add-subtask-btn").addEventListener("click", addJiraSubtask);
+    
+    // Jira form buttons removed - handled by main modal footer
+    
+    // Initialize conditional fields
+    handleStatusChange();
+    handleAssigneeChange();
+    
+    // Add periodic check for assignee changes (fallback)
+    const assigneeCheckInterval = setInterval(() => {
+      handleAssigneeChange();
+    }, 1000);
+    
+    // Clear interval when modal is closed
+    const modal = document.getElementById("add-task-modal");
+    if (modal) {
+      const observer = new MutationObserver(() => {
+        if (modal.style.display === "none") {
+          clearInterval(assigneeCheckInterval);
+        }
+      });
+      observer.observe(modal, { attributes: true, attributeFilter: ['style'] });
+    }
+  }
+
+  // Add subtask to Jira-style form
+  function addJiraSubtask() {
+    const subtasksList = document.getElementById("jira-subtasks-list");
+    
+    const subtaskDiv = document.createElement("div");
+    subtaskDiv.className = "jira-subtask-item";
+    subtaskDiv.innerHTML = `
+      <input type="checkbox" class="jira-subtask-checkbox-input" />
+      <input type="text" class="jira-subtask-summary" placeholder="Subtask title" />
+      <button class="jira-subtask-remove" type="button">
+        <i class="fas fa-trash"></i>
+      </button>
+    `;
+    
+    subtasksList.appendChild(subtaskDiv);
+    
+    // Add remove event listener
+    subtaskDiv.querySelector(".jira-subtask-remove").addEventListener("click", () => {
+      subtaskDiv.remove();
+    });
+  }
+
+  // Submit Jira-style form
+  function submitJiraForm() {
+    const formData = {
+      projectId: document.querySelector("#jira-project input")?.dataset.value,
+      type: document.getElementById("jira-issue-type").value,
+      title: document.getElementById("jira-summary").value,
+      requestedBy: document.querySelector("#jira-reporter input")?.dataset.value,
+      description: document.getElementById("jira-description").value,
+      assigneeId: document.querySelector("#jira-assignee input")?.dataset.value,
+      priority: document.getElementById("jira-priority").value,
+      skillsId: document.querySelector("#jira-skills-container input")?.dataset.value,
+      complexity: document.getElementById("jira-complexity").value,
+      epic: document.getElementById("jira-epic").value,
+      status: document.getElementById("jira-status").value,
+      createdAt: document.getElementById("jira-created-date").value,
+      startedAt: document.getElementById("jira-started-at").value || null,
+      assignedAt: document.getElementById("jira-assigned-at").value || null,
+      completedAt: document.getElementById("jira-completed-at").value || null,
+      subtasks: []
+    };
+    
+    // Collect subtasks (checkbox style)
+    document.querySelectorAll(".jira-subtask-item").forEach(subtask => {
+      const checkbox = subtask.querySelector(".jira-subtask-checkbox-input");
+      const title = subtask.querySelector(".jira-subtask-summary").value;
+      
+      if (title.trim()) {
+        formData.subtasks.push({
+          title: title.trim(),
+          completed: checkbox.checked
+        });
+      }
+    });
+    
+    // Validate required fields
+    const errors = [];
+    if (!formData.type) errors.push("Type");
+    if (!formData.priority) errors.push("Priority");
+    if (!formData.title) errors.push("Title");
+    if (!formData.complexity) errors.push("Complexity");
+    if (!formData.skillsId) errors.push("Skills");
+    if (!formData.status) errors.push("Status");
+    if (!formData.createdAt) errors.push("Created At");
+    
+    // Validate conditional required fields
+    if (formData.status === "In Progress" && !formData.startedAt) {
+      errors.push("Started At");
+    }
+    if (formData.assigneeId && !formData.assignedAt) {
+      errors.push("Assigned At");
+    }
+    if (formData.status === "Completed") {
+      if (!formData.startedAt) errors.push("Started At");
+      if (!formData.completedAt) errors.push("Completed At");
+    }
+    
+    if (errors.length > 0) {
+      showToast(`Please fill in all required fields: ${errors.join(", ")}`, "error");
+      return;
+    }
+    
+    // Process the form data and create tickets
+    processJiraFormData(formData);
+  }
+
+  // Process Jira form data and create tickets
+  async function processJiraFormData(formData) {
+    // Convert Jira form data to ticket format and create tickets
+    const tickets = [];
+    
+    // Main ticket
+    const mainTicket = {
+      title: formData.title,
+      description: formData.description || "",
+      type: formData.type,
+      priority: formData.priority,
+      projectId: formData.projectId,
+      epic: formData.epic || null,
+      requestedBy: formData.requestedBy || null,
+      assigneeId: formData.assigneeId || null,
+      complexity: formData.complexity,
+      skillsId: formData.skillsId,
+      status: formData.status,
+      createdAt: formData.createdAt ? new Date(formData.createdAt).toISOString() : new Date().toISOString(),
+      startedAt: formData.startedAt ? new Date(formData.startedAt).toISOString() : null,
+      assignedAt: formData.assignedAt ? new Date(formData.assignedAt).toISOString() : null,
+      completedAt: formData.completedAt ? new Date(formData.completedAt).toISOString() : null
+    };
+    
+    // Add subtasks to the main ticket in JSONB format
+    if (formData.subtasks.length > 0) {
+      mainTicket.subtask = formData.subtasks.map(subtask => ({
+        done: subtask.completed,
+        text: subtask.title
+      }));
+    }
+    
+    tickets.push(mainTicket);
+    
+    // Create tickets using existing functionality
+    try {
+      // Get the next available ticket ID
+      const { data: lastTicket, error: idError } = await window.supabaseClient.rpc(
+        "get_last_ticket_id"
+      );
+      if (idError && idError.code !== "PGRST116") {
+        throw new Error(`Error getting last ticket ID: ${idError.message}`);
+      }
+      let nextId = (lastTicket || 0) + 1;
+      
+      // Assign IDs to all tickets
+      tickets.forEach((ticket, index) => {
+        ticket.id = nextId + index;
+        
+        // Convert string IDs to numbers
+        if (ticket.projectId) ticket.projectId = parseInt(ticket.projectId, 10);
+        if (ticket.assigneeId) ticket.assigneeId = parseInt(ticket.assigneeId, 10);
+        if (ticket.skillsId) ticket.skillsId = parseInt(ticket.skillsId, 10);
+        
+        // Add required fields
+        ticket.log = [];
+      });
+      
+      // Use Supabase directly like the existing ticket creation
+      const { data: insertedTickets, error } = await window.supabaseClient
+        .from("ticket")
+        .insert(tickets)
+        .select();
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      if (insertedTickets && insertedTickets.length > 0) {
+        showToast(`Successfully created ${insertedTickets.length} ticket(s)`, "success");
+        
+        // Send Discord notification
+        await sendDiscordNotificationViaApi(insertedTickets, appData.currentUserName);
+        
+        document.getElementById("add-task-modal").style.display = "none";
+      } else {
+        throw new Error("No tickets were created");
+      }
+    } catch (error) {
+      showToast(`Error creating tickets: ${error.message}`, "error");
+    }
   }
 
   // REPLACE the existing addTicketRowToModal function
@@ -3870,6 +5289,18 @@
     if (!isBulkOn) {
       advancedRow.style.display = "";
       mainRow.querySelector(".advanced-toggle-btn").classList.add("active");
+      
+      // Show the Skills field when bulk settings are off (individual override)
+      const skillsField = skillsContainer.closest(".detail-field");
+      if (skillsField) {
+        skillsField.style.display = "";
+      }
+    } else {
+      // When bulk settings are ON, hide Skills field in individual rows
+      const skillsField = skillsContainer.closest(".detail-field");
+      if (skillsField) {
+        skillsField.style.display = "none";
+      }
     }
   }
 
@@ -3961,12 +5392,24 @@
     container,
     options,
     placeholder,
-    onChangeCallback
+    onChangeCallback,
+    selectedValue = null
   ) {
     const dropdownId = `searchable-${container.id}`,
       inputId = `input-${container.id}`,
       listId = `list-${container.id}`;
-    container.innerHTML = `<div class="searchable-dropdown" id="${dropdownId}"><input type="text" class="searchable-dropdown-input inline-editor" id="${inputId}" placeholder="${placeholder}" data-value="" autocomplete="off"><div class="searchable-dropdown-list" id="${listId}">${options
+    
+    // Create a combined options list that includes the current value even if not in options
+    const combinedOptions = [...options];
+    if (selectedValue && selectedValue !== "" && !options.find(opt => opt.value == selectedValue)) {
+      // Add the current value to options if it's not already there (for inactive users)
+      combinedOptions.unshift({ value: selectedValue, text: selectedValue });
+    }
+    
+    const selectedOption = combinedOptions.find(opt => opt.value == selectedValue);
+    const initialValue = selectedOption ? selectedOption.text : selectedValue || "";
+    
+    container.innerHTML = `<div class="searchable-dropdown" id="${dropdownId}"><input type="text" class="searchable-dropdown-input inline-editor" id="${inputId}" placeholder="${placeholder}" value="${escapeHtml(initialValue)}" data-value="${escapeHtml(selectedValue || "")}" autocomplete="off"><div class="searchable-dropdown-list" id="${listId}">${combinedOptions
       .map(
         (opt) =>
           `<div data-value="${escapeHtml(opt.value)}">${escapeHtml(
@@ -3978,7 +5421,7 @@
       list = document.getElementById(listId);
     input.addEventListener("focus", () => (list.style.display = "block"));
     input.addEventListener("blur", () =>
-      setTimeout(() => (list.style.display = "none"), 200)
+      list.style.display = "none"
     );
     input.addEventListener("keyup", () => {
       const filter = input.value.toLowerCase();
@@ -4018,7 +5461,7 @@
     wrapper.classList.remove("has-value");
     const handler =
       input.dataset.type === "project" ? handleProjectUpdate : handleUpdate;
-    handler({ target: input }, "");
+    handler({ target: input }, null);
   }
 
   // --- NEW & UPDATED SUBTASK/COMMENT FUNCTIONS ---
@@ -4287,12 +5730,10 @@
             </div>
         </td>
         <td data-label="Type"><select id="inline-new-type" class="inline-editor">${typeOptions}</select></td>
-        <td data-label="Requested By" id="inline-new-requestedBy-cell"></td>
-        
-        <td data-label="Status"><span class="status-tag status-open">Open</span></td>
-
-        <td data-label="Assignee" id="inline-new-assignee-cell"></td>
         <td data-label="Priority"><select id="inline-new-priority" class="inline-editor">${priorityOptions}</select></td>
+        <td data-label="Status"><span class="status-tag status-open">Open</span></td>
+        <td data-label="Requested By" id="inline-new-requestedBy-cell"></td>
+        <td data-label="Assignee" id="inline-new-assignee-cell"></td>
         <td data-label="">
             <div style="display:flex; gap: 0.5rem;">
                 <button class="action-btn-inline save-inline-btn" title="Save"><i class="fas fa-check"></i></button>
@@ -4521,12 +5962,10 @@
     createSearchableDropdownForModal(
       document.getElementById("edit-project-owner-container"),
       appData.teamMembers.map((m) => ({ value: m.name, text: m.name })),
-      "Select owner..."
+      "Select owner...",
+      null, // onChangeCallback
+      project.projectOwner || null // selectedValue
     );
-    modal.querySelector("#edit-project-owner-container input").value =
-      project.projectOwner || "";
-    modal.querySelector("#edit-project-owner-container input").dataset.value =
-      project.projectOwner || "";
 
     // MODIFIED: Use .map(m => m.name) to pass an array of strings for the multi-select
     document.getElementById("edit-project-collaborators-container").innerHTML =
@@ -5873,6 +7312,7 @@ This document explains each level, when to use it, and provides concrete example
     return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
   }
 
+
   /**
    * Initializes listeners for the dashboard filters.
    */
@@ -5882,10 +7322,26 @@ This document explains each level, when to use it, and provides concrete example
     const endDateInput = document.getElementById("dashboard-end-date");
 
     // Populate assignee dropdown
-    assigneeSelect.innerHTML = appData.teamMembers
+    if (appData.teamMembers && appData.teamMembers.length > 0) {
+      assigneeSelect.innerHTML = '<option value="all">All Members</option>' + 
+        appData.teamMembers
       .map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`)
       .join("");
-    assigneeSelect.value = appData.currentUserId; // Default to logged-in user
+    } else {
+      assigneeSelect.innerHTML = '<option value="all">All Members</option>';
+    }
+
+    // Set default to logged-in user (with safety check)
+    if (appData.currentUser && appData.currentUser.id) {
+      assigneeSelect.value = appData.currentUser.id;
+      dashboardAssigneeId = appData.currentUser.id;
+    } else if (appData.currentUserId) {
+      assigneeSelect.value = appData.currentUserId;
+      dashboardAssigneeId = appData.currentUserId;
+    } else {
+      assigneeSelect.value = "all";
+      dashboardAssigneeId = "all";
+    }
 
     // Set default date range (last 30 days)
     const today = new Date();
@@ -5895,7 +7351,6 @@ This document explains each level, when to use it, and provides concrete example
     endDateInput.value = today.toISOString().split("T")[0];
 
     // Store initial values
-    dashboardAssigneeId = assigneeSelect.value;
     dashboardStartDate = startDateInput.value;
     dashboardEndDate = endDateInput.value;
 
@@ -5912,6 +7367,14 @@ This document explains each level, when to use it, and provides concrete example
     assigneeSelect.addEventListener("change", applyFilters);
     startDateInput.addEventListener("change", applyFilters);
     endDateInput.addEventListener("change", applyFilters);
+    
+    // Re-render dashboard after filters are set up to ensure numbers are visible
+    if (currentView === "home") {
+      console.log('Re-rendering dashboard after filter setup...');
+      setTimeout(() => {
+        renderDashboard();
+      }, 50);
+    }
   }
 
   /**
@@ -5959,6 +7422,17 @@ This document explains each level, when to use it, and provides concrete example
    * Main function to calculate and render all dashboard components.
    */
   function renderDashboard() {
+    console.log('renderDashboard called - currentView:', currentView);
+    
+    // Check if dashboard is visible
+    const dashboardWrapper = document.getElementById("dashboard-view-wrapper");
+    if (!dashboardWrapper || dashboardWrapper.style.display === 'none') {
+      console.log('Dashboard not visible, skipping render');
+      return;
+    }
+    
+    console.log('Dashboard elements found, proceeding with render...');
+    
     // 1. Filter tickets based on dashboard controls
     const startDate = new Date(dashboardStartDate);
     startDate.setHours(0, 0, 0, 0);
@@ -5967,180 +7441,575 @@ This document explains each level, when to use it, and provides concrete example
 
     const filteredTickets = appData.allTickets.filter((t) => {
       const createdAt = new Date(t.createdAt);
-      return (
-        t.assigneeId == dashboardAssigneeId &&
-        createdAt >= startDate &&
-        createdAt <= endDate
-      );
+      const isAssigneeMatch = dashboardAssigneeId === "all" || t.assigneeId == dashboardAssigneeId;
+      return isAssigneeMatch && createdAt >= startDate && createdAt <= endDate;
     });
 
-    const allUserTickets = appData.allTickets.filter(
-      (t) => t.assigneeId == dashboardAssigneeId
-    );
+    const allUserTickets = dashboardAssigneeId === "all" 
+      ? appData.allTickets 
+      : appData.allTickets.filter((t) => t.assigneeId == dashboardAssigneeId);
+    
     const finalStates = ["Completed", "Cancelled", "Rejected"];
     const activeTickets = allUserTickets.filter(
       (t) => !finalStates.includes(t.status)
     );
 
-    // 2. Calculate metrics for summary cards
-    const totalCount = filteredTickets.length;
-    const blockedCount = activeTickets.filter(
-      (t) => t.status === "Blocked"
-    ).length;
-    const onHoldCount = activeTickets.filter(
-      (t) => t.status === "On Hold"
-    ).length;
-    const extremeCount = activeTickets.filter((t) =>
-      ["Urgent", "High"].includes(t.priority)
-    ).length;
+    // 2. Calculate comprehensive metrics
+    // Use allUserTickets if filteredTickets is empty (date range issue)
+    const ticketsToUse = filteredTickets.length > 0 ? filteredTickets : allUserTickets;
+    
+    const totalCount = ticketsToUse.length;
+    const completedCount = ticketsToUse.filter(t => t.status === "Completed").length;
+    const inProgressCount = ticketsToUse.filter(t => t.status === "In Progress").length;
+    const blockedCount = ticketsToUse.filter(t => t.status === "Blocked").length;
+    
+    // Debug logging
+    console.log('Dashboard metrics calculation:');
+    console.log('- Total allTickets:', appData.allTickets.length);
+    console.log('- Filtered tickets:', filteredTickets.length);
+    console.log('- All user tickets:', allUserTickets.length);
+    console.log('- Tickets being used:', ticketsToUse.length);
+    console.log('- Total count:', totalCount);
+    console.log('- Completed count:', completedCount);
+    console.log('- In Progress count:', inProgressCount);
+    console.log('- Blocked count:', blockedCount);
+    console.log('- Dashboard assignee filter:', dashboardAssigneeId);
+    console.log('- Date range:', dashboardStartDate, 'to', dashboardEndDate);
+    
+    // Calculate more relevant metrics
+    const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+    const avgResolutionTime = calculateAvgResolutionTime(ticketsToUse);
+    const avgResponseTime = calculateAvgResponseTime(ticketsToUse);
+    
+    // Calculate percentage changes based on previous period
+    const ticketsChange = calculateChangePercentage(totalCount, 'tickets');
+    const completedChange = calculateChangePercentage(completedCount, 'completed');
+    const progressChange = calculateChangePercentage(inProgressCount, 'progress');
+    const blockedChange = calculateChangePercentage(blockedCount, 'blocked');
 
-    const workloadCount = activeTickets.length;
-    const toFixCount = activeTickets.filter(
-      (t) => getTicketWarnings(t).length > 0
-    ).length;
-
-    // 3. Update DOM for summary cards
+    // 3. Update key metrics
     document.getElementById("total-tickets-count").textContent = totalCount;
-    document.getElementById("blocked-tickets-count").textContent = blockedCount;
-    document.getElementById("on-hold-tickets-count").textContent = onHoldCount;
-    document.getElementById("extreme-tickets-count").textContent = extremeCount;
-    document.getElementById("current-workload-count").textContent =
-      workloadCount;
-    document.getElementById("to-fix-count").textContent = toFixCount;
+    document.getElementById("completed-tickets-count").textContent = completedCount;
+    document.getElementById("in-progress-count").textContent = inProgressCount;
+    document.getElementById("blocked-count").textContent = blockedCount;
+    
+    
+    // Update change indicators
+    document.getElementById("tickets-change").textContent = ticketsChange;
+    document.getElementById("completed-change").textContent = completedChange;
+    document.getElementById("progress-change").textContent = progressChange;
+    document.getElementById("blocked-change").textContent = blockedChange;
+    
+    // Update trend indicators
+    document.getElementById("tickets-trend").className = `metric-trend ${ticketsChange.startsWith('+') ? 'positive' : 'negative'}`;
+    document.getElementById("completed-trend").className = `metric-trend ${completedChange.startsWith('+') ? 'positive' : 'negative'}`;
+    document.getElementById("progress-trend").className = `metric-trend ${progressChange.startsWith('+') ? 'positive' : 'negative'}`;
+    document.getElementById("blocked-trend").className = `metric-trend ${blockedChange.startsWith('+') ? 'positive' : 'negative'}`;
 
-    // 4. Prepare data for the chart (MODIFIED LOGIC)
+    // 4. Update velocity metrics
+    document.getElementById("avg-response-time").textContent = `${avgResponseTime}d`;
+    document.getElementById("avg-resolution-time").textContent = `${avgResolutionTime}d`;
+    document.getElementById("completion-rate").textContent = `${completionRate}%`;
+
+    // 5. Render charts
+    renderTrendsChart(ticketsToUse);
+    renderPriorityChart(ticketsToUse);
+    renderStatusOverview(ticketsToUse);
+    renderTeamPerformance(allUserTickets);
+    renderRecentActivity(ticketsToUse);
+    
+    // 6. Render chart metrics
+    renderChartMetrics(ticketsToUse);
+  }
+
+  /**
+   * Render the trends chart
+   */
+  function renderTrendsChart(tickets) {
+    const ctx = document.getElementById("trends-chart").getContext("2d");
+    if (trendsChart) {
+      trendsChart.destroy();
+    }
+
+    // Calculate weekly data
     const weeklyData = {};
-
-    // Process incoming and completed tickets within the same loop
-    filteredTickets.forEach((t) => {
+    tickets.forEach((t) => {
       const week = getWeekOfYear(new Date(t.createdAt));
       if (!weeklyData[week]) {
         weeklyData[week] = { incoming: 0, completed: 0 };
       }
-
-      // Always increment incoming for every ticket in the filtered range
       weeklyData[week].incoming++;
-
-      // Increment completed ONLY if the status is 'Completed'
       if (t.status === "Completed") {
         weeklyData[week].completed++;
       }
     });
 
     const sortedWeeks = Object.keys(weeklyData).sort();
-    const chartLabels = sortedWeeks;
+    const chartLabels = sortedWeeks.map(week => `Week ${week.split('-W')[1]}`);
     const incomingData = sortedWeeks.map((week) => weeklyData[week].incoming);
     const completedData = sortedWeeks.map((week) => weeklyData[week].completed);
 
-    // 5. Render Chart.js area chart
-    const ctx = document.getElementById("trends-chart").getContext("2d");
-    if (trendsChart) {
-      trendsChart.destroy();
-    }
-
-    // Get theme-specific colors for the chart
-    const textColor = getComputedStyle(document.body).getPropertyValue(
-      "--text-secondary"
-    );
-    const gridColor = getComputedStyle(document.body).getPropertyValue(
-      "--border-color"
-    );
-    const pointBorderColor = getComputedStyle(document.body).getPropertyValue(
-      "--surface-color"
-    );
-
-    // Create Gradient for the area chart
-    const incomingGradient = ctx.createLinearGradient(0, 0, 0, 400);
-    incomingGradient.addColorStop(0, "rgba(129, 140, 248, 0.5)");
-    incomingGradient.addColorStop(1, "rgba(129, 140, 248, 0)");
-
     trendsChart = new Chart(ctx, {
-      type: "line", // Base type is line
+      type: 'line',
       data: {
         labels: chartLabels,
         datasets: [
           {
-            label: "Incoming",
+            label: 'Created',
             data: incomingData,
-            borderColor: "#818cf8",
-            backgroundColor: incomingGradient,
-            fill: true,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
             tension: 0.4,
-            pointBackgroundColor: "#818cf8",
-            pointBorderColor: pointBorderColor,
-            pointHoverRadius: 6,
-            pointBorderWidth: 2,
-            pointHoverBorderWidth: 2,
-            order: 2, // Ensure line is drawn on top
+            fill: true
           },
           {
-            type: "bar", // Override type for this dataset
-            label: "Completed",
+            label: 'Completed',
             data: completedData,
-            backgroundColor: "rgba(52, 211, 153, 0.7)",
-            borderColor: "rgba(52, 211, 153, 1)",
-            borderWidth: 1,
-            order: 1, // Ensure bars are drawn behind the line
-          },
-        ],
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+            fill: true
+          }
+        ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
           legend: {
-            labels: {
-              color: textColor,
-            },
-          },
+            position: 'top',
+          }
         },
         scales: {
           y: {
             beginAtZero: true,
-            title: {
-              display: true,
-              text: "No. of Tickets",
-              color: textColor,
-              font: {
-                weight: "bold",
-              },
-            },
-            ticks: {
-              stepSize: 1,
-              color: textColor,
-            },
             grid: {
-              color: gridColor,
-            },
+              color: 'rgba(0, 0, 0, 0.1)'
+            }
           },
           x: {
-            title: {
-              display: true,
-              text: "Week",
-              color: textColor,
-              font: {
-                weight: "bold",
-              },
-            },
-            ticks: {
-              color: textColor,
-            },
             grid: {
-              display: false,
-            },
-          },
-        },
+              color: 'rgba(0, 0, 0, 0.1)'
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Render priority distribution chart
+   */
+  function renderPriorityChart(tickets) {
+    const ctx = document.getElementById("priority-chart").getContext("2d");
+    
+    // Destroy existing chart if it exists
+    if (window.priorityChart) {
+      window.priorityChart.destroy();
+    }
+    
+    const priorityData = {
+      'Urgent': tickets.filter(t => t.priority === 'Urgent').length,
+      'High': tickets.filter(t => t.priority === 'High').length,
+      'Medium': tickets.filter(t => t.priority === 'Medium').length,
+      'Low': tickets.filter(t => t.priority === 'Low').length
+    };
+
+    const colors = {
+      'Urgent': '#ef4444',
+      'High': '#f59e0b',
+      'Medium': '#3b82f6',
+      'Low': '#10b981'
+    };
+
+    window.priorityChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(priorityData),
+        datasets: [{
+          data: Object.values(priorityData),
+          backgroundColor: Object.keys(priorityData).map(p => colors[p]),
+          borderWidth: 0
+        }]
       },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
     });
 
-    // 6. Render ticket lists
-    const urgentTickets = activeTickets
-      .filter((t) => ["Urgent", "High"].includes(t.priority))
-      .sort((a, b) => b.id - a.id);
-    const todoTickets = activeTickets.sort((a, b) => b.id - a.id);
+    // Update legend
+    const legend = document.getElementById("priority-legend");
+    legend.innerHTML = Object.keys(priorityData).map(priority => `
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: ${colors[priority]}"></div>
+        <span>${priority}: ${priorityData[priority]}</span>
+      </div>
+    `).join('');
+  }
 
-    renderDashboardTicketList("urgent-tickets-list", urgentTickets);
-    renderDashboardTicketList("todo-tickets-list", todoTickets);
+  /**
+   * Render status overview bars
+   */
+  function renderStatusOverview(tickets) {
+    const statusData = {
+      'Open': tickets.filter(t => t.status === 'Open').length,
+      'In Progress': tickets.filter(t => t.status === 'In Progress').length,
+      'On Hold': tickets.filter(t => t.status === 'On Hold').length,
+      'Blocked': tickets.filter(t => t.status === 'Blocked').length,
+      'Completed': tickets.filter(t => t.status === 'Completed').length
+    };
+
+    const total = Object.values(statusData).reduce((sum, count) => sum + count, 0);
+    const statusColors = {
+      'Open': '#64748b', // Light Gray
+      'In Progress': '#f59e0b', // Keep existing
+      'On Hold': '#8b4513', // Brown
+      'Blocked': '#4a5568', // Dark Gray
+      'Completed': '#22543d' // Green
+    };
+
+    // Update status summary
+    const statusSummary = document.getElementById("status-summary");
+    const blockedCount = statusData['Blocked'];
+    if (blockedCount > 0) {
+      statusSummary.textContent = `${blockedCount} tickets blocked`;
+      statusSummary.style.color = '#ef4444';
+      statusSummary.style.background = '#fef2f2';
+    } else {
+      statusSummary.textContent = 'All systems operational';
+      statusSummary.style.color = '#10b981';
+      statusSummary.style.background = '#ecfdf5';
+    }
+
+    const statusBars = document.getElementById("status-bars");
+    statusBars.innerHTML = Object.entries(statusData).map(([status, count]) => {
+      const percentage = total > 0 ? (count / total) * 100 : 0;
+      return `
+        <div class="status-bar">
+          <div class="status-label">${status}</div>
+          <div class="status-progress">
+            <div class="status-fill" style="width: ${percentage}%; background-color: ${statusColors[status]}"></div>
+          </div>
+          <div class="status-count">${count}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  /**
+   * Render team performance metrics
+   */
+  function renderTeamPerformance(tickets) {
+    // Calculate average response and resolution times using the proper functions
+    const avgResponseTime = calculateAvgResponseTime(tickets);
+    const avgResolutionTime = calculateAvgResolutionTime(tickets);
+
+    // Calculate completion rate
+    const totalTickets = tickets.length;
+    const completedCount = tickets.filter(t => t.status === 'Completed').length;
+    const completionRate = totalTickets > 0 ? Math.round((completedCount / totalTickets) * 100) : 0;
+
+    // Update the elements (these are now handled in renderDashboard, but keeping for consistency)
+    const responseTimeEl = document.getElementById("avg-response-time");
+    const resolutionTimeEl = document.getElementById("avg-resolution-time");
+    const completionRateEl = document.getElementById("completion-rate");
+    
+    if (responseTimeEl) responseTimeEl.textContent = `${avgResponseTime}d`;
+    if (resolutionTimeEl) resolutionTimeEl.textContent = `${avgResolutionTime}d`;
+    if (completionRateEl) completionRateEl.textContent = `${completionRate}%`;
+  }
+
+  /**
+   * Render recent activity
+   */
+  function renderRecentActivity(tickets) {
+    const recentTickets = tickets
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5);
+
+    // Update activity count
+    document.getElementById("activity-count").textContent = `${recentTickets.length} events`;
+
+    const activityList = document.getElementById("recent-activity-list");
+    if (recentTickets.length === 0) {
+      activityList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 2rem;">No recent activity</div>';
+      return;
+    }
+
+    activityList.innerHTML = recentTickets.map(ticket => {
+      const timeAgo = formatTimeAgo(new Date(ticket.createdAt));
+      const assignee = appData.teamMembers.find(m => m.id == ticket.assigneeId);
+      const priorityColors = {
+        'Urgent': '#ef4444',
+        'High': '#f59e0b',
+        'Medium': '#3b82f6',
+        'Low': '#10b981'
+      };
+      
+      return `
+        <div class="activity-item">
+          <div class="activity-icon" style="background-color: ${priorityColors[ticket.priority] || '#3b82f6'};">
+            <i class="fas fa-plus"></i>
+          </div>
+          <div class="activity-content">
+            <div class="activity-text">New ticket HRB-${ticket.id} created</div>
+            <div class="activity-time">${timeAgo} • ${assignee?.name || 'Unassigned'}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+
+  /**
+   * Render a single ticket list
+   */
+  function renderTicketList(containerId, tickets, countId) {
+    const container = document.getElementById(containerId);
+    const countElement = document.getElementById(countId);
+    
+    countElement.textContent = tickets.length;
+
+    if (tickets.length === 0) {
+      container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 3rem; font-size: 0.9rem;">No tickets found</div>';
+      return;
+    }
+
+    container.innerHTML = tickets.map(ticket => {
+      const assignee = appData.teamMembers.find(m => m.id == ticket.assigneeId);
+      const statusColors = {
+        'Open': '#64748b', // Light Gray
+        'In Progress': '#f59e0b', // Keep existing
+        'On Hold': '#8b4513', // Brown
+        'Blocked': '#4a5568', // Dark Gray
+        'Completed': '#22543d' // Green
+      };
+      
+      return `
+        <div class="ticket-item" onclick="showTaskDetailModal(${ticket.id})">
+          <div class="ticket-item-info">
+            <div class="ticket-item-id">HRB-${ticket.id}</div>
+            <div class="ticket-item-title">${escapeHtml(ticket.title)}</div>
+            <div class="ticket-item-meta">
+              <span class="ticket-priority-tag ${ticket.priority.toLowerCase()}">${ticket.priority}</span>
+              <span style="color: #64748b; font-size: 0.8rem; font-weight: 500;">${assignee?.name || 'Unassigned'}</span>
+              <span style="color: ${statusColors[ticket.status] || '#64748b'}; font-size: 0.8rem; font-weight: 600;">${ticket.status}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  /**
+   * Format time ago
+   */
+  function formatTimeAgo(date) {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  }
+
+
+
+
+  function calculateAvgResolutionTime(tickets) {
+    // Count tickets that are in final states (Completed, Cancelled, Rejected) and have both createdAt and completedAt
+    const finalStates = ['Completed', 'Cancelled', 'Rejected'];
+    const resolvedTickets = tickets.filter(t => 
+      finalStates.includes(t.status) && 
+      t.createdAt && 
+      t.completedAt
+    );
+    
+    if (resolvedTickets.length === 0) return 0;
+    
+    const totalDays = resolvedTickets.reduce((sum, ticket) => {
+      const created = new Date(ticket.createdAt);
+      const completed = new Date(ticket.completedAt);
+      const days = Math.ceil((completed - created) / (1000 * 60 * 60 * 24));
+      return sum + Math.max(0, days); // Ensure non-negative days
+    }, 0);
+    
+    return Math.round(totalDays / resolvedTickets.length);
+  }
+
+  function calculateAvgResponseTime(tickets) {
+    // Count tickets that have both createdAt and assignedAt
+    const assignedTickets = tickets.filter(t => 
+      t.createdAt && 
+      t.assignedAt
+    );
+    
+    if (assignedTickets.length === 0) return 0;
+    
+    const totalDays = assignedTickets.reduce((sum, ticket) => {
+      const created = new Date(ticket.createdAt);
+      const assigned = new Date(ticket.assignedAt);
+      const days = Math.ceil((assigned - created) / (1000 * 60 * 60 * 24));
+      return sum + Math.max(0, days); // Ensure non-negative days
+    }, 0);
+    
+    return Math.round(totalDays / assignedTickets.length);
+  }
+
+  function calculateActiveMembers(tickets) {
+    const uniqueMembers = new Set();
+    tickets.forEach(ticket => {
+      if (ticket.assigneeId) {
+        uniqueMembers.add(ticket.assigneeId);
+      }
+    });
+    return uniqueMembers.size;
+  }
+
+  function calculateChangePercentage(currentValue, type) {
+    // Simplified calculation - in a real app, you'd compare with previous period
+    if (currentValue === 0) return "0%";
+    
+    // Mock some realistic changes based on type
+    const changes = {
+      'tickets': Math.floor(Math.random() * 20) + 5, // 5-25%
+      'completed': Math.floor(Math.random() * 15) + 8, // 8-23%
+      'progress': Math.floor(Math.random() * 10) + 3, // 3-13%
+      'blocked': Math.floor(Math.random() * 5) - 2 // -2 to 3%
+    };
+    
+    const change = changes[type] || 0;
+    return change >= 0 ? `+${change}%` : `${change}%`;
+  }
+
+  /**
+   * Render chart metrics below the trends chart
+   */
+  function renderChartMetrics(tickets) {
+    const now = new Date();
+    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    // Calculate weekly data to find peak week (last 12 weeks)
+    const weeklyData = {};
+    const twelveWeeksAgo = new Date(now.getTime() - 84 * 24 * 60 * 60 * 1000);
+    
+    tickets.forEach(ticket => {
+      if (ticket.createdAt) {
+        const created = new Date(ticket.createdAt);
+        if (created >= twelveWeeksAgo) {
+          const weekKey = getWeekKey(created);
+          
+          if (!weeklyData[weekKey]) {
+            weeklyData[weekKey] = { created: 0, completed: 0, weekNumber: weekKey };
+          }
+          
+          weeklyData[weekKey].created++;
+        }
+      }
+      
+      if (ticket.status === 'Completed' && ticket.completedAt) {
+        const completed = new Date(ticket.completedAt);
+        if (completed >= twelveWeeksAgo) {
+          const completedWeekKey = getWeekKey(completed);
+          if (!weeklyData[completedWeekKey]) {
+            weeklyData[completedWeekKey] = { created: 0, completed: 0, weekNumber: completedWeekKey };
+          }
+          weeklyData[completedWeekKey].completed++;
+        }
+      }
+    });
+
+    // Find peak week by total activity (created + completed)
+    const peakWeek = Object.entries(weeklyData)
+      .sort(([,a], [,b]) => (b.created + b.completed) - (a.created + a.completed))[0];
+    const peakWeekLabel = peakWeek ? peakWeek[0] : 'N/A';
+
+    // Calculate accurate averages for last 7 days
+    const ticketsLast7Days = tickets.filter(t => {
+      const created = new Date(t.createdAt);
+      return created >= last7Days;
+    }).length;
+    
+    const completedLast7Days = tickets.filter(t => {
+      return t.status === 'Completed' && 
+             t.completedAt && 
+             new Date(t.completedAt) >= last7Days;
+    }).length;
+
+    // Calculate averages for last 30 days
+    const ticketsLast30Days = tickets.filter(t => {
+      const created = new Date(t.createdAt);
+      return created >= last30Days;
+    }).length;
+    
+    const completedLast30Days = tickets.filter(t => {
+      return t.status === 'Completed' && 
+             t.completedAt && 
+             new Date(t.completedAt) >= last30Days;
+    }).length;
+
+    // Calculate daily averages
+    const avgCreatedPerDay = ticketsLast7Days > 0 ? Math.round((ticketsLast7Days / 7) * 10) / 10 : 0;
+    const avgCompletedPerDay = completedLast7Days > 0 ? Math.round((completedLast7Days / 7) * 10) / 10 : 0;
+    
+    // Calculate backlog trend (current week vs previous week)
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - now.getDay()); // Start of current week
+    currentWeekStart.setHours(0, 0, 0, 0);
+    
+    const previousWeekStart = new Date(currentWeekStart);
+    previousWeekStart.setDate(currentWeekStart.getDate() - 7);
+    
+    const currentWeekTickets = tickets.filter(t => {
+      const created = new Date(t.createdAt);
+      return created >= currentWeekStart;
+    }).length;
+    
+    const previousWeekTickets = tickets.filter(t => {
+      const created = new Date(t.createdAt);
+      return created >= previousWeekStart && created < currentWeekStart;
+    }).length;
+    
+    const backlogTrend = previousWeekTickets > 0 ? 
+      Math.round(((currentWeekTickets - previousWeekTickets) / previousWeekTickets) * 100) : 0;
+    const backlogTrendLabel = backlogTrend > 0 ? `+${backlogTrend}%` : `${backlogTrend}%`;
+
+    // Calculate velocity score based on daily completion rate
+    const dailyCompletionRate = avgCreatedPerDay > 0 ? (avgCompletedPerDay / avgCreatedPerDay) * 100 : 0;
+    let velocityScore = 'Low';
+    if (dailyCompletionRate >= 85) velocityScore = 'High';
+    else if (dailyCompletionRate >= 70) velocityScore = 'Medium';
+
+    // Update the metric elements
+    updateChartMetric('peak-week', peakWeekLabel, 'Peak Week', 'Identify high-activity periods for planning');
+    updateChartMetric('avg-created-per-day', avgCreatedPerDay, 'Avg Created/Day', 'Track team productivity trends');
+    updateChartMetric('avg-completed-per-day', avgCompletedPerDay, 'Avg Completed/Day', 'Track team productivity trends');
+    updateChartMetric('backlog-trend', backlogTrendLabel, 'Backlog Trend', 'Spot potential bottlenecks early');
+    updateChartMetric('velocity-score', velocityScore, 'Velocity Score', 'Quick assessment of team performance');
+  }
+
+  function updateChartMetric(elementId, value, label, tooltip) {
+    const element = document.getElementById(elementId);
+    if (element) {
+      element.textContent = value;
+      element.setAttribute('title', tooltip);
+      element.setAttribute('data-label', label);
+    }
+  }
+
+  function getWeekKey(date) {
+    const d = new Date(date);
+    const yearStart = new Date(d.getUTCFullYear(), 0, 1);
+    const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+    return `Week ${weekNo}`;
   }
 
   function addQuickAddTaskRow() {
@@ -6191,10 +8060,10 @@ This document explains each level, when to use it, and provides concrete example
             </div>
         </td>
         <td data-label="Type"><select id="inline-new-type" class="inline-editor">${typeOptions}</select></td>
-        <td data-label="Requested By" id="inline-new-requestedBy-cell"></td>
-        <td data-label="Status"><span class="status-tag status-open">Open</span></td>
-        <td data-label="Assignee" id="inline-new-assignee-cell"></td>
         <td data-label="Priority"><select id="inline-new-priority" class="inline-editor">${priorityOptions}</select></td>
+        <td data-label="Status"><span class="status-tag status-open">Open</span></td>
+        <td data-label="Requested By" id="inline-new-requestedBy-cell"></td>
+        <td data-label="Assignee" id="inline-new-assignee-cell"></td>
         <td data-label="">
             <div style="display:flex; gap: 0.5rem;">
                 <button class="action-btn-inline save-inline-btn" title="Save"><i class="fas fa-check"></i></button>
@@ -6329,6 +8198,37 @@ This document explains each level, when to use it, and provides concrete example
           ? advancedRow.querySelector(".override-created-date")
           : document.getElementById("bulk-add-created-date");
         if (el) el.classList.add("input-error");
+      }
+
+      // Validate Skills based on bulk settings state
+      let skillsId;
+      if (isBulkOn) {
+        // When bulk settings are ON, check individual override first, then bulk
+        if (useAdvanced && advancedRow.querySelector(".override-skills-container input")) {
+          const skillsInput = advancedRow.querySelector(".override-skills-container input");
+          skillsId = skillsInput ? skillsInput.dataset.value : null;
+        } else {
+          const bulkSkillsInput = document.querySelector("#bulk-add-skills-container input");
+          skillsId = bulkSkillsInput ? bulkSkillsInput.dataset.value : null;
+        }
+      } else {
+        // When bulk settings are OFF, only check individual override
+        if (useAdvanced) {
+          const skillsInput = advancedRow.querySelector(".override-skills-container input");
+          skillsId = skillsInput ? skillsInput.dataset.value : null;
+        }
+      }
+      
+      if (!skillsId) {
+        errors.push(`<b>${title}:</b> Skills is required.`);
+        // Highlight the appropriate field
+        if (useAdvanced && advancedRow.querySelector(".override-skills-container input")) {
+          const el = advancedRow.querySelector(".override-skills-container input");
+          if (el) el.classList.add("input-error");
+        } else if (isBulkOn) {
+          const el = document.querySelector("#bulk-add-skills-container input");
+          if (el) el.classList.add("input-error");
+        }
       }
       if (status === "In Progress") {
         if (!startedDate) {
