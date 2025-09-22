@@ -2324,17 +2324,13 @@
           </select>
         </td>
         <td>
-          <div class="searchable-dropdown-container" id="skills-container-${ticket.id}">
-            <input type="text" 
-                   class="searchable-dropdown-input ${isMissing('skillsId') ? 'missing' : ''}"
-                   data-field="skillsId" 
-                   data-ticket-id="${ticket.id}"
-                   placeholder="Select Skills..."
-                   value="${ticket.skillsId ? skillOptions.find(s => s.value == ticket.skillsId)?.text || '' : ''}"
-                   data-value="${ticket.skillsId || ''}"
-                   data-old-value="${ticket.skillsId || ''}"
-                   readonly>
-          </div>
+          <select class="simple-select ${isMissing('skillsId') ? 'missing' : ''}"
+                  data-field="skillsId" data-ticket-id="${ticket.id}">
+            <option value="">Select Skills...</option>
+            ${skillOptions.map(opt => 
+              `<option value="${opt.value}" ${opt.value == ticket.skillsId ? 'selected' : ''}>${opt.text}</option>`
+            ).join('')}
+          </select>
         </td>
       `;
     });
@@ -2342,20 +2338,7 @@
     // Add event listeners
     addSimpleIncompleteEventListeners();
     
-    // Create searchable dropdowns for Skills
-    tickets.forEach(ticket => {
-      const skillsContainer = document.getElementById(`skills-container-${ticket.id}`);
-      if (skillsContainer) {
-        const skillOptions = appData.skills?.map(s => ({ value: s.id, text: s.name })) || [];
-        createSearchableDropdown(
-          skillsContainer,
-          skillOptions,
-          ticket.skillsId,
-          "skillsId",
-          ticket.id
-        );
-      }
-    });
+    // Skills dropdowns are now created directly in the HTML template
   }
 
   function addSimpleIncompleteEventListeners() {
