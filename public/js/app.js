@@ -2918,6 +2918,9 @@
 
     // Add global click listener to close Jira dropdowns when clicking outside
     document.addEventListener("click", (e) => {
+      // Don't prevent default or stop propagation here - let the event bubble
+      console.log("Global click detected on:", e.target);
+      
       if (!e.target.closest(".tag-editor.jira-style")) {
         document.querySelectorAll(".jira-dropdown").forEach(dropdown => {
           dropdown.style.display = "none";
@@ -2926,24 +2929,19 @@
       
       // Close searchable dropdowns when clicking outside
       if (!e.target.closest(".searchable-dropdown") && !e.target.closest(".searchable-dropdown-list")) {
-        document.querySelectorAll(".searchable-dropdown-list").forEach(dropdown => {
-          if (dropdown.style.display === "block") {
-            dropdown.style.display = "none";
-            // Return dropdown to its original parent if it was moved to body
-            if (dropdown.parentNode === document.body) {
-              // Find the input that corresponds to this dropdown
-              const inputs = document.querySelectorAll(".searchable-dropdown-input");
-              for (let input of inputs) {
-                const container = input.closest(".searchable-dropdown");
-                if (container && !container.querySelector(".searchable-dropdown-list")) {
-                  // This container doesn't have its dropdown, so this must be it
-                  container.appendChild(dropdown);
-                  break;
-                }
-              }
-            }
-          }
-        });
+        console.log("Clicking outside dropdown, closing all searchable dropdowns");
+        closeAllDropdowns();
+      }
+    });
+    
+    // Add specific event listener for table interactions to close dropdowns
+    document.addEventListener("click", (e) => {
+      // Only close dropdowns if clicking on table elements that are NOT part of a dropdown
+      if ((e.target.closest("td") || e.target.closest("th") || e.target.closest("tr")) && 
+          !e.target.closest(".searchable-dropdown") && 
+          !e.target.closest(".searchable-dropdown-list")) {
+        console.log("Clicking on table element (not dropdown), closing dropdowns");
+        closeAllDropdowns();
       }
     });
     
@@ -5031,8 +5029,8 @@
   
   // Handle assignee change for conditional fields
   function handleAssigneeChange() {
-    const assigneeInput = document.querySelector("#jira-assignee input");
-    const assignee = assigneeInput ? assigneeInput.dataset.value : null;
+    const assigneeSelect = document.getElementById("jira-assignee-select");
+    const assignee = assigneeSelect ? assigneeSelect.value : null;
     const conditionalFields = document.getElementById("jira-conditional-fields");
     const assignedAtField = document.getElementById("jira-assigned-at-field");
     
@@ -5059,19 +5057,37 @@
       "Select Project..."
     );
     
-    // Initialize Requested By dropdown as searchable
-    createSearchableDropdownForModal(
-      document.getElementById("jira-reporter"),
-      appData.users.map(u => ({ value: u, text: u })),
-      "Select User..."
-    );
+    // Initialize Requested By dropdown as simple select
+    console.log("Initializing Requested By dropdown with users:", appData.users);
+    const reporterContainer = document.getElementById("jira-reporter");
+    if (reporterContainer && appData.users && appData.users.length > 0) {
+      reporterContainer.innerHTML = `
+        <select class="jira-select" id="jira-reporter-select">
+          <option value="">Select User...</option>
+          ${appData.users.map(u => `<option value="${u}">${u}</option>`).join('')}
+        </select>
+      `;
+      console.log("Requested By dropdown initialized successfully");
+    } else {
+      console.error("Requested By dropdown not initialized - missing container or users data");
+      reporterContainer.innerHTML = '<input type="text" class="jira-input" placeholder="Select User..." readonly>';
+    }
     
-    // Initialize Assignee dropdown as searchable
-    createSearchableDropdownForModal(
-      document.getElementById("jira-assignee"),
-      appData.teamMembers.map(m => ({ value: m.id, text: m.name })),
-      "Select Assignee..."
-    );
+    // Initialize Assignee dropdown as simple select
+    console.log("Initializing Assignee dropdown with team members:", appData.teamMembers);
+    const assigneeContainer = document.getElementById("jira-assignee");
+    if (assigneeContainer && appData.teamMembers && appData.teamMembers.length > 0) {
+      assigneeContainer.innerHTML = `
+        <select class="jira-select" id="jira-assignee-select">
+          <option value="">Select Assignee...</option>
+          ${appData.teamMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
+        </select>
+      `;
+      console.log("Assignee dropdown initialized successfully");
+    } else {
+      console.error("Assignee dropdown not initialized - missing container or team members data");
+      assigneeContainer.innerHTML = '<input type="text" class="jira-input" placeholder="Select Assignee..." readonly>';
+    }
     
     // Initialize skills dropdown
     createSearchableDropdownForModal(
@@ -5090,33 +5106,10 @@
     // Add event listeners for conditional fields
     document.getElementById("jira-status").addEventListener("change", handleStatusChange);
     
-    // Add event listener for assignee dropdown (searchable dropdown)
-    const assigneeContainer = document.getElementById("jira-assignee");
-    if (assigneeContainer) {
-      // Use MutationObserver to watch for changes in the dropdown
-      const observer = new MutationObserver(() => {
-        handleAssigneeChange();
-      });
-      
-      // Start observing
-      observer.observe(assigneeContainer, {
-        attributes: true,
-        childList: true,
-        subtree: true,
-        attributeFilter: ['data-value']
-      });
-      
-      // Also add click listener for immediate response
-      assigneeContainer.addEventListener("click", (e) => {
-        setTimeout(handleAssigneeChange, 200); // Longer delay to ensure value is set
-      });
-      
-      // Listen for input changes
-      const assigneeInput = assigneeContainer.querySelector("input");
-      if (assigneeInput) {
-        assigneeInput.addEventListener("change", handleAssigneeChange);
-        assigneeInput.addEventListener("input", handleAssigneeChange);
-      }
+    // Add event listener for assignee dropdown (simple select)
+    const assigneeSelect = document.getElementById("jira-assignee-select");
+    if (assigneeSelect) {
+      assigneeSelect.addEventListener("change", handleAssigneeChange);
     }
     
     // Add event listeners
@@ -5173,9 +5166,9 @@
       projectId: document.querySelector("#jira-project input")?.dataset.value,
       type: document.getElementById("jira-issue-type").value,
       title: document.getElementById("jira-summary").value,
-      requestedBy: document.querySelector("#jira-reporter input")?.dataset.value,
+      requestedBy: document.getElementById("jira-reporter-select")?.value,
       description: document.getElementById("jira-description").value,
-      assigneeId: document.querySelector("#jira-assignee input")?.dataset.value,
+      assigneeId: document.getElementById("jira-assignee-select")?.value,
       priority: document.getElementById("jira-priority").value,
       skillsId: document.querySelector("#jira-skills-container input")?.dataset.value,
       complexity: document.getElementById("jira-complexity").value,
@@ -5611,6 +5604,7 @@
     onChangeCallback,
     selectedValue = null
   ) {
+    console.log(`Creating searchable dropdown for ${container.id} with ${options.length} options`);
     const dropdownId = `searchable-${container.id}`,
       inputId = `input-${container.id}`,
       listId = `list-${container.id}`;
@@ -5636,9 +5630,13 @@
     const input = document.getElementById(inputId),
       list = document.getElementById(listId);
     input.addEventListener("focus", () => (list.style.display = "block"));
-    input.addEventListener("blur", () =>
-      list.style.display = "none"
-    );
+    input.addEventListener("click", () => (list.style.display = "block"));
+    input.addEventListener("blur", () => {
+      // Add a small delay to allow click events to be processed
+      setTimeout(() => {
+        list.style.display = "none";
+      }, 150);
+    });
     input.addEventListener("keyup", () => {
       const filter = input.value.toLowerCase();
       list
@@ -5656,7 +5654,18 @@
       if (e.target.tagName === "DIV") {
         input.value = e.target.textContent;
         input.dataset.value = e.target.dataset.value;
+        list.style.display = "none";
         if (onChangeCallback) onChangeCallback(); // <-- MODIFICATION
+      }
+    });
+    
+    // Also add click event for better compatibility
+    list.addEventListener("click", (e) => {
+      if (e.target.tagName === "DIV") {
+        input.value = e.target.textContent;
+        input.dataset.value = e.target.dataset.value;
+        list.style.display = "none";
+        if (onChangeCallback) onChangeCallback();
       }
     });
   }
@@ -6159,7 +6168,7 @@
     
     // Create modal HTML
     const modalHTML = `
-      <div id="add-project-modal" class="modal" style="display: flex;">
+      <div id="add-project-modal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 600px;">
           <div class="modal-header">
             <h3>Add New Project</h3>
@@ -6226,6 +6235,9 @@
         }
       };
       document.addEventListener('keydown', escHandler);
+      
+      // Show the modal after setting up all event listeners
+      modal.style.display = 'flex';
     }
     
     // Focus on project name input
