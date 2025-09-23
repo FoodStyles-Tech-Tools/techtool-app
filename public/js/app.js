@@ -4622,6 +4622,96 @@
     const descTextarea = modal.querySelector("#modal-edit-description");
     autoSizeTextarea(titleTextarea);
     autoSizeTextarea(descTextarea);
+
+    // Add event listeners for tag editors (status and priority)
+    addTagEditorEventListeners(modal);
+  }
+
+  function addTagEditorEventListeners(modal) {
+    // Add click listeners for status and priority tag editors
+    const tagEditors = modal.querySelectorAll('.tag-editor.jira-style');
+    
+    tagEditors.forEach(editor => {
+      const tag = editor.querySelector('.status-tag');
+      const dropdown = editor.querySelector('.jira-dropdown');
+      
+      if (tag && dropdown) {
+        // Toggle dropdown when tag is clicked
+        tag.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // Close other dropdowns first
+          modal.querySelectorAll('.jira-dropdown').forEach(d => {
+            if (d !== dropdown) d.style.display = 'none';
+          });
+          // Toggle current dropdown
+          dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Handle option clicks
+        const options = dropdown.querySelectorAll('.jira-option');
+        options.forEach(option => {
+          option.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const newValue = option.dataset.value;
+            const ticketId = option.dataset.id;
+            const field = option.dataset.field;
+            
+            // Update the tag display
+            const tagInfo = getTagInfo(field, newValue);
+            tag.className = `status-tag ${tagInfo.className}`;
+            tag.textContent = tagInfo.text;
+            tag.dataset.oldValue = newValue;
+            
+            // Close dropdown
+            dropdown.style.display = 'none';
+            
+            // Update the database
+            try {
+              const { error } = await window.supabaseClient
+                .from('ticket')
+                .update({ [field]: newValue })
+                .eq('id', ticketId);
+              
+              if (error) {
+                console.error('Error updating ticket:', error);
+                showToast(`Failed to update ${field}`, 'error');
+                // Revert the change
+                const oldValue = tag.dataset.oldValue;
+                const oldTagInfo = getTagInfo(field, oldValue);
+                tag.className = `status-tag ${oldTagInfo.className}`;
+                tag.textContent = oldTagInfo.text;
+              } else {
+                // Update the local data
+                const ticket = appData.allTickets.find(t => t.id == ticketId);
+                if (ticket) {
+                  ticket[field] = newValue;
+                }
+                showToast(`${field} updated successfully`, 'success');
+                
+                // Update the UI
+                applyFilterAndRender();
+                if (currentView === "home") {
+                  renderDashboard();
+                }
+                updateNavBadgeCounts();
+              }
+            } catch (error) {
+              console.error('Error updating ticket:', error);
+              showToast(`Failed to update ${field}`, 'error');
+            }
+          });
+        });
+      }
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!modal.contains(e.target)) {
+        modal.querySelectorAll('.jira-dropdown').forEach(dropdown => {
+          dropdown.style.display = 'none';
+        });
+      }
+    });
   }
 
   function createDropdown(
