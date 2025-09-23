@@ -42,6 +42,7 @@
     ticketNumberFilter = "",
     selectedProjectFilter = "all",
     selectedEpicFilter = "all",
+    selectedAssigneeFilter = "all",
     reconcileExcludeDone = true,
     reconcileCurrentPage = 1,
     selectedIncompleteMemberFilter = "all";
@@ -442,21 +443,37 @@
    * Subscribes to real-time changes (inserts, updates, deletes) in the 'ticket' table.
    */
   function subscribeToTicketChanges() {
-    supabaseClient
-      .channel("public:ticket")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "ticket" },
-        (payload) => {
-          console.log("Real-time change received!", payload);
-          handleRealtimeChange(payload);
-        }
-      )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.log("Successfully subscribed to real-time ticket changes!");
-        }
-      });
+    try {
+      console.log("Setting up real-time subscription...");
+      supabaseClient
+        .channel("public:ticket")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "ticket" },
+          (payload) => {
+            console.log("Real-time change received!", payload);
+            try {
+              handleRealtimeChange(payload);
+            } catch (error) {
+              console.error("Error handling real-time change:", error);
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log("Subscription status:", status);
+          if (status === "SUBSCRIBED") {
+            console.log("✅ Successfully subscribed to real-time ticket changes!");
+          } else if (status === "CHANNEL_ERROR") {
+            console.error("❌ Real-time subscription error");
+          } else if (status === "TIMED_OUT") {
+            console.error("❌ Real-time subscription timed out");
+          } else if (status === "CLOSED") {
+            console.warn("⚠️ Real-time subscription closed");
+          }
+        });
+    } catch (error) {
+      console.error("Error setting up real-time subscription:", error);
+    }
   }
 
   /**
@@ -467,9 +484,22 @@
   // REPLACE the existing handleRealtimeChange function with this one
 
   function handleRealtimeChange(payload) {
-    const { eventType, new: newRecord, old: oldRecord } = payload;
+    console.log("Real-time payload received:", payload);
+    
+    // Handle different payload structures
+    const eventType = payload.eventType || payload.event_type || payload.type;
+    const newRecord = payload.new || payload.new_record;
+    const oldRecord = payload.old || payload.old_record;
+    
     let ticketId;
     let isChanged = false;
+
+    if (!eventType) {
+      console.error("No event type found in payload:", payload);
+      return;
+    }
+
+    console.log("Processing event:", eventType, "newRecord:", newRecord, "oldRecord:", oldRecord);
 
     switch (eventType) {
       case "INSERT":
@@ -520,7 +550,17 @@
     }
 
     if (isChanged) {
+      console.log("Data changed, updating UI...");
       applyFilterAndRender();
+      
+      // Update dashboard if it's currently visible
+      if (currentView === "home") {
+        console.log("Updating dashboard...");
+        renderDashboard();
+      }
+      
+      // Update navigation badges
+      updateNavBadgeCounts();
       const modal = document.getElementById("task-detail-modal");
       if (modal.style.display === "flex") {
         const modalTicketId = modal.querySelector(".ticket-main-content")
@@ -2012,6 +2052,16 @@
         )
         .join("");
 
+    // Populate assignee filter
+    const assigneeFilterSelect = document.getElementById("assignee-filter-select");
+    if (assigneeFilterSelect) {
+      assigneeFilterSelect.innerHTML =
+        '<option value="all">All Assignees</option>' +
+        appData.teamMembers
+          .map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`)
+          .join("");
+    }
+
     // Populate incomplete member filter
     const incompleteMemberFilter = document.getElementById("incomplete-member-filter");
     if (incompleteMemberFilter) {
@@ -2068,6 +2118,13 @@
     if (epicFilterSelect) {
       epicFilterSelect.addEventListener("change", (e) => {
         selectedEpicFilter = e.target.value;
+        applyFilterAndRender();
+      });
+    }
+
+    if (assigneeFilterSelect) {
+      assigneeFilterSelect.addEventListener("change", (e) => {
+        selectedAssigneeFilter = e.target.value;
         applyFilterAndRender();
       });
     }
@@ -2209,6 +2266,19 @@
         integratedFilters.style.display = "block";
       }
       
+      // Show/hide assignee filter based on current view
+      const assigneeFilterSelect = document.getElementById("assignee-filter-select");
+      if (assigneeFilterSelect) {
+        if (currentView === "all") {
+          assigneeFilterSelect.style.display = "block";
+        } else {
+          assigneeFilterSelect.style.display = "none";
+          // Reset assignee filter when not on "all" view
+          selectedAssigneeFilter = "all";
+          assigneeFilterSelect.value = "all";
+        }
+      }
+      
       // Show/hide Exclude Done checkbox based on current view and update its state
       const excludeDoneCheckbox = document.getElementById("exclude-done-checkbox");
       const excludeDoneLabel = excludeDoneCheckbox?.parentElement;
@@ -2293,6 +2363,11 @@
       if (selectedEpicFilter !== "all") {
         finalFilteredTickets = finalFilteredTickets.filter(
           (t) => String(t.epic || "") === selectedEpicFilter
+        );
+      }
+      if (selectedAssigneeFilter !== "all") {
+        finalFilteredTickets = finalFilteredTickets.filter(
+          (t) => String(t.assigneeId || "") === selectedAssigneeFilter
         );
       }
       if (ticketNumberFilter) {
