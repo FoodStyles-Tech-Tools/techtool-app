@@ -576,21 +576,61 @@
     text-align: left;
   }
 
+  /* Sortable header styles */
+  .sortable-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background-color 0.2s ease;
+  }
+
+  .sortable-header:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .sortable-header .sort-indicator {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 0.8em;
+    opacity: 0.6;
+    transition: opacity 0.2s ease;
+  }
+
+  .sortable-header.sort-asc .sort-indicator,
+  .sortable-header.sort-desc .sort-indicator {
+    opacity: 1;
+  }
+
+  .sortable-header.sort-asc .sort-indicator::after {
+    content: "▲";
+    color: var(--accent-color);
+  }
+
+  .sortable-header.sort-desc .sort-indicator::after {
+    content: "▼";
+    color: var(--accent-color);
+  }
+
+  .sortable-header.sort-reset .sort-indicator::after {
+    content: "↕";
+    color: var(--text-secondary);
+  }
+
   /* Column Widths - New order: ID, Task, Type, Priority, Status, Requested By, Assignee, Actions */
   table:not(.project-view) thead tr th:nth-child(1) {
     width: 8%; /* ID */
   }
   table:not(.project-view) thead tr th:nth-child(2) {
-    width: 40.8%; /* Task - Adjusted to compensate for Priority increase */
+    width: 42.96%; /* Task - Adjusted to compensate for Priority increase and Status decrease */
   }
   table:not(.project-view) thead tr th:nth-child(3) {
     width: 6%; /* Type - Reduced by 1/2 */
   }
   table:not(.project-view) thead tr th:nth-child(4) {
-    width: 7.2%; /* Priority - Increased by 20% */
+    width: 8.52%; /* Priority - Same size as Status */
   }
   table:not(.project-view) thead tr th:nth-child(5) {
-    width: 12%; /* Status - Even distribution */
+    width: 8.52%; /* Status - Same size as Priority */
   }
   table:not(.project-view) thead tr th:nth-child(6) {
     width: 12%; /* Requested By - Even distribution */
@@ -1939,16 +1979,16 @@
     }
   }
   .bulk-edit-active table:not(.project-view) thead tr th:nth-child(3) {
-    width: 37.8%; /* Task - Adjusted to compensate for Priority increase */
+    width: 39.96%; /* Task - Adjusted to compensate for Priority increase and Status decrease */
   }
   .bulk-edit-active table:not(.project-view) thead tr th:nth-child(4) {
     width: 6%; /* Type - Reduced by 1/2 */
   }
   .bulk-edit-active table:not(.project-view) thead tr th:nth-child(5) {
-    width: 7.2%; /* Priority - Increased by 20% */
+    width: 8.52%; /* Priority - Same size as Status */
   }
   .bulk-edit-active table:not(.project-view) thead tr th:nth-child(6) {
-    width: 12%; /* Status - Even distribution */
+    width: 8.52%; /* Status - Same size as Priority */
   }
   .bulk-edit-active table:not(.project-view) thead tr th:nth-child(7) {
     width: 12%; /* Requested By - Even distribution */
@@ -1992,8 +2032,11 @@
     color: var(--accent-color);
   }
   .updating {
-    opacity: 0.5;
+    opacity: 0.7;
     cursor: progress !important;
+    background-color: rgba(255, 165, 0, 0.1) !important;
+    border: 1px solid rgba(255, 165, 0, 0.3) !important;
+    box-shadow: 0 0 8px rgba(255, 165, 0, 0.2) !important;
   }
   .is-successful {
     animation: success-flash 1.5s ease-out;
@@ -2002,10 +2045,13 @@
     0%,
     100% {
       background-color: transparent;
+      border-color: transparent;
     }
     25%,
     75% {
       background-color: var(--success-bg-color);
+      border-color: #10b981;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
     }
   }
 

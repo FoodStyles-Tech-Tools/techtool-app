@@ -46,6 +46,12 @@
     reconcileCurrentPage = 1,
     selectedIncompleteMemberFilter = "all";
   
+  // Sorting state
+  let currentSort = {
+    field: null,
+    direction: null // 'asc', 'desc', or null for reset
+  };
+  
   // Per-tab exclude done settings
   let excludeDoneSettings = {
     'all': true,
@@ -580,6 +586,82 @@
         }
       }
     }
+  }
+
+  // Sorting functions
+  function getCurrentSortState() {
+    return currentSort;
+  }
+
+  function setSortState(field, direction) {
+    currentSort.field = field;
+    currentSort.direction = direction;
+  }
+
+  function getNextSortDirection(currentField, currentDirection) {
+    if (currentField !== currentSort.field) {
+      return 'asc'; // First click on new field
+    }
+    
+    switch (currentDirection) {
+      case 'asc': return 'desc';
+      case 'desc': return null; // Reset
+      case null: return 'asc';
+      default: return 'asc';
+    }
+  }
+
+  function sortTickets(tickets, field, direction) {
+    if (!field || !direction) {
+      return tickets; // Return unsorted if no valid sort
+    }
+
+    return [...tickets].sort((a, b) => {
+      let aVal = a[field];
+      let bVal = b[field];
+
+      // Handle special cases
+      if (field === 'assigneeId') {
+        aVal = a.assigneeName || '';
+        bVal = b.assigneeName || '';
+      } else if (field === 'requestedBy') {
+        aVal = a.requestedBy || '';
+        bVal = b.requestedBy || '';
+      } else if (field === 'priority') {
+        const priorityOrder = { 'Urgent': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
+        aVal = priorityOrder[aVal] ?? 4;
+        bVal = priorityOrder[bVal] ?? 4;
+      } else if (field === 'status') {
+        const statusOrder = { 'Open': 0, 'In Progress': 1, 'On Hold': 2, 'Blocked': 3, 'Completed': 4, 'Cancelled': 5, 'Rejected': 6 };
+        aVal = statusOrder[aVal] ?? 7;
+        bVal = statusOrder[bVal] ?? 7;
+      }
+
+      // Convert to strings for comparison if not numbers
+      if (typeof aVal !== 'number' && typeof bVal !== 'number') {
+        aVal = String(aVal || '').toLowerCase();
+        bVal = String(bVal || '').toLowerCase();
+      }
+
+      if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  function handleHeaderClick(event) {
+    const header = event.target.closest('.sortable-header');
+    if (!header) return;
+
+    const field = header.dataset.sortField;
+    const currentDirection = currentSort.field === field ? currentSort.direction : null;
+    const nextDirection = getNextSortDirection(field, currentDirection);
+
+    // Update sort state
+    setSortState(field, nextDirection);
+
+    // Re-render the table with new sort
+    applyFilterAndRender();
   }
 
   // REPLACE the existing handleUpdate function with this new ASYNC version
@@ -2236,17 +2318,22 @@
         );
       }
 
-      // Sort by priority (Urgent, High, Medium, Low) then by ID descending
-      finalFilteredTickets.sort((a, b) => {
-        const priorityOrder = { 'Urgent': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
-        const aPriority = priorityOrder[a.priority] ?? 4; // Unknown priorities go last
-        const bPriority = priorityOrder[b.priority] ?? 4;
-        
-        if (aPriority !== bPriority) {
-          return aPriority - bPriority; // Sort by priority first
-        }
-        return b.id - a.id; // Then by ID descending (newest first)
-      });
+      // Apply custom sorting if set, otherwise use default priority + ID sort
+      if (currentSort.field && currentSort.direction) {
+        finalFilteredTickets = sortTickets(finalFilteredTickets, currentSort.field, currentSort.direction);
+      } else {
+        // Default sort by priority (Urgent, High, Medium, Low) then by ID descending
+        finalFilteredTickets.sort((a, b) => {
+          const priorityOrder = { 'Urgent': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
+          const aPriority = priorityOrder[a.priority] ?? 4; // Unknown priorities go last
+          const bPriority = priorityOrder[b.priority] ?? 4;
+          
+          if (aPriority !== bPriority) {
+            return aPriority - bPriority; // Sort by priority first
+          }
+          return b.id - a.id; // Then by ID descending (newest first)
+        });
+      }
 
       appData.tickets = finalFilteredTickets;
       if (
@@ -2692,12 +2779,28 @@
       ? ["", "ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee", ""]
       : ["ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee", ""];
     
+    // Define sortable columns (exclude checkbox and actions columns)
+    const sortableColumns = isBulkEditMode
+      ? ["id", "title", "type", "priority", "status", "requestedBy", "assigneeId"]
+      : ["id", "title", "type", "priority", "status", "requestedBy", "assigneeId"];
+    
     tableHead.innerHTML = columns
       .map((h, index) => {
         if (index === 0 && isBulkEditMode) {
           return '<th class="checkbox-cell"><input type="checkbox" id="select-all-checkbox" title="Select all on this page"></th>';
         }
-        return `<th>${h}</th>`;
+        if (index === columns.length - 1) {
+          return `<th>${h}</th>`; // Actions column - not sortable
+        }
+        
+        const sortKey = sortableColumns[index - (isBulkEditMode ? 1 : 0)];
+        const currentSort = getCurrentSortState();
+        const sortClass = currentSort.field === sortKey ? `sort-${currentSort.direction}` : 'sort-reset';
+        
+        return `<th class="sortable-header ${sortClass}" data-sort-field="${sortKey}">
+          ${h}
+          <span class="sort-indicator"></span>
+        </th>`;
       })
       .join("");
     
@@ -2901,10 +3004,180 @@
     newBody.addEventListener("change", handleTableChange);
     newBody.addEventListener("focusin", handleTableFocusIn);
     newBody.addEventListener("focusout", handleTableFocusOut);
+    
+    // Add blur event listener for searchable dropdown reset
+    newBody.addEventListener("blur", (e) => {
+      if (e.target.classList.contains("searchable-dropdown-input")) {
+        // Use setTimeout to allow click events to be processed first
+        setTimeout(() => {
+          const input = e.target;
+          const originalValue = input.dataset.originalValue || "";
+          const originalText = input.dataset.originalText || "";
+          
+          // Check if a dropdown item was clicked (selection made)
+          const wasSelectionMade = document.querySelector('.searchable-dropdown-list[style*="block"]') === null;
+          
+          // If no selection was made and we have original values, reset
+          if (wasSelectionMade && (originalValue !== input.dataset.value || originalText !== input.value)) {
+            console.log("Resetting searchable dropdown to original values");
+            input.value = originalText;
+            input.dataset.value = originalValue;
+            
+            // Clear any active selection
+            const allDropdowns = document.querySelectorAll(".searchable-dropdown-list");
+            allDropdowns.forEach(dropdown => {
+              if (dropdown.parentNode === document.body) {
+                dropdown.style.display = "none";
+                // Return dropdown to original parent
+                const inputs = document.querySelectorAll(".searchable-dropdown-input");
+                for (let inp of inputs) {
+                  const container = inp.closest(".searchable-dropdown");
+                  if (container && !container.querySelector(".searchable-dropdown-list")) {
+                    container.appendChild(dropdown);
+                    break;
+                  }
+                }
+              }
+            });
+          }
+        }, 150);
+      }
+    }, true);
     newBody.addEventListener("keyup", handleTableKeyUp);
     
     // Add click handler for searchable dropdown inputs
     newBody.addEventListener("click", handleSearchableDropdownClick);
+    
+    // Add click handler for sortable headers
+    const tableHead = document.querySelector("thead");
+    if (tableHead) {
+      // Remove existing listener to avoid duplicates
+      tableHead.removeEventListener("click", handleHeaderClick);
+      tableHead.addEventListener("click", handleHeaderClick);
+    }
+    
+    // Add input and keyup event listeners for searchable dropdown filtering
+    newBody.addEventListener("input", (e) => {
+      if (e.target.classList.contains("searchable-dropdown-input")) {
+        console.log("Input event triggered on searchable dropdown:", e.target.value);
+        const filter = e.target.value.toLowerCase();
+        
+        // Find the dropdown list - it might be a sibling or moved to document.body
+        let list = e.target.nextElementSibling;
+        if (!list || !list.classList.contains("searchable-dropdown-list")) {
+          // If not found as sibling, look for it in the same searchable dropdown container
+          const container = e.target.closest(".searchable-dropdown");
+          list = container ? container.querySelector(".searchable-dropdown-list") : null;
+        }
+        
+        // If still not found, it might be moved to document.body
+        if (!list) {
+          // Find the dropdown that belongs to this input by looking for one that was moved to body
+          const allDropdowns = document.querySelectorAll(".searchable-dropdown-list");
+          for (let dropdown of allDropdowns) {
+            if (dropdown.parentNode === document.body) {
+              // Check if this dropdown belongs to our input by looking for matching data attributes
+              const inputId = e.target.dataset.id;
+              const inputField = e.target.dataset.field;
+              // We can't easily match them, so we'll use the first visible dropdown
+              if (dropdown.style.display === "block") {
+                list = dropdown;
+                break;
+              }
+            }
+          }
+        }
+        
+        console.log("Found list element:", list);
+        if (list && list.classList.contains("searchable-dropdown-list")) {
+          console.log("Filtering with:", filter);
+          list.querySelectorAll("div").forEach((item) => {
+            const text = item.textContent.toLowerCase();
+            const shouldShow = text.includes(filter);
+            item.style.display = shouldShow ? "" : "none";
+            console.log(`Item "${item.textContent}" - should show: ${shouldShow}`);
+          });
+          // Clear any active selection when user types
+          const activeItem = list.querySelector(".dropdown-active");
+          if (activeItem) activeItem.classList.remove("dropdown-active");
+        }
+      }
+    });
+    
+    newBody.addEventListener("keyup", (e) => {
+      if (e.target.classList.contains("searchable-dropdown-input")) {
+        // Handle Escape key to reset value
+        if (e.key === "Escape") {
+          const input = e.target;
+          const originalValue = input.dataset.originalValue || "";
+          const originalText = input.dataset.originalText || "";
+          
+          console.log("Escape pressed - resetting searchable dropdown to original values");
+          input.value = originalText;
+          input.dataset.value = originalValue;
+          
+          // Close dropdown
+          const allDropdowns = document.querySelectorAll(".searchable-dropdown-list");
+          allDropdowns.forEach(dropdown => {
+            if (dropdown.parentNode === document.body) {
+              dropdown.style.display = "none";
+              // Return dropdown to original parent
+              const inputs = document.querySelectorAll(".searchable-dropdown-input");
+              for (let inp of inputs) {
+                const container = inp.closest(".searchable-dropdown");
+                if (container && !container.querySelector(".searchable-dropdown-list")) {
+                  container.appendChild(dropdown);
+                  break;
+                }
+              }
+            }
+          });
+          return;
+        }
+        
+        console.log("Keyup event triggered on searchable dropdown:", e.target.value);
+        const filter = e.target.value.toLowerCase();
+        
+        // Find the dropdown list - it might be a sibling or moved to document.body
+        let list = e.target.nextElementSibling;
+        if (!list || !list.classList.contains("searchable-dropdown-list")) {
+          // If not found as sibling, look for it in the same searchable dropdown container
+          const container = e.target.closest(".searchable-dropdown");
+          list = container ? container.querySelector(".searchable-dropdown-list") : null;
+        }
+        
+        // If still not found, it might be moved to document.body
+        if (!list) {
+          // Find the dropdown that belongs to this input by looking for one that was moved to body
+          const allDropdowns = document.querySelectorAll(".searchable-dropdown-list");
+          for (let dropdown of allDropdowns) {
+            if (dropdown.parentNode === document.body) {
+              // Check if this dropdown belongs to our input by looking for matching data attributes
+              const inputId = e.target.dataset.id;
+              const inputField = e.target.dataset.field;
+              // We can't easily match them, so we'll use the first visible dropdown
+              if (dropdown.style.display === "block") {
+                list = dropdown;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (list && list.classList.contains("searchable-dropdown-list")) {
+          console.log("Keyup filtering with:", filter);
+          list.querySelectorAll("div").forEach((item) => {
+            const text = item.textContent.toLowerCase();
+            const shouldShow = text.includes(filter);
+            item.style.display = shouldShow ? "" : "none";
+            console.log(`Keyup - Item "${item.textContent}" - should show: ${shouldShow}`);
+          });
+          // Clear any active selection when user types
+          const activeItem = list.querySelector(".dropdown-active");
+          if (activeItem) activeItem.classList.remove("dropdown-active");
+        }
+      }
+    });
 
     // Add global click listener for dropdown items (since they're moved to document.body)
     document.addEventListener("click", (e) => {
@@ -2913,6 +3186,53 @@
         console.log("Global dropdown item click detected");
         handleDropdownItemClick(e);
         return;
+      }
+    });
+
+    // Add global input listener for searchable dropdown filtering
+    document.addEventListener("input", (e) => {
+      if (e.target.classList.contains("searchable-dropdown-input")) {
+        console.log("Global input event triggered on searchable dropdown:", e.target.value);
+        const filter = e.target.value.toLowerCase();
+        
+        // Find the dropdown list - it might be a sibling or moved to document.body
+        let list = e.target.nextElementSibling;
+        if (!list || !list.classList.contains("searchable-dropdown-list")) {
+          // If not found as sibling, look for it in the same searchable dropdown container
+          const container = e.target.closest(".searchable-dropdown");
+          list = container ? container.querySelector(".searchable-dropdown-list") : null;
+        }
+        
+        // If still not found, it might be moved to document.body
+        if (!list) {
+          // Find the dropdown that belongs to this input by looking for one that was moved to body
+          const allDropdowns = document.querySelectorAll(".searchable-dropdown-list");
+          for (let dropdown of allDropdowns) {
+            if (dropdown.parentNode === document.body) {
+              // Check if this dropdown belongs to our input by looking for matching data attributes
+              const inputId = e.target.dataset.id;
+              const inputField = e.target.dataset.field;
+              // We can't easily match them, so we'll use the first visible dropdown
+              if (dropdown.style.display === "block") {
+                list = dropdown;
+                break;
+              }
+            }
+          }
+        }
+        
+        if (list && list.classList.contains("searchable-dropdown-list")) {
+          console.log("Global filtering with:", filter);
+          list.querySelectorAll("div").forEach((item) => {
+            const text = item.textContent.toLowerCase();
+            const shouldShow = text.includes(filter);
+            item.style.display = shouldShow ? "" : "none";
+            console.log(`Global - Item "${item.textContent}" - should show: ${shouldShow}`);
+          });
+          // Clear any active selection when user types
+          const activeItem = list.querySelector(".dropdown-active");
+          if (activeItem) activeItem.classList.remove("dropdown-active");
+        }
       }
     });
 
@@ -3490,6 +3810,10 @@
   // Add click handler for searchable dropdown inputs
   function handleSearchableDropdownClick(e) {
     if (e.target.classList.contains("searchable-dropdown-input")) {
+      // Store the original value for potential reset
+      e.target.dataset.originalValue = e.target.dataset.value || "";
+      e.target.dataset.originalText = e.target.value || "";
+      
       // Find the dropdown - it might be a sibling or already moved to body
       let dropdown = e.target.nextElementSibling;
       if (!dropdown || !dropdown.classList.contains("searchable-dropdown-list")) {
@@ -5781,6 +6105,21 @@
               : "none")
         );
     });
+    
+    // Add input event listener for real-time filtering
+    input.addEventListener("input", () => {
+      const filter = input.value.toLowerCase();
+      list
+        .querySelectorAll("div")
+        .forEach(
+          (item) =>
+            (item.style.display = item.textContent
+              .toLowerCase()
+              .includes(filter)
+              ? ""
+              : "none")
+        );
+    });
     list.addEventListener("mousedown", (e) => {
       if (e.target.tagName === "DIV") {
         input.value = e.target.textContent;
@@ -7184,6 +7523,21 @@ This document explains each level, when to use it, and provides concrete example
     // All closing/reverting logic is now handled in the keydown listener for Escape, Enter, and Tab.
 
     wrapper.addEventListener("keyup", (e) => {
+      if (e.target.classList.contains("searchable-dropdown-input")) {
+        const filter = e.target.value.toLowerCase();
+        const list = e.target.nextElementSibling;
+        list.querySelectorAll("div").forEach((item) => {
+          const text = item.textContent.toLowerCase();
+          item.style.display = text.includes(filter) ? "" : "none";
+        });
+        // Clear any active selection when user types
+        const activeItem = list.querySelector(".dropdown-active");
+        if (activeItem) activeItem.classList.remove("dropdown-active");
+      }
+    });
+
+    // Add input event listener for real-time filtering
+    wrapper.addEventListener("input", (e) => {
       if (e.target.classList.contains("searchable-dropdown-input")) {
         const filter = e.target.value.toLowerCase();
         const list = e.target.nextElementSibling;
