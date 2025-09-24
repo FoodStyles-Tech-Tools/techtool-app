@@ -920,6 +920,37 @@
     submitBtn.textContent = "Submitting...";
     submitBtn.disabled = true;
 
+    // Log ticket submission for debugging
+    console.log(`Submitting ${ticketsToSubmit.length} tickets`);
+    
+    // Ensure no manual IDs are present
+    ticketsToSubmit.forEach((ticket, index) => {
+      if (ticket.id !== undefined) {
+        console.warn(`⚠️ Ticket ${index} has manual ID:`, ticket.id);
+        delete ticket.id; // Remove any manual ID
+      }
+    });
+
+    // Try to fix sequence if it's out of sync
+    try {
+      const { data: lastTicket } = await supabaseClient
+        .from("ticket")
+        .select("id")
+        .order("id", { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (lastTicket) {
+        // Reset the sequence to be higher than the last ticket ID
+        await supabaseClient.rpc('reset_ticket_sequence', { 
+          new_start_value: lastTicket.id + 1 
+        });
+        console.log(`Sequence reset to: ${lastTicket.id + 1}`);
+      }
+    } catch (seqError) {
+      console.warn("⚠️ Could not reset sequence (this is normal if function doesn't exist):", seqError.message);
+    }
+
     const { data: insertedTickets, error } = await supabaseClient
       .from("ticket")
       .insert(ticketsToSubmit)
@@ -929,13 +960,20 @@
     submitBtn.disabled = false;
 
     if (error) {
+      console.error("Database error:", error);
       showToast("Error: " + error.message, "error");
     } else {
+      console.log(`${insertedTickets.length} tickets inserted successfully`);
       showToast(
         `${insertedTickets.length} ticket(s) added successfully!`,
         "success"
       );
+      
       if (insertedTickets && insertedTickets.length > 0) {
+        // Update the frontend state with the new tickets
+        await updateTicketDataAfterCreation(insertedTickets);
+        
+        // Send Discord notification
         await sendDiscordNotificationViaApi(
           insertedTickets,
           appData.currentUserName
@@ -944,6 +982,121 @@
 
       confirmModal.style.display = "none";
       addModal.style.display = "none";
+    }
+  }
+
+  // NEW: Function to update frontend state after ticket creation
+  async function updateTicketDataAfterCreation(newTickets) {
+    try {
+      console.log("Updating frontend state with new tickets...");
+      
+      // Add a small delay to ensure database consistency in production
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Fetch fresh data from database with retry logic for production reliability
+      let freshTicketData, fetchError;
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries) {
+        const result = await supabaseClient
+          .from("ticket")
+          .select(`
+            *,
+            project:projectId(projectName)
+          `)
+          .order("id", { ascending: false });
+        
+        freshTicketData = result.data;
+        fetchError = result.error;
+        
+        if (!fetchError) break;
+        
+        retryCount++;
+        console.warn(`⚠️ Database fetch attempt ${retryCount} failed, retrying...`, fetchError);
+        
+        if (retryCount < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, 200 * retryCount));
+        }
+      }
+
+      if (fetchError) {
+        console.error("❌ Error fetching fresh ticket data:", fetchError);
+        // Fallback: just add the new tickets to existing state
+        const formattedNewTickets = newTickets.map((t) => ({
+          id: t.id,
+          projectId: t.projectId,
+          epic: t.epic,
+          title: t.title,
+          description: t.description,
+          requestedBy: t.requestedBy,
+          relevantLink: t.relevantLink,
+          priority: t.priority,
+          type: t.type,
+          status: t.status,
+          assigneeId: t.assigneeId,
+          skillsId: t.skillsId,
+          complexity: t.complexity,
+          sprint: t.sprint,
+          createdAt: t.createdAt,
+          assignedAt: t.assignedAt,
+          startedAt: t.startedAt,
+          completedAt: t.completedAt,
+          dueDate: t.dueDate,
+          log: t.log,
+          requesterEmail: t.requesterEmail,
+          subtask: t.subtask,
+          comment: t.comment,
+          projectName: t.project?.projectName || "",
+        }));
+        
+        appData.allTickets = [...formattedNewTickets, ...appData.allTickets];
+        appData.tickets = appData.allTickets;
+        
+        console.log("Added new tickets to existing state (fallback)");
+      } else {
+        // Update with fresh data from database
+        appData.allTickets = freshTicketData.map((t) => ({
+          id: t.id,
+          projectId: t.projectId,
+          epic: t.epic,
+          title: t.title,
+          description: t.description,
+          requestedBy: t.requestedBy,
+          relevantLink: t.relevantLink,
+          priority: t.priority,
+          type: t.type,
+          status: t.status,
+          assigneeId: t.assigneeId,
+          skillsId: t.skillsId,
+          complexity: t.complexity,
+          sprint: t.sprint,
+          createdAt: t.createdAt,
+          assignedAt: t.assignedAt,
+          startedAt: t.startedAt,
+          completedAt: t.completedAt,
+          dueDate: t.dueDate,
+          log: t.log,
+          requesterEmail: t.requesterEmail,
+          subtask: t.subtask,
+          comment: t.comment,
+          projectName: t.project?.projectName || "",
+        }));
+        
+        appData.tickets = appData.allTickets;
+        console.log("Updated with fresh data from database");
+      }
+      
+      // Apply current filters and refresh the display
+      applyFilters();
+      renderTickets();
+      
+      console.log("Frontend state updated successfully");
+      
+    } catch (error) {
+      console.error("Error updating frontend state:", error);
+      // Even if state update fails, don't block the user
+      showToast("Tickets created successfully, but UI may need refresh", "warning");
     }
   }
 
@@ -1026,14 +1179,8 @@
       createdAtTimestamp = new Date().toISOString();
     }
 
-    const { data: lastTicket, error: idError } = await window.supabaseClient.rpc(
-      "get_last_ticket_id"
-    );
-    if (idError && idError.code !== "PGRST116") {
-      showToast(`Error getting last ticket ID: ${idError.message}`, "error");
-      return;
-    }
-    let nextId = (lastTicket || 0) + 1;
+    // Remove manual ID generation - let database handle auto-increment
+    // This prevents duplicate key constraint violations in concurrent scenarios
 
     ticketRows.forEach((row) => {
       const advancedRow = row.nextElementSibling;
@@ -1114,7 +1261,8 @@
           if (advCompletedDate) ticket.completedAt = advCompletedDate;
         }
 
-        ticket.id = nextId;
+        // Don't assign manual ID - let database auto-generate
+        // ticket.id = nextId; // REMOVED to prevent duplicate key violations
         ticket.title = title;
         ticket.description = row
           .querySelector(".new-ticket-description")
@@ -1139,7 +1287,6 @@
         if (ticket.skillsId) ticket.skillsId = parseInt(ticket.skillsId, 10);
 
         newTicketsData.push(ticket);
-        nextId++;
       }
     });
 
@@ -5881,18 +6028,10 @@
     
     // Create tickets using existing functionality
     try {
-      // Get the next available ticket ID
-      const { data: lastTicket, error: idError } = await window.supabaseClient.rpc(
-        "get_last_ticket_id"
-      );
-      if (idError && idError.code !== "PGRST116") {
-        throw new Error(`Error getting last ticket ID: ${idError.message}`);
-      }
-      let nextId = (lastTicket || 0) + 1;
-      
-      // Assign IDs to all tickets
+      // Remove manual ID assignment - let database auto-generate IDs
+      // This prevents duplicate key constraint violations
       tickets.forEach((ticket, index) => {
-        ticket.id = nextId + index;
+        // ticket.id = nextId + index; // REMOVED to prevent duplicate key violations
         
         // Convert string IDs to numbers
         if (ticket.projectId) ticket.projectId = parseInt(ticket.projectId, 10);
@@ -5915,6 +6054,9 @@
 
       if (insertedTickets && insertedTickets.length > 0) {
         showToast(`Successfully created ${insertedTickets.length} ticket(s)`, "success");
+        
+        // Update frontend state with new tickets
+        await updateTicketDataAfterCreation(insertedTickets);
         
         // Send Discord notification
         await sendDiscordNotificationViaApi(insertedTickets, appData.currentUserName);
@@ -6224,7 +6366,11 @@
     onChangeCallback,
     selectedValue = null
   ) {
-    console.log(`Creating searchable dropdown for ${container.id} with ${options.length} options`);
+    if (!container) {
+      console.error("❌ Container is null or undefined!");
+      return;
+    }
+    
     const dropdownId = `searchable-${container.id}`,
       inputId = `input-${container.id}`,
       listId = `list-${container.id}`;
@@ -6249,8 +6395,12 @@
       .join("")}</div></div>`;
     const input = document.getElementById(inputId),
       list = document.getElementById(listId);
-    input.addEventListener("focus", () => (list.style.display = "block"));
-    input.addEventListener("click", () => (list.style.display = "block"));
+    input.addEventListener("focus", () => {
+      positionDropdownFixed(input, list);
+    });
+    input.addEventListener("click", () => {
+      positionDropdownFixed(input, list);
+    });
     input.addEventListener("blur", () => {
       // Add a small delay to allow click events to be processed
       setTimeout(() => {
@@ -6269,6 +6419,10 @@
               ? ""
               : "none")
         );
+      // Reposition dropdown after filtering
+      if (list.style.display === "block") {
+        positionDropdownFixed(input, list);
+      }
     });
     
     // Add input event listener for real-time filtering
@@ -6284,6 +6438,10 @@
               ? ""
               : "none")
         );
+      // Reposition dropdown after filtering
+      if (list.style.display === "block") {
+        positionDropdownFixed(input, list);
+      }
     });
     list.addEventListener("mousedown", (e) => {
       if (e.target.tagName === "DIV") {
@@ -6303,6 +6461,7 @@
         if (onChangeCallback) onChangeCallback();
       }
     });
+    
   }
 
   function handleClear(event) {
@@ -6664,20 +6823,8 @@
     const assigneeInput = row.querySelector("#inline-new-assignee-cell input");
     const assigneeId = assigneeInput.dataset.value || null;
 
-    const { data: lastIdData, error: idError } = await window.supabaseClient.rpc(
-      "get_last_ticket_id"
-    );
-
-    if (idError && idError.code !== "PGRST116") {
-      showToast(`Error getting last ticket ID: ${idError.message}`, "error");
-      // --- UI INDICATOR RESET on early exit ---
-      saveBtn.disabled = false;
-      cancelBtn.disabled = false;
-      saveIcon.className = originalIconClass;
-      row.style.opacity = "1";
-      return;
-    }
-    const lastId = lastIdData ? lastIdData : 0;
+    // Remove manual ID generation - let database handle auto-increment
+    // This prevents duplicate key constraint violations
 
     let finalTimestamp;
     const createdAtValue = row.querySelector("#inline-new-createdAt").value;
@@ -6698,7 +6845,7 @@
     }
 
     const newTicketData = {
-      id: lastId + 1,
+      // id: lastId + 1, // REMOVED to prevent duplicate key violations - let DB auto-generate
       title: title,
       type: row.querySelector("#inline-new-type").value,
       requestedBy: requestedByInput.value,
@@ -6728,6 +6875,9 @@
       // On success, the row is removed, so no reset is needed.
       row.remove();
       if (insertedTickets && insertedTickets.length > 0) {
+        // Update frontend state with new ticket
+        await updateTicketDataAfterCreation(insertedTickets);
+        
         await sendDiscordNotificationViaApi(
           insertedTickets,
           appData.currentUserName
@@ -7906,17 +8056,8 @@ This document explains each level, when to use it, and provides concrete example
     submitBtn.textContent = "Creating...";
     submitBtn.disabled = true;
 
-    const { data: lastId, error: idError } = await window.supabaseClient.rpc(
-      "get_last_ticket_id"
-    );
-
-    if (idError && idError.code !== "PGRST116") {
-      showToast(`Error getting last ticket ID: ${idError.message}`, "error");
-      submitBtn.textContent = "Create Ticket";
-      submitBtn.disabled = false;
-      return;
-    }
-    const newTicketId = (lastId || 0) + 1;
+    // Remove manual ID generation - let database handle auto-increment
+    // This prevents duplicate key constraint violations
 
     // --- Data Gathering ---
     const createdAt = document.getElementById("rct-createdAt").value;
@@ -7930,7 +8071,7 @@ This document explains each level, when to use it, and provides concrete example
       null;
 
     const newTicketData = {
-      id: newTicketId,
+      // id: newTicketId, // REMOVED to prevent duplicate key violations - let DB auto-generate
       title: document.getElementById("rct-title").value.trim(),
       description: document.getElementById("rct-description").value.trim(),
       createdAt: createdAtTimestamp,
@@ -8006,6 +8147,9 @@ This document explains each level, when to use it, and provides concrete example
         appData.allReconcileHrs[localIndex].ticketNumber = insertedTicket.id;
       }
     }
+
+    // Update frontend state with new ticket
+    await updateTicketDataAfterCreation([insertedTicket]);
 
     // --- Finalize ---
     modal.style.display = "none";
