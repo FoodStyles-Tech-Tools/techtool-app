@@ -138,19 +138,26 @@ export default function AppPage({
       </Head>
       <Script
         src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
-        strategy="afterInteractive"
+        strategy="beforeInteractive"
       />
       <Script src="https://cdn.jsdelivr.net/npm/chart.js" strategy="afterInteractive" />
-      <Script id="supabase-init" strategy="afterInteractive">
+      <Script id="supabase-init" strategy="beforeInteractive">
         {`
           console.log("Setting up Supabase environment variables...");
           window.SUPABASE_URL = ${JSON.stringify(supabaseUrl)};
           window.SUPABASE_KEY = ${JSON.stringify(supabaseAnonKey)};
           console.log("Supabase URL set:", window.SUPABASE_URL);
           console.log("Supabase Key set:", window.SUPABASE_KEY ? "Present" : "Missing");
-          
-          // Initialize Supabase client immediately
-          function initSupabaseClient() {
+        `}
+      </Script>
+      <div
+        id="webapp-root"
+        dangerouslySetInnerHTML={{ __html: appHtml }}
+      />
+      <Script id="app-init" strategy="afterInteractive">
+        {`
+          // Initialize Supabase client and app after DOM is ready
+          function initSupabaseAndApp() {
             if (typeof window.supabase !== 'undefined') {
               console.log("Creating Supabase client...");
               window.supabaseClient = window.supabase.createClient(
@@ -158,21 +165,29 @@ export default function AppPage({
                 window.SUPABASE_KEY
               );
               console.log("Supabase client created successfully!");
+              
+              // Initialize app after Supabase is ready
+              if (typeof window.initializeApp === 'function') {
+                window.initializeApp();
+              } else {
+                // Wait for app.js to load
+                setTimeout(initSupabaseAndApp, 100);
+              }
             } else {
               console.log("Supabase library not ready, retrying...");
-              setTimeout(initSupabaseClient, 100);
+              setTimeout(initSupabaseAndApp, 100);
             }
           }
           
-          // Start initialization
-          initSupabaseClient();
+          // Start initialization when DOM is ready
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSupabaseAndApp);
+          } else {
+            initSupabaseAndApp();
+          }
         `}
       </Script>
-      <div
-        id="webapp-root"
-        dangerouslySetInnerHTML={{ __html: appHtml }}
-      />
-      <Script src="/js/app.js?v=10" strategy="afterInteractive" />
+      <Script src="/js/app.js?v=${Date.now()}" strategy="afterInteractive" />
     </>
   );
 }

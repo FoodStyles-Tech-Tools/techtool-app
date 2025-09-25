@@ -195,6 +195,24 @@
     console.log("✅ All required elements found, starting app...");
     startApp();
   }
+
+  // Make initializeApp available globally for external initialization
+  window.initializeApp = initializeApp;
+
+  // Add global event listener for ticket field updates to ensure UI consistency
+  document.addEventListener('ticketFieldUpdated', (event) => {
+    const { ticketId, field, newValue, oldValue } = event.detail;
+    console.log(`Field updated: ${field} for ticket ${ticketId}`, { oldValue, newValue });
+    
+    // Force a UI refresh to ensure all views are updated
+    setTimeout(() => {
+      applyFilterAndRender();
+      if (currentView === "home") {
+        renderDashboard();
+      }
+      updateNavBadgeCounts();
+    }, 100);
+  });
   
   async function startApp() {
     console.log("🚀 App.js loaded and starting...");
@@ -214,17 +232,37 @@
       console.log("Supabase URL:", window.SUPABASE_URL);
       console.log("Supabase Key:", window.SUPABASE_KEY ? "Present" : "Missing");
       
-      // Test Supabase connection
+      // Test Supabase connection with retry logic for Vercel
       console.log("Testing Supabase connection...");
-      try {
-        const { data, error } = await supabaseClient.from('user').select('count').limit(1);
-        if (error) {
-          console.error("Supabase connection test failed:", error);
-        } else {
-          console.log("✅ Supabase connection test successful");
+      let connectionTestPassed = false;
+      let testRetries = 0;
+      const maxTestRetries = 3;
+      
+      while (testRetries < maxTestRetries && !connectionTestPassed) {
+        try {
+          const { data, error } = await supabaseClient.from('user').select('count').limit(1);
+          if (error) {
+            console.warn(`Supabase connection test attempt ${testRetries + 1} failed:`, error);
+            testRetries++;
+            if (testRetries < maxTestRetries) {
+              await new Promise(resolve => setTimeout(resolve, 1000 * testRetries));
+            }
+          } else {
+            console.log("✅ Supabase connection test successful");
+            connectionTestPassed = true;
+          }
+        } catch (testError) {
+          console.warn(`Supabase connection test attempt ${testRetries + 1} error:`, testError);
+          testRetries++;
+          if (testRetries < maxTestRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * testRetries));
+          }
         }
-      } catch (testError) {
-        console.error("Supabase connection test error:", testError);
+      }
+      
+      if (!connectionTestPassed) {
+        console.error("❌ Supabase connection test failed after all retries");
+        showToast("Connection issues detected. Some features may not work properly.", "warning");
       }
       
       // Make supabaseClient available globally
@@ -403,7 +441,25 @@
       applyFilterAndRender();
       addPaginationListeners();
       addReconcilePaginationListeners();
-      subscribeToTicketChanges();
+      
+      // Set up real-time subscriptions with fallback
+      try {
+        subscribeToTicketChanges();
+        
+        // Add a fallback polling mechanism for Vercel reliability
+        if (window.location.href.includes('vercel.app')) {
+          console.log("Vercel environment detected, setting up fallback polling");
+          setInterval(async () => {
+            if (!window.realtimeSubscribed) {
+              console.log("Real-time subscription lost, attempting to reconnect...");
+              subscribeToTicketChanges();
+            }
+          }, 30000); // Check every 30 seconds
+        }
+      } catch (subscriptionError) {
+        console.error("Failed to set up real-time subscriptions:", subscriptionError);
+        showToast("Real-time updates unavailable. Changes may not appear immediately.", "warning");
+      }
     } catch (error) {
       console.error("Error during initialization:", error);
       console.error("Error stack:", error.stack);
@@ -422,22 +478,28 @@
     }
   }
   
-  // Multiple initialization triggers
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeApp);
-  } else {
-    // DOM is already ready
-    initializeApp();
-  }
+  // Initialization is now handled by the external script in app.tsx
+  // This ensures proper timing with Supabase client initialization
   
-  // Fallback initialization
+  // Fallback initialization - only if not already initialized
   window.addEventListener('load', () => {
     console.log("🚀 Window load event fired");
     if (document.getElementById("loader") && document.getElementById("loader").style.display !== "none") {
       console.log("🚀 App still loading, triggering initialization...");
-      initializeApp();
+      // Only initialize if not already done
+      if (!window.appInitialized) {
+        initializeApp();
+      }
     }
   });
+
+  // Mark app as initialized when startApp completes
+  const originalStartApp = startApp;
+  startApp = async function() {
+    await originalStartApp();
+    window.appInitialized = true;
+    console.log("✅ App initialization completed and marked");
+  };
 
   /**
    * Subscribes to real-time changes (inserts, updates, deletes) in the 'ticket' table.
@@ -445,7 +507,19 @@
   function subscribeToTicketChanges() {
     try {
       console.log("Setting up real-time subscription...");
-      supabaseClient
+      
+      if (!window.supabaseClient) {
+        console.error("❌ Supabase client not available for real-time subscription");
+        // Retry after a short delay
+        setTimeout(() => {
+          if (window.supabaseClient) {
+            subscribeToTicketChanges();
+          }
+        }, 1000);
+        return;
+      }
+
+      const channel = window.supabaseClient
         .channel("public:ticket")
         .on(
           "postgres_changes",
@@ -463,16 +537,40 @@
           console.log("Subscription status:", status);
           if (status === "SUBSCRIBED") {
             console.log("✅ Successfully subscribed to real-time ticket changes!");
+            window.realtimeSubscribed = true;
           } else if (status === "CHANNEL_ERROR") {
             console.error("❌ Real-time subscription error");
+            window.realtimeSubscribed = false;
+            // Retry subscription after error
+            setTimeout(() => {
+              console.log("🔄 Retrying real-time subscription...");
+              subscribeToTicketChanges();
+            }, 5000);
           } else if (status === "TIMED_OUT") {
             console.error("❌ Real-time subscription timed out");
+            window.realtimeSubscribed = false;
+            // Retry subscription after timeout
+            setTimeout(() => {
+              console.log("🔄 Retrying real-time subscription after timeout...");
+              subscribeToTicketChanges();
+            }, 3000);
           } else if (status === "CLOSED") {
             console.warn("⚠️ Real-time subscription closed");
+            window.realtimeSubscribed = false;
           }
         });
+        
+      // Store channel reference for cleanup
+      window.realtimeChannel = channel;
+      
     } catch (error) {
       console.error("Error setting up real-time subscription:", error);
+      window.realtimeSubscribed = false;
+      // Retry after error
+      setTimeout(() => {
+        console.log("🔄 Retrying real-time subscription after error...");
+        subscribeToTicketChanges();
+      }, 3000);
     }
   }
 
@@ -551,80 +649,45 @@
 
     if (isChanged) {
       console.log("Data changed, updating UI...");
-      applyFilterAndRender();
       
-      // Update dashboard if it's currently visible
-      if (currentView === "home") {
-        console.log("Updating dashboard...");
-        renderDashboard();
-      }
-      
-      // Update navigation badges
-      updateNavBadgeCounts();
-      const modal = document.getElementById("task-detail-modal");
-      if (modal.style.display === "flex") {
-        const modalTicketId = modal.querySelector(".ticket-main-content")
-          ?.dataset.ticketId;
-        if (modalTicketId == ticketId) {
-          if (eventType === "DELETE") {
-            modal.style.display = "none";
-            showToast(`Ticket ${ticketId} was deleted.`, "error");
-          } else {
-            const mainContent = modal.querySelector(".ticket-main-content");
-            const sidebar = modal.querySelector(".ticket-details-sidebar");
-            const mainScroll = mainContent ? mainContent.scrollTop : 0;
-            const sidebarScroll = sidebar ? sidebar.scrollTop : 0;
-            const focusedElementField = document.activeElement?.dataset.field;
-            const dirtyFieldsState = {};
-            modal
-              .querySelectorAll(".editable-field-wrapper.is-dirty input")
-              .forEach((input) => {
-                dirtyFieldsState[input.dataset.field] = input.value;
+      // Force UI refresh with a small delay to ensure DOM is ready
+      setTimeout(() => {
+        try {
+          applyFilterAndRender();
+          
+          // Update dashboard if it's currently visible
+          if (currentView === "home") {
+            console.log("Updating dashboard...");
+            renderDashboard();
+          }
+          
+          // Update navigation badges
+          updateNavBadgeCounts();
+          
+          // Force a re-render of any open modals to reflect changes
+          const modal = document.getElementById("task-detail-modal");
+          if (modal && modal.style.display === "flex") {
+            const modalTicketId = modal.querySelector(".ticket-main-content")?.dataset.ticketId;
+            if (modalTicketId == ticketId) {
+              console.log("Refreshing open modal for updated ticket:", ticketId);
+              // Trigger a modal refresh
+              const event = new CustomEvent('ticketUpdated', { 
+                detail: { ticketId: ticketId, eventType: eventType } 
               });
-            const advancedToggle = modal.querySelector(
-              ".advanced-details-toggle"
-            );
-            const isAdvancedOpen = advancedToggle
-              ? advancedToggle.classList.contains("is-open")
-              : false;
-
-            showTaskDetailModal(ticketId, { isAdvancedOpen: isAdvancedOpen });
-
-            requestAnimationFrame(() => {
-              const newMainContent = modal.querySelector(
-                ".ticket-main-content"
-              );
-              if (newMainContent) newMainContent.scrollTop = mainScroll;
-
-              const newSidebar = modal.querySelector(".ticket-details-sidebar");
-              if (newSidebar) newSidebar.scrollTop = sidebarScroll;
-
-              Object.entries(dirtyFieldsState).forEach(([field, value]) => {
-                const input = modal.querySelector(
-                  `input[data-field='${field}']`
-                );
-                if (input) {
-                  input.value = value;
-                  const wrapper = input.closest(".editable-field-wrapper");
-                  if (wrapper) {
-                    wrapper.classList.add("is-dirty");
-                  }
-                }
-              });
-
-              if (focusedElementField) {
-                const elementToFocus = modal.querySelector(
-                  `[data-field='${focusedElementField}']`
-                );
-                if (elementToFocus) {
-                  // THIS IS THE ONLY LINE THAT CHANGED
-                  elementToFocus.focus({ preventScroll: true });
-                }
-              }
-            });
+              document.dispatchEvent(event);
+            }
+          }
+        } catch (uiError) {
+          console.error("Error during UI refresh:", uiError);
+          // Fallback: try a simple page refresh if UI update fails
+          if (window.location.href.includes('vercel.app')) {
+            console.log("Vercel environment detected, attempting fallback refresh");
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
           }
         }
-      }
+      }, 100);
     }
   }
 
@@ -812,39 +875,82 @@
     if (updates.logReason) delete updates.logReason;
 
     parentContainer.classList.add("updating");
-    const { error } = await supabaseClient
-      .from("ticket")
-      .update(updates)
-      .eq("id", ticket.id);
-    parentContainer.classList.remove("updating");
+    
+    try {
+      // Add retry logic for Vercel reliability
+      let retryCount = 0;
+      const maxRetries = 3;
+      let error = null;
+      
+      while (retryCount < maxRetries) {
+        const result = await supabaseClient
+          .from("ticket")
+          .update(updates)
+          .eq("id", ticket.id);
+        
+        error = result.error;
+        
+        if (!error) break;
+        
+        retryCount++;
+        console.warn(`Update attempt ${retryCount} failed:`, error);
+        
+        if (retryCount < maxRetries) {
+          // Wait before retry with exponential backoff
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+      
+      parentContainer.classList.remove("updating");
 
-    if (error) {
-      showToast("Update failed: " + error.message, "error");
-      element.value = oldValue;
-    } else {
-      // Update local data
-      ticket[field] = newValue;
-      
-      element.dataset.oldValue = newValue;
-      element.dataset.value = newValue;
-      
-      // For Jira-style dropdowns, also update the tag element's oldValue and text
-      if (element.classList.contains("status-tag")) {
+      if (error) {
+        console.error("Final update error after retries:", error);
+        showToast("Update failed: " + error.message, "error");
+        element.value = oldValue;
+        
+        // Revert any UI changes
+        if (element.classList.contains("status-tag")) {
+          const oldTagInfo = getTagInfo(element.dataset.field, oldValue);
+          element.className = `status-tag ${oldTagInfo.className}`;
+          element.textContent = oldValue;
+        }
+      } else {
+        // Update local data
+        ticket[field] = newValue;
+        
         element.dataset.oldValue = newValue;
-        // Update the tag text content
-        element.textContent = newValue;
-        // Update the tag classes based on the new value
-        const tagInfo = getTagInfo(element.dataset.field, newValue);
-        element.className = `status-tag ${tagInfo.className}`;
+        element.dataset.value = newValue;
+        
+        // For Jira-style dropdowns, also update the tag element's oldValue and text
+        if (element.classList.contains("status-tag")) {
+          element.dataset.oldValue = newValue;
+          // Update the tag text content
+          element.textContent = newValue;
+          // Update the tag classes based on the new value
+          const tagInfo = getTagInfo(element.dataset.field, newValue);
+          element.className = `status-tag ${tagInfo.className}`;
+        }
+        
+        parentContainer.classList.add("is-successful");
+        if (fieldWrapper) {
+          fieldWrapper.classList.remove("is-dirty");
+        }
+        
+        // Force UI refresh after successful update
+        setTimeout(() => {
+          parentContainer.classList.remove("is-successful");
+          // Trigger a custom event for real-time updates
+          const updateEvent = new CustomEvent('ticketFieldUpdated', {
+            detail: { ticketId: ticket.id, field: field, newValue: newValue, oldValue: oldValue }
+          });
+          document.dispatchEvent(updateEvent);
+        }, 1200);
       }
-      
-      parentContainer.classList.add("is-successful");
-      if (fieldWrapper) {
-        fieldWrapper.classList.remove("is-dirty");
-      }
-      setTimeout(() => {
-        parentContainer.classList.remove("is-successful");
-      }, 1200);
+    } catch (networkError) {
+      console.error("Network error during update:", networkError);
+      parentContainer.classList.remove("updating");
+      showToast("Network error. Please check your connection and try again.", "error");
+      element.value = oldValue;
     }
   }
 
@@ -1366,87 +1472,6 @@
     }
   }
 
-  async function submitNewProject() {
-    const modal = document.getElementById("add-project-modal");
-    const submitBtn = document.getElementById("submit-new-project-btn");
-
-    const projectName = document
-      .getElementById("new-project-name")
-      .value.trim();
-    if (!projectName) {
-      showToast("Project Name is required.", "error");
-      document.getElementById("new-project-name").classList.add("input-error");
-      return;
-    }
-
-    const collaborators = Array.from(
-      modal.querySelectorAll(
-        "#new-project-collaborators-container input:checked"
-      )
-    )
-      .map((cb) => cb.value)
-      .join(", ");
-
-    const { data: lastProject, error: idError } = await supabaseClient
-      .from("project")
-      .select("id")
-      .order("id", { ascending: false })
-      .limit(1)
-      .single();
-    if (idError && idError.code !== "PGRST116") {
-      showToast(`Error getting last project ID: ${idError.message}`, "error");
-      return;
-    }
-    const newProjectId = (lastProject?.id || 0) + 1;
-
-    const projectData = {
-      id: newProjectId,
-      projectName: projectName,
-      description: document
-        .getElementById("new-project-description")
-        .value.trim(),
-      priority: document.getElementById("new-project-priority").value,
-      projectOwner:
-        modal.querySelector("#new-project-owner-container input").dataset
-          .value || null,
-      collaborators: collaborators,
-      attachment:
-        document.getElementById("new-project-attachment").value.trim() || null,
-      startDate:
-        document.getElementById("new-project-start-date").value || null,
-      estCompletedDate:
-        document.getElementById("new-project-est-completed-date").value || null,
-      createdAt: new Date().toISOString(),
-      createdBy: appData.currentUserName,
-      status: "Open",
-      log: "[]",
-    };
-
-    submitBtn.textContent = "Submitting...";
-    submitBtn.disabled = true;
-
-    const { data: newProject, error } = await supabaseClient
-      .from("project")
-      .insert(projectData)
-      .select()
-      .single();
-
-    submitBtn.textContent = "Add Project";
-    submitBtn.disabled = false;
-
-    if (error) {
-      showToast("Error: " + error.message, "error");
-    } else {
-      showToast("Project added successfully!", "success");
-      modal.style.display = "none";
-      appData.allProjects.push(newProject);
-      appData.projects.push({
-        id: newProject.id,
-        name: newProject.projectName,
-      });
-      applyFilterAndRender();
-    }
-  }
 
   // REPLACE the existing executeBulkUpdate function.
   async function executeBulkUpdate(updates) {
@@ -1673,7 +1698,7 @@
 
     if (addNewProjectOption) {
       addNewProjectOption.addEventListener("click", () => {
-        openAddProjectModal();
+        showAddProjectModal();
         if (addNewMenu) addNewMenu.style.display = "none";
       });
     }
@@ -1723,16 +1748,7 @@
         confirmModal.style.display = "none";
       });
 
-    const addProjectModal = document.getElementById("add-project-modal");
-    if (addProjectModal) {
-      addProjectModal.addEventListener("click", handleAddProjectModalClick);
-      addProjectModal.addEventListener("change", handleAddProjectModalChange);
-    }
-    
-    const submitNewProjectBtn = document.getElementById("submit-new-project-btn");
-    if (submitNewProjectBtn) {
-      submitNewProjectBtn.addEventListener("click", submitNewProject);
-    }
+    // Project modal event listeners are now handled dynamically in showAddProjectModal()
     const updateSelectedBtn = document.getElementById("update-selected-btn");
     if (updateSelectedBtn) {
       updateSelectedBtn.addEventListener("click", openBulkUpdateModal);
@@ -4509,9 +4525,27 @@
     const ticket = appData.allTickets.find((t) => t.id == ticketId);
     if (!ticket) return;
 
+    // Add event listener for real-time updates to this modal
+    const modal = document.getElementById("task-detail-modal");
+    if (modal) {
+      const handleTicketUpdate = (event) => {
+        if (event.detail.ticketId == ticketId) {
+          console.log("Refreshing modal for ticket update:", ticketId);
+          // Re-render the modal with updated data
+          const updatedTicket = appData.allTickets.find((t) => t.id == ticketId);
+          if (updatedTicket) {
+            showTaskDetailModal(ticketId, options);
+          }
+        }
+      };
+      
+      // Remove existing listener to avoid duplicates
+      modal.removeEventListener('ticketUpdated', handleTicketUpdate);
+      modal.addEventListener('ticketUpdated', handleTicketUpdate);
+    }
+
     const { isAdvancedOpen = false } = options;
     const warnings = getTicketWarnings(ticket);
-    const modal = document.getElementById("task-detail-modal");
     const modalBody = document.getElementById("task-detail-modal-body");
     const toDateInputString = (isoString) =>
       isoString ? isoString.split("T")[0] : "";
@@ -6275,68 +6309,7 @@
     }
   }
 
-  function openAddProjectModal() {
-    const modal = document.getElementById("add-project-modal");
-    modal
-      .querySelectorAll("input, select, textarea")
-      .forEach((el) => (el.value = ""));
 
-    // MODIFIED: Use .map(m => ({ value: m.name, text: m.name })) to correctly pass name strings
-    createSearchableDropdownForModal(
-      document.getElementById("new-project-owner-container"),
-      appData.teamMembers.map((m) => ({ value: m.name, text: m.name })),
-      "Select owner..."
-    );
-
-    // MODIFIED: Use .map(m => m.name) to pass an array of strings for the multi-select
-    document.getElementById("new-project-collaborators-container").innerHTML =
-      createMultiSelectDropdown(
-        appData.teamMembers.map((m) => m.name),
-        "",
-        "new",
-        "collaborators",
-        "project"
-      );
-
-    const startDateInput = document.getElementById("new-project-start-date");
-    const estCompletedDateInput = document.getElementById(
-      "new-project-est-completed-date"
-    );
-    startDateInput.addEventListener("change", () => {
-      if (startDateInput.value)
-        estCompletedDateInput.min = startDateInput.value;
-    });
-    const textarea = document.getElementById("new-project-description");
-    textarea.addEventListener("input", function () {
-      this.style.height = "auto";
-      this.style.height = this.scrollHeight + "px";
-    });
-    modal.style.display = "flex";
-  }
-
-  function handleAddProjectModalClick(e) {
-    const target = e.target;
-    const modal = document.getElementById("add-project-modal");
-    if (target.closest(".multi-select-pills"))
-      target.closest(".multi-select-container").classList.toggle("is-open");
-    else if (!target.closest(".multi-select-container"))
-      modal
-        .querySelectorAll(".multi-select-container.is-open")
-        .forEach((el) => el.classList.remove("is-open"));
-    if (target.classList.contains("remove-pill")) {
-      const valueToRemove = target.dataset.value;
-      const container = target.closest(".multi-select-container");
-      const checkbox = container.querySelector(
-        `input[value="${valueToRemove}"]`
-      );
-      if (checkbox) checkbox.checked = false;
-      updateMultiSelectPills(container);
-    }
-  }
-  function handleAddProjectModalChange(e) {
-    if (e.target.closest(".multi-select-option"))
-      updateMultiSelectPills(e.target.closest(".multi-select-container"));
-  }
   function getReasonFromUser(title) {
     return new Promise((resolve) => {
       const modal = document.getElementById("reason-modal");
