@@ -1096,6 +1096,16 @@
     try {
       console.log("Updating frontend state with new tickets...");
       
+      // Prevent duplicate processing of the same tickets
+      const ticketIds = newTickets.map(t => t.id).filter(id => id);
+      const existingIds = appData.allTickets.map(t => t.id);
+      const newTicketIds = ticketIds.filter(id => !existingIds.includes(id));
+      
+      if (newTicketIds.length === 0) {
+        console.log("All tickets already exist in frontend state, skipping update");
+        return;
+      }
+      
       // Add a small delay to ensure database consistency in production
       await new Promise(resolve => setTimeout(resolve, 100));
       
@@ -1156,7 +1166,10 @@
           projectName: t.project?.projectName || "",
         }));
         
-        appData.allTickets = [...formattedNewTickets, ...appData.allTickets];
+        // Only add tickets that don't already exist
+        const existingIds = appData.allTickets.map(t => t.id);
+        const uniqueNewTickets = formattedNewTickets.filter(t => !existingIds.includes(t.id));
+        appData.allTickets = [...uniqueNewTickets, ...appData.allTickets];
         appData.tickets = appData.allTickets;
         
         console.log("Added new tickets to existing state (fallback)");
@@ -1601,6 +1614,12 @@
 
   // REPLACE the addModalEventListeners function
   function addModalEventListeners() {
+    // Prevent duplicate event listeners
+    if (document.body.hasAttribute('data-modal-listeners-added')) {
+      console.log("Modal event listeners already added, skipping...");
+      return;
+    }
+    
     // --- GENERIC CLOSE LOGIC WITH UNSAVED CHANGES CHECK ---
     document.querySelectorAll(".modal-overlay").forEach((modal) => {
       modal.addEventListener("click", async (e) => {
@@ -1931,6 +1950,10 @@
         attributeFilter: ["style"],
       });
     }
+    
+    // Mark that modal event listeners have been added
+    document.body.setAttribute('data-modal-listeners-added', 'true');
+    console.log("Modal event listeners added successfully");
   }
 
   function autoSizeTextarea(textarea) {
