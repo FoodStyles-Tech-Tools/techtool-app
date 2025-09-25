@@ -601,6 +601,19 @@
 
     switch (eventType) {
       case "INSERT":
+        // Skip real-time insert if user is currently creating tickets
+        if (window.userCreatingTickets) {
+          console.log("User is creating tickets, skipping real-time insert to prevent duplicates");
+          return;
+        }
+        
+        // Check if this ticket already exists in our local state
+        const existingTicket = appData.allTickets.find(t => t.id === newRecord.id);
+        if (existingTicket) {
+          console.log("Ticket already exists in local state, skipping real-time insert");
+          return;
+        }
+        
         const project = appData.allProjects.find(
           (p) => p.id === newRecord.projectId
         );
@@ -1026,6 +1039,10 @@
     submitBtn.textContent = "Submitting...";
     submitBtn.disabled = true;
 
+    // Set flag to prevent real-time subscription from interfering
+    window.userCreatingTickets = true;
+    const createdTicketIds = ticketsToSubmit.map(t => t.id).filter(id => id);
+
     // Log ticket submission for debugging
     console.log(`Submitting ${ticketsToSubmit.length} tickets`);
     
@@ -1089,11 +1106,21 @@
       confirmModal.style.display = "none";
       addModal.style.display = "none";
     }
+    
+    // Clear the flag after processing
+    window.userCreatingTickets = false;
   }
 
   // NEW: Function to update frontend state after ticket creation
   async function updateTicketDataAfterCreation(newTickets) {
+    // Prevent multiple simultaneous updates
+    if (window.updatingTickets) {
+      console.log("Ticket update already in progress, skipping duplicate call");
+      return;
+    }
+    
     try {
+      window.updatingTickets = true;
       console.log("Updating frontend state with new tickets...");
       
       // Prevent duplicate processing of the same tickets
@@ -1214,8 +1241,15 @@
       
     } catch (error) {
       console.error("Error updating frontend state:", error);
-      // Even if state update fails, don't block the user
-      showToast("Tickets created successfully, but UI may need refresh", "warning");
+      // Only show refresh warning if it's a critical error
+      if (error.message && error.message.includes('fetch')) {
+        showToast("Tickets created successfully, but UI may need refresh", "warning");
+      } else {
+        showToast("Tickets created successfully!", "success");
+      }
+    } finally {
+      // Always clear the updating flag
+      window.updatingTickets = false;
     }
   }
 
