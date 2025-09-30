@@ -401,6 +401,8 @@
       addModalEventListeners();
       // Add dashboard filter listeners after data is loaded
       addDashboardFilterListeners();
+      // Add testing filter listeners after data is loaded
+      addTestingFilterListeners();
 
       const scriptUrl = document.getElementById("script-url").value;
       const clearUrlFilterBtn = document.getElementById("clear-url-filter-btn");
@@ -2386,6 +2388,7 @@
     const mainTableWrapper = document.querySelector(".table-wrapper");
     const reconcileWrapper = document.getElementById("reconcile-view-wrapper");
     const dashboardWrapper = document.getElementById("dashboard-view-wrapper");
+    const testingWrapper = document.getElementById("testing-view-wrapper");
     const actionsContainer = document.querySelector(".actions-container");
 
     // Get handles for the main action button groups
@@ -2404,6 +2407,7 @@
     if (integratedFilters) integratedFilters.style.display = "none";
     reconcileWrapper.style.display = "none";
     dashboardWrapper.style.display = "none";
+    testingWrapper.style.display = "none";
     actionsContainer.style.display = "none";
     document.body.classList.remove("project-view");
 
@@ -2475,6 +2479,17 @@
       // Hide the main filter and all right-side action buttons
       defaultFilterBtn.style.display = "none";
       rightActions.style.display = "none";
+    } else if (currentView === "testing") {
+      // --- Testing View ---
+      testingWrapper.style.display = "block";
+      rightActions.style.display = "none"; // Hide main action buttons for testing view
+      
+      // Add a small delay to ensure DOM is ready
+      setTimeout(() => {
+        console.log('Rendering testing dashboard...');
+        renderTestingDashboard();
+      }, 50);
+      return; // Exit early for testing view
     } else {
       // --- All Other Ticket Views ---
       mainTableWrapper.style.display = "block";
@@ -9728,4 +9743,506 @@ This document explains each level, when to use it, and provides concrete example
     const month = months[date.getMonth()];
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
+  }
+
+  // ===== TESTING DASHBOARD FUNCTIONS =====
+  
+  /**
+   * Main function to render the Testing dashboard with all charts
+   */
+  function renderTestingDashboard() {
+    console.log('renderTestingDashboard called');
+    
+    // Check if testing view is visible
+    const testingWrapper = document.getElementById("testing-view-wrapper");
+    if (!testingWrapper || testingWrapper.style.display === 'none') {
+      console.log('Testing view not visible, skipping render');
+      return;
+    }
+
+    // Filter tickets based on testing controls
+    const startDate = new Date(document.getElementById("testing-start-date").value);
+    const endDate = new Date(document.getElementById("testing-end-date").value);
+    const assigneeId = document.getElementById("testing-assignee-filter").value;
+
+    let filteredTickets = appData.allTickets.filter(ticket => {
+      const createdDate = new Date(ticket.createdAt);
+      const isDateMatch = (!document.getElementById("testing-start-date").value || createdDate >= startDate) &&
+                         (!document.getElementById("testing-end-date").value || createdDate <= endDate);
+      const isAssigneeMatch = assigneeId === "all" || ticket.assigneeId == assigneeId;
+      return isDateMatch && isAssigneeMatch;
+    });
+
+    console.log('Filtered tickets for testing dashboard:', filteredTickets.length);
+
+    // Render all charts
+    renderStatusDistributionChart(filteredTickets);
+    renderComplexityAnalysisChart(filteredTickets);
+    renderAssignmentPatternsChart(filteredTickets);
+    renderCompletionTimelineChart(filteredTickets);
+    renderPriorityStatusHeatmap(filteredTickets);
+    renderEpicPerformanceChart(filteredTickets);
+    renderSkillsUtilizationChart(filteredTickets);
+  }
+
+  /**
+   * Render status distribution pie chart
+   */
+  function renderStatusDistributionChart(tickets) {
+    const ctx = document.getElementById("status-distribution-chart").getContext("2d");
+    
+    // Destroy existing chart if it exists
+    if (window.statusDistributionChart) {
+      window.statusDistributionChart.destroy();
+    }
+
+    // Count tickets by status
+    const statusCounts = {};
+    tickets.forEach(ticket => {
+      const status = ticket.status || 'Unknown';
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
+    });
+
+    const labels = Object.keys(statusCounts);
+    const data = Object.values(statusCounts);
+    const colors = [
+      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+      '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+    ];
+
+    window.statusDistributionChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors.slice(0, labels.length),
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 20,
+              usePointStyle: true
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Render complexity analysis bar chart
+   */
+  function renderComplexityAnalysisChart(tickets) {
+    const ctx = document.getElementById("complexity-analysis-chart").getContext("2d");
+    
+    if (window.complexityAnalysisChart) {
+      window.complexityAnalysisChart.destroy();
+    }
+
+    // Count tickets by complexity
+    const complexityCounts = {};
+    tickets.forEach(ticket => {
+      const complexity = ticket.complexity || 'Unknown';
+      complexityCounts[complexity] = (complexityCounts[complexity] || 0) + 1;
+    });
+
+    const labels = Object.keys(complexityCounts);
+    const data = Object.values(complexityCounts);
+
+    window.complexityAnalysisChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Tickets',
+          data: data,
+          backgroundColor: '#36A2EB',
+          borderColor: '#36A2EB',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Render assignment patterns chart
+   */
+  function renderAssignmentPatternsChart(tickets) {
+    const ctx = document.getElementById("assignment-patterns-chart").getContext("2d");
+    
+    if (window.assignmentPatternsChart) {
+      window.assignmentPatternsChart.destroy();
+    }
+
+    // Count tickets by assignee
+    const assigneeCounts = {};
+    tickets.forEach(ticket => {
+      const assigneeName = ticket.assigneeName || 'Unassigned';
+      assigneeCounts[assigneeName] = (assigneeCounts[assigneeName] || 0) + 1;
+    });
+
+    const labels = Object.keys(assigneeCounts);
+    const data = Object.values(assigneeCounts);
+
+    window.assignmentPatternsChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Tickets Assigned',
+          data: data,
+          backgroundColor: '#4BC0C0',
+          borderColor: '#4BC0C0',
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Render completion timeline chart
+   */
+  function renderCompletionTimelineChart(tickets) {
+    const ctx = document.getElementById("completion-timeline-chart").getContext("2d");
+    
+    if (window.completionTimelineChart) {
+      window.completionTimelineChart.destroy();
+    }
+
+    // Group tickets by week
+    const weeklyData = {};
+    tickets.forEach(ticket => {
+      const createdDate = new Date(ticket.createdAt);
+      const weekKey = getWeekOfYear(createdDate);
+      
+      if (!weeklyData[weekKey]) {
+        weeklyData[weekKey] = { created: 0, completed: 0 };
+      }
+      
+      weeklyData[weekKey].created++;
+      
+      if (ticket.status === 'Completed' && ticket.completedAt) {
+        const completedDate = new Date(ticket.completedAt);
+        const completedWeekKey = getWeekOfYear(completedDate);
+        if (!weeklyData[completedWeekKey]) {
+          weeklyData[completedWeekKey] = { created: 0, completed: 0 };
+        }
+        weeklyData[completedWeekKey].completed++;
+      }
+    });
+
+    const sortedWeeks = Object.keys(weeklyData).sort();
+    const chartLabels = sortedWeeks.map(week => `Week ${week.split('-W')[1]}`);
+    const createdData = sortedWeeks.map(week => weeklyData[week].created);
+    const completedData = sortedWeeks.map(week => weeklyData[week].completed);
+
+    window.completionTimelineChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartLabels,
+        datasets: [
+          {
+            label: 'Created',
+            data: createdData,
+            borderColor: '#FF6384',
+            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+            tension: 0.4
+          },
+          {
+            label: 'Completed',
+            data: completedData,
+            borderColor: '#36A2EB',
+            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+            tension: 0.4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Render priority vs status heatmap
+   */
+  function renderPriorityStatusHeatmap(tickets) {
+    const ctx = document.getElementById("priority-status-heatmap").getContext("2d");
+    
+    if (window.priorityStatusHeatmap) {
+      window.priorityStatusHeatmap.destroy();
+    }
+
+    // Create heatmap data
+    const priorities = ['Low', 'Medium', 'High', 'Critical'];
+    const statuses = ['Open', 'In Progress', 'Completed', 'Blocked'];
+    
+    const heatmapData = [];
+    priorities.forEach((priority, pIndex) => {
+      statuses.forEach((status, sIndex) => {
+        const count = tickets.filter(t => 
+          (t.priority || 'Unknown') === priority && 
+          (t.status || 'Unknown') === status
+        ).length;
+        heatmapData.push({ x: sIndex, y: pIndex, v: count });
+      });
+    });
+
+    window.priorityStatusHeatmap = new Chart(ctx, {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'Priority vs Status',
+          data: heatmapData,
+          backgroundColor: function(context) {
+            const value = context.parsed.v;
+            const max = Math.max(...heatmapData.map(d => d.v));
+            const intensity = value / max;
+            return `rgba(54, 162, 235, ${intensity})`;
+          },
+          pointRadius: function(context) {
+            return Math.max(5, context.parsed.v * 3);
+          }
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            type: 'linear',
+            position: 'bottom',
+            min: -0.5,
+            max: statuses.length - 0.5,
+            ticks: {
+              callback: function(value) {
+                return statuses[Math.round(value)] || '';
+              }
+            }
+          },
+          y: {
+            min: -0.5,
+            max: priorities.length - 0.5,
+            ticks: {
+              callback: function(value) {
+                return priorities[Math.round(value)] || '';
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Render epic performance chart
+   */
+  function renderEpicPerformanceChart(tickets) {
+    const ctx = document.getElementById("epic-performance-chart").getContext("2d");
+    
+    if (window.epicPerformanceChart) {
+      window.epicPerformanceChart.destroy();
+    }
+
+    // Group tickets by epic
+    const epicData = {};
+    tickets.forEach(ticket => {
+      const epic = ticket.epic || 'No Epic';
+      if (!epicData[epic]) {
+        epicData[epic] = { total: 0, completed: 0 };
+      }
+      epicData[epic].total++;
+      if (ticket.status === 'Completed') {
+        epicData[epic].completed++;
+      }
+    });
+
+    const labels = Object.keys(epicData);
+    const totalData = labels.map(epic => epicData[epic].total);
+    const completedData = labels.map(epic => epicData[epic].completed);
+
+    window.epicPerformanceChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Total Tickets',
+            data: totalData,
+            backgroundColor: '#FFCE56',
+            borderColor: '#FFCE56',
+            borderWidth: 1
+          },
+          {
+            label: 'Completed',
+            data: completedData,
+            backgroundColor: '#4BC0C0',
+            borderColor: '#4BC0C0',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Render skills utilization chart
+   */
+  function renderSkillsUtilizationChart(tickets) {
+    const ctx = document.getElementById("skills-utilization-chart").getContext("2d");
+    
+    if (window.skillsUtilizationChart) {
+      window.skillsUtilizationChart.destroy();
+    }
+
+    // Count skills usage
+    const skillsCount = {};
+    tickets.forEach(ticket => {
+      if (ticket.skillsId && appData.skills) {
+        const skill = appData.skills.find(s => s.id == ticket.skillsId);
+        if (skill) {
+          skillsCount[skill.name] = (skillsCount[skill.name] || 0) + 1;
+        }
+      }
+    });
+
+    // Sort by usage count and take top 10
+    const sortedSkills = Object.entries(skillsCount)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 10);
+
+    const labels = sortedSkills.map(([skill]) => skill);
+    const data = sortedSkills.map(([, count]) => count);
+
+    window.skillsUtilizationChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
+            '#4BC0C0', '#36A2EB'
+          ],
+          borderWidth: 2,
+          borderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 15,
+              usePointStyle: true
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Initialize testing dashboard filters
+   */
+  function addTestingFilterListeners() {
+    const assigneeSelect = document.getElementById("testing-assignee-filter");
+    const startDateInput = document.getElementById("testing-start-date");
+    const endDateInput = document.getElementById("testing-end-date");
+
+    // Populate assignee dropdown
+    if (appData.teamMembers && appData.teamMembers.length > 0) {
+      assigneeSelect.innerHTML = '<option value="all">All Members</option>' + 
+        appData.teamMembers
+        .map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`)
+        .join("");
+    } else {
+      assigneeSelect.innerHTML = '<option value="all">All Members</option>';
+    }
+
+    // Set default dates (last 30 days)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 30);
+    
+    startDateInput.value = startDate.toISOString().split('T')[0];
+    endDateInput.value = endDate.toISOString().split('T')[0];
+
+    // Add event listeners
+    const applyFilters = () => {
+      if (currentView === "testing") {
+        renderTestingDashboard();
+      }
+    };
+
+    assigneeSelect.addEventListener("change", applyFilters);
+    startDateInput.addEventListener("change", applyFilters);
+    endDateInput.addEventListener("change", applyFilters);
   }
