@@ -156,10 +156,11 @@
    */
   function showBrowserNotification(ticket) {
     if (Notification.permission === "granted") {
-      const faviconUrl = document.getElementById("favicon-url").value;
+      const faviconElement = document.getElementById("favicon-url");
+      const faviconUrl = faviconElement ? faviconElement.value : "/favicons/favicon.svg?v=2";
       const notification = new Notification(`New Ticket Added: ${ticket.id}`, {
         body: ticket.title || "A new ticket has been created.",
-        icon: faviconUrl,
+        icon: faviconUrl && faviconUrl !== "{{FAVICON_URL}}" ? faviconUrl : "/favicons/favicon.svg?v=2",
       });
 
       // When the user clicks the notification, focus the app's window
@@ -4004,6 +4005,30 @@
       handler(e);
     }
   }
+  // Helper function to find the dropdown list associated with an input
+  function findDropdownForInput(input) {
+    // First try nextElementSibling (if dropdown hasn't been moved)
+    let dropdown = input.nextElementSibling;
+    if (dropdown && dropdown.classList.contains("searchable-dropdown-list")) {
+      return dropdown;
+    }
+    
+    // If not found as sibling, look in the container
+    const container = input.closest(".searchable-dropdown");
+    if (container) {
+      dropdown = container.querySelector(".searchable-dropdown-list");
+      if (dropdown) return dropdown;
+    }
+    
+    // If still not found, it might have been moved to body - search by data attribute
+    if (input.dataset.dropdownId) {
+      dropdown = document.querySelector(`.searchable-dropdown-list[data-dropdown-id="${input.dataset.dropdownId}"]`);
+      if (dropdown) return dropdown;
+    }
+    
+    return null;
+  }
+  
   // Position dropdown using fixed positioning and move to body to escape all stacking contexts
   function positionDropdownFixed(input, dropdown) {
     const inputRect = input.getBoundingClientRect();
@@ -4027,6 +4052,11 @@
         }
       }
     });
+    
+    // Store reference to the input on the dropdown for later retrieval
+    dropdown.dataset.connectedInput = input.dataset.reconcileId || "default";
+    input.dataset.dropdownId = "dropdown-" + (input.dataset.reconcileId || "default");
+    dropdown.dataset.dropdownId = "dropdown-" + (input.dataset.reconcileId || "default");
     
     // Move dropdown to body to escape any container stacking contexts
     if (dropdown.parentNode !== document.body) {
@@ -7814,11 +7844,33 @@ This document explains each level, when to use it, and provides concrete example
       ) {
         const item = e.target.closest(".searchable-dropdown-list div");
         const newValue = item.dataset.value;
-        const input = item
-          .closest(".searchable-dropdown")
-          .querySelector("input");
-        handleReconcileUpdate({ target: input }, newValue);
-        input.nextElementSibling.style.display = "none";
+        const dropdown = item.closest(".searchable-dropdown-list");
+        
+        console.log("Dropdown item clicked:", { newValue, connectedInput: dropdown.dataset.connectedInput });
+        
+        // Find the input associated with this dropdown
+        let input = null;
+        if (dropdown.dataset.connectedInput) {
+          // Find input by reconcileId
+          input = wrapper.querySelector(`input[data-reconcile-id="${dropdown.dataset.connectedInput}"]`);
+          console.log("Found input by connectedInput:", input);
+        }
+        if (!input) {
+          // Fallback: look for input in the searchable-dropdown container (if dropdown hasn't been moved)
+          const container = dropdown.closest(".searchable-dropdown");
+          if (container) {
+            input = container.querySelector("input");
+            console.log("Found input in container:", input);
+          }
+        }
+        
+        if (input) {
+          console.log("Calling handleReconcileUpdate with:", { reconcileId: input.dataset.reconcileId, newValue });
+          handleReconcileUpdate({ target: input }, newValue);
+          dropdown.style.display = "none";
+        } else {
+          console.error("Could not find input for dropdown!");
+        }
       }
       // Handle clear icon click
       if (e.type === "click" && e.target.classList.contains("clear-icon")) {
@@ -7835,33 +7887,108 @@ This document explains each level, when to use it, and provides concrete example
         handleReconcileExcludeToggle(e);
       }
       // NEW: Add logic to close dropdowns if clicking outside
-      if (!e.target.closest(".reconcile-ticket-dropdown")) {
+      if (!e.target.closest(".reconcile-ticket-dropdown") && !e.target.closest(".searchable-dropdown-list")) {
+        // Close dropdowns in wrapper
         wrapper
           .querySelectorAll(".searchable-dropdown-list")
           .forEach((list) => {
             list.style.display = "none";
+          });
+        // Also close dropdowns that have been moved to body
+        document
+          .querySelectorAll(".searchable-dropdown-list")
+          .forEach((list) => {
+            // Only close if it's associated with reconcile view
+            if (list.dataset.connectedInput) {
+              list.style.display = "none";
+            }
           });
       }
     };
 
     wrapper.addEventListener("click", handleEvent);
     wrapper.addEventListener("change", handleEvent);
+    
+    // Add global click handler for dropdown items (since they might be moved to body)
+    document.addEventListener("click", (e) => {
+      // Check if click is on a dropdown item in reconcile view
+      const item = e.target.closest(".searchable-dropdown-list div[data-value]");
+      if (item) {
+        const dropdown = item.closest(".searchable-dropdown-list");
+        // Only handle if this is a reconcile dropdown
+        if (dropdown && dropdown.dataset.connectedInput) {
+          const newValue = item.dataset.value;
+          const input = wrapper.querySelector(`input[data-reconcile-id="${dropdown.dataset.connectedInput}"]`);
+          
+          console.log("Global click handler - Dropdown item clicked:", { newValue, input });
+          
+          if (input) {
+            console.log("Calling handleReconcileUpdate from global handler");
+            handleReconcileUpdate({ target: input }, newValue);
+            dropdown.style.display = "none";
+            e.stopPropagation();
+          }
+        }
+      }
+    });
+
+    // Close dropdowns on scroll
+    wrapper.addEventListener("scroll", () => {
+      // Close dropdowns in wrapper
+      wrapper
+        .querySelectorAll(".searchable-dropdown-list")
+        .forEach((list) => {
+          if (list.style.display === "block") {
+            list.style.display = "none";
+          }
+        });
+      // Also close dropdowns that have been moved to body
+      document
+        .querySelectorAll(".searchable-dropdown-list")
+        .forEach((list) => {
+          // Only close if it's associated with reconcile view
+          if (list.dataset.connectedInput && list.style.display === "block") {
+            list.style.display = "none";
+          }
+        });
+    });
 
     wrapper.addEventListener("focusin", (e) => {
       if (e.target.classList.contains("searchable-dropdown-input")) {
+        // Find the dropdown for this input
+        const dropdown = findDropdownForInput(e.target);
+        
         // First, find and close all other open dropdowns in the view
         const allDropdowns = wrapper.querySelectorAll(
           ".searchable-dropdown-list"
         );
-        allDropdowns.forEach((list) => {
-          if (list !== e.target.nextElementSibling) {
+        // Also check for dropdowns that have been moved to body
+        const bodyDropdowns = document.querySelectorAll(
+          ".searchable-dropdown-list"
+        );
+        const allDropdownsList = [...allDropdowns, ...bodyDropdowns];
+        
+        allDropdownsList.forEach((list) => {
+          if (list !== dropdown) {
             // Don't close the current one
             list.style.display = "none";
           }
         });
 
         // Now, open the dropdown for the currently focused input
-        e.target.nextElementSibling.style.display = "block";
+        if (dropdown) {
+          positionDropdownFixed(e.target, dropdown);
+        }
+      }
+    });
+
+    // Add click handler for dropdown inputs
+    wrapper.addEventListener("click", (e) => {
+      if (e.target.classList.contains("searchable-dropdown-input")) {
+        const dropdown = findDropdownForInput(e.target);
+        if (dropdown) {
+          positionDropdownFixed(e.target, dropdown);
+        }
       }
     });
 
@@ -7870,14 +7997,20 @@ This document explains each level, when to use it, and provides concrete example
     wrapper.addEventListener("keyup", (e) => {
       if (e.target.classList.contains("searchable-dropdown-input")) {
         const filter = e.target.value.toLowerCase();
-        const list = e.target.nextElementSibling;
-        list.querySelectorAll("div").forEach((item) => {
-          const text = item.textContent.toLowerCase();
-          item.style.display = text.includes(filter) ? "" : "none";
-        });
-        // Clear any active selection when user types
-        const activeItem = list.querySelector(".dropdown-active");
-        if (activeItem) activeItem.classList.remove("dropdown-active");
+        const list = findDropdownForInput(e.target);
+        if (list) {
+          list.querySelectorAll("div").forEach((item) => {
+            const text = item.textContent.toLowerCase();
+            item.style.display = text.includes(filter) ? "" : "none";
+          });
+          // Clear any active selection when user types
+          const activeItem = list.querySelector(".dropdown-active");
+          if (activeItem) activeItem.classList.remove("dropdown-active");
+          // Reposition dropdown after filtering if it's visible
+          if (list.style.display === "block") {
+            positionDropdownFixed(e.target, list);
+          }
+        }
       }
     });
 
@@ -7885,14 +8018,20 @@ This document explains each level, when to use it, and provides concrete example
     wrapper.addEventListener("input", (e) => {
       if (e.target.classList.contains("searchable-dropdown-input")) {
         const filter = e.target.value.toLowerCase();
-        const list = e.target.nextElementSibling;
-        list.querySelectorAll("div").forEach((item) => {
-          const text = item.textContent.toLowerCase();
-          item.style.display = text.includes(filter) ? "" : "none";
-        });
-        // Clear any active selection when user types
-        const activeItem = list.querySelector(".dropdown-active");
-        if (activeItem) activeItem.classList.remove("dropdown-active");
+        const list = findDropdownForInput(e.target);
+        if (list) {
+          list.querySelectorAll("div").forEach((item) => {
+            const text = item.textContent.toLowerCase();
+            item.style.display = text.includes(filter) ? "" : "none";
+          });
+          // Clear any active selection when user types
+          const activeItem = list.querySelector(".dropdown-active");
+          if (activeItem) activeItem.classList.remove("dropdown-active");
+          // Reposition dropdown after filtering if it's visible
+          if (list.style.display === "block") {
+            positionDropdownFixed(e.target, list);
+          }
+        }
       }
     });
   }
@@ -8193,12 +8332,24 @@ This document explains each level, when to use it, and provides concrete example
     const oldValue = element.dataset.oldValue;
     const newValue = newValueFromDropdown; // Only use value from dropdown click
 
-    if (String(oldValue || "") === String(newValue || "")) return;
+    console.log("handleReconcileUpdate called:", { reconcileId, oldValue, newValue });
+
+    if (String(oldValue || "") === String(newValue || "")) {
+      console.log("No change detected, skipping update");
+      return;
+    }
 
     const td = element.closest("td");
     const parentRow = element.closest("tr");
+    
+    if (!td || !parentRow) {
+      console.error("Could not find TD or parent row for input");
+      return;
+    }
+    
     td.classList.add("updating");
 
+    console.log("Updating database:", { reconcileId, ticketNumber: newValue });
     const { error } = await supabaseClient
       .from("reconcileHrs")
       .update({ ticketNumber: newValue })
@@ -8207,8 +8358,11 @@ This document explains each level, when to use it, and provides concrete example
     td.classList.remove("updating");
 
     if (error) {
+      console.error("Database update error:", error);
       showToast(`Update failed: ${error.message}`, "error");
     } else {
+      console.log("Database update successful!");
+      showToast(`Ticket linked successfully!`, "success");
       td.classList.add("cell-success-highlight");
       setTimeout(() => {
         td.classList.remove("cell-success-highlight");
@@ -8347,7 +8501,13 @@ This document explains each level, when to use it, and provides concrete example
 
       // --- Block 1: Handle key events when an INPUT field has focus ---
       if (isInput) {
-        const list = activeEl.nextElementSibling;
+        const list = findDropdownForInput(activeEl);
+        
+        // Safety check: ensure the dropdown list exists
+        if (!list) {
+          return;
+        }
+        
         let activeItem = list.querySelector(".dropdown-active");
 
         const findNextVisible = (current, direction) => {
@@ -8419,7 +8579,7 @@ This document explains each level, when to use it, and provides concrete example
             const oldValue = activeEl.dataset.oldValue;
             const oldTicket = appData.allTickets.find((t) => t.id == oldValue);
             activeEl.value = oldTicket
-              ? `[${oldTicket.id}] ${oldTicket.title}`
+              ? `[HRB-${oldTicket.id}] ${oldTicket.title}`
               : "";
             list.style.display = "none";
             handleTabNavigation(e, activeEl);
@@ -8432,7 +8592,7 @@ This document explains each level, when to use it, and provides concrete example
               (t) => t.id == escOldValue
             );
             activeEl.value = escOldTicket
-              ? `[${escOldTicket.id}] ${escOldTicket.title}`
+              ? `[HRB-${escOldTicket.id}] ${escOldTicket.title}`
               : "";
             list.style.display = "none";
             activeEl.closest("td").focus();
