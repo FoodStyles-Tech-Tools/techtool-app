@@ -22,7 +22,6 @@
     projects: [],
     users: [],
     teamMembers: [],
-    skills: [],
     epics: [],
     allReconcileHrs: [],
     reconcileHrs: [],
@@ -274,8 +273,6 @@
         { data: projectData, error: projectError },
         { data: memberData, error: memberError },
         { data: userData, error: userError },
-        // MODIFIED: Fetch both 'id' and 'skills' text
-        { data: skillsData, error: skillsError },
         { data: reconcileData, error: reconcileError },
       ] = await Promise.all([
         fetchAllPaginatedData(
@@ -290,8 +287,6 @@
           .select("clockify_name")
           .order("clockify_name"),
         window.supabaseClient.from("user").select("id, name, email").order("name"),
-        // MODIFIED: Select 'id' and the text column 'skills'
-        window.supabaseClient.from("skills").select("id, skills").order("skills"),
         fetchAllPaginatedData(
           window.supabaseClient
             .from("reconcileHrs")
@@ -305,7 +300,6 @@
         projectData: projectData?.length || 0,
         memberData: memberData?.length || 0,
         userData: userData?.length || 0,
-        skillsData: skillsData?.length || 0,
         reconcileData: reconcileData?.length || 0,
       });
 
@@ -314,7 +308,6 @@
         projectError ||
         memberError ||
         userError ||
-        skillsError ||
         reconcileError
       ) {
         console.error("Data Fetch Error:", {
@@ -322,7 +315,6 @@
           projectError,
           memberError,
           userError,
-          skillsError,
           reconcileError,
         });
         throw new Error("Failed to fetch initial data.");
@@ -340,9 +332,6 @@
         type: t.type,
         status: t.status,
         assigneeId: t.assigneeId,
-        // MODIFIED: Store skillsId instead of skills
-        skillsId: t.skillsId,
-        complexity: t.complexity,
         sprint: t.sprint,
         createdAt: t.createdAt,
         assignedAt: t.assignedAt,
@@ -366,8 +355,6 @@
       appData.users = memberData.map((m) => m.clockify_name);
       appData.teamMembers = userData.map((u) => ({ id: u.id, name: u.name }));
 
-      // MODIFIED: Store skills as objects {id, name} for lookups
-      appData.skills = skillsData.map((s) => ({ id: s.id, name: s.skills }));
 
       appData.epics = [
         ...new Set(ticketData.map((t) => t.epic).filter(Boolean)),
@@ -401,8 +388,6 @@
       addModalEventListeners();
       // Add dashboard filter listeners after data is loaded
       addDashboardFilterListeners();
-      // Add testing filter listeners after data is loaded
-      addTestingFilterListeners();
 
       const scriptUrl = document.getElementById("script-url").value;
       const clearUrlFilterBtn = document.getElementById("clear-url-filter-btn");
@@ -796,7 +781,7 @@
     if (!ticket) return;
 
     const field = element.dataset.field;
-    const oldValue = element.dataset.oldValue;
+    const oldValue = ticket[field]; // Get the actual current value from the ticket data
     let newValue;
     
     // Handle searchable dropdowns (Requested By, Assignee, etc.)
@@ -813,7 +798,7 @@
         : element.value;
     }
 
-    if ((field === "assigneeId" || field === "skillsId") && newValue && newValue !== "") {
+    if (field === "assigneeId" && newValue && newValue !== "") {
       newValue = parseInt(newValue, 10);
     }
 
@@ -828,53 +813,167 @@
 
     if (field === "assigneeId" && newValue) updates.assignedAt = nowIso;
 
-    // --- MODIFICATION START ---
+    // --- COMPREHENSIVE STATUS TRANSITION LOGIC ---
     if (field === "status") {
+      const oldStatus = oldValue;
       const newStatus = newValue;
-      // Check for the specific transition from "Open" to "Completed"
-      if (oldValue === "Open" && newStatus === "Completed") {
-        const startDate = await getStartDateFromUser(); // Await the user's input
-
-        if (startDate === null) {
-          // User cancelled, so we revert the change and stop processing
-          element.value = oldValue;
-          if (element.closest(".tag-editor"))
-            element.closest(".tag-editor").classList.remove("is-editing");
-          return;
-        } else {
-          // User provided a date, so we add it to our updates object
-          const [year, month, day] = startDate.split("-").map(Number);
-          const now = new Date();
-          const selectedDate = new Date(
-            year,
-            month - 1,
-            day,
-            now.getHours(),
-            now.getMinutes(),
-            now.getSeconds()
-          );
-          updates.startedAt = selectedDate.toISOString();
+      
+      // Open -> transitions
+      if (oldStatus === "Open") {
+        if (newStatus === "In Progress") {
+          updates.startedAt = nowIso;
         }
-      }
-      // The original logic for other status changes remains here
-      if (["On Hold", "Cancelled", "Rejected", "Blocked"].includes(newStatus)) {
-        const reason = await getReasonFromUser(
-          `Reason for changing status to "${newStatus}"`
-        );
-        if (reason === null) {
-          element.value = oldValue;
-          if (element.closest(".tag-editor"))
-            element.closest(".tag-editor").classList.remove("is-editing");
-          return;
+        else if (newStatus === "On Hold") {
+          // Just change status
         }
-        updates.logReason = reason;
-      }
-      if (newStatus === "In Progress" && !ticket.startedAt)
+        else if (newStatus === "Blocked") {
+          // Just change status
+        }
+        else if (newStatus === "Cancelled") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+        else if (newStatus === "Rejected") {
         updates.startedAt = nowIso;
-      if (newStatus === "Completed" && !ticket.completedAt)
         updates.completedAt = nowIso;
     }
-    // --- MODIFICATION END ---
+        else if (newStatus === "Completed") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+      }
+      
+      // In Progress -> transitions
+      else if (oldStatus === "In Progress") {
+        if (newStatus === "Open") {
+          updates.startedAt = null;
+        }
+        else if (newStatus === "On Hold") {
+          // Just change status
+        }
+        else if (newStatus === "Blocked") {
+          // Just change status
+        }
+        else if (newStatus === "Cancelled") {
+          updates.completedAt = nowIso;
+        }
+        else if (newStatus === "Rejected") {
+          updates.completedAt = nowIso;
+        }
+        else if (newStatus === "Completed") {
+          updates.completedAt = nowIso;
+        }
+      }
+      
+      // On Hold -> transitions
+      else if (oldStatus === "On Hold") {
+        if (newStatus === "Open") {
+          // Just change status
+        }
+        else if (newStatus === "Blocked") {
+          // Just change status
+        }
+        else if (newStatus === "In Progress") {
+          updates.startedAt = nowIso;
+        }
+        else if (newStatus === "Rejected") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+        else if (newStatus === "Completed") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+      }
+      
+      // Blocked -> transitions
+      else if (oldStatus === "Blocked") {
+        if (newStatus === "Open") {
+          // Just change status
+        }
+        else if (newStatus === "On Hold") {
+          // Just change status
+        }
+        else if (newStatus === "In Progress") {
+          updates.startedAt = nowIso;
+        }
+        else if (newStatus === "Rejected") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+        else if (newStatus === "Completed") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+      }
+      
+      // Cancelled -> transitions
+      else if (oldStatus === "Cancelled") {
+        if (newStatus === "Open") {
+          updates.completedAt = null;
+          updates.startedAt = null;
+        }
+        else if (newStatus === "On Hold") {
+          updates.completedAt = null;
+        }
+        else if (newStatus === "In Progress") {
+          updates.completedAt = null;
+        }
+        else if (newStatus === "Rejected") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+        else if (newStatus === "Completed") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+      }
+      
+      // Rejected -> transitions
+      else if (oldStatus === "Rejected") {
+        if (newStatus === "Open") {
+          updates.completedAt = null;
+          updates.startedAt = null;
+        }
+        else if (newStatus === "On Hold") {
+          updates.completedAt = null;
+        }
+        else if (newStatus === "In Progress") {
+          updates.completedAt = null;
+        }
+        else if (newStatus === "Cancelled") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+        else if (newStatus === "Completed") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+      }
+      
+      // Completed -> transitions
+      else if (oldStatus === "Completed") {
+        if (newStatus === "Open") {
+          updates.completedAt = null;
+          updates.startedAt = null;
+        }
+        else if (newStatus === "On Hold") {
+          updates.completedAt = null;
+        }
+        else if (newStatus === "In Progress") {
+          updates.completedAt = null;
+        }
+        else if (newStatus === "Cancelled") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+        else if (newStatus === "Rejected") {
+          updates.startedAt = nowIso;
+          updates.completedAt = nowIso;
+        }
+      }
+    }
+    // --- END STATUS TRANSITION LOGIC ---
 
     const logEntry = {
       user: appData.currentUserEmail,
@@ -891,6 +990,14 @@
     if (updates.logReason) delete updates.logReason;
 
     parentContainer.classList.add("updating");
+    
+    // Add updating indicator for all tag-editor jira-style elements
+    if (element.classList.contains("status-tag") || 
+        element.classList.contains("priority-tag") || 
+        element.classList.contains("type-tag")) {
+      element.classList.add("updating");
+      element.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Updating...`;
+    }
     
     try {
       // Add retry logic for Vercel reliability
@@ -925,10 +1032,14 @@
         element.value = oldValue;
         
         // Revert any UI changes
-        if (element.classList.contains("status-tag")) {
+        if (element.classList.contains("status-tag") || 
+            element.classList.contains("priority-tag") || 
+            element.classList.contains("type-tag")) {
           const oldTagInfo = getTagInfo(element.dataset.field, oldValue);
-          element.className = `status-tag ${oldTagInfo.className}`;
+          element.className = `${element.classList.contains("status-tag") ? "status-tag" : 
+                               element.classList.contains("priority-tag") ? "priority-tag" : "type-tag"} ${oldTagInfo.className}`;
           element.textContent = oldValue;
+          element.classList.remove("updating");
         }
       } else {
         // Update local data
@@ -938,13 +1049,25 @@
         element.dataset.value = newValue;
         
         // For Jira-style dropdowns, also update the tag element's oldValue and text
-        if (element.classList.contains("status-tag")) {
+        if (element.classList.contains("status-tag") || 
+            element.classList.contains("priority-tag") || 
+            element.classList.contains("type-tag")) {
           element.dataset.oldValue = newValue;
-          // Update the tag text content
-          element.textContent = newValue;
-          // Update the tag classes based on the new value
-          const tagInfo = getTagInfo(element.dataset.field, newValue);
-          element.className = `status-tag ${tagInfo.className}`;
+          
+          // Show success indicator for all tag types
+          element.classList.remove("updating");
+          element.classList.add("success");
+          element.innerHTML = `<i class="fas fa-check"></i> ${newValue}`;
+          
+          // Remove success indicator after 2 seconds
+          setTimeout(() => {
+            element.classList.remove("success");
+            const finalTagInfo = getTagInfo(element.dataset.field, newValue);
+            const tagType = element.classList.contains("status-tag") ? "status-tag" : 
+                           element.classList.contains("priority-tag") ? "priority-tag" : "type-tag";
+            element.className = `${tagType} ${finalTagInfo.className}`;
+            element.textContent = finalTagInfo.text;
+          }, 2000);
         }
         
         parentContainer.classList.add("is-successful");
@@ -1181,8 +1304,6 @@
           type: t.type,
           status: t.status,
           assigneeId: t.assigneeId,
-          skillsId: t.skillsId,
-          complexity: t.complexity,
           sprint: t.sprint,
           createdAt: t.createdAt,
           assignedAt: t.assignedAt,
@@ -1217,8 +1338,6 @@
           type: t.type,
           status: t.status,
           assigneeId: t.assigneeId,
-          skillsId: t.skillsId,
-          complexity: t.complexity,
           sprint: t.sprint,
           createdAt: t.createdAt,
           assignedAt: t.assignedAt,
@@ -1304,10 +1423,6 @@
       assigneeId:
         document.querySelector("#bulk-add-assignee-container input").dataset
           .value || null,
-      complexity: document.getElementById("bulk-add-complexity").value || null,
-      skillsId:
-        document.querySelector("#bulk-add-skills-container input").dataset
-          .value || null,
       status: document.getElementById("bulk-add-status").value || "Open",
       assignedAt:
         document.getElementById("bulk-add-assigned-date").value || null,
@@ -1372,15 +1487,6 @@
           ).dataset.value;
           if (advAssigneeId) ticket.assigneeId = advAssigneeId;
 
-          const advComplexity = advancedRow.querySelector(
-            ".override-complexity"
-          ).value;
-          if (advComplexity) ticket.complexity = advComplexity;
-
-          const advSkillsId = advancedRow.querySelector(
-            ".override-skills-container input"
-          ).dataset.value;
-          if (advSkillsId) ticket.skillsId = advSkillsId;
 
           const advStatus = advancedRow.querySelector(".override-status").value;
           if (advStatus) ticket.status = advStatus;
@@ -1440,7 +1546,6 @@
         if (ticket.projectId) ticket.projectId = parseInt(ticket.projectId, 10);
         if (ticket.assigneeId)
           ticket.assigneeId = parseInt(ticket.assigneeId, 10);
-        if (ticket.skillsId) ticket.skillsId = parseInt(ticket.skillsId, 10);
 
         newTicketsData.push(ticket);
       }
@@ -1542,27 +1647,12 @@
     if (updates.projectId) {
       updates.projectId = parseInt(updates.projectId, 10);
     }
-    if (updates.skillsId) {
-      updates.skillsId = parseInt(updates.skillsId, 10);
-    }
     // --- END OF FIX ---
 
     const nowIso = new Date().toISOString();
     let reason = null;
 
-    if (
-      updates.status &&
-      ["On Hold", "Cancelled", "Rejected", "Blocked"].includes(updates.status)
-    ) {
-      reason = await getReasonFromUser(
-        `Reason for changing status to "${updates.status}"`
-      );
-      if (reason === null) {
-        confirmBtn.textContent = originalBtnText;
-        confirmBtn.disabled = false;
-        return;
-      }
-    }
+    // No popup required for status changes - just proceed with the update
 
     const payload = ticketIds.map((id) => {
       const ticket = appData.allTickets.find((t) => t.id == id); // Use == instead of === for type flexibility
@@ -1592,9 +1682,7 @@
         assignee: "Assignee",
         requestedBy: "Requested By",
         projectId: "Project",
-        skillsId: "Skills",
         type: "Type",
-        complexity: "Complexity",
         assignedAt: "Assigned At",
         startedAt: "Started At",
         completedAt: "Completed At"
@@ -1726,6 +1814,13 @@
             if (modal.id === "project-detail-modal") {
               initialProjectData = null;
             }
+            
+            // Clean up dropdown listeners if they exist
+            if (modal._cleanupDropdowns && typeof modal._cleanupDropdowns === 'function') {
+              modal._cleanupDropdowns();
+              delete modal._cleanupDropdowns;
+            }
+            
             modal.style.display = "none";
           }
         }
@@ -1819,10 +1914,6 @@
             "#bulk-update-project-container input"
           ).dataset.value,
           epic: document.getElementById("bulk-update-epic").value,
-          skillsId: document.querySelector(
-            "#bulk-update-skills-container input"
-          ).dataset.value,
-          complexity: document.getElementById("bulk-update-complexity").value,
           requestedBy: document.getElementById("bulk-update-requestedBy").value,
           status: document.getElementById("bulk-update-status").value,
           priority: document.getElementById("bulk-update-priority").value,
@@ -1918,20 +2009,6 @@
         }
         if (e.target.closest(".subtask-copy-icon")) {
           copySubtaskInfo(e);
-        }
-        if (e.target.id === "add-comment-btn") {
-          handleCommentAdd(e);
-        }
-        if (e.target.classList.contains("clear-date-btn")) {
-          const button = e.target;
-          const field = button.dataset.field;
-          const id = button.dataset.id;
-          const input = taskDetailModal.querySelector(
-            `input[data-field='${field}'][data-id='${id}']`
-          );
-          if (input) {
-            handleUpdate({ target: input }, null);
-          }
         }
       });
 
@@ -2036,16 +2113,15 @@
     addNavListeners();
     
     // Check if elements were found
-    const ticketsButton = document.getElementById("nav-tickets");
-    const ticketsDropdown = document.getElementById("nav-tickets-dropdown");
+    const allTicketsButton = document.getElementById("nav-all");
     
     // If elements not found and we haven't exceeded max retries, try again
-    if ((!ticketsButton || !ticketsDropdown) && retryCount < maxRetries) {
+    if (!allTicketsButton && retryCount < maxRetries) {
       console.log(`Navigation elements not ready, retrying... (${retryCount + 1}/${maxRetries})`);
       setTimeout(() => {
         addNavListenersWithRetry(retryCount + 1);
       }, retryDelay);
-    } else if (!ticketsButton || !ticketsDropdown) {
+    } else if (!allTicketsButton) {
       console.error("Failed to initialize navigation after maximum retries");
     } else {
       console.log("Navigation listeners successfully initialized");
@@ -2053,63 +2129,11 @@
   }
 
   function addNavListeners() {
-    // Handle Tickets dropdown
-    const ticketsDropdown = document.getElementById("nav-tickets-dropdown");
-    const ticketsButton = document.getElementById("nav-tickets");
-    const dropdownContent = document.getElementById("tickets-dropdown-content");
-    
-    console.log("Navigation elements found:", {
-      ticketsDropdown: !!ticketsDropdown,
-      ticketsButton: !!ticketsButton,
-      dropdownContent: !!dropdownContent
-    });
-    
-    if (ticketsButton && ticketsDropdown) {
-      // Prevent duplicate event listeners
-      if (!ticketsButton.hasAttribute('data-listener-added')) {
-        ticketsButton.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          const isActive = ticketsDropdown.classList.contains("active");
-          console.log("Ticket button clicked, isActive:", isActive);
-          
-          if (isActive) {
-            // Collapse
-            ticketsDropdown.classList.remove("active");
-            console.log("Collapsing tickets dropdown");
-          } else {
-            // Expand
-            ticketsDropdown.classList.add("active");
-            console.log("Expanding tickets dropdown");
-          }
-        });
-        ticketsButton.setAttribute('data-listener-added', 'true');
-        console.log("Navigation event listener added successfully");
-      } else {
-        console.log("Navigation event listener already added");
-      }
-    } else {
-      console.error("Missing navigation elements:", {
-        ticketsButton: !!ticketsButton,
-        ticketsDropdown: !!ticketsDropdown
-      });
-    }
-
-    // Remove global click listener - dropdown only controlled by Ticket button click
-
-    // Prevent dropdown from closing when clicking inside it
-    if (dropdownContent) {
-      dropdownContent.addEventListener("click", (e) => {
-        e.stopPropagation();
-      });
-    }
-
     const navButtons = document.querySelectorAll(".nav-panel .nav-btn");
     navButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
         // Ignore special buttons that don't change the main view
-        if (btn.id === "bulk-edit-btn" || btn.id === "readme-btn" || btn.id === "nav-tickets") {
+        if (btn.id === "bulk-edit-btn" || btn.id === "readme-btn") {
           return;
         }
         const view = btn.id.replace("nav-", "");
@@ -2140,21 +2164,9 @@
         currentPage = 1;
         reconcileCurrentPage = 1;
 
-        // Only close dropdown if clicking outside the tickets section
-        if (ticketsDropdown && !ticketsDropdown.contains(btn)) {
-          ticketsDropdown.classList.remove("active");
-        }
-
         // Update the active button style
         navButtons.forEach((b) => b.classList.remove("active"));
         btn.classList.add("active");
-
-        // Update child button active state
-        const childButtons = document.querySelectorAll(".nav-child");
-        childButtons.forEach((child) => child.classList.remove("active"));
-        if (btn.classList.contains("nav-child")) {
-          btn.classList.add("active");
-        }
 
         // Exit bulk edit mode if it's active
         if (isBulkEditMode) exitBulkEditMode(false);
@@ -2388,7 +2400,6 @@
     const mainTableWrapper = document.querySelector(".table-wrapper");
     const reconcileWrapper = document.getElementById("reconcile-view-wrapper");
     const dashboardWrapper = document.getElementById("dashboard-view-wrapper");
-    const testingWrapper = document.getElementById("testing-view-wrapper");
     const actionsContainer = document.querySelector(".actions-container");
 
     // Get handles for the main action button groups
@@ -2407,7 +2418,6 @@
     if (integratedFilters) integratedFilters.style.display = "none";
     reconcileWrapper.style.display = "none";
     dashboardWrapper.style.display = "none";
-    testingWrapper.style.display = "none";
     actionsContainer.style.display = "none";
     document.body.classList.remove("project-view");
 
@@ -2479,17 +2489,6 @@
       // Hide the main filter and all right-side action buttons
       defaultFilterBtn.style.display = "none";
       rightActions.style.display = "none";
-    } else if (currentView === "testing") {
-      // --- Testing View ---
-      testingWrapper.style.display = "block";
-      rightActions.style.display = "none"; // Hide main action buttons for testing view
-      
-      // Add a small delay to ensure DOM is ready
-      setTimeout(() => {
-        console.log('Rendering testing dashboard...');
-        renderTestingDashboard();
-      }, 50);
-      return; // Exit early for testing view
     } else {
       // --- All Other Ticket Views ---
       mainTableWrapper.style.display = "block";
@@ -2911,12 +2910,6 @@
       };
 
       // Get options for dropdowns
-      const skillOptions = appData.skills?.map(s => ({ value: s.id, text: s.name })) || [];
-      const complexityOptions = [
-        { value: "Easy", text: "Easy" },
-        { value: "Moderate", text: "Moderate" },
-        { value: "Complex", text: "Complex" }
-      ];
 
       row.innerHTML = `
         <td><span class="simple-ticket-id">HRB-${ticket.id}</span></td>
@@ -2945,31 +2938,12 @@
                  class="simple-input ${isMissing('completedAt') ? 'missing' : ''}"
                  data-field="completedAt" data-ticket-id="${ticket.id}">
         </td>
-        <td>
-          <select class="simple-select ${isMissing('complexity') ? 'missing' : ''}"
-                  data-field="complexity" data-ticket-id="${ticket.id}">
-            <option value="">Select...</option>
-            ${complexityOptions.map(opt => 
-              `<option value="${opt.value}" ${opt.value === ticket.complexity ? 'selected' : ''}>${opt.text}</option>`
-            ).join('')}
-          </select>
-        </td>
-        <td>
-          <select class="simple-select ${isMissing('skillsId') ? 'missing' : ''}"
-                  data-field="skillsId" data-ticket-id="${ticket.id}">
-            <option value="">Select Skills...</option>
-            ${skillOptions.map(opt => 
-              `<option value="${opt.value}" ${opt.value == ticket.skillsId ? 'selected' : ''}>${opt.text}</option>`
-            ).join('')}
-          </select>
-        </td>
       `;
     });
 
     // Add event listeners
     addSimpleIncompleteEventListeners();
     
-    // Skills dropdowns are now created directly in the HTML template
   }
 
   function addSimpleIncompleteEventListeners() {
@@ -2997,7 +2971,7 @@
         const oldValue = ticket[field];
         let newValue = e.target.value === "" ? null : e.target.value;
         
-        if ((field === "assigneeId" || field === "skillsId") && newValue && newValue !== "") {
+        if (field === "assigneeId" && newValue && newValue !== "") {
           newValue = parseInt(newValue, 10);
         }
         
@@ -3217,15 +3191,7 @@
               "priority"
             )}</td>
             <td data-label="Status">${createTagEditor(
-              [
-                "Open",
-                "In Progress",
-                "On Hold",
-                "Blocked",
-                "Cancelled",
-                "Rejected",
-                "Completed",
-              ],
+              getStatusTransitionOptions(ticket.status),
               ticket.status,
               ticket.id,
               "status"
@@ -3242,13 +3208,7 @@
               ticket.id,
               "assigneeId"
             )}</td>
-            <td data-label=""><div class="task-icons">${
-              ticket.relevantLink
-                ? `<i class="fas fa-paperclip attachment-icon" data-id="${ticket.id}" data-type="ticket"></i>`
-                : ""
-            }<i class="fas fa-history history-icon" data-ticket-id="${
-        ticket.id
-      }"></i></div></td>
+            <td data-label=""></td>
         `;
       
       row.innerHTML = rowContent;
@@ -3669,6 +3629,24 @@
     const selectAllCheckbox = document.getElementById("select-all-checkbox");
     if (selectAllCheckbox)
       selectAllCheckbox.addEventListener("change", toggleSelectAll);
+    
+    // Add global click listener to close dropdowns when clicking outside
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".jira-dropdown") && !e.target.closest(".tag-editor")) {
+        document.querySelectorAll(".jira-dropdown").forEach(dropdown => {
+          dropdown.style.display = "none";
+        });
+      }
+    });
+    
+    // Add scroll listener to close dropdowns when scrolling
+    document.addEventListener("scroll", () => {
+      document.querySelectorAll(".jira-dropdown").forEach(dropdown => {
+        if (dropdown.style.display === "block") {
+          dropdown.style.display = "none";
+        }
+      });
+    }, true);
   }
 
   function handleJiraDropdownUpdate(id, field, value, type) {
@@ -3762,8 +3740,39 @@
                 }
               }
             });
-            // Toggle current dropdown
-            dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+            // Position dropdown to be fully visible
+            if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+              const tagRect = target.getBoundingClientRect();
+              const dropdownWidth = 240; // min-width from CSS
+              const viewportWidth = window.innerWidth;
+              const viewportHeight = window.innerHeight;
+              
+              let left = tagRect.left;
+              let top = tagRect.bottom + 4;
+              
+              // Ensure dropdown doesn't go off the right edge
+              if (left + dropdownWidth > viewportWidth - 20) {
+                left = viewportWidth - dropdownWidth - 20;
+              }
+              
+              // Ensure dropdown doesn't go off the left edge
+              if (left < 20) {
+                left = 20;
+              }
+              
+              // If dropdown would go off bottom, show it above the tag
+              if (top + 200 > viewportHeight - 20) {
+                top = tagRect.top - 200;
+              }
+              
+              dropdown.style.position = 'fixed';
+              dropdown.style.left = left + 'px';
+              dropdown.style.top = top + 'px';
+              dropdown.style.right = 'auto';
+              dropdown.style.display = 'block';
+            } else {
+              dropdown.style.display = 'none';
+            }
           }
         } else {
           // Handle old-style dropdown
@@ -3804,8 +3813,39 @@
                 }
               }
             });
-            // Toggle current dropdown
-            dropdown.style.display = dropdown.style.display === "none" ? "block" : "none";
+            // Position dropdown to be fully visible
+            if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+              const tagRect = target.getBoundingClientRect();
+              const dropdownWidth = 160; // min-width for priority dropdown
+              const viewportWidth = window.innerWidth;
+              const viewportHeight = window.innerHeight;
+              
+              let left = tagRect.left;
+              let top = tagRect.bottom + 4;
+              
+              // Ensure dropdown doesn't go off the right edge
+              if (left + dropdownWidth > viewportWidth - 20) {
+                left = viewportWidth - dropdownWidth - 20;
+              }
+              
+              // Ensure dropdown doesn't go off the left edge
+              if (left < 20) {
+                left = 20;
+              }
+              
+              // If dropdown would go off bottom, show it above the tag
+              if (top + 150 > viewportHeight - 20) {
+                top = tagRect.top - 150;
+              }
+              
+              dropdown.style.position = 'fixed';
+              dropdown.style.left = left + 'px';
+              dropdown.style.top = top + 'px';
+              dropdown.style.right = 'auto';
+              dropdown.style.display = 'block';
+            } else {
+              dropdown.style.display = 'none';
+            }
           }
         }
       }
@@ -3877,14 +3917,6 @@
     }
     if (target.classList.contains("clear-icon")) {
       handleClear(e);
-      return;
-    }
-    if (target.classList.contains("history-icon")) {
-      showHistory(e);
-      return;
-    }
-    if (target.classList.contains("attachment-icon")) {
-      showAttachments(e);
       return;
     }
     if (target.classList.contains("copy-icon")) {
@@ -4400,8 +4432,6 @@
   function isFieldRequired(field, status) {
     switch (field) {
       case 'createdAt':
-      case 'complexity':
-      case 'skillsId':
         return true; // Always required
       case 'assignedAt':
         return status !== "Open";
@@ -4420,8 +4450,6 @@
     
     // Recalculate missing fields
     let missingFieldCount = 0;
-    if (!ticket.complexity || ticket.complexity === "") missingFieldCount++;
-    if (!ticket.skillsId || ticket.skillsId === "") missingFieldCount++;
     if (!ticket.createdAt) missingFieldCount++;
     if (!ticket.assignedAt && ticket.status !== "Open") missingFieldCount++;
     if (!ticket.startedAt && (ticket.status === "In Progress" || ticket.status === "Completed")) missingFieldCount++;
@@ -4478,17 +4506,7 @@
       "Select project..."
     );
 
-    createSearchableDropdownForModal(
-      document.getElementById("bulk-update-skills-container"),
-      [
-        { value: "", text: "- No Change -" },
-        ...appData.skills.map((s) => ({ value: s.id, text: s.name })),
-      ],
-      "Select skills..."
-    );
 
-    document.getElementById("bulk-update-complexity").innerHTML =
-      '<option value="">- No Change -</option><option>Easy</option><option>Moderate</option><option>Complex</option>';
     document.getElementById("bulk-update-requestedBy").innerHTML =
       '<option value="">- No Change -</option>' +
       appData.users
@@ -4517,110 +4535,25 @@
       });
   }
 
-  function showHistory(event) {
-    const ticketId = event.target.dataset.ticketId;
-    const ticket = appData.allTickets.find((t) => t.id == ticketId);
-    const modalBody = document.getElementById("history-content");
 
-    if (!ticket || !ticket.log || ticket.log.length === 0) {
-      modalBody.innerHTML = "<p>No history found for this ticket.</p>";
-    } else {
-      modalBody.innerHTML = [...ticket.log]
-        .reverse()
-        .map((entry) => {
-          // Handle different types of values for better display
-          const formatValue = (value) => {
-            if (value === null || value === undefined || value === "" || value === "null") {
-              return "(empty)";
-            }
-            if (typeof value === "object") {
-              return JSON.stringify(value);
-            }
-            return String(value);
-          };
-          
-          const oldVal = formatValue(entry.oldValue);
-          const newVal = formatValue(entry.newValue);
-          
-          // Convert field names to user-friendly display names
-          const fieldDisplayNames = {
-            status: "Status",
-            priority: "Priority", 
-            assignee: "Assignee",
-            assigneeId: "Assignee",
-            requestedBy: "Requested By",
-            projectId: "Project",
-            skillsId: "Skills",
-            type: "Type",
-            complexity: "Complexity",
-            assignedAt: "Assigned At",
-            startedAt: "Started At",
-            completedAt: "Completed At",
-            "bulk-update": "Bulk Update"
-          };
-          
-          const fieldName = fieldDisplayNames[entry.field] || entry.field;
-          return `<div class="history-entry">
-                    <div class="history-meta"><strong>${escapeHtml(
-                      entry.user
-                    )}</strong> on ${new Date(
-            entry.timestamp
-          ).toLocaleString()}</div>
-                    <div class="history-change">Changed <strong>${escapeHtml(
-                      fieldName
-                    )}</strong> from "<em>${escapeHtml(
-            oldVal
-          )}</em>" to "<em>${escapeHtml(newVal)}</em>"</div>
-                    ${
-                      entry.reason
-                        ? `<div style="font-style: italic; color: var(--text-secondary); margin-top: 4px;">Reason: ${escapeHtml(
-                            entry.reason
-                          )}</div>`
-                        : ""
-                    }
-                </div>`;
-        })
-        .join("");
-    }
-    document.getElementById("history-modal").style.display = "flex";
+  // Function to get status transition options based on current status
+  function getStatusTransitionOptions(currentStatus) {
+    const allStatuses = [
+      "Open",
+      "In Progress", 
+      "On Hold",
+      "Blocked",
+      "Cancelled",
+      "Rejected",
+      "Completed"
+    ];
+    
+    // Return all statuses except the current one, formatted as transitions
+    return allStatuses
+      .filter(status => status !== currentStatus)
+      .map(status => `${currentStatus} → ${status}`);
   }
-  function showAttachments(event) {
-    const icon = event.target;
-    const id = icon.dataset.id;
-    const type = icon.dataset.type;
 
-    let item;
-    let linkString = "";
-
-    if (type === "project") {
-      item = appData.allProjects.find((p) => p.id == id);
-      if (item) linkString = String(item.attachment || "");
-    } else {
-      item = appData.allTickets.find((t) => t.id == id);
-      if (item) linkString = String(item.relevantLink || "");
-    }
-
-    if (!item) return;
-
-    const modalBody = document.getElementById("attachment-content");
-    modalBody.innerHTML = "";
-
-    const urls = linkString
-      .split(/[\s,]+/)
-      .filter((url) => url.trim().startsWith("http"));
-
-    if (urls.length === 0) {
-      modalBody.innerHTML = "<p>No valid attachments found.</p>";
-    } else {
-      urls.forEach((url) => {
-        modalBody.innerHTML += `<a href="${url}" target="_blank" class="attachment-link">${escapeHtml(
-          url
-        )}</a>`;
-      });
-    }
-
-    document.getElementById("attachment-modal").style.display = "flex";
-  }
   // REPLACE the existing showTaskDetailModal function with this one
 
   function showTaskDetailModal(ticketId, options = {}) {
@@ -4646,16 +4579,13 @@
       modal.addEventListener('ticketUpdated', handleTicketUpdate);
     }
 
-    const { isAdvancedOpen = false } = options;
     const warnings = getTicketWarnings(ticket);
     const modalBody = document.getElementById("task-detail-modal-body");
     const toDateInputString = (isoString) =>
       isoString ? isoString.split("T")[0] : "";
 
-    const createDateField = (label, value, field, id, icon) => {
-      const clearButtonVisibilityClass = value ? "" : "is-hidden";
+    const createDateField = (label, value, field, id) => {
       return `
-            <label class="prop-label"><i class="fas ${icon} fa-fw"></i> ${label}</label>
             <div class="date-field-container">
                 <div class="editable-field-wrapper ${
                   value ? "has-value" : ""
@@ -4667,9 +4597,7 @@
       }">
                     <span class="date-field-warning-tooltip">Unsaved Changes Found Please Press Enter</span>
                 </div>
-                <button class="clear-date-btn ${clearButtonVisibilityClass}" data-field="${field}" data-id="${id}">Clear</button>
             </div>
-            <small class="date-field-caption">Press Enter/Tab to Save</small>
             `;
     };
 
@@ -4711,12 +4639,15 @@
     const mainContentHtml = `
         <div class="ticket-main-content" data-ticket-id="${ticket.id}">
             <div class="ticket-main-header">
-                <div>
+                <div class="ticket-header-row">
                     <span class="ticket-id-tag">HRB-${escapeHtml(ticket.id)}</span>
+                    <div class="ticket-type-tag">
+                        ${createTypeTag(ticket.type)}
+                    </div>
+                </div>
                     <textarea id="modal-edit-title" class="modal-title-textarea" rows="1" placeholder="Ticket Title...">${escapeHtml(
                       ticket.title || ""
                     )}</textarea>
-                </div>
             </div>
             <h4 class="modal-section-label">Description</h4>
             <textarea id="modal-edit-description" class="modal-description-textarea" placeholder="Add a description...">${escapeHtml(
@@ -4730,155 +4661,163 @@
             </div>
             ${attachmentsHtml}
             <div id="subtask-container-modal"></div>
-            <div id="comment-container-modal"></div>
         </div>`;
 
     const sidebarHtml = `
         <div class="ticket-details-sidebar" data-ticket-id="${ticket.id}">
             <div class="sidebar-section">
-                <h4>Properties</h4>
-                <div class="sidebar-property-editable"><label class="prop-label"><i class="fas fa-flag fa-fw"></i> Status</label>${createTagEditor(
-                  [
-                    "Open",
-                    "In Progress",
-                    "On Hold",
-                    "Blocked",
-                    "Cancelled",
-                    "Rejected",
-                    "Completed",
-                  ],
+                <div class="sidebar-property-editable">
+                    <label class="prop-label">Status</label>
+                    <div class="prop-value">
+                        ${createTagEditor(
+                          getStatusTransitionOptions(ticket.status),
                   ticket.status,
                   ticket.id,
                   "status"
-                )}</div>
+                        )}
+                    </div>
+                </div>
+                <div class="sidebar-property-editable">
+                    <label class="prop-label">Priority</label>
+                    <div class="prop-value">
+                        ${createTagEditor(
+                          ["Urgent", "High", "Medium", "Low"],
+                          ticket.priority,
+                          ticket.id,
+                          "priority"
+                        )}
+                    </div>
+                </div>
+                <div class="sidebar-property-editable ${
+                  warnings.some((w) => w.field === "dueDate")
+                    ? "has-warning"
+                    : ""
+                }">
+                    <label class="prop-label">Due date</label>
+                    <div class="prop-value">
+                        ${createDateField(
+                          "",
+                          ticket.dueDate,
+                          "dueDate",
+                          ticket.id
+                        )}
+                    </div>
+                </div>
                 <div class="sidebar-property-editable ${
                   warnings.some((w) => w.field === "assigneeId")
                     ? "has-warning"
                     : ""
-                }"><label class="prop-label"><i class="fas fa-user-check fa-fw"></i> Assign to</label>${createSearchableDropdown(
+                }">
+                    <label class="prop-label">Assignee</label>
+                    <div class="prop-value">
+                        ${createSearchableDropdown(
       appData.teamMembers.map((m) => ({ value: m.id, text: m.name })),
       ticket.assigneeId,
       ticket.id,
       "assigneeId"
-    )}</div>
-                <div class="sidebar-property-editable"><label class="prop-label"><i class="fas fa-stream fa-fw"></i> Priority</label>${createTagEditor(
-                  ["Urgent", "High", "Medium", "Low"],
-                  ticket.priority,
-                  ticket.id,
-                  "priority"
-                )}</div>
-                <div class="sidebar-property-editable"><label class="prop-label"><i class="fas fa-tag fa-fw"></i> Type</label>${createTypeTag(
-                  ticket.type
-                )}</div>
-                <div class="sidebar-property-editable"><label class="prop-label"><i class="fas fa-folder fa-fw"></i> Project</label>${createSearchableDropdown(
-                  appData.projects.map((p) => ({ value: p.id, text: p.name })),
-                  ticket.projectId,
-                  ticket.id,
-                  "projectId"
-                )}</div>
+                        )}
+                    </div>
+                </div>
                 <div class="sidebar-property-editable ${
                   warnings.some((w) => w.field === "requestedBy")
                     ? "has-warning"
                     : ""
-                }"><label class="prop-label"><i class="fas fa-user-tag fa-fw"></i> Requested By</label>${createSearchableDropdown(
+                }">
+                    <label class="prop-label">Requested By</label>
+                    <div class="prop-value">
+                        ${createSearchableDropdown(
       appData.users.map((u) => ({ value: u, text: u })),
       ticket.requestedBy,
       ticket.id,
       "requestedBy"
-    )}</div>
+                        )}
             </div>
-            <div class="sidebar-section advanced-details-section">
-                <button class="advanced-details-toggle ${
-                  isAdvancedOpen ? "is-open" : ""
-                }">
-                    <span><i class="fas fa-cogs fa-fw"></i> Advanced Details</span>
-                    <i class="fas fa-chevron-down toggle-icon"></i>
-                </button>
-                <div class="advanced-details-content ${
-                  isAdvancedOpen ? "" : "is-hidden"
-                }">
-                    <div class="sidebar-property-editable"><label class="prop-label"><i class="fas fa-bolt fa-fw"></i> Epic</label><div class="editable-field-wrapper ${
+                </div>
+                <div class="sidebar-property-editable">
+                    <label class="prop-label">Project</label>
+                    <div class="prop-value">
+                        ${createSearchableDropdown(
+                          appData.projects.map((p) => ({ value: p.id, text: p.name })),
+                          ticket.projectId,
+                          ticket.id,
+                          "projectId"
+                        )}
+                    </div>
+                </div>
+                <div class="sidebar-property-editable">
+                    <label class="prop-label">Epic</label>
+                    <div class="prop-value">
+                        <div class="editable-field-wrapper epic-field-wrapper ${
                       ticket.epic ? "has-value" : ""
-                    }"><input type="text" list="epic-datalist-details" class="inline-editor" value="${escapeHtml(
+                        }">
+                            <input type="text" list="epic-datalist-details" class="inline-editor epic-input" value="${escapeHtml(
       ticket.epic || ""
     )}" data-id="${ticket.id}" data-field="epic" data-old-value="${escapeHtml(
       ticket.epic || ""
-    )}"><i class="fas fa-times-circle clear-icon"></i></div></div>
-                    <div class="sidebar-property-editable ${
-                      warnings.some((w) => w.field === "complexity")
-                        ? "has-warning"
-                        : ""
-                    }"><label class="prop-label"><i class="fas fa-puzzle-piece fa-fw"></i> Complexity</label>${createDropdown(
-      ["Complex", "Moderate", "Easy"],
-      ticket.complexity,
-      ticket.id,
-      "complexity"
-    )}</div>
-                    <div class="sidebar-property-editable ${
-                      warnings.some((w) => w.field === "skillsId")
-                        ? "has-warning"
-                        : ""
-                    }"><label class="prop-label"><i class="fas fa-tools fa-fw"></i> Skills</label>${createSearchableDropdown(
-      appData.skills.map((s) => ({ value: s.id, text: s.name })),
-      ticket.skillsId,
-      ticket.id,
-      "skillsId"
-    )}</div>
+    )}">
+                            <i class="fas fa-times-circle clear-icon"></i>
+                        </div>
+                    </div>
+                </div>
                     <div class="sidebar-property-editable ${
                       warnings.some((w) => w.field === "createdAt")
                         ? "has-warning"
                         : ""
-                    }">${createDateField(
-      "Created",
+                }">
+                    <label class="prop-label">Created date</label>
+                    <div class="prop-value">
+                        ${createDateField(
+                          "",
       ticket.createdAt,
       "createdAt",
-      ticket.id,
-      "fa-calendar-plus"
-    )}</div>
-                    <div class="sidebar-property-editable ${
-                      warnings.some((w) => w.field === "dueDate")
-                        ? "has-warning"
-                        : ""
-                    }">${createDateField(
-      "Due Date",
-      ticket.dueDate,
-      "dueDate",
-      ticket.id,
-      "fa-calendar-day"
-    )}</div>
+                          ticket.id
+                        )}
+                    </div>
+                </div>
                     <div class="sidebar-property-editable ${
                       warnings.some((w) => w.field === "assignedAt")
                         ? "has-warning"
                         : ""
-                    }">${createDateField(
-      "Assigned",
+                }">
+                    <label class="prop-label">Assigned date</label>
+                    <div class="prop-value">
+                        ${createDateField(
+                          "",
       ticket.assignedAt,
       "assignedAt",
-      ticket.id,
-      "fa-calendar-check"
-    )}</div>
+                          ticket.id
+                        )}
+                    </div>
+                </div>
                     <div class="sidebar-property-editable ${
                       warnings.some((w) => w.field === "startedAt")
                         ? "has-warning"
                         : ""
-                    }">${createDateField(
-      "Started",
+                }">
+                    <label class="prop-label">Started date</label>
+                    <div class="prop-value">
+                        ${createDateField(
+                          "",
       ticket.startedAt,
       "startedAt",
-      ticket.id,
-      "fa-play-circle"
-    )}</div>
+                          ticket.id
+                        )}
+                    </div>
+                </div>
                     <div class="sidebar-property-editable ${
                       warnings.some((w) => w.field === "completedAt")
                         ? "has-warning"
                         : ""
-                    }">${createDateField(
-      "Completed",
+                }">
+                    <label class="prop-label">Completed date</label>
+                    <div class="prop-value">
+                        ${createDateField(
+                          "",
       ticket.completedAt,
       "completedAt",
-      ticket.id,
-      "fa-check-circle"
-    )}</div>
+                          ticket.id
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
@@ -4887,19 +4826,9 @@
     modalBody.innerHTML = mainContentHtml + sidebarHtml;
 
     renderSubtasks(ticket);
-    renderComments(ticket);
 
     modal.style.display = "flex";
 
-    const advancedToggleBtn = modal.querySelector(".advanced-details-toggle");
-    if (advancedToggleBtn) {
-      advancedToggleBtn.addEventListener("click", () => {
-        const content = modal.querySelector(".advanced-details-content");
-        const isOpen = !content.classList.contains("is-hidden");
-        content.classList.toggle("is-hidden", isOpen);
-        advancedToggleBtn.classList.toggle("is-open", !isOpen);
-      });
-    }
 
     const titleTextarea = modal.querySelector("#modal-edit-title");
     const descTextarea = modal.querySelector("#modal-edit-description");
@@ -4908,6 +4837,35 @@
 
     // Add event listeners for tag editors (status and priority)
     addTagEditorEventListeners(modal);
+    
+    // Add global click listener to close dropdowns when clicking outside modal
+    const closeDropdownsOnClickOutside = (e) => {
+      if (!e.target.closest(".jira-dropdown") && !e.target.closest(".tag-editor")) {
+        modal.querySelectorAll(".jira-dropdown").forEach(dropdown => {
+          dropdown.style.display = "none";
+        });
+      }
+    };
+    
+    const closeDropdownsOnScroll = () => {
+      modal.querySelectorAll(".jira-dropdown").forEach(dropdown => {
+        if (dropdown.style.display === "block") {
+          dropdown.style.display = "none";
+        }
+      });
+    };
+    
+    document.addEventListener("click", closeDropdownsOnClickOutside);
+    document.addEventListener("scroll", closeDropdownsOnScroll, true);
+    
+    // Clean up listeners when modal is closed
+    const cleanup = () => {
+      document.removeEventListener("click", closeDropdownsOnClickOutside);
+      document.removeEventListener("scroll", closeDropdownsOnScroll, true);
+    };
+    
+    // Store cleanup function for later use (not in dataset since it's not a string)
+    modal._cleanupDropdowns = cleanup;
   }
 
   function addTagEditorEventListeners(modal) {
@@ -4926,8 +4884,40 @@
           modal.querySelectorAll('.jira-dropdown').forEach(d => {
             if (d !== dropdown) d.style.display = 'none';
           });
-          // Toggle current dropdown
-          dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+          
+          if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+            // Position dropdown to be fully visible
+            const tagRect = tag.getBoundingClientRect();
+            const dropdownWidth = 240; // min-width from CSS
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            let left = tagRect.left;
+            let top = tagRect.bottom + 4;
+            
+            // Ensure dropdown doesn't go off the right edge
+            if (left + dropdownWidth > viewportWidth - 20) {
+              left = viewportWidth - dropdownWidth - 20;
+            }
+            
+            // Ensure dropdown doesn't go off the left edge
+            if (left < 20) {
+              left = 20;
+            }
+            
+            // If dropdown would go off bottom, show it above the tag
+            if (top + 200 > viewportHeight - 20) {
+              top = tagRect.top - 200;
+            }
+            
+            dropdown.style.position = 'fixed';
+            dropdown.style.left = left + 'px';
+            dropdown.style.top = top + 'px';
+            dropdown.style.right = 'auto';
+            dropdown.style.display = 'block';
+          } else {
+            dropdown.style.display = 'none';
+          }
         });
 
         // Handle option clicks
@@ -4945,30 +4935,224 @@
             tag.textContent = tagInfo.text;
             tag.dataset.oldValue = newValue;
             
+            // Add updating indicator
+            tag.classList.add('updating');
+            tag.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Updating...`;
+            
             // Close dropdown
             dropdown.style.display = 'none';
             
-            // Update the database
+            // Update the database with comprehensive status transition logic
             try {
+              const ticket = appData.allTickets.find(t => t.id == ticketId);
+              if (!ticket) {
+                console.error('Ticket not found:', ticketId);
+                return;
+              }
+
+              const oldValue = ticket[field]; // Get the actual current value from the ticket data
+              let updates = { [field]: newValue };
+              const nowIso = new Date().toISOString();
+
+              // Apply comprehensive status transition logic
+              if (field === "status") {
+                const oldStatus = oldValue;
+                const newStatus = newValue;
+                
+                // Open -> transitions
+                if (oldStatus === "Open") {
+                  if (newStatus === "In Progress") {
+                    updates.startedAt = nowIso;
+                  }
+                  else if (newStatus === "On Hold") {
+                    // Just change status
+                  }
+                  else if (newStatus === "Blocked") {
+                    // Just change status
+                  }
+                  else if (newStatus === "Cancelled") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                  else if (newStatus === "Rejected") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                  else if (newStatus === "Completed") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                }
+                
+                // In Progress -> transitions
+                else if (oldStatus === "In Progress") {
+                  if (newStatus === "Open") {
+                    updates.startedAt = null;
+                  }
+                  else if (newStatus === "On Hold") {
+                    // Just change status
+                  }
+                  else if (newStatus === "Blocked") {
+                    // Just change status
+                  }
+                  else if (newStatus === "Cancelled") {
+                    updates.completedAt = nowIso;
+                  }
+                  else if (newStatus === "Rejected") {
+                    updates.completedAt = nowIso;
+                  }
+                  else if (newStatus === "Completed") {
+                    updates.completedAt = nowIso;
+                  }
+                }
+                
+                // On Hold -> transitions
+                else if (oldStatus === "On Hold") {
+                  if (newStatus === "Open") {
+                    // Just change status
+                  }
+                  else if (newStatus === "Blocked") {
+                    // Just change status
+                  }
+                  else if (newStatus === "In Progress") {
+                    updates.startedAt = nowIso;
+                  }
+                  else if (newStatus === "Rejected") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                  else if (newStatus === "Completed") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                }
+                
+                // Blocked -> transitions
+                else if (oldStatus === "Blocked") {
+                  if (newStatus === "Open") {
+                    // Just change status
+                  }
+                  else if (newStatus === "On Hold") {
+                    // Just change status
+                  }
+                  else if (newStatus === "In Progress") {
+                    updates.startedAt = nowIso;
+                  }
+                  else if (newStatus === "Rejected") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                  else if (newStatus === "Completed") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                }
+                
+                // Cancelled -> transitions
+                else if (oldStatus === "Cancelled") {
+                  if (newStatus === "Open") {
+                    updates.completedAt = null;
+                    updates.startedAt = null;
+                  }
+                  else if (newStatus === "On Hold") {
+                    updates.completedAt = null;
+                  }
+                  else if (newStatus === "In Progress") {
+                    updates.completedAt = null;
+                  }
+                  else if (newStatus === "Rejected") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                  else if (newStatus === "Completed") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                }
+                
+                // Rejected -> transitions
+                else if (oldStatus === "Rejected") {
+                  if (newStatus === "Open") {
+                    updates.completedAt = null;
+                    updates.startedAt = null;
+                  }
+                  else if (newStatus === "On Hold") {
+                    updates.completedAt = null;
+                  }
+                  else if (newStatus === "In Progress") {
+                    updates.completedAt = null;
+                  }
+                  else if (newStatus === "Cancelled") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                  else if (newStatus === "Completed") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                }
+                
+                // Completed -> transitions
+                else if (oldStatus === "Completed") {
+                  if (newStatus === "Open") {
+                    updates.completedAt = null;
+                    updates.startedAt = null;
+                  }
+                  else if (newStatus === "On Hold") {
+                    updates.completedAt = null;
+                  }
+                  else if (newStatus === "In Progress") {
+                    updates.completedAt = null;
+                  }
+                  else if (newStatus === "Cancelled") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                  else if (newStatus === "Rejected") {
+                    updates.startedAt = nowIso;
+                    updates.completedAt = nowIso;
+                  }
+                }
+              }
+
+              // Add log entry
+              const logEntry = {
+                user: appData.currentUserEmail,
+                timestamp: nowIso,
+                field: field,
+                oldValue: oldValue,
+                newValue: newValue,
+                reason: null,
+              };
+
+              updates.log = Array.isArray(ticket.log)
+                ? [...ticket.log, logEntry]
+                : [logEntry];
+
               const { error } = await window.supabaseClient
                 .from('ticket')
-                .update({ [field]: newValue })
+                .update(updates)
                 .eq('id', ticketId);
               
               if (error) {
                 console.error('Error updating ticket:', error);
                 showToast(`Failed to update ${field}`, 'error');
                 // Revert the change
-                const oldValue = tag.dataset.oldValue;
                 const oldTagInfo = getTagInfo(field, oldValue);
                 tag.className = `status-tag ${oldTagInfo.className}`;
                 tag.textContent = oldTagInfo.text;
+                tag.dataset.oldValue = oldValue;
+                tag.classList.remove('updating');
               } else {
                 // Update the local data
-                const ticket = appData.allTickets.find(t => t.id == ticketId);
-                if (ticket) {
-                  ticket[field] = newValue;
-                }
+                Object.assign(ticket, updates);
+                
+                // Show success indicator
+                tag.classList.remove('updating');
+                tag.classList.add('success');
+                tag.innerHTML = `<i class="fas fa-check"></i> ${newValue}`;
+                
+                // Show success toast
                 showToast(`${field} updated successfully`, 'success');
                 
                 // Update the UI
@@ -4977,6 +5161,17 @@
                   renderDashboard();
                 }
                 updateNavBadgeCounts();
+                
+                // Refresh the modal to show updated date fields
+                showTaskDetailModal(ticketId);
+                
+                // Remove success indicator after 2 seconds
+                setTimeout(() => {
+                  tag.classList.remove('success');
+                  const finalTagInfo = getTagInfo(field, newValue);
+                  tag.className = `status-tag ${finalTagInfo.className}`;
+                  tag.textContent = finalTagInfo.text;
+                }, 2000);
               }
             } catch (error) {
               console.error('Error updating ticket:', error);
@@ -5052,20 +5247,46 @@
     const dropdownId = `jira-dropdown-${id}-${field}`;
     const optionsHTML = options
       .map((option) => {
-        const tagInfo = getTagInfo(field, option);
-        const isSelected = option === selectedValue;
+        // For status field, extract the target status from transition format
+        const actualValue = field === 'status' && option.includes(' → ') 
+          ? option.split(' → ')[1] 
+          : option;
+        const tagInfo = getTagInfo(field, actualValue);
+        const isSelected = actualValue === selectedValue;
+        
+        // For status transitions, show both current and target status tags
+        let displayHTML;
+        if (field === 'status' && option.includes(' → ')) {
+          const [currentStatus, targetStatus] = option.split(' → ');
+          const currentTagInfo = getTagInfo(field, currentStatus);
+          const targetTagInfo = getTagInfo(field, targetStatus);
+          
+          displayHTML = `
+            <div class="status-transition-option">
+              <span class="jira-tag ${currentTagInfo.className}">${escapeHtml(currentStatus)}</span>
+              <span class="transition-arrow">→</span>
+              <span class="jira-tag ${targetTagInfo.className}">${escapeHtml(targetStatus)}</span>
+            </div>
+          `;
+        } else {
+          displayHTML = `<span class="jira-tag ${tagInfo.className}">${escapeHtml(option)}</span>`;
+        }
+        
         return `<div class="jira-option ${isSelected ? 'selected' : ''}" 
-                        data-value="${escapeHtml(option)}" 
+                        data-value="${escapeHtml(actualValue)}" 
+                        data-display="${escapeHtml(option)}"
                         data-id="${id}" 
                         data-field="${field}" 
                         data-type="${type}">
-                  <span class="jira-tag ${tagInfo.className}">${escapeHtml(option)}</span>
+                  ${displayHTML}
                 </div>`;
       })
       .join("");
     
+    const dropdownClass = field === 'priority' ? 'jira-dropdown priority-dropdown' : 'jira-dropdown';
+    
     return `<div class="jira-dropdown-container">
-              <div class="jira-dropdown" id="${dropdownId}" style="display: none;">
+              <div class="${dropdownClass}" id="${dropdownId}" style="display: none;">
                 ${optionsHTML}
               </div>
             </div>`;
@@ -5171,7 +5392,6 @@
 
   function getTicketWarnings(ticket) {
     const warnings = [];
-    // MODIFIED: Destructure skillsId instead of skills
     const {
       status,
       assigneeId,
@@ -5179,23 +5399,10 @@
       startedAt,
       completedAt,
       createdAt,
-      skillsId,
-      complexity,
       requestedBy,
     } = ticket;
 
     // --- Basic Field Checks ---
-    // MODIFIED: Check for skillsId
-    if (!skillsId)
-      warnings.push({
-        field: "skillsId",
-        message: "Ticket is missing Skills.",
-      });
-    if (!complexity)
-      warnings.push({
-        field: "complexity",
-        message: "Ticket is missing Complexity.",
-      });
     if (!requestedBy)
       warnings.push({
         field: "requestedBy",
@@ -5569,13 +5776,6 @@
       appData.teamMembers.map((m) => ({ value: m.id, text: m.name })),
       "Select assignee..."
     );
-    document.getElementById("bulk-add-complexity").innerHTML =
-      '<option value="">-- Select --</option><option>Easy</option><option>Moderate</option><option>Complex</option>';
-    createSearchableDropdownForModal(
-      document.getElementById("bulk-add-skills-container"),
-      appData.skills.map((s) => ({ value: s.id, text: s.name })),
-      "Select skills..."
-    );
 
     const assigneeContainer = document.getElementById(
       "bulk-add-assignee-container"
@@ -5655,7 +5855,7 @@
       const modalBody = document.querySelector("#add-task-modal .modal-body");
       
       if (isBulkOn) {
-        // When bulk settings are ON, show the full left panel and hide Skills in individual rows
+        // When bulk settings are ON, show the full left panel
         leftPanel.style.display = "flex";
         
         // Show all bulk fields
@@ -5692,21 +5892,6 @@
           modalContent.style.minWidth = "1200px";
         }
         
-        // Hide Skills field in individual ticket rows (use bulk setting)
-        document
-          .querySelectorAll("#new-tickets-tbody .main-ticket-row")
-          .forEach((row) => {
-            const advancedRow = row.nextElementSibling;
-            if (
-              advancedRow &&
-              advancedRow.classList.contains("advanced-fields-row")
-            ) {
-              const skillsField = advancedRow.querySelector(".override-skills-container").closest(".detail-field");
-              if (skillsField) {
-                skillsField.style.display = "none";
-              }
-            }
-          });
       } else {
         // When bulk settings are OFF, create Jira-style layout
         leftPanel.style.display = "none";
@@ -5814,22 +5999,6 @@
             </div>
           </div>
           
-          <div class="jira-field-group">
-            <div class="jira-field">
-              <label class="jira-label required"><i class="fas fa-puzzle-piece"></i> Complexity</label>
-              <select id="jira-complexity" class="jira-select">
-                <option value="">Select Complexity</option>
-                <option value="Easy">Easy</option>
-                <option value="Moderate">Moderate</option>
-                <option value="Complex">Complex</option>
-              </select>
-            </div>
-            
-            <div class="jira-field">
-              <label class="jira-label required"><i class="fas fa-code"></i> Skills</label>
-              <div id="jira-skills-container" class="jira-dropdown-container"></div>
-            </div>
-          </div>
           
           <div class="jira-field-group">
             <div class="jira-field">
@@ -5992,12 +6161,6 @@
       assigneeContainer.innerHTML = '<input type="text" class="jira-input" placeholder="Select Assignee..." readonly>';
     }
     
-    // Initialize skills dropdown
-    createSearchableDropdownForModal(
-      document.getElementById("jira-skills-container"),
-      appData.skills.map(s => ({ value: s.id, text: s.name })),
-      "Select skills..."
-    );
     
     // Populate epic datalist
     const epicDatalist = document.getElementById("jira-epic-datalist");
@@ -6073,8 +6236,6 @@
       description: document.getElementById("jira-description").value,
       assigneeId: document.getElementById("jira-assignee-select")?.value,
       priority: document.getElementById("jira-priority").value,
-      skillsId: document.querySelector("#jira-skills-container input")?.dataset.value,
-      complexity: document.getElementById("jira-complexity").value,
       epic: document.getElementById("jira-epic").value,
       status: document.getElementById("jira-status").value,
       createdAt: document.getElementById("jira-created-date").value,
@@ -6102,8 +6263,6 @@
     if (!formData.type) errors.push("Type");
     if (!formData.priority) errors.push("Priority");
     if (!formData.title) errors.push("Title");
-    if (!formData.complexity) errors.push("Complexity");
-    if (!formData.skillsId) errors.push("Skills");
     if (!formData.status) errors.push("Status");
     if (!formData.createdAt) errors.push("Created At");
     
@@ -6143,8 +6302,6 @@
       epic: formData.epic || null,
       requestedBy: formData.requestedBy || null,
       assigneeId: formData.assigneeId || null,
-      complexity: formData.complexity,
-      skillsId: formData.skillsId,
       status: formData.status,
       createdAt: formData.createdAt ? new Date(formData.createdAt).toISOString() : new Date().toISOString(),
       startedAt: formData.startedAt ? new Date(formData.startedAt).toISOString() : null,
@@ -6172,7 +6329,6 @@
         // Convert string IDs to numbers
         if (ticket.projectId) ticket.projectId = parseInt(ticket.projectId, 10);
         if (ticket.assigneeId) ticket.assigneeId = parseInt(ticket.assigneeId, 10);
-        if (ticket.skillsId) ticket.skillsId = parseInt(ticket.skillsId, 10);
         
         // Add required fields
         ticket.log = [];
@@ -6262,13 +6418,6 @@
                 <div class="override-assignee-container"></div>
             </div>
             <div class="detail-field">
-                <label><i class="fas fa-puzzle-piece fa-fw"></i>Complexity</label>
-                <select class="inline-editor override-complexity"></select>
-            </div>
-            <div class="detail-field">
-                <label><i class="fas fa-tools fa-fw"></i>Skills</label>
-                <div class="override-skills-container"></div>
-            </div>
             <div class="detail-field">
                 <label><i class="fas fa-flag fa-fw"></i>Status</label>
                 <select class="inline-editor override-status">
@@ -6311,15 +6460,11 @@
       appData.users
         .map((u) => `<option value="${u}">${escapeHtml(u)}</option>`)
         .join("");
-    advCell.querySelector(".override-complexity").innerHTML =
-      '<option value="">-- Use Bulk Setting --</option><option>Easy</option><option>Moderate</option><option>Complex</option>';
 
     const assigneeContainer = advCell.querySelector(
       ".override-assignee-container"
     );
     assigneeContainer.id = `assignee-container-${uniqueId}`;
-    const skillsContainer = advCell.querySelector(".override-skills-container");
-    skillsContainer.id = `skills-container-${uniqueId}`;
 
     createSearchableDropdownForModal(
       assigneeContainer,
@@ -6328,14 +6473,6 @@
         ...appData.teamMembers.map((m) => ({ value: m.id, text: m.name })),
       ],
       "Select assignee..."
-    );
-    createSearchableDropdownForModal(
-      skillsContainer,
-      [
-        { value: "", text: "-- Use Bulk Setting --" },
-        ...appData.skills.map((s) => ({ value: s.id, text: s.name })),
-      ],
-      "Select skills..."
     );
 
     const advAssigneeInput = advCell.querySelector(
@@ -6397,42 +6534,10 @@
       advancedRow.style.display = "";
       mainRow.querySelector(".advanced-toggle-btn").classList.add("active");
       
-      // Show the Skills field when bulk settings are off (individual override)
-      const skillsField = skillsContainer.closest(".detail-field");
-      if (skillsField) {
-        skillsField.style.display = "";
-      }
-    } else {
-      // When bulk settings are ON, hide Skills field in individual rows
-      const skillsField = skillsContainer.closest(".detail-field");
-      if (skillsField) {
-        skillsField.style.display = "none";
-      }
     }
   }
 
 
-  function getReasonFromUser(title) {
-    return new Promise((resolve) => {
-      const modal = document.getElementById("reason-modal");
-      const titleEl = document.getElementById("reason-modal-title");
-      const input = document.getElementById("reason-input");
-      const submitBtn = document.getElementById("submit-reason");
-      const cancelBtn = document.getElementById("cancel-reason");
-      titleEl.textContent = title;
-      input.value = "";
-      modal.style.display = "flex";
-      input.focus();
-      const close = (value) => {
-        modal.style.display = "none";
-        submitBtn.onclick = null;
-        cancelBtn.onclick = null;
-        resolve(value);
-      };
-      submitBtn.onclick = () => close(input.value);
-      cancelBtn.onclick = () => close(null);
-    });
-  }
   // REPLACE the createSearchableDropdownForModal function
   function createSearchableDropdownForModal(
     container,
@@ -6592,47 +6697,14 @@
                     <button id="add-subtask-btn" class="action-btn">Add</button>
                 </div>
             </div>`;
+
+    // Add event listeners for subtask checkboxes
+    const checkboxes = container.querySelectorAll('.subtask-checkbox');
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', handleSubtaskToggle);
+    });
   }
 
-  function renderComments(ticket) {
-    const container = document.getElementById("comment-container-modal");
-    if (!container) return;
-
-    const comments = (ticket.comment || []).sort(
-      (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-    );
-    const commentsListHtml = comments
-      .map((comment) => {
-        const authorInitial = (comment.author || "G").charAt(0).toUpperCase();
-        const timestamp = comment.timestamp
-          ? new Date(comment.timestamp).toLocaleString()
-          : "";
-        return `
-            <div class="comment-item">
-                <div class="comment-avatar">${authorInitial}</div>
-                <div class="comment-body">
-                    <div class="comment-header">
-                        <span class="comment-author">${escapeHtml(
-                          comment.author
-                        )}</span>
-                        <span class="comment-timestamp">${timestamp}</span>
-                    </div>
-                    <div class="comment-text">${escapeHtml(comment.text)}</div>
-                </div>
-            </div>`;
-      })
-      .join("");
-
-    container.innerHTML = `
-            <div class="ticket-comments-container">
-                <h4 class="modal-section-label">Conversation</h4>
-                <div class="comment-list">${commentsListHtml}</div>
-                <div class="comment-input-area">
-                    <textarea id="new-comment-input" class="inline-editor" placeholder="Add a comment..."></textarea>
-                    <button id="add-comment-btn" class="action-btn">Comment</button>
-                </div>
-            </div>`;
-  }
 
   // Handler Functions
   async function handleSubtaskUpdate(ticketId, newSubtasks) {
@@ -6643,23 +6715,17 @@
     if (error) {
       showToast("Failed to update subtasks: " + error.message, "error");
     } else {
-      // No need to manually update state, real-time will handle it
+      // Update local data immediately for UI responsiveness
+      const ticket = appData.allTickets.find((t) => t.id == ticketId);
+      if (ticket) {
+        ticket.subtask = newSubtasks;
+        // Re-render the subtasks in the modal
+        renderSubtasks(ticket);
+      }
       showToast("Subtask updated!", "success");
     }
   }
 
-  async function handleCommentUpdate(ticketId, newComments) {
-    const { error } = await supabaseClient
-      .from("ticket")
-      .update({ comment: newComments })
-      .eq("id", ticketId);
-    if (error) {
-      showToast("Failed to update comment: " + error.message, "error");
-    } else {
-      // No need to manually update state, real-time will handle it
-      showToast("Comment updated!", "success");
-    }
-  }
 
   // Event Triggers
   function handleSubtaskAdd(e) {
@@ -6704,26 +6770,6 @@
     handleSubtaskUpdate(ticketId, updatedSubtasks);
   }
 
-  function handleCommentAdd(e) {
-    const modal = e.target.closest(".ticket-main-content");
-    const ticketId = modal.dataset.ticketId;
-    const input = document.getElementById("new-comment-input");
-    const text = input.value.trim();
-    if (!text) return;
-
-    const ticket = appData.allTickets.find((t) => t.id == ticketId);
-    const newComment = {
-      id: `comment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      author: appData.currentUserName,
-      text: text,
-      timestamp: new Date().toISOString(),
-      parentId: null,
-    };
-    const updatedComments = [...(ticket.comment || []), newComment];
-
-    handleCommentUpdate(ticketId, updatedComments);
-    input.value = "";
-  }
 
   function copySubtaskInfo(event) {
     const icon = event.target.closest(".subtask-copy-icon");
@@ -8126,11 +8172,6 @@ This document explains each level, when to use it, and provides concrete example
     }
 
     createSearchableDropdownForModal(
-      document.getElementById("rct-skills-container"),
-      appData.skills.map((s) => ({ value: s.id, text: s.name })),
-      "Select skills..."
-    );
-    createSearchableDropdownForModal(
       document.getElementById("rct-project-container"),
       appData.projects.map((p) => ({ value: p.id, text: p.name })),
       "Select project..."
@@ -8212,8 +8253,6 @@ This document explains each level, when to use it, and provides concrete example
       "#rct-createdAt": "Created Date",
       "#rct-title": "Title",
       "#rct-requestedBy-container input": "Requested By",
-      "#rct-complexity": "Complexity",
-      "#rct-skills-container input": "Skills",
     };
     let errors = [];
     for (const [selector, name] of Object.entries(requiredFields)) {
@@ -8264,11 +8303,6 @@ This document explains each level, when to use it, and provides concrete example
         .value,
       assigneeId: assigneeId ? parseInt(assigneeId, 10) : null,
       status: status,
-      complexity: document.getElementById("rct-complexity").value,
-      skillsId: parseInt(
-        document.querySelector("#rct-skills-container input").dataset.value,
-        10
-      ),
       projectId: document.querySelector("#rct-project-container input").dataset
         .value
         ? parseInt(
@@ -8795,11 +8829,11 @@ This document explains each level, when to use it, and provides concrete example
       dashboardAssigneeId = "all";
     }
 
-    // Set default date range (last 30 days)
+    // Set default date range (last 10 weeks)
     const today = new Date();
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(today.getDate() - 30);
-    startDateInput.value = thirtyDaysAgo.toISOString().split("T")[0];
+    const tenWeeksAgo = new Date();
+    tenWeeksAgo.setDate(today.getDate() - 70); // 10 weeks = 70 days
+    startDateInput.value = tenWeeksAgo.toISOString().split("T")[0];
     endDateInput.value = today.toISOString().split("T")[0];
 
     // Store initial values
@@ -8966,9 +9000,7 @@ This document explains each level, when to use it, and provides concrete example
     // 5. Render charts
     renderTrendsChart(ticketsToUse);
     renderPriorityChart(ticketsToUse);
-    renderStatusOverview(ticketsToUse);
     renderTeamPerformance(allUserTickets);
-    renderRecentActivity(ticketsToUse);
     
     // 6. Render chart metrics
     renderChartMetrics(ticketsToUse);
@@ -9564,42 +9596,6 @@ This document explains each level, when to use it, and provides concrete example
    * Opens a modal to ask the user for a start date.
    * @returns {Promise<string|null>} A promise that resolves with the selected date string (YYYY-MM-DD), or null if cancelled.
    */
-  function getStartDateFromUser() {
-    return new Promise((resolve) => {
-      const modal = document.getElementById("open-to-complete-modal");
-      const dateInput = document.getElementById("open-to-complete-date-input");
-      const confirmBtn = document.getElementById(
-        "open-to-complete-confirm-btn"
-      );
-      const cancelBtn = document.getElementById("open-to-complete-cancel-btn");
-
-      // Set the max date to today and default value to today
-      const today = new Date().toISOString().split("T")[0];
-      dateInput.max = today;
-      dateInput.value = today;
-
-      const close = (value) => {
-        modal.style.display = "none";
-        // Clean up listeners to prevent duplicates
-        confirmBtn.onclick = null;
-        cancelBtn.onclick = null;
-        resolve(value);
-      };
-
-      confirmBtn.onclick = () => {
-        if (dateInput.value) {
-          close(dateInput.value);
-        } else {
-          showToast("Please select a valid start date.", "error");
-        }
-      };
-
-      cancelBtn.onclick = () => close(null);
-
-      modal.style.display = "flex";
-      dateInput.focus();
-    });
-  }
 
   // ADD this new function for validation
   function validateTicketRows() {
@@ -9652,36 +9648,6 @@ This document explains each level, when to use it, and provides concrete example
         if (el) el.classList.add("input-error");
       }
 
-      // Validate Skills based on bulk settings state
-      let skillsId;
-      if (isBulkOn) {
-        // When bulk settings are ON, check individual override first, then bulk
-        if (useAdvanced && advancedRow.querySelector(".override-skills-container input")) {
-          const skillsInput = advancedRow.querySelector(".override-skills-container input");
-          skillsId = skillsInput ? skillsInput.dataset.value : null;
-        } else {
-          const bulkSkillsInput = document.querySelector("#bulk-add-skills-container input");
-          skillsId = bulkSkillsInput ? bulkSkillsInput.dataset.value : null;
-        }
-      } else {
-        // When bulk settings are OFF, only check individual override
-        if (useAdvanced) {
-          const skillsInput = advancedRow.querySelector(".override-skills-container input");
-          skillsId = skillsInput ? skillsInput.dataset.value : null;
-        }
-      }
-      
-      if (!skillsId) {
-        errors.push(`<b>${title}:</b> Skills is required.`);
-        // Highlight the appropriate field
-        if (useAdvanced && advancedRow.querySelector(".override-skills-container input")) {
-          const el = advancedRow.querySelector(".override-skills-container input");
-          if (el) el.classList.add("input-error");
-        } else if (isBulkOn) {
-          const el = document.querySelector("#bulk-add-skills-container input");
-          if (el) el.classList.add("input-error");
-        }
-      }
       if (status === "In Progress") {
         if (!startedDate) {
           errors.push(
@@ -9745,504 +9711,4 @@ This document explains each level, when to use it, and provides concrete example
     return `${day}-${month}-${year}`;
   }
 
-  // ===== TESTING DASHBOARD FUNCTIONS =====
-  
-  /**
-   * Main function to render the Testing dashboard with all charts
-   */
-  function renderTestingDashboard() {
-    console.log('renderTestingDashboard called');
-    
-    // Check if testing view is visible
-    const testingWrapper = document.getElementById("testing-view-wrapper");
-    if (!testingWrapper || testingWrapper.style.display === 'none') {
-      console.log('Testing view not visible, skipping render');
-      return;
-    }
 
-    // Filter tickets based on testing controls
-    const startDate = new Date(document.getElementById("testing-start-date").value);
-    const endDate = new Date(document.getElementById("testing-end-date").value);
-    const assigneeId = document.getElementById("testing-assignee-filter").value;
-
-    let filteredTickets = appData.allTickets.filter(ticket => {
-      const createdDate = new Date(ticket.createdAt);
-      const isDateMatch = (!document.getElementById("testing-start-date").value || createdDate >= startDate) &&
-                         (!document.getElementById("testing-end-date").value || createdDate <= endDate);
-      const isAssigneeMatch = assigneeId === "all" || ticket.assigneeId == assigneeId;
-      return isDateMatch && isAssigneeMatch;
-    });
-
-    console.log('Filtered tickets for testing dashboard:', filteredTickets.length);
-
-    // Render all charts
-    renderStatusDistributionChart(filteredTickets);
-    renderComplexityAnalysisChart(filteredTickets);
-    renderAssignmentPatternsChart(filteredTickets);
-    renderCompletionTimelineChart(filteredTickets);
-    renderPriorityStatusHeatmap(filteredTickets);
-    renderEpicPerformanceChart(filteredTickets);
-    renderSkillsUtilizationChart(filteredTickets);
-  }
-
-  /**
-   * Render status distribution pie chart
-   */
-  function renderStatusDistributionChart(tickets) {
-    const ctx = document.getElementById("status-distribution-chart").getContext("2d");
-    
-    // Destroy existing chart if it exists
-    if (window.statusDistributionChart) {
-      window.statusDistributionChart.destroy();
-    }
-
-    // Count tickets by status
-    const statusCounts = {};
-    tickets.forEach(ticket => {
-      const status = ticket.status || 'Unknown';
-      statusCounts[status] = (statusCounts[status] || 0) + 1;
-    });
-
-    const labels = Object.keys(statusCounts);
-    const data = Object.values(statusCounts);
-    const colors = [
-      '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-      '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
-    ];
-
-    window.statusDistributionChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: data,
-          backgroundColor: colors.slice(0, labels.length),
-          borderWidth: 2,
-          borderColor: '#fff'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              padding: 20,
-              usePointStyle: true
-            }
-          }
-        }
-      }
-    });
-  }
-
-  /**
-   * Render complexity analysis bar chart
-   */
-  function renderComplexityAnalysisChart(tickets) {
-    const ctx = document.getElementById("complexity-analysis-chart").getContext("2d");
-    
-    if (window.complexityAnalysisChart) {
-      window.complexityAnalysisChart.destroy();
-    }
-
-    // Count tickets by complexity
-    const complexityCounts = {};
-    tickets.forEach(ticket => {
-      const complexity = ticket.complexity || 'Unknown';
-      complexityCounts[complexity] = (complexityCounts[complexity] || 0) + 1;
-    });
-
-    const labels = Object.keys(complexityCounts);
-    const data = Object.values(complexityCounts);
-
-    window.complexityAnalysisChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Tickets',
-          data: data,
-          backgroundColor: '#36A2EB',
-          borderColor: '#36A2EB',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              stepSize: 1
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: false
-          }
-        }
-      }
-    });
-  }
-
-  /**
-   * Render assignment patterns chart
-   */
-  function renderAssignmentPatternsChart(tickets) {
-    const ctx = document.getElementById("assignment-patterns-chart").getContext("2d");
-    
-    if (window.assignmentPatternsChart) {
-      window.assignmentPatternsChart.destroy();
-    }
-
-    // Count tickets by assignee
-    const assigneeCounts = {};
-    tickets.forEach(ticket => {
-      const assigneeName = ticket.assigneeName || 'Unassigned';
-      assigneeCounts[assigneeName] = (assigneeCounts[assigneeName] || 0) + 1;
-    });
-
-    const labels = Object.keys(assigneeCounts);
-    const data = Object.values(assigneeCounts);
-
-    window.assignmentPatternsChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Tickets Assigned',
-          data: data,
-          backgroundColor: '#4BC0C0',
-          borderColor: '#4BC0C0',
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        indexAxis: 'y',
-        scales: {
-          x: {
-            beginAtZero: true,
-            ticks: {
-              stepSize: 1
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: false
-          }
-        }
-      }
-    });
-  }
-
-  /**
-   * Render completion timeline chart
-   */
-  function renderCompletionTimelineChart(tickets) {
-    const ctx = document.getElementById("completion-timeline-chart").getContext("2d");
-    
-    if (window.completionTimelineChart) {
-      window.completionTimelineChart.destroy();
-    }
-
-    // Group tickets by week
-    const weeklyData = {};
-    tickets.forEach(ticket => {
-      const createdDate = new Date(ticket.createdAt);
-      const weekKey = getWeekOfYear(createdDate);
-      
-      if (!weeklyData[weekKey]) {
-        weeklyData[weekKey] = { created: 0, completed: 0 };
-      }
-      
-      weeklyData[weekKey].created++;
-      
-      if (ticket.status === 'Completed' && ticket.completedAt) {
-        const completedDate = new Date(ticket.completedAt);
-        const completedWeekKey = getWeekOfYear(completedDate);
-        if (!weeklyData[completedWeekKey]) {
-          weeklyData[completedWeekKey] = { created: 0, completed: 0 };
-        }
-        weeklyData[completedWeekKey].completed++;
-      }
-    });
-
-    const sortedWeeks = Object.keys(weeklyData).sort();
-    const chartLabels = sortedWeeks.map(week => `Week ${week.split('-W')[1]}`);
-    const createdData = sortedWeeks.map(week => weeklyData[week].created);
-    const completedData = sortedWeeks.map(week => weeklyData[week].completed);
-
-    window.completionTimelineChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: chartLabels,
-        datasets: [
-          {
-            label: 'Created',
-            data: createdData,
-            borderColor: '#FF6384',
-            backgroundColor: 'rgba(255, 99, 132, 0.1)',
-            tension: 0.4
-          },
-          {
-            label: 'Completed',
-            data: completedData,
-            borderColor: '#36A2EB',
-            backgroundColor: 'rgba(54, 162, 235, 0.1)',
-            tension: 0.4
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              stepSize: 1
-            }
-          }
-        }
-      }
-    });
-  }
-
-  /**
-   * Render priority vs status heatmap
-   */
-  function renderPriorityStatusHeatmap(tickets) {
-    const ctx = document.getElementById("priority-status-heatmap").getContext("2d");
-    
-    if (window.priorityStatusHeatmap) {
-      window.priorityStatusHeatmap.destroy();
-    }
-
-    // Create heatmap data
-    const priorities = ['Low', 'Medium', 'High', 'Critical'];
-    const statuses = ['Open', 'In Progress', 'Completed', 'Blocked'];
-    
-    const heatmapData = [];
-    priorities.forEach((priority, pIndex) => {
-      statuses.forEach((status, sIndex) => {
-        const count = tickets.filter(t => 
-          (t.priority || 'Unknown') === priority && 
-          (t.status || 'Unknown') === status
-        ).length;
-        heatmapData.push({ x: sIndex, y: pIndex, v: count });
-      });
-    });
-
-    window.priorityStatusHeatmap = new Chart(ctx, {
-      type: 'scatter',
-      data: {
-        datasets: [{
-          label: 'Priority vs Status',
-          data: heatmapData,
-          backgroundColor: function(context) {
-            const value = context.parsed.v;
-            const max = Math.max(...heatmapData.map(d => d.v));
-            const intensity = value / max;
-            return `rgba(54, 162, 235, ${intensity})`;
-          },
-          pointRadius: function(context) {
-            return Math.max(5, context.parsed.v * 3);
-          }
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            type: 'linear',
-            position: 'bottom',
-            min: -0.5,
-            max: statuses.length - 0.5,
-            ticks: {
-              callback: function(value) {
-                return statuses[Math.round(value)] || '';
-              }
-            }
-          },
-          y: {
-            min: -0.5,
-            max: priorities.length - 0.5,
-            ticks: {
-              callback: function(value) {
-                return priorities[Math.round(value)] || '';
-              }
-            }
-          }
-        }
-      }
-    });
-  }
-
-  /**
-   * Render epic performance chart
-   */
-  function renderEpicPerformanceChart(tickets) {
-    const ctx = document.getElementById("epic-performance-chart").getContext("2d");
-    
-    if (window.epicPerformanceChart) {
-      window.epicPerformanceChart.destroy();
-    }
-
-    // Group tickets by epic
-    const epicData = {};
-    tickets.forEach(ticket => {
-      const epic = ticket.epic || 'No Epic';
-      if (!epicData[epic]) {
-        epicData[epic] = { total: 0, completed: 0 };
-      }
-      epicData[epic].total++;
-      if (ticket.status === 'Completed') {
-        epicData[epic].completed++;
-      }
-    });
-
-    const labels = Object.keys(epicData);
-    const totalData = labels.map(epic => epicData[epic].total);
-    const completedData = labels.map(epic => epicData[epic].completed);
-
-    window.epicPerformanceChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: labels,
-        datasets: [
-          {
-            label: 'Total Tickets',
-            data: totalData,
-            backgroundColor: '#FFCE56',
-            borderColor: '#FFCE56',
-            borderWidth: 1
-          },
-          {
-            label: 'Completed',
-            data: completedData,
-            backgroundColor: '#4BC0C0',
-            borderColor: '#4BC0C0',
-            borderWidth: 1
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              stepSize: 1
-            }
-          }
-        }
-      }
-    });
-  }
-
-  /**
-   * Render skills utilization chart
-   */
-  function renderSkillsUtilizationChart(tickets) {
-    const ctx = document.getElementById("skills-utilization-chart").getContext("2d");
-    
-    if (window.skillsUtilizationChart) {
-      window.skillsUtilizationChart.destroy();
-    }
-
-    // Count skills usage
-    const skillsCount = {};
-    tickets.forEach(ticket => {
-      if (ticket.skillsId && appData.skills) {
-        const skill = appData.skills.find(s => s.id == ticket.skillsId);
-        if (skill) {
-          skillsCount[skill.name] = (skillsCount[skill.name] || 0) + 1;
-        }
-      }
-    });
-
-    // Sort by usage count and take top 10
-    const sortedSkills = Object.entries(skillsCount)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 10);
-
-    const labels = sortedSkills.map(([skill]) => skill);
-    const data = sortedSkills.map(([, count]) => count);
-
-    window.skillsUtilizationChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: data,
-          backgroundColor: [
-            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
-            '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF',
-            '#4BC0C0', '#36A2EB'
-          ],
-          borderWidth: 2,
-          borderColor: '#fff'
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              padding: 15,
-              usePointStyle: true
-            }
-          }
-        }
-      }
-    });
-  }
-
-  /**
-   * Initialize testing dashboard filters
-   */
-  function addTestingFilterListeners() {
-    const assigneeSelect = document.getElementById("testing-assignee-filter");
-    const startDateInput = document.getElementById("testing-start-date");
-    const endDateInput = document.getElementById("testing-end-date");
-
-    // Populate assignee dropdown
-    if (appData.teamMembers && appData.teamMembers.length > 0) {
-      assigneeSelect.innerHTML = '<option value="all">All Members</option>' + 
-        appData.teamMembers
-        .map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`)
-        .join("");
-    } else {
-      assigneeSelect.innerHTML = '<option value="all">All Members</option>';
-    }
-
-    // Set default dates (last 30 days)
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 30);
-    
-    startDateInput.value = startDate.toISOString().split('T')[0];
-    endDateInput.value = endDate.toISOString().split('T')[0];
-
-    // Add event listeners
-    const applyFilters = () => {
-      if (currentView === "testing") {
-        renderTestingDashboard();
-      }
-    };
-
-    assigneeSelect.addEventListener("change", applyFilters);
-    startDateInput.addEventListener("change", applyFilters);
-    endDateInput.addEventListener("change", applyFilters);
-  }
