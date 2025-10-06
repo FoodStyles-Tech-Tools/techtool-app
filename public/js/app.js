@@ -2010,6 +2010,9 @@
         if (e.target.closest(".subtask-copy-icon")) {
           copySubtaskInfo(e);
         }
+        if (e.target.closest(".remove-field-btn")) {
+          handleRemoveField(e);
+        }
       });
 
       taskDetailModal.addEventListener("input", (e) => {
@@ -3649,6 +3652,24 @@
     }, true);
   }
 
+  function updateRemoveButtonVisibility(container, field, id, value) {
+    const existingButton = container.querySelector(`.remove-field-btn[data-field="${field}"]`);
+    
+    if (value && value !== "" && value !== null) {
+      // Show remove button if value exists and button doesn't exist
+      if (!existingButton) {
+        const fieldName = field === 'assigneeId' ? 'Assignee' : field === 'projectId' ? 'Project' : 'Epic';
+        const removeButtonHTML = `<button class="remove-field-btn" data-field="${field}" data-ticket-id="${id}" title="Remove ${fieldName}"><i class="fas fa-times-circle clear-icon"></i></button>`;
+        container.insertAdjacentHTML('beforeend', removeButtonHTML);
+      }
+    } else {
+      // Hide remove button if no value
+      if (existingButton) {
+        existingButton.remove();
+      }
+    }
+  }
+
   function handleJiraDropdownUpdate(id, field, value, type) {
     const handler = type === "project" ? handleProjectUpdate : handleUpdate;
     
@@ -4714,7 +4735,8 @@
       appData.teamMembers.map((m) => ({ value: m.id, text: m.name })),
       ticket.assigneeId,
       ticket.id,
-      "assigneeId"
+      "assigneeId",
+      "modal"
                         )}
                     </div>
                 </div>
@@ -4740,7 +4762,8 @@
                           appData.projects.map((p) => ({ value: p.id, text: p.name })),
                           ticket.projectId,
                           ticket.id,
-                          "projectId"
+                          "projectId",
+                          "modal"
                         )}
                     </div>
                 </div>
@@ -5613,6 +5636,11 @@
       ? '<i class="fas fa-times-circle clear-icon"></i>'
       : "";
     
+    // Add remove button for specific fields in modal context
+     const removeButtonHTML = (type === "modal" && (field === "assigneeId" || field === "projectId" || field === "epic") && selectedValue)
+       ? `<button class="remove-field-btn" data-field="${field}" data-ticket-id="${id}" title="Remove ${field === 'assigneeId' ? 'Assignee' : field === 'projectId' ? 'Project' : 'Epic'}"><i class="fas fa-times-circle clear-icon"></i></button>`
+      : "";
+    
     // Create a combined options list that includes the current value even if not in options
     const combinedOptions = [...options];
     if (selectedValue && selectedValue !== "" && !selectedOption) {
@@ -5633,7 +5661,7 @@
         opt.text
       )}</div>`;
     });
-    html += `</div></div>${clearIconHTML}</div>`;
+    html += `</div></div>${clearIconHTML}${removeButtonHTML}</div>`;
     return html;
   }
 
@@ -6770,6 +6798,41 @@
     handleSubtaskUpdate(ticketId, updatedSubtasks);
   }
 
+
+  async function handleRemoveField(e) {
+    const button = e.target.closest(".remove-field-btn");
+    if (!button) return;
+    
+    const field = button.dataset.field;
+    const ticketId = button.dataset.ticketId;
+
+    const ticket = appData.allTickets.find((t) => t.id == ticketId);
+    if (!ticket) return;
+
+    // Find the actual input element for this field
+    const inputElement = document.querySelector(`input[data-field="${field}"][data-id="${ticketId}"]`);
+    if (!inputElement) return;
+
+    // Create a proper event object that handleUpdate expects
+    const fakeEvent = {
+      target: inputElement
+    };
+
+    try {
+      // Use the existing handleUpdate function to clear the field
+      await handleUpdate(fakeEvent, null);
+      
+      // Show success message
+      const fieldName = field === 'projectId' ? 'Project' : field === 'assigneeId' ? 'Assignee' : 'Epic';
+      showToast(`${fieldName} removed successfully`, 'success');
+      
+      // Refresh the modal to show the updated UI
+      showTaskDetailModal(ticketId);
+    } catch (error) {
+      console.error('Error removing field:', error);
+      showToast(`Failed to remove ${fieldName}`, 'error');
+    }
+  }
 
   function copySubtaskInfo(event) {
     const icon = event.target.closest(".subtask-copy-icon");

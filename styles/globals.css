@@ -1972,7 +1972,7 @@
   }
   .clear-icon {
     position: absolute;
-    right: 20px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-secondary);
@@ -2306,6 +2306,37 @@
     100% {
       transform: scale(1);
     }
+  }
+
+  /* Remove field button styling */
+.remove-field-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  z-index: 10;
+  opacity: 0.7;
+}
+
+.remove-field-btn:hover {
+  opacity: 1;
+  color: #dc2626;
+}
+
+.remove-field-btn i {
+  font-size: 12px;
+}
+
+  /* Ensure the input has enough padding for the remove button */
+  .editable-field-wrapper:has(.remove-field-btn) .searchable-dropdown-input {
+    padding-right: 35px;
   }
 
   .transition-arrow {
