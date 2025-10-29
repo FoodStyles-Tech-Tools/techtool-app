@@ -11,6 +11,401 @@
     font-family: var(--font-family);
   }
 
+  /* --- COMPACT PROJECTS LAYOUT (Jira-inspired) --- */
+  .jira-projects-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 0;
+    background: var(--bg-color);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    height: calc(100vh - 48px);
+    min-height: 0;
+  }
+
+  .jira-projects-rail {
+    background: var(--surface-color);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    padding: 16px;
+    gap: 12px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .jira-projects-rail__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .jira-projects-rail__header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .jira-rail-action {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .jira-rail-action:hover {
+    background: var(--row-hover-color);
+    color: var(--text-primary);
+  }
+
+  .jira-projects-rail__search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--row-alt-color);
+    border-radius: 8px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+  }
+
+  .jira-projects-rail__search:focus-within {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+  }
+
+  .jira-projects-rail__search i {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+  }
+
+  #jira-project-search {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+  }
+
+  #jira-project-search::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+  }
+
+  #jira-project-search:focus {
+    outline: none;
+  }
+
+  #jira-project-search-clear {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+  }
+
+  #jira-project-search-clear:hover {
+    opacity: 1;
+  }
+
+  .jira-projects-rail__list {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+    min-height: 0;
+  }
+
+  .jira-project-chip {
+    border: none;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    padding: 12px 14px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .jira-project-chip:hover {
+    background: var(--row-hover-color);
+    color: var(--text-primary);
+  }
+
+  .jira-project-chip--active {
+    background: var(--accent-bg-light);
+    color: var(--accent-color);
+    font-weight: 600;
+  }
+
+  .jira-projects-content {
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    gap: 16px;
+    overflow: hidden;
+  }
+
+  .jira-project-detail {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .jira-project-detail__info h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+  }
+
+  .jira-project-detail__meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .jira-project-detail__description {
+    margin-top: 12px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .jira-project-detail__stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .jira-project-stat {
+    background: var(--row-alt-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 110px;
+  }
+
+  .jira-project-stat span:first-child {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.04em;
+  }
+
+  .jira-project-stat span:last-child {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 1rem;
+  }
+
+  .jira-project-detail__actions {
+    display: flex;
+    gap: 8px;
+    align-self: start;
+  }
+
+  .jira-tertiary-btn {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    padding: 8px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .jira-tertiary-btn:hover {
+    background: var(--row-hover-color);
+    color: var(--text-primary);
+  }
+
+  .jira-tertiary-btn--danger {
+    border-color: rgba(239, 68, 68, 0.4);
+    color: var(--danger-color);
+  }
+
+  .jira-tertiary-btn--danger:hover {
+    background: var(--danger-bg);
+  }
+
+  .jira-ticket-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .jira-ticket-panel__header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .jira-ticket-panel__header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+  }
+
+  .jira-ticket-panel__info {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .jira-ticket-table-wrapper {
+    flex: 1;
+    overflow: auto;
+  }
+
+  .jira-ticket-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 720px;
+  }
+
+  .jira-ticket-table thead {
+    background: var(--row-alt-color);
+  }
+
+  .jira-ticket-table th {
+    text-align: left;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    padding: 12px 16px;
+  }
+
+  .jira-ticket-table tbody tr {
+    border-top: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .jira-ticket-table tbody tr:hover {
+    background: var(--row-hover-color);
+  }
+
+  .jira-ticket-table td {
+    padding: 14px 16px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+
+  .jira-ticket-key {
+    font-weight: 600;
+    color: var(--accent-color);
+  }
+
+  .jira-ticket-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--row-alt-color);
+    color: var(--text-secondary);
+  }
+
+  .jira-empty-state {
+    padding: 32px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 1200px) {
+  .jira-projects-layout {
+    grid-template-columns: 220px 1fr;
+  }
+
+  .jira-projects-rail__search {
+    gap: 6px;
+  }
+
+  .jira-projects-rail__search i {
+    font-size: 0.75rem;
+  }
+
+  #jira-project-search {
+    font-size: 0.85rem;
+  }
+
+  .jira-project-detail {
+      grid-template-columns: 1fr;
+    }
+
+    .jira-project-detail__actions {
+      justify-content: flex-start;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .jira-projects-layout {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+
+    .jira-projects-rail {
+      flex-direction: row;
+      align-items: center;
+      overflow-x: auto;
+    }
+
+    .jira-projects-rail__list {
+      flex-direction: row;
+      flex: 1;
+      overflow-y: visible;
+      overflow-x: auto;
+    }
+
+    .jira-project-chip {
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 160px;
+    }
+  }
+
   body {
     font-family: var(--font-family);
     font-weight: 400;

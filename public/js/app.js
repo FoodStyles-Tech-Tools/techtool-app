@@ -32,6 +32,32 @@
   let reconcileWrapper = null; // <--- ADD THIS LINE
   let tableWrapper = null; // <--- ADD THIS LINE
   let currentView = "my-ticket";
+  let currentProjectId = null;
+  let projectStatsCache = [];
+  const normalizePath = (path) => {
+    if (!path) return "/";
+    return path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
+  };
+
+  const VIEW_ROUTE_MAP = {
+    home: "/dashboard",
+    all: "/all-tickets",
+    "my-ticket": "/my-tickets",
+    critical: "/critical",
+    stalled: "/stalled",
+    unassigned: "/unassigned",
+    incomplete: "/incomplete",
+    projects: "/projects",
+    reconcile: "/reconcile",
+  };
+  const ROUTE_VIEW_MAP = Object.entries(VIEW_ROUTE_MAP).reduce(
+    (acc, [view, route]) => {
+      acc[normalizePath(route)] = view;
+      return acc;
+    },
+    {}
+  );
+  let suppressHistoryUpdate = false;
   const ticketsPerPage = 20;
   let isBulkEditMode = false;
   let selectedTickets = new Set();
@@ -374,9 +400,10 @@
 
       dashboardAssigneeId = appData.currentUserId; // Default to current user
 
+      let forcedInitialView = null;
       if (!appData.currentUserName) {
         document.getElementById("nav-my-ticket").style.display = "none";
-        currentView = "all";
+        forcedInitialView = "all";
       }
 
       tableWrapper.style.display = "block";
@@ -389,35 +416,52 @@
       // Add dashboard filter listeners after data is loaded
       addDashboardFilterListeners();
 
-      const scriptUrl = document.getElementById("script-url").value;
       const clearUrlFilterBtn = document.getElementById("clear-url-filter-btn");
-      const urlTicketNumber =
-        document.getElementById("url-ticket-number").value;
-      const urlInitialView = document.getElementById("url-initial-view").value;
+      const urlTicketNumberInput = document.getElementById("url-ticket-number");
+      const urlInitialViewInput = document.getElementById("url-initial-view");
 
-      clearUrlFilterBtn.addEventListener("click", () => {
-        window.top.location.href = scriptUrl;
+      const urlTicketNumber = urlTicketNumberInput ? urlTicketNumberInput.value : "";
+      const rawInitialView = urlInitialViewInput ? urlInitialViewInput.value : "";
+      const locationView =
+        ROUTE_VIEW_MAP[normalizePath(window.location.pathname)] ?? null;
+      const initialView =
+        forcedInitialView ??
+        (rawInitialView && VIEW_ROUTE_MAP[rawInitialView]
+          ? rawInitialView
+          : locationView ?? "home");
+
+      if (urlTicketNumber) {
+        ticketNumberFilter = urlTicketNumber;
+        document.getElementById("ticket-number-filter").value = urlTicketNumber;
+      }
+
+      if (clearUrlFilterBtn) {
+        clearUrlFilterBtn.addEventListener("click", () => {
+          const currentRoute = VIEW_ROUTE_MAP[currentView] ?? "/dashboard";
+          window.top.location.href = currentRoute;
+        });
+        clearUrlFilterBtn.style.display = urlTicketNumber ? "inline-flex" : "none";
+      }
+
+      activateView(initialView, {
+        replaceHistory: true,
+        preserveFilters: Boolean(urlTicketNumber),
       });
 
-      if (urlInitialView && urlTicketNumber) {
-        currentView = urlInitialView;
-        ticketNumberFilter = urlTicketNumber;
-        clearUrlFilterBtn.style.display = "inline-flex";
-        document
-          .querySelectorAll(".nav-btn.active")
-          .forEach((btn) => btn.classList.remove("active"));
-        document
-          .getElementById(`nav-${urlInitialView}`)
-          .classList.add("active");
-        document.getElementById("ticket-number-filter").value = urlTicketNumber;
-      } else {
-        // MODIFIED: Default to 'home' view
-        currentView = "home";
-        document
-          .querySelectorAll(".nav-btn.active")
-          .forEach((btn) => btn.classList.remove("active"));
-        document.getElementById("nav-home").classList.add("active");
-      }
+      window.addEventListener("popstate", (event) => {
+        const stateView = event.state?.view;
+        const fallbackView =
+          ROUTE_VIEW_MAP[normalizePath(window.location.pathname)] ?? "home";
+        const nextView =
+          (stateView && VIEW_ROUTE_MAP[stateView] ? stateView : null) ??
+          fallbackView;
+        if (!nextView || nextView === currentView) {
+          return;
+        }
+        suppressHistoryUpdate = true;
+        activateView(nextView, { updateHistory: false });
+        suppressHistoryUpdate = false;
+      });
 
       // Hide loader and show main content
       loader.style.display = "none";
@@ -2108,6 +2152,88 @@
     if (clearUrlFilterBtn) clearUrlFilterBtn.style.display = "none";
   }
 
+  function activateView(
+    view,
+    {
+      replaceHistory = false,
+      updateHistory = true,
+      preserveFilters = false,
+    } = {}
+  ) {
+    if (!VIEW_ROUTE_MAP[view]) {
+      console.warn("Attempted to activate unknown view:", view);
+      return;
+    }
+
+    const isSwitchingView = currentView !== view;
+
+    if (
+      isSwitchingView &&
+      !preserveFilters &&
+      view !== "home" &&
+      view !== "reconcile"
+    ) {
+      resetFilters();
+    }
+
+    if (isSwitchingView) {
+      const quickAddBtn = document.getElementById("quick-add-btn");
+      if (quickAddBtn) {
+        quickAddBtn.addEventListener("click", addQuickAddTaskRow);
+      }
+
+      const readmeBtn = document.getElementById("readme-btn");
+      if (readmeBtn) {
+        readmeBtn.addEventListener("click", showReadmeModal);
+      }
+
+      const addProjectBtn = document.getElementById("add-project-btn");
+      if (addProjectBtn) {
+        addProjectBtn.removeEventListener("click", showAddProjectModal);
+        addProjectBtn.addEventListener("click", showAddProjectModal);
+      }
+    }
+
+    currentView = view;
+    currentPage = 1;
+    reconcileCurrentPage = 1;
+
+    document
+      .querySelectorAll(".nav-panel .nav-btn")
+      .forEach((btn) => btn.classList.remove("active"));
+    const activeBtn = document.getElementById(`nav-${view}`);
+    if (activeBtn) {
+      activeBtn.classList.add("active");
+    }
+
+    if (isBulkEditMode) {
+      exitBulkEditMode(false);
+    }
+
+    applyFilterAndRender();
+
+    const route = VIEW_ROUTE_MAP[view];
+    const scriptUrlInputEl = document.getElementById("script-url");
+    if (scriptUrlInputEl && route) {
+      scriptUrlInputEl.value = route;
+    }
+
+    const shouldUpdateHistory =
+      !suppressHistoryUpdate &&
+      updateHistory &&
+      route &&
+      (isSwitchingView || replaceHistory);
+
+    if (shouldUpdateHistory) {
+      const state = { view };
+      if (replaceHistory) {
+        window.history.replaceState(state, "", route);
+      } else {
+        window.history.pushState(state, "", route);
+      }
+    }
+  }
+
   function addNavListenersWithRetry(retryCount = 0) {
     const maxRetries = 5;
     const retryDelay = 100; // 100ms delay between retries
@@ -2135,47 +2261,12 @@
     const navButtons = document.querySelectorAll(".nav-panel .nav-btn");
     navButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
-        // Ignore special buttons that don't change the main view
         if (btn.id === "bulk-edit-btn" || btn.id === "readme-btn") {
           return;
         }
+
         const view = btn.id.replace("nav-", "");
-        console.log("🔄 Navigation clicked:", btn.id, "-> view:", view); // Debug log
-        if (currentView === view) return; // Do nothing if already on this view
-
-        // Only reset the main filters when switching to a view that uses them
-        if (view !== "home" && view !== "reconcile") {
-          resetFilters();
-        }
-        document
-          .getElementById("quick-add-btn")
-          .addEventListener("click", addQuickAddTaskRow);
-
-        document
-          .getElementById("readme-btn")
-          .addEventListener("click", showReadmeModal);
-
-        const addProjectBtn = document.getElementById("add-project-btn");
-        if (addProjectBtn) {
-          // Remove existing listener to prevent duplicates
-          addProjectBtn.removeEventListener("click", showAddProjectModal);
-          addProjectBtn.addEventListener("click", showAddProjectModal);
-        }
-
-        currentView = view;
-        console.log("🎯 currentView set to:", currentView); // Debug log
-        currentPage = 1;
-        reconcileCurrentPage = 1;
-
-        // Update the active button style
-        navButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-
-        // Exit bulk edit mode if it's active
-        if (isBulkEditMode) exitBulkEditMode(false);
-
-        // Render the newly selected view
-        applyFilterAndRender();
+        activateView(view);
       });
     });
 
@@ -2183,6 +2274,7 @@
       .getElementById("readme-btn")
       .addEventListener("click", showReadmeModal);
   }
+
   function addBulkEditListeners() {
     document
       .getElementById("bulk-edit-btn")
@@ -2665,113 +2757,352 @@
 
   // Projects view rendering function
   function renderProjectsView() {
-    const projectsList = document.getElementById("projects-list");
-    if (!projectsList) {
-      console.error("Projects list container not found");
+    const layout = document.getElementById("projects-view-wrapper");
+    const railList = document.getElementById("jira-project-list");
+    const detailSection = document.getElementById("jira-project-detail");
+    const ticketBody = document.getElementById("jira-ticket-table-body");
+    const emptyState = document.getElementById("jira-ticket-empty");
+    const ticketCount = document.getElementById("jira-ticket-count");
+
+    if (!layout || !railList || !detailSection || !ticketBody || !emptyState || !ticketCount) {
+      console.error("Projects view markup missing required containers");
       return;
     }
 
-    // Check if projects data exists
+    layout.style.display = "grid";
+
     if (!appData.projects || appData.projects.length === 0) {
-      console.warn("No projects data available");
-      projectsList.innerHTML = '<div class="no-projects">No projects available. Click "Add Project" to create your first project.</div>';
+      railList.innerHTML =
+        '<div class="jira-empty-state">No projects available yet. Use the "+" button to add one.</div>';
+      detailSection.style.display = "none";
+      ticketBody.innerHTML = "";
+      ticketCount.textContent = "";
+      emptyState.style.display = "block";
+      emptyState.textContent = "Create your first project to get started.";
       return;
     }
 
-    console.log("Rendering projects view with", appData.projects.length, "projects");
-    console.log("Projects data:", appData.projects);
-    console.log("First project sample:", appData.projects[0]);
+    projectStatsCache = appData.projects.map((project) => {
+      const tickets = appData.allTickets.filter((ticket) => ticket.projectId == project.id);
+      const completedTickets = tickets.filter((ticket) => ticket.status === "Completed").length;
+      const inProgressTickets = tickets.filter((ticket) => ticket.status === "In Progress").length;
 
-    // Get project statistics
-    const projectStats = appData.projects.map(project => {
-      const projectTickets = appData.allTickets.filter(ticket => ticket.projectId == project.id);
-      const completedTickets = projectTickets.filter(ticket => ticket.status === "Completed").length;
-      const inProgressTickets = projectTickets.filter(ticket => ticket.status === "In Progress").length;
-      const totalTickets = projectTickets.length;
-      
       return {
-        ...project,
-        name: project.projectName, // Add name property for backward compatibility
-        totalTickets,
+        id: String(project.id),
+        raw: project,
+        totalTickets: tickets.length,
         completedTickets,
         inProgressTickets,
-        completionRate: totalTickets > 0 ? Math.round((completedTickets / totalTickets) * 100) : 0
+        completionRate:
+          tickets.length > 0
+            ? Math.round((completedTickets / tickets.length) * 100)
+            : 0,
       };
     });
 
-    // Sort projects by name
-    projectStats.sort((a, b) => (a.projectName || '').localeCompare(b.projectName || ''));
+    projectStatsCache.sort((a, b) =>
+      (a.raw.projectName || "").localeCompare(b.raw.projectName || "")
+    );
 
-    projectsList.innerHTML = projectStats.map(project => `
-      <div class="project-card" data-project-id="${project.id}">
-        <div class="project-actions">
-          <button class="project-action-btn" onclick="editProject(${project.id})" title="Edit Project">
-            <i class="fas fa-edit"></i>
+    if (
+      !currentProjectId ||
+      !projectStatsCache.some((item) => item.id === String(currentProjectId))
+    ) {
+      currentProjectId = projectStatsCache[0].id;
+    } else {
+      currentProjectId = String(currentProjectId);
+    }
+
+    renderProjectRail();
+    renderProjectDetailSection();
+    renderProjectTicketsSection();
+  }
+
+  function renderProjectRail() {
+    const railList = document.getElementById("jira-project-list");
+    const searchInput = document.getElementById("jira-project-search");
+    const clearBtn = document.getElementById("jira-project-search-clear");
+    if (!railList) return;
+
+    const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
+    const filteredProjects = projectStatsCache.filter(({ raw }) => {
+      if (!query) return true;
+      const name = raw.projectName || "";
+      return name.toLowerCase().includes(query);
+    });
+
+    railList.innerHTML = filteredProjects
+      .map((project) => {
+        const projectName = escapeHtml(project.raw.projectName || "Untitled project");
+        const isActive = project.id === String(currentProjectId);
+        return `
+          <button class="jira-project-chip ${isActive ? "jira-project-chip--active" : ""}" data-project-id="${project.id}">
+            <span>${projectName}</span>
+            <span>${project.totalTickets}</span>
           </button>
-          <button class="project-action-btn" onclick="deleteProject(${project.id})" title="Delete Project">
-            <i class="fas fa-trash"></i>
-          </button>
-        </div>
-        
-        <div class="project-card-header">
-          <div>
-            <h3 class="project-name">${escapeHtml(project.name)}</h3>
-            <p class="project-owner">Owner: ${escapeHtml(project.projectOwner || 'Unassigned')}</p>
-          </div>
-        </div>
-        
-        <div class="project-stats">
-          <div class="project-stat">
-            <i class="fas fa-tasks"></i>
-            <span>${project.totalTickets} tickets</span>
-          </div>
-          <div class="project-stat">
-            <i class="fas fa-check-circle"></i>
-            <span>${project.completedTickets} completed</span>
-          </div>
-          <div class="project-stat">
-            <i class="fas fa-clock"></i>
-            <span>${project.inProgressTickets} in progress</span>
-          </div>
-          <div class="project-stat">
-            <i class="fas fa-percentage"></i>
-            <span>${project.completionRate}% complete</span>
-          </div>
-        </div>
-        
-        <p class="project-description">${escapeHtml(project.description || 'No description available')}</p>
+        `;
+      })
+      .join("");
+
+    railList.querySelectorAll("[data-project-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const projectId = button.getAttribute("data-project-id");
+        if (!projectId || projectId === currentProjectId) return;
+        currentProjectId = projectId;
+        renderProjectRail();
+        renderProjectDetailSection();
+        renderProjectTicketsSection();
+      });
+    });
+
+    if (filteredProjects.length === 0) {
+      return;
+    }
+
+    if (searchInput && !searchInput.dataset.listenerAttached) {
+      searchInput.addEventListener("input", () => {
+        renderProjectRail();
+        const firstVisible = railList.querySelector("[data-project-id]");
+        if (firstVisible && (!currentProjectId || !railList.querySelector(`[data-project-id="${currentProjectId}"]`))) {
+          const projectId = firstVisible.getAttribute("data-project-id");
+          if (projectId) {
+            currentProjectId = projectId;
+            renderProjectDetailSection();
+            renderProjectTicketsSection();
+            renderProjectRail();
+          }
+        }
+      });
+      searchInput.dataset.listenerAttached = "true";
+    }
+
+    if (clearBtn && !clearBtn.dataset.listenerAttached) {
+      clearBtn.addEventListener("click", () => {
+        if (searchInput) {
+          searchInput.value = "";
+          renderProjectRail();
+        }
+      });
+      clearBtn.dataset.listenerAttached = "true";
+    }
+
+    const emptyState = document.getElementById("jira-ticket-empty");
+    const detailSection = document.getElementById("jira-project-detail");
+    if (filteredProjects.length === 0) {
+      if (detailSection) detailSection.style.display = "none";
+      if (emptyState) {
+        emptyState.style.display = "block";
+        emptyState.textContent = "No projects match your search.";
+      }
+    } else {
+      if (emptyState) emptyState.style.display = "none";
+    }
+  }
+
+  function renderProjectDetailSection() {
+    const detailSection = document.getElementById("jira-project-detail");
+    const nameEl = document.getElementById("jira-project-name");
+    const ownerEl = document.getElementById("jira-project-owner");
+    const updatedEl = document.getElementById("jira-project-updated");
+    const descriptionEl = document.getElementById("jira-project-description");
+    const statsContainer = document.getElementById("jira-project-stats");
+
+    if (!detailSection || !nameEl || !ownerEl || !updatedEl || !descriptionEl || !statsContainer) {
+      return;
+    }
+
+    const projectEntry = projectStatsCache.find((item) => item.id === String(currentProjectId));
+    if (!projectEntry) {
+      detailSection.style.display = "none";
+      return;
+    }
+
+    const project = projectEntry.raw;
+    detailSection.style.display = "grid";
+
+    nameEl.textContent = project.projectName || "Untitled project";
+    ownerEl.textContent = project.projectOwner
+      ? `Owner: ${project.projectOwner}`
+      : "Owner: Unassigned";
+
+    const updatedLabel = formatProjectUpdated(project);
+    updatedEl.textContent = updatedLabel;
+
+    const description = project.description && project.description.trim().length
+      ? project.description.trim()
+      : "No description provided.";
+    descriptionEl.textContent = description;
+
+    statsContainer.innerHTML = `
+      <div class="jira-project-stat">
+        <span>Total issues</span>
+        <span>${projectEntry.totalTickets}</span>
       </div>
-    `).join('');
+      <div class="jira-project-stat">
+        <span>In progress</span>
+        <span>${projectEntry.inProgressTickets}</span>
+      </div>
+      <div class="jira-project-stat">
+        <span>Completed</span>
+        <span>${projectEntry.completedTickets}</span>
+      </div>
+      <div class="jira-project-stat">
+        <span>Completion</span>
+        <span>${projectEntry.completionRate}%</span>
+      </div>
+    `;
 
-    // Add click event listeners to project cards
-    document.querySelectorAll('.project-card').forEach(card => {
-      card.addEventListener('click', (e) => {
-        // Don't trigger if clicking on action buttons
-        if (e.target.closest('.project-actions')) return;
-        
-        const projectId = card.dataset.projectId;
-        showProjectTickets(projectId);
+    const editBtn = document.getElementById("jira-edit-project");
+    const deleteBtn = document.getElementById("jira-delete-project");
+    if (editBtn) {
+      editBtn.onclick = () => editProject(project.id);
+    }
+    if (deleteBtn) {
+      deleteBtn.onclick = () => deleteProject(project.id);
+    }
+  }
+
+  function renderProjectTicketsSection() {
+    const ticketBody = document.getElementById("jira-ticket-table-body");
+    const emptyState = document.getElementById("jira-ticket-empty");
+    const ticketCount = document.getElementById("jira-ticket-count");
+    if (!ticketBody || !emptyState || !ticketCount) return;
+
+    const tickets = appData.allTickets
+      .filter((ticket) => String(ticket.projectId) === String(currentProjectId));
+
+    ticketCount.textContent =
+      tickets.length === 1 ? "1 issue" : `${tickets.length} issues`;
+
+    if (tickets.length === 0) {
+      ticketBody.innerHTML = "";
+      emptyState.style.display = "block";
+      return;
+    }
+
+    emptyState.style.display = "none";
+
+    tickets.sort((a, b) => {
+      const aDate = ticketUpdatedAt(a);
+      const bDate = ticketUpdatedAt(b);
+      return bDate - aDate;
+    });
+
+    ticketBody.innerHTML = tickets
+      .map((ticket) => {
+        const summary = escapeHtml(ticket.title || "Untitled issue");
+        const type = escapeHtml(ticket.type || "Task");
+        const status = escapeHtml(ticket.status || "Open");
+        const assignee = escapeHtml(findAssigneeName(ticket.assigneeId) || "Unassigned");
+        const updated = escapeHtml(formatTicketUpdatedLabel(ticket));
+        return `
+          <tr data-ticket-id="${ticket.id}">
+            <td class="jira-ticket-key">HRB-${ticket.id}</td>
+            <td>${summary}</td>
+            <td>${type}</td>
+            <td><span class="jira-ticket-status">${status}</span></td>
+            <td>${assignee}</td>
+            <td>${updated}</td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    ticketBody.querySelectorAll("tr[data-ticket-id]").forEach((row) => {
+      row.addEventListener("click", () => {
+        const ticketId = row.getAttribute("data-ticket-id");
+        if (ticketId) {
+          showTaskDetailModal(ticketId);
+        }
       });
     });
   }
 
-  // Show tickets for a specific project
   function showProjectTickets(projectId) {
-    const project = appData.projects.find(p => p.id == projectId);
-    if (!project) return;
+    if (!projectId) return;
+    currentProjectId = String(projectId);
+    renderProjectRail();
+    renderProjectDetailSection();
+    renderProjectTicketsSection();
+  }
 
-    // Filter tickets for this project
-    const projectTickets = appData.allTickets.filter(ticket => ticket.projectId == projectId);
-    
-    // Switch to all tickets view and filter by project
-    currentView = "all";
-    document.getElementById("project-filter-select").value = projectId;
-    selectedProjectFilter = projectId;
-    
-    // Re-render the view
-    applyFilterAndRender();
-    
-    showToast(`Showing tickets for project: ${project.name}`, "info");
+  function findAssigneeName(assigneeId) {
+    if (!assigneeId) return "";
+    const member = appData.teamMembers?.find((m) => m.id == assigneeId);
+    return member?.name || "";
+  }
+
+  function ticketUpdatedAt(ticket) {
+    const candidates = [
+      ticket.updatedAt,
+      ticket.updated_at,
+      ticket.completedAt,
+      ticket.completed_at,
+      ticket.startedAt,
+      ticket.started_at,
+      ticket.assignedAt,
+      ticket.assigned_at,
+      ticket.createdAt,
+      ticket.created_at,
+    ];
+
+    for (const value of candidates) {
+      if (!value) continue;
+      const date = new Date(value);
+      if (!Number.isNaN(date.getTime())) {
+        return date.getTime();
+      }
+    }
+    return 0;
+  }
+
+  function formatTicketUpdatedLabel(ticket) {
+    const timestamp = ticketUpdatedAt(ticket);
+    if (!timestamp) return "--";
+
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffDays <= 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays}d ago`;
+
+    const iso = date.toISOString().slice(0, 10);
+    return formatDateForUIDisplay(iso) || "--";
+  }
+
+  function formatProjectUpdated(project) {
+    const candidates = [
+      project.updated_at,
+      project.updatedAt,
+      project.modified_at,
+      project.modifiedAt,
+      project.created_at,
+      project.createdAt,
+    ];
+
+    for (const value of candidates) {
+      if (!value) continue;
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) continue;
+
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffDays <= 0) return "Updated today";
+      if (diffDays === 1) return "Updated yesterday";
+      if (diffDays < 7) return `Updated ${diffDays} days ago`;
+
+      const iso = date.toISOString().slice(0, 10);
+      const formatted = formatDateForUIDisplay(iso);
+      return formatted ? `Updated ${formatted}` : "";
+    }
+
+    return "";
   }
 
   // Edit project function

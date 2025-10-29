@@ -1,0 +1,16 @@
+{
+  "name": "TechTool",
+  "short_name": "TechTool",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f7f8fc",
+  "theme_color": "#4f46e5",
+  "description": "Manage team tickets, projects, and hours from any device.",
+  "icons": [
+    {
+      "src": "/favicons/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ]
+}

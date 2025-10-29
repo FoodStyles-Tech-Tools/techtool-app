@@ -292,7 +292,7 @@ export const getServerSideProps: GetServerSideProps<LoginPageProps> = async (
   if (session) {
     return {
       redirect: {
-        destination: "/app",
+        destination: "/dashboard",
         permanent: false,
       },
     };

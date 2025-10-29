@@ -566,23 +566,83 @@
           </div>
 
           <!-- Projects View -->
-          <div id="projects-view-wrapper" class="table-wrapper" style="display: none">
-            <div class="projects-header">
-              <div class="projects-title">
+          <div id="projects-view-wrapper" class="jira-projects-layout" style="display: none">
+            <aside class="jira-projects-rail">
+              <div class="jira-projects-rail__header">
                 <h2>Projects</h2>
-                <p>Manage and view all projects</p>
-              </div>
-              <div class="projects-actions">
-                <button id="add-project-btn" class="primary-btn">
+                <button id="add-project-btn" class="jira-rail-action" title="Add project">
                   <i class="fas fa-plus"></i>
-                  Add Project
                 </button>
               </div>
-            </div>
-            
-            <div id="projects-list" class="projects-list">
-              <!-- Projects will be rendered here -->
-            </div>
+              <div class="jira-projects-rail__search">
+                <i class="fas fa-search"></i>
+                <input
+                  type="search"
+                  id="jira-project-search"
+                  placeholder="Search projects"
+                  autocomplete="off"
+                />
+                <button id="jira-project-search-clear" title="Clear search">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div id="jira-project-list" class="jira-projects-rail__list">
+                <!-- Project list populated via JS -->
+              </div>
+            </aside>
+            <section class="jira-projects-content">
+              <header id="jira-project-detail" class="jira-project-detail" style="display: none">
+                <div class="jira-project-detail__info">
+                  <h1 id="jira-project-name"></h1>
+                  <div class="jira-project-detail__meta">
+                    <span id="jira-project-owner"></span>
+                    <span id="jira-project-updated"></span>
+                  </div>
+                  <p id="jira-project-description" class="jira-project-detail__description"></p>
+                </div>
+                <div class="jira-project-detail__stats" id="jira-project-stats">
+                  <!-- Stats injected via JS -->
+                </div>
+                <div class="jira-project-detail__actions">
+                  <button id="jira-edit-project" class="jira-tertiary-btn">
+                    <i class="fas fa-edit"></i>
+                    Edit
+                  </button>
+                  <button id="jira-delete-project" class="jira-tertiary-btn jira-tertiary-btn--danger">
+                    <i class="fas fa-trash"></i>
+                    Delete
+                  </button>
+                </div>
+              </header>
+              <div class="jira-ticket-panel">
+                <div class="jira-ticket-panel__header">
+                  <h2>Issues</h2>
+                  <div class="jira-ticket-panel__info">
+                    <span id="jira-ticket-count"></span>
+                  </div>
+                </div>
+                <div class="jira-ticket-table-wrapper">
+                  <table class="jira-ticket-table" aria-label="Project issues">
+                    <thead>
+                      <tr>
+                        <th scope="col">Key</th>
+                        <th scope="col">Summary</th>
+                        <th scope="col">Type</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Assignee</th>
+                        <th scope="col">Updated</th>
+                      </tr>
+                    </thead>
+                    <tbody id="jira-ticket-table-body">
+                      <!-- Tickets injected via JS -->
+                    </tbody>
+                  </table>
+                  <div id="jira-ticket-empty" class="jira-empty-state" style="display: none">
+                    No issues in this project yet.
+                  </div>
+                </div>
+              </div>
+            </section>
           </div>
 
           <div
