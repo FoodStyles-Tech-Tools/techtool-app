@@ -1284,10 +1284,6 @@ async function submitQuickAddTicket() {
 
       // Hide loader and show main content
       loader.style.display = "none";
-      const actionsContainer = document.querySelector(".actions-container");
-      if (actionsContainer) {
-        actionsContainer.style.display = "block";
-      }
 
       applyFilterAndRender();
       addPaginationListeners();
@@ -3265,83 +3261,64 @@ async function submitQuickAddTicket() {
     const mainTableWrapper = document.querySelector(".table-wrapper");
     const reconcileWrapper = document.getElementById("reconcile-view-wrapper");
     const dashboardWrapper = document.getElementById("dashboard-view-wrapper");
-    const actionsContainer = document.querySelector(".actions-container");
-
-    // Get handles for the main action button groups
-    const rightActions = document.querySelector(".right-actions");
-    const defaultFilterBtn = document.querySelector(
-      ".left-actions .dropdown-container"
-    );
+    const simpleIncompleteWrapper = document.getElementById("simple-incomplete-wrapper");
+    const projectsWrapper = document.getElementById("projects-view-wrapper");
+    const integratedFilters = document.getElementById("integrated-filters");
     const reconcileFilters = document.getElementById("reconcile-filters");
     const mainPagination = document.getElementById("pagination-controls");
 
-    // Hide all view wrappers and the main action bar initially
+    if (!mainTableWrapper || !reconcileWrapper || !dashboardWrapper) {
+      return;
+    }
+
     mainTableWrapper.style.display = "none";
-    document.getElementById("simple-incomplete-wrapper").style.display = "none";
-    document.getElementById("projects-view-wrapper").style.display = "none";
-    const integratedFilters = document.getElementById("integrated-filters");
+    if (simpleIncompleteWrapper) simpleIncompleteWrapper.style.display = "none";
+    if (projectsWrapper) projectsWrapper.style.display = "none";
     if (integratedFilters) integratedFilters.style.display = "none";
+    if (reconcileFilters) reconcileFilters.style.display = "none";
     reconcileWrapper.style.display = "none";
     dashboardWrapper.style.display = "none";
-    actionsContainer.style.display = "none";
+    if (mainPagination) mainPagination.style.display = "none";
     document.body.classList.remove("project-view");
 
-    // Home View Logic
     if (currentView === "home") {
       dashboardWrapper.style.display = "flex";
-      // Add a small delay to ensure DOM is ready
       setTimeout(() => {
-        console.log('Rendering dashboard with delay...');
-      renderDashboard();
+        console.log("Rendering dashboard with delay...");
+        renderDashboard();
       }, 50);
       return;
     }
 
-    // Show the main actions container for all other views
-    actionsContainer.style.display = "flex";
-
-    // Hide specific filters/pagination by default
-    defaultFilterBtn.style.display = "none";
-    reconcileFilters.style.display = "none";
-    mainPagination.style.display = "none";
-
     if (currentView === "incomplete") {
-      // --- Simple Incomplete View ---
-      document.getElementById("simple-incomplete-wrapper").style.display = "block";
-      rightActions.style.display = "none"; // Hide main action buttons for incomplete view
-      
-      // Handle simple incomplete rendering
+      if (simpleIncompleteWrapper) simpleIncompleteWrapper.style.display = "block";
       renderSimpleIncompleteView();
-      return; // Exit early for incomplete view
-    } else if (currentView === "projects") {
-      // --- Projects View ---
-      document.getElementById("projects-view-wrapper").style.display = "block";
-      rightActions.style.display = "none"; // Hide main action buttons for projects view
-      
-      // Handle projects rendering
-      renderProjectsView();
-      return; // Exit early for projects view
-    } else if (currentView === "reconcile") {
-      // --- Reconcile View ---
-      reconcileWrapper.style.display = "block";
-      reconcileFilters.style.display = "flex";
+      return;
+    }
 
-      // --- START OF MODIFICATION ---
-      const userFilterContainer = document.getElementById(
-        "reconcile-user-filter-container"
-      );
-      if (appData.currentUserRole === "Lead") {
-        userFilterContainer.style.display = "flex";
-      } else {
-        userFilterContainer.style.display = "none";
-        // Ensure non-leads can only see their own data
-        reconcileSelectedUserName = appData.currentUserName;
+    if (currentView === "projects") {
+      if (projectsWrapper) projectsWrapper.style.display = "block";
+      renderProjectsView();
+      return;
+    }
+
+    if (currentView === "reconcile") {
+      reconcileWrapper.style.display = "block";
+      if (reconcileFilters) reconcileFilters.style.display = "flex";
+
+      const userFilterContainer = document.getElementById("reconcile-user-filter-container");
+      if (userFilterContainer) {
+        if (appData.currentUserRole === "Lead") {
+          userFilterContainer.style.display = "flex";
+        } else {
+          userFilterContainer.style.display = "none";
+          reconcileSelectedUserName = appData.currentUserName;
+        }
       }
 
       let filteredHrs = appData.allReconcileHrs.filter(
         (r) => r.clockify_member === reconcileSelectedUserName
       );
-      // --- END OF MODIFICATION ---
 
       if (reconcileExcludeDone) {
         filteredHrs = filteredHrs.filter(
@@ -3350,175 +3327,144 @@ async function submitQuickAddTicket() {
       }
       appData.reconcileHrs = filteredHrs;
       renderReconcileView(appData.reconcileHrs);
-
-      // Hide the main filter and all right-side action buttons
-      defaultFilterBtn.style.display = "none";
-      rightActions.style.display = "none";
-    } else {
-      // --- All Other Ticket Views ---
-      mainTableWrapper.style.display = "block";
-      // Hide the entire actions container since filters are now integrated
-      actionsContainer.style.display = "none";
-
-      // Show integrated filters for all standard ticket views
-      const integratedFilters = document.getElementById("integrated-filters");
-      if (integratedFilters) {
-        integratedFilters.style.display = "block";
-      }
-      
-      // Show/hide assignee filter based on current view
-      const assigneeFilterSelect = document.getElementById("assignee-filter-select");
-      if (assigneeFilterSelect) {
-        if (currentView === "all") {
-          assigneeFilterSelect.style.display = "block";
-        } else {
-          assigneeFilterSelect.style.display = "none";
-          // Reset assignee filter when not on "all" view
-          selectedAssigneeFilter = "all";
-          assigneeFilterSelect.value = "all";
-        }
-      }
-      
-      // Show/hide Exclude Done checkbox based on current view and update its state
-      const excludeDoneCheckbox = document.getElementById("exclude-done-checkbox");
-      const excludeDoneLabel = excludeDoneCheckbox?.parentElement;
-      if (excludeDoneCheckbox && excludeDoneLabel) {
-        // Always show the checkbox for all views
-        excludeDoneLabel.style.display = "block";
-        // Set checkbox state to the current tab's setting
-        excludeDoneCheckbox.checked = excludeDoneSettings[currentView];
-      }
-
-      let baseTickets;
-      switch (currentView) {
-        case "my-ticket":
-          baseTickets = appData.allTickets.filter(
-            (t) => t.assigneeId == appData.currentUserId
-          );
-          if (excludeDoneSettings[currentView]) {
-            baseTickets = baseTickets.filter(
-              (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
-            );
-          }
-          if (selectedStatus !== "all") {
-            baseTickets = baseTickets.filter(
-              (t) => t.status === selectedStatus
-            );
-          }
-          break;
-        case "unassigned":
-          baseTickets = appData.allTickets.filter((t) => t.assigneeId == null);
-          if (excludeDoneSettings[currentView]) {
-            baseTickets = baseTickets.filter(
-              (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
-            );
-          }
-          break;
-        case "critical":
-          // Filter tickets that are Urgent or High priority
-          // AND assigned to the current user
-          baseTickets = appData.allTickets.filter((t) => {
-            const isHighPriority = t.priority === "Urgent" || t.priority === "High";
-            const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
-            return isHighPriority && isAssignedToCurrentUser;
-          });
-          // Apply excludeDone filter if enabled for this tab
-          if (excludeDoneSettings[currentView]) {
-            baseTickets = baseTickets.filter(
-              (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
-            );
-          }
-          break;
-        case "stalled":
-          // Filter tickets that are On Hold or Blocked
-          // AND assigned to the current user
-          baseTickets = appData.allTickets.filter((t) => {
-            const isStalledStatus = t.status === "On Hold" || t.status === "Blocked";
-            const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
-            return isStalledStatus && isAssignedToCurrentUser;
-          });
-          // Apply excludeDone filter if enabled for this tab
-          if (excludeDoneSettings[currentView]) {
-            baseTickets = baseTickets.filter(
-              (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
-            );
-          }
-          break;
-        default:
-          baseTickets = [...appData.allTickets];
-          if (excludeDoneSettings[currentView]) {
-            baseTickets = baseTickets.filter(
-              (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
-            );
-          }
-          break;
-      }
-
-      let finalFilteredTickets = baseTickets;
-      if (selectedProjectFilter !== "all") {
-        finalFilteredTickets = finalFilteredTickets.filter(
-          (t) => String(t.projectId) == selectedProjectFilter
-        );
-      }
-      if (selectedEpicFilter !== "all") {
-        finalFilteredTickets = finalFilteredTickets.filter(
-          (t) => String(t.epic || "") === selectedEpicFilter
-        );
-      }
-      if (selectedAssigneeFilter !== "all") {
-        finalFilteredTickets = finalFilteredTickets.filter(
-          (t) => String(t.assigneeId || "") === selectedAssigneeFilter
-        );
-      }
-      if (ticketNumberFilter) {
-        const numericFilter = ticketNumberFilter
-          .toLowerCase()
-          .replace("hrb-", "");
-        finalFilteredTickets = finalFilteredTickets.filter((t) =>
-          String(t.id || "")
-            .toLowerCase()
-            .includes(numericFilter)
-        );
-      }
-      if (textSearchTerm) {
-        const lower = textSearchTerm.toLowerCase();
-        finalFilteredTickets = finalFilteredTickets.filter(
-          (t) =>
-            String(t.title || "")
-              .toLowerCase()
-              .includes(lower) ||
-            String(t.description || "")
-              .toLowerCase()
-              .includes(lower)
-        );
-      }
-
-      // Apply custom sorting if set, otherwise use default priority + ID sort
-      if (currentSort.field && currentSort.direction) {
-        finalFilteredTickets = sortTickets(finalFilteredTickets, currentSort.field, currentSort.direction);
-      } else {
-        // Default sort by priority (Urgent, High, Medium, Low) then by ID descending
-        finalFilteredTickets.sort((a, b) => {
-          const priorityOrder = { 'Urgent': 0, 'High': 1, 'Medium': 2, 'Low': 3 };
-          const aPriority = priorityOrder[a.priority] ?? 4; // Unknown priorities go last
-          const bPriority = priorityOrder[b.priority] ?? 4;
-          
-          if (aPriority !== bPriority) {
-            return aPriority - bPriority; // Sort by priority first
-          }
-          return b.id - a.id; // Then by ID descending (newest first)
-        });
-      }
-
-      appData.tickets = finalFilteredTickets;
-      if (
-        appData.tickets.length > 0 &&
-        currentPage > Math.ceil(appData.tickets.length / ticketsPerPage)
-      ) {
-        currentPage = 1;
-      }
-      renderPage(currentPage);
+      return;
     }
+
+    // --- Standard ticket views ---
+    mainTableWrapper.style.display = "block";
+    if (integratedFilters) {
+      integratedFilters.style.display = "block";
+    }
+
+    const assigneeFilterSelect = document.getElementById("assignee-filter-select");
+    if (assigneeFilterSelect) {
+      if (currentView === "all") {
+        assigneeFilterSelect.style.display = "block";
+      } else {
+        assigneeFilterSelect.style.display = "none";
+        selectedAssigneeFilter = "all";
+        assigneeFilterSelect.value = "all";
+      }
+    }
+
+    const excludeDoneCheckbox = document.getElementById("exclude-done-checkbox");
+    const excludeDoneLabel = excludeDoneCheckbox?.parentElement;
+    if (excludeDoneCheckbox && excludeDoneLabel) {
+      excludeDoneLabel.style.display = "block";
+      excludeDoneCheckbox.checked = excludeDoneSettings[currentView];
+    }
+
+    let baseTickets;
+    switch (currentView) {
+      case "my-ticket":
+        baseTickets = appData.allTickets.filter(
+          (t) => t.assigneeId == appData.currentUserId
+        );
+        if (excludeDoneSettings[currentView]) {
+          baseTickets = baseTickets.filter(
+            (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
+          );
+        }
+        if (selectedStatus !== "all") {
+          baseTickets = baseTickets.filter((t) => t.status === selectedStatus);
+        }
+        break;
+      case "unassigned":
+        baseTickets = appData.allTickets.filter((t) => t.assigneeId == null);
+        if (excludeDoneSettings[currentView]) {
+          baseTickets = baseTickets.filter(
+            (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
+          );
+        }
+        break;
+      case "critical":
+        baseTickets = appData.allTickets.filter((t) => {
+          const isHighPriority = t.priority === "Urgent" || t.priority === "High";
+          const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
+          return isHighPriority && isAssignedToCurrentUser;
+        });
+        if (excludeDoneSettings[currentView]) {
+          baseTickets = baseTickets.filter(
+            (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
+          );
+        }
+        break;
+      case "stalled":
+        baseTickets = appData.allTickets.filter((t) => {
+          const isStalledStatus = t.status === "On Hold" || t.status === "Blocked";
+          const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
+          return isStalledStatus && isAssignedToCurrentUser;
+        });
+        if (excludeDoneSettings[currentView]) {
+          baseTickets = baseTickets.filter(
+            (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
+          );
+        }
+        break;
+      default:
+        baseTickets = [...appData.allTickets];
+        if (excludeDoneSettings[currentView]) {
+          baseTickets = baseTickets.filter(
+            (t) => !["Completed", "Rejected", "Cancelled"].includes(t.status)
+          );
+        }
+        break;
+    }
+
+    let finalFilteredTickets = baseTickets;
+    if (selectedProjectFilter !== "all") {
+      finalFilteredTickets = finalFilteredTickets.filter(
+        (t) => String(t.projectId) == selectedProjectFilter
+      );
+    }
+    if (selectedEpicFilter !== "all") {
+      finalFilteredTickets = finalFilteredTickets.filter(
+        (t) => String(t.epic || "") === selectedEpicFilter
+      );
+    }
+    if (selectedAssigneeFilter !== "all") {
+      finalFilteredTickets = finalFilteredTickets.filter(
+        (t) => String(t.assigneeId || "") === selectedAssigneeFilter
+      );
+    }
+    if (ticketNumberFilter) {
+      const numericFilter = ticketNumberFilter.toLowerCase().replace("hrb-", "");
+      finalFilteredTickets = finalFilteredTickets.filter((t) =>
+        String(t.id || "").toLowerCase().includes(numericFilter)
+      );
+    }
+    if (textSearchTerm) {
+      const lower = textSearchTerm.toLowerCase();
+      finalFilteredTickets = finalFilteredTickets.filter(
+        (t) =>
+          String(t.title || "").toLowerCase().includes(lower) ||
+          String(t.description || "").toLowerCase().includes(lower)
+      );
+    }
+
+    if (currentSort.field && currentSort.direction) {
+      finalFilteredTickets = sortTickets(finalFilteredTickets, currentSort.field, currentSort.direction);
+    } else {
+      finalFilteredTickets.sort((a, b) => {
+        const priorityOrder = { Urgent: 0, High: 1, Medium: 2, Low: 3 };
+        const aPriority = priorityOrder[a.priority] ?? 4;
+        const bPriority = priorityOrder[b.priority] ?? 4;
+
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+        return b.id - a.id;
+      });
+    }
+
+    appData.tickets = finalFilteredTickets;
+    if (
+      appData.tickets.length > 0 &&
+      currentPage > Math.ceil(appData.tickets.length / ticketsPerPage)
+    ) {
+      currentPage = 1;
+    }
+    renderPage(currentPage);
     updateNavBadgeCounts();
   }
 
@@ -3591,7 +3537,6 @@ async function submitQuickAddTicket() {
   function renderProjectRail() {
     const railList = document.getElementById("jira-project-list");
     const searchInput = document.getElementById("jira-project-search");
-    const clearBtn = document.getElementById("jira-project-search-clear");
     if (!railList) return;
 
     const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
@@ -3645,16 +3590,6 @@ async function submitQuickAddTicket() {
         }
       });
       searchInput.dataset.listenerAttached = "true";
-    }
-
-    if (clearBtn && !clearBtn.dataset.listenerAttached) {
-      clearBtn.addEventListener("click", () => {
-        if (searchInput) {
-          searchInput.value = "";
-          renderProjectRail();
-        }
-      });
-      clearBtn.dataset.listenerAttached = "true";
     }
 
     const emptyState = document.getElementById("jira-ticket-empty");

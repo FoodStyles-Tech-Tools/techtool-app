@@ -79,17 +79,10 @@
         <header class="app-header">
           <div class="app-header-left">
             <div class="keyboard-shortcut-card">
-              Press Cmd + A (Mac) or Alt + A (Windows) to quickly add a task
+              Press ⌘ + A (Mac) or Alt + A (Windows) to quickly add a task
             </div>
           </div>
           <div class="app-header-right">
-            <div class="theme-toggle">
-              <span>Appearance</span>
-              <label class="switch">
-                <input type="checkbox" id="mode-toggle" />
-                <span class="slider round"></span>
-              </label>
-            </div>
             <div class="user-profile">
               <div class="avatar" id="user-avatar"></div>
               <div class="details">
@@ -111,6 +104,14 @@
                   />
                 </svg>
               </button>
+            </div>
+            <div class="theme-toggle">
+              <input type="checkbox" id="mode-toggle" aria-label="Toggle dark mode" />
+              <label for="mode-toggle" class="theme-toggle-track">
+                <i class="fas fa-sun theme-icon sun" aria-hidden="true"></i>
+                <span class="theme-toggle-thumb"></span>
+                <i class="fas fa-moon theme-icon moon" aria-hidden="true"></i>
+              </label>
             </div>
           </div>
         </header>
@@ -298,63 +299,33 @@
 
 
           </div>
-
-
-          <div class="actions-container" style="display: none;">
-            <div class="left-actions">
-              <div
-                id="reconcile-filters"
-                class="filter-panel"
-                style="display: none"
+          <div
+            id="reconcile-filters"
+            class="filter-panel"
+            style="display: none"
+          >
+            <div
+              id="reconcile-user-filter-container"
+              class="filter-item"
+              style="display: none"
+            >
+              <label for="reconcile-user-select"
+                ><i class="fas fa-user-friends"></i> Team Member</label
               >
-                <div
-                  id="reconcile-user-filter-container"
-                  class="filter-item"
-                  style="display: none"
-                >
-                  <label for="reconcile-user-select"
-                    ><i class="fas fa-user-friends"></i> Team Member</label
-                  >
-                  <select
-                    id="reconcile-user-select"
-                    class="inline-editor"
-                  ></select>
-                </div>
-                <div class="filter-item">
-                  <label>
-                    <input
-                      type="checkbox"
-                      id="reconcile-exclude-done"
-                      checked
-                    />
-                    Exclude Done
-                  </label>
-                </div>
-              </div>
-              <div class="dropdown-container">
-                <button id="filter-btn" class="action-btn secondary-btn">
-                  <i class="fas fa-filter"></i>
-                  <span>Filters</span>
-                </button>
-                <div id="filter-menu" class="dropdown-menu">
-                  <div class="filter-menu-section">
-                    <p style="color: var(--text-secondary); padding: 1rem; text-align: center;">
-                      Filters have been moved to the main interface above.
-                    </p>
-                    </div>
-                    </div>
-                <button
-                  id="clear-url-filter-btn"
-                  class="action-btn secondary-btn"
-                  style="display: none"
-                >
-                  <i class="fas fa-times"></i>
-                  <span>Clear Search</span>
-                </button>
-                    </div>
-                    </div>
-
-            <div class="right-actions" style="display: none;">
+              <select
+                id="reconcile-user-select"
+                class="inline-editor"
+              ></select>
+            </div>
+            <div class="filter-item">
+              <label>
+                <input
+                  type="checkbox"
+                  id="reconcile-exclude-done"
+                  checked
+                />
+                Exclude Done
+              </label>
             </div>
           </div>
 
@@ -439,6 +410,13 @@
                   <button id="readme-btn" class="compact-btn" title="Guidelines">
                     <i class="fas fa-book"></i>
                   </button>
+                  <button
+                    id="clear-url-filter-btn"
+                    style="display: none"
+                  >
+                    <i class="fas fa-times"></i>
+                    <span>Clear Search</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -520,9 +498,6 @@
                   placeholder="Search projects"
                   autocomplete="off"
                 />
-                <button id="jira-project-search-clear" title="Clear search">
-                  <i class="fas fa-times"></i>
-                </button>
               </div>
               <div id="jira-project-list" class="jira-projects-rail__list">
                 <!-- Project list populated via JS -->
