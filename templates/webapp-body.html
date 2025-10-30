@@ -424,11 +424,7 @@
                 </div>
                 
                 <div class="action-section">
-                  <button id="add-new-btn" class="primary-btn">
-                    <i class="fas fa-folder-plus"></i>
-                    Add New
-                  </button>
-                  <button id="quick-add-btn" class="compact-btn" title="Quick Add Row">
+                  <button id="quick-add-btn" class="compact-btn" title="Quick Add (Alt+A or Cmd+A)" aria-label="Quick Add (Alt+A or Cmd+A)">
                     <i class="fas fa-plus"></i>
                   </button>
                   <button id="bulk-edit-btn" class="compact-btn" title="Bulk Edit">
@@ -605,146 +601,25 @@
       <div class="spinner"></div>
       <p>Logging out...</p>
     </div>
-    <div id="add-task-modal" class="modal-overlay" style="display: none">
-      <div class="modal-content" style="max-width: 1400px">
-        <div class="modal-header">
-          <h2>Add New Tickets</h2>
-          <div class="bulk-settings-toggle-container">
-            <span>Use Bulk Settings</span>
-            <label class="switch">
-              <input type="checkbox" id="bulk-settings-toggle" />
-              <span class="slider round"></span>
-            </label>
-          </div>
-          <button class="close-button modal-close-btn">&times;</button>
+    <div id="quick-add-overlay" class="quick-add-overlay" style="display: none">
+      <div class="quick-add-panel" role="dialog" aria-modal="true" aria-labelledby="quick-add-title">
+        <div class="quick-add-header">
+          <span id="quick-add-title">Quick Add Ticket</span>
+          <button id="quick-add-close" class="quick-add-close" type="button" aria-label="Close">&times;</button>
         </div>
-
-        <div class="modal-body add-task-layout">
-          <div class="left-panel">
-            <h3>Bulk Settings</h3>
-            <p class="panel-description">
-              These values will apply to all new tickets unless overridden.
-            </p>
-
-            <div class="detail-field">
-              <label
-                ><i class="fas fa-calendar-plus fa-fw"></i> Created Date</label
-              >
-              <input
-                type="date"
-                id="bulk-add-created-date"
-                class="inline-editor"
-              />
-            </div>
-            <div class="detail-field">
-              <label><i class="fas fa-folder fa-fw"></i> Project</label>
-              <select
-                id="bulk-add-project-select"
-                class="inline-editor"
-              ></select>
-            </div>
-            <div class="detail-field">
-              <label><i class="fas fa-bolt fa-fw"></i> Epic</label>
-              <input
-                type="text"
-                id="bulk-add-epic"
-                class="inline-editor"
-                list="epic-datalist-bulk-add"
-                placeholder="Type or select an epic..."
-              />
-              <datalist id="epic-datalist-bulk-add"></datalist>
-            </div>
-            <div class="detail-field">
-              <label><i class="fas fa-user-tag fa-fw"></i> Requested By</label>
-              <select id="bulk-add-requested-by" class="inline-editor"></select>
-            </div>
-            <div class="detail-field">
-              <label><i class="fas fa-user-check fa-fw"></i> Assignee</label>
-              <div id="bulk-add-assignee-container"></div>
-            </div>
-            <div
-              class="detail-field"
-              id="bulk-add-assigned-date-container"
-              style="display: none"
-            >
-              <label
-                ><i class="fas fa-calendar-alt fa-fw"></i> Assigned Date</label
-              >
-              <input
-                type="date"
-                id="bulk-add-assigned-date"
-                class="inline-editor"
-              />
-            </div>
-            <div class="detail-field">
-              <label><i class="fas fa-flag fa-fw"></i> Status</label>
-              <select id="bulk-add-status" class="inline-editor">
-                <option>Open</option>
-                <option>In Progress</option>
-                <option>Completed</option>
-              </select>
-            </div>
-            <div
-              class="detail-field"
-              id="bulk-add-started-date-container"
-              style="display: none"
-            >
-              <label
-                ><i class="fas fa-calendar-alt fa-fw"></i> Started Date</label
-              >
-              <input
-                type="date"
-                id="bulk-add-started-date"
-                class="inline-editor"
-              />
-            </div>
-            <div
-              class="detail-field"
-              id="bulk-add-completed-date-container"
-              style="display: none"
-            >
-              <label
-                ><i class="fas fa-calendar-alt fa-fw"></i> Completed Date</label
-              >
-              <input
-                type="date"
-                id="bulk-add-completed-date"
-                class="inline-editor"
-              />
-            </div>
-          </div>
-          <div class="right-panel">
-            <div class="table-wrapper" id="new-tickets-table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th style="width: 30%">Title</th>
-                    <th style="width: 30%">Description</th>
-                    <th style="width: 15%">Type</th>
-                    <th style="width: 15%">Priority</th>
-                    <th style="width: 10%"></th>
-                  </tr>
-                </thead>
-                <tbody id="new-tickets-tbody"></tbody>
-              </table>
-            </div>
-            <button
-              id="add-another-ticket-btn"
-              class="add-ticket-btn"
-              style="margin-top: 1rem;"
-            >
-              <i class="fas fa-plus"></i> Add Another Ticket
-            </button>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button id="submit-new-tickets-btn" class="save-btn">
-            <i class="fas fa-save"></i> Submit Tickets
-          </button>
-        </div>
+        <input
+          id="quick-add-input"
+          class="quick-add-input"
+          type="text"
+          placeholder="Describe the ticket. Use / to change details."
+          autocomplete="off"
+        />
+        <div id="quick-add-summary" class="quick-add-summary"></div>
+        <div id="quick-add-command-list" class="quick-add-command-list"></div>
+        <div id="quick-add-error" class="quick-add-error" role="alert"></div>
+        <div class="quick-add-hint">Press Enter to create • Esc to cancel • Alt+A or Cmd+A to open</div>
       </div>
     </div>
-
     <div id="bulk-update-modal" class="modal-overlay" style="display: none">
       <div class="modal-content" style="max-width: 800px">
         <div class="modal-header">
@@ -1117,45 +992,6 @@
         <div class="modal-footer">
           <button class="save-btn" id="bsam-apply">Apply</button
           ><button class="cancel-btn" id="bsam-cancel">Cancel</button>
-        </div>
-      </div>
-    </div>
-
-    <div
-      id="add-ticket-confirm-modal"
-      class="modal-overlay"
-      style="display: none"
-    >
-      <div class="modal-content" style="max-width: 800px">
-        <div class="modal-header">
-          <h2>Confirm New Tickets</h2>
-          <button class="close-button modal-close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p style="margin-bottom: 1rem">
-            Please review the tickets below before submitting. The following
-            tickets will be created:
-          </p>
-          <div
-            id="confirm-ticket-list"
-            class="ticket-list-container"
-            style="
-              max-height: 50vh;
-              overflow-y: auto;
-              background-color: var(--row-alt-color);
-              border: 1px solid var(--border-color);
-              border-radius: 8px;
-              padding: 1rem;
-            "
-          ></div>
-        </div>
-        <div class="modal-footer">
-          <button id="cancel-ticket-confirmation-btn" class="cancel-btn">
-            Go Back & Edit
-          </button>
-          <button id="confirm-and-submit-tickets-btn" class="save-btn">
-            Confirm & Submit
-          </button>
         </div>
       </div>
     </div>

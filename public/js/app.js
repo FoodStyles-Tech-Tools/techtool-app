@@ -92,6 +92,697 @@
   let dashboardStartDate = null;
   let dashboardEndDate = null;
   let reconcileSelectedUserName = null;
+
+  const QUICK_ADD_COMMANDS = [
+    { key: "assignee", label: "Assignee", description: "Assign to a teammate" },
+    { key: "requester", label: "Requester", description: "Set who requested the work" },
+    { key: "created", label: "Created Date", description: "Override created date (YYYY-MM-DD or 'today')" },
+    { key: "assigned", label: "Assigned Date", description: "Override assigned date" },
+    { key: "priority", label: "Priority", description: "Low, Medium, High, Urgent, Critical" },
+    { key: "type", label: "Type", description: "Task, Bug, Request" },
+    { key: "description", label: "Description", description: "Add a short note" },
+  ];
+
+  const QUICK_ADD_COMMAND_ALIASES = {
+    assignee: ["assignee", "assign", "owner"],
+    requester: ["requester", "request", "by"],
+    created: ["created", "createddate", "created_at", "createdat", "date"],
+    assigned: ["assigned", "assigneddate", "assigned_at", "assignedat"],
+    priority: ["priority", "prio"],
+    type: ["type", "category"],
+    description: ["description", "desc", "note", "notes"],
+  };
+
+  const QUICK_ADD_PRIORITIES = ["Low", "Medium", "High", "Urgent", "Critical"];
+  const QUICK_ADD_TYPES = ["Task", "Bug", "Request"];
+
+  let quickAddOverlay = null;
+  let quickAddInput = null;
+  let quickAddSummary = null;
+  let quickAddCommandList = null;
+  let quickAddError = null;
+  let quickAddInitialized = false;
+  let quickAddOpen = false;
+  let quickAddSubmitting = false;
+  let quickAddLastParse = null;
+
+  function initializeQuickAddSpotlight() {
+    if (quickAddInitialized) {
+      return;
+    }
+
+    quickAddOverlay = document.getElementById("quick-add-overlay");
+    quickAddInput = document.getElementById("quick-add-input");
+    quickAddSummary = document.getElementById("quick-add-summary");
+    quickAddCommandList = document.getElementById("quick-add-command-list");
+    quickAddError = document.getElementById("quick-add-error");
+    const quickAddClose = document.getElementById("quick-add-close");
+
+    if (!quickAddOverlay || !quickAddInput || !quickAddSummary) {
+      return;
+    }
+
+    quickAddInitialized = true;
+
+    if (quickAddClose) {
+      quickAddClose.addEventListener("click", closeQuickAddOverlay);
+    }
+
+    quickAddOverlay.addEventListener("click", (event) => {
+      if (event.target === quickAddOverlay) {
+        closeQuickAddOverlay();
+      }
+    });
+
+    quickAddInput.addEventListener("input", refreshQuickAddUI);
+    quickAddInput.addEventListener("keyup", refreshQuickAddUI);
+    quickAddInput.addEventListener("click", refreshQuickAddUI);
+    quickAddInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        submitQuickAddTicket();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        closeQuickAddOverlay();
+      }
+    });
+
+    if (quickAddCommandList) {
+      quickAddCommandList.addEventListener("click", (event) => {
+        const button = event.target.closest(".quick-add-command");
+        if (!button) {
+          return;
+        }
+        event.preventDefault();
+        insertQuickAddCommand(button.dataset.command);
+      });
+    }
+
+    document.addEventListener("keydown", handleQuickAddShortcut, true);
+    refreshQuickAddUI();
+  }
+
+  function handleQuickAddShortcut(event) {
+    const isMetaA = event.metaKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "a";
+    const isAltA = event.altKey && !event.metaKey && !event.ctrlKey && event.key.toLowerCase() === "a";
+
+    if (quickAddOpen) {
+      if (event.key === "Escape" && !event.metaKey && !event.altKey) {
+        event.preventDefault();
+        closeQuickAddOverlay();
+      }
+      return;
+    }
+
+    if (!isMetaA && !isAltA) {
+      return;
+    }
+
+    if (isTextInputTarget(event.target)) {
+      return;
+    }
+
+    event.preventDefault();
+    openQuickAddOverlay();
+  }
+
+  function isTextInputTarget(target) {
+    if (!target) return false;
+    const tagName = target.tagName;
+    return (
+      tagName === "INPUT" ||
+      tagName === "TEXTAREA" ||
+      target.isContentEditable
+    );
+  }
+
+  function openQuickAddOverlay(prefill = "") {
+    initializeQuickAddSpotlight();
+    if (!quickAddOverlay || !quickAddInput) {
+      return;
+    }
+
+    quickAddOpen = true;
+    quickAddOverlay.style.display = "flex";
+    quickAddOverlay.classList.add("active");
+    quickAddInput.value = prefill || "";
+    quickAddSubmitting = false;
+    refreshQuickAddUI();
+    requestAnimationFrame(() => {
+      quickAddInput.focus();
+      if (quickAddInput.value.length) {
+        quickAddInput.setSelectionRange(
+          quickAddInput.value.length,
+          quickAddInput.value.length
+        );
+      }
+    });
+  }
+
+  function closeQuickAddOverlay() {
+    if (!quickAddOverlay) {
+      return;
+    }
+    quickAddOpen = false;
+    quickAddOverlay.classList.remove("active");
+    quickAddOverlay.style.display = "none";
+    quickAddSubmitting = false;
+    if (quickAddCommandList) {
+      quickAddCommandList.classList.remove("active");
+      quickAddCommandList.innerHTML = "";
+    }
+  }
+
+  function getDefaultQuickAddState() {
+    const nowIso = new Date().toISOString();
+    const defaultProjectId =
+      typeof currentProjectId !== "undefined" && currentProjectId !== null
+        ? Number(currentProjectId)
+        : null;
+    const defaultAssigneeId =
+      typeof appData.currentUserId !== "undefined"
+        ? appData.currentUserId
+        : null;
+    const defaultAssigneeName =
+      appData.teamMembers.find(
+        (member) =>
+          String(member.id) === String(defaultAssigneeId ?? "").trim()
+      )?.name ?? appData.currentUserName ?? "";
+
+    return {
+      title: "",
+      projectId: defaultProjectId,
+      assigneeId: defaultAssigneeId ?? null,
+      assigneeName:
+        defaultAssigneeId && defaultAssigneeName
+          ? defaultAssigneeName
+          : "",
+      requester: null,
+      createdAt: nowIso,
+      assignedAt: defaultAssigneeId ? nowIso : null,
+      priority: "Medium",
+      type: "Task",
+      description: "",
+    };
+  }
+
+  function parseQuickAddInput(rawInput = "") {
+    const state = getDefaultQuickAddState();
+    const errors = [];
+    const pending = [];
+
+    if (!rawInput) {
+      return { state, errors, pending };
+    }
+
+    const segments = rawInput.split("/");
+    state.title = segments.shift().trim();
+
+    segments.forEach((segment) => {
+      const trimmed = segment.trim();
+      if (!trimmed) {
+        pending.push({ command: "", value: "" });
+        return;
+      }
+
+      const spaceIndex = trimmed.indexOf(" ");
+      const token =
+        spaceIndex === -1 ? trimmed : trimmed.slice(0, spaceIndex);
+      const remainder =
+        spaceIndex === -1 ? "" : trimmed.slice(spaceIndex + 1).trim();
+      const commandKey = resolveQuickAddCommand(token);
+
+      if (!commandKey) {
+        pending.push({ command: token, value: remainder });
+        return;
+      }
+
+      if (!remainder) {
+        pending.push({ command: commandKey, value: "" });
+        return;
+      }
+
+      const result = applyQuickAddCommand(state, commandKey, remainder);
+      if (result?.error) {
+        errors.push(result.error);
+      }
+    });
+
+    return { state, errors, pending };
+  }
+
+  function resolveQuickAddCommand(token) {
+    if (!token) return null;
+    const normalized = token.toLowerCase().replace(/[^a-z]/g, "");
+    if (!normalized) return null;
+
+    for (const [command, aliases] of Object.entries(
+      QUICK_ADD_COMMAND_ALIASES
+    )) {
+      if (command === normalized || aliases.includes(normalized)) {
+        return command;
+      }
+    }
+    return null;
+  }
+
+  function applyQuickAddCommand(state, commandKey, rawValue) {
+    const value = rawValue.trim();
+
+    switch (commandKey) {
+      case "assignee": {
+        const result = resolveAssigneeValue(value);
+        if (result.error) {
+          return result;
+        }
+        state.assigneeId = result.id;
+        state.assigneeName = result.name ?? "";
+        state.assignedAt = result.id ? state.assignedAt ?? new Date().toISOString() : null;
+        return {};
+      }
+      case "requester": {
+        if (!value || ["none", "null", "clear"].includes(value.toLowerCase())) {
+          state.requester = null;
+        } else {
+          state.requester = value;
+        }
+        return {};
+      }
+      case "created": {
+        const parsed = parseQuickAddDate(value);
+        if (!parsed) {
+          return {
+            error: `Unable to understand created date "${value}". Use YYYY-MM-DD or common words like "today".`,
+          };
+        }
+        state.createdAt = parsed;
+        return {};
+      }
+      case "assigned": {
+        if (!value || ["none", "null", "clear"].includes(value.toLowerCase())) {
+          state.assignedAt = null;
+          return {};
+        }
+        const parsed = parseQuickAddDate(value);
+        if (!parsed) {
+          return {
+            error: `Unable to understand assigned date "${value}".`,
+          };
+        }
+        state.assignedAt = parsed;
+        return {};
+      }
+      case "priority": {
+        const normalized = normalizeQuickAddPriority(value);
+        if (!normalized) {
+          return {
+            error: `Priority must be one of ${QUICK_ADD_PRIORITIES.join(
+              ", "
+            )}.`,
+          };
+        }
+        state.priority = normalized;
+        return {};
+      }
+      case "type": {
+        const normalized = normalizeQuickAddType(value);
+        if (!normalized) {
+          return {
+            error: `Type must be one of ${QUICK_ADD_TYPES.join(", ")}.`,
+          };
+        }
+        state.type = normalized;
+        return {};
+      }
+      case "description": {
+        state.description = value;
+        return {};
+      }
+      default:
+        return {};
+    }
+  }
+
+  function resolveAssigneeValue(rawValue) {
+    const value = rawValue.trim();
+    if (!value) {
+      return { error: "Provide a value for /assignee." };
+    }
+
+    const lower = value.toLowerCase();
+    if (["none", "null", "clear", "unassigned"].includes(lower)) {
+      return { id: null, name: "" };
+    }
+    if (["me", "self", "current"].includes(lower)) {
+      if (!appData.currentUserId) {
+        return { error: "No current user available for assignment." };
+      }
+      return {
+        id: appData.currentUserId,
+        name: appData.currentUserName || "Me",
+      };
+    }
+
+    const normalizedValue = value.toLowerCase();
+    const exactMatch = appData.teamMembers.find(
+      (member) => member.name.toLowerCase() === normalizedValue
+    );
+    if (exactMatch) {
+      return { id: exactMatch.id, name: exactMatch.name };
+    }
+
+    const partialMatches = appData.teamMembers.filter((member) =>
+      member.name.toLowerCase().includes(normalizedValue)
+    );
+
+    if (partialMatches.length === 1) {
+      const match = partialMatches[0];
+      return { id: match.id, name: match.name };
+    }
+
+    if (partialMatches.length > 1) {
+      const preview = partialMatches
+        .slice(0, 3)
+        .map((m) => m.name)
+        .join(", ");
+      return {
+        error: `Multiple teammates match "${value}". Try one of: ${preview}${
+          partialMatches.length > 3 ? "…" : ""
+        }`,
+      };
+    }
+
+    return { error: `No teammate found named "${value}".` };
+  }
+
+  function normalizeQuickAddPriority(rawValue) {
+    const value = rawValue.trim().toLowerCase();
+    if (!value) return null;
+
+    const direct = QUICK_ADD_PRIORITIES.find(
+      (option) => option.toLowerCase() === value
+    );
+    if (direct) return direct;
+
+    if (["med", "medium"].includes(value)) return "Medium";
+    if (["hi", "high"].includes(value)) return "High";
+    if (["crit", "critical"].includes(value)) return "Critical";
+    if (["urg", "urgent"].includes(value)) return "Urgent";
+    if (["lo", "low"].includes(value)) return "Low";
+    return null;
+  }
+
+  function normalizeQuickAddType(rawValue) {
+    const value = rawValue.trim().toLowerCase();
+    if (!value) return null;
+
+    const direct = QUICK_ADD_TYPES.find(
+      (option) => option.toLowerCase() === value
+    );
+    if (direct) return direct;
+
+    if (value === "bugfix" || value === "issue") return "Bug";
+    if (value === "task" || value === "todo") return "Task";
+    if (value === "req" || value === "request") return "Request";
+    return null;
+  }
+
+  function parseQuickAddDate(rawValue) {
+    if (!rawValue) return null;
+    const value = rawValue.trim().toLowerCase();
+
+    const today = new Date();
+    if (value === "today") {
+      return new Date().toISOString();
+    }
+    if (value === "tomorrow") {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() + 1);
+      return date.toISOString();
+    }
+    if (value === "yesterday") {
+      const date = new Date();
+      date.setUTCDate(date.getUTCDate() - 1);
+      return date.toISOString();
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      const parsed = new Date(value + "T00:00:00Z");
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toISOString();
+      }
+    }
+
+    const parsedGeneric = new Date(rawValue);
+    if (!Number.isNaN(parsedGeneric.getTime())) {
+      return parsedGeneric.toISOString();
+    }
+    return null;
+  }
+
+  function refreshQuickAddUI() {
+    if (!quickAddInput) {
+      return;
+    }
+    const rawValue = quickAddInput.value;
+    quickAddLastParse = parseQuickAddInput(rawValue);
+    renderQuickAddSummary(quickAddLastParse.state);
+    updateQuickAddSuggestions(rawValue);
+    if (quickAddError) {
+      quickAddError.textContent = quickAddLastParse.errors[0] ?? "";
+    }
+  }
+
+  function renderQuickAddSummary(state) {
+    if (!quickAddSummary || !state) {
+      return;
+    }
+
+    const summaryItems = [];
+    const projectName = state.projectId
+      ? appData.allProjects.find(
+          (project) => String(project.id) === String(state.projectId)
+        )?.projectName
+      : null;
+
+    if (projectName) {
+      summaryItems.push({ label: "Project", value: projectName });
+    }
+
+    summaryItems.push({
+      label: "Title",
+      value: state.title ? state.title : "—",
+    });
+    summaryItems.push({
+      label: "Assignee",
+      value: state.assigneeName || "Unassigned",
+      emphasise: !!state.assigneeName,
+    });
+    summaryItems.push({
+      label: "Requester",
+      value: state.requester || "—",
+    });
+    summaryItems.push({
+      label: "Priority",
+      value: state.priority || "—",
+    });
+    summaryItems.push({
+      label: "Type",
+      value: state.type || "—",
+    });
+    summaryItems.push({
+      label: "Created",
+      value: formatQuickAddSummaryDate(state.createdAt),
+    });
+    summaryItems.push({
+      label: "Assigned",
+      value: formatQuickAddSummaryDate(state.assignedAt),
+    });
+    summaryItems.push({
+      label: "Description",
+      value: state.description || "—",
+    });
+
+    quickAddSummary.innerHTML = summaryItems
+      .map(
+        (item) => `
+        <div class="quick-add-summary-item">
+          <strong>${escapeHtml(item.label)}</strong>
+          <span>${escapeHtml(String(item.value))}</span>
+        </div>
+      `
+      )
+      .join("");
+  }
+
+  function formatQuickAddSummaryDate(isoValue) {
+    if (!isoValue) {
+      return "—";
+    }
+    const date = new Date(isoValue);
+    if (Number.isNaN(date.getTime())) {
+      return "—";
+    }
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
+
+  function updateQuickAddSuggestions(rawValue) {
+    if (!quickAddCommandList || !quickAddInput) {
+      return;
+    }
+
+    const caret = quickAddInput.selectionStart ?? rawValue.length;
+    const beforeCaret = rawValue.slice(0, caret);
+    const lastSlash = beforeCaret.lastIndexOf("/");
+    if (lastSlash === -1) {
+      quickAddCommandList.classList.remove("active");
+      quickAddCommandList.innerHTML = "";
+      return;
+    }
+
+    const fragment = beforeCaret.slice(lastSlash + 1);
+    if (fragment.includes(" ")) {
+      quickAddCommandList.classList.remove("active");
+      quickAddCommandList.innerHTML = "";
+      return;
+    }
+
+    const normalized = fragment.toLowerCase();
+    const matches =
+      normalized.length === 0
+        ? QUICK_ADD_COMMANDS
+        : QUICK_ADD_COMMANDS.filter(
+            (command) =>
+              command.key.startsWith(normalized) ||
+              command.label.toLowerCase().startsWith(normalized)
+          );
+
+    if (!matches.length) {
+      quickAddCommandList.classList.remove("active");
+      quickAddCommandList.innerHTML = "";
+      return;
+    }
+
+    quickAddCommandList.innerHTML = matches
+      .map(
+        (command) => `
+        <button type="button" class="quick-add-command" data-command="${command.key}">
+          <span>/${command.key}</span>
+          <small>${escapeHtml(command.description)}</small>
+        </button>
+      `
+      )
+      .join("");
+    quickAddCommandList.classList.add("active");
+  }
+
+  function insertQuickAddCommand(commandKey) {
+    if (!quickAddInput) {
+      return;
+    }
+
+    const value = quickAddInput.value;
+    const caret = quickAddInput.selectionStart ?? value.length;
+    const beforeCaret = value.slice(0, caret);
+    const commandMatch = beforeCaret.match(/\/[^\s]*$/);
+    let prefix = beforeCaret;
+    let suffix = value.slice(caret);
+
+    if (commandMatch) {
+      const start = commandMatch.index;
+      prefix = value.slice(0, start);
+      suffix = value.slice(start + commandMatch[0].length);
+    } else if (prefix && !prefix.endsWith(" ")) {
+      prefix += " ";
+    }
+
+    const insertion = `${prefix.endsWith(" ") || !prefix ? "" : " "}/${commandKey} `;
+    const newValue = `${prefix.replace(/\s*$/, "")}${insertion}${suffix.trimStart()}`;
+
+    quickAddInput.value = newValue.trimStart();
+    const newCaretPosition = quickAddInput.value.length;
+    quickAddInput.setSelectionRange(newCaretPosition, newCaretPosition);
+    refreshQuickAddUI();
+    quickAddInput.focus();
+  }
+
+  async function submitQuickAddTicket() {
+    if (!quickAddInput || quickAddSubmitting) {
+      return;
+    }
+
+    refreshQuickAddUI();
+    const parseResult =
+      quickAddLastParse ?? parseQuickAddInput(quickAddInput.value);
+
+    const title = (parseResult.state.title || "").trim();
+    if (!title) {
+      if (quickAddError) {
+        quickAddError.textContent = "Add a task title before creating a ticket.";
+      }
+      quickAddInput.focus();
+      return;
+    }
+
+    const pending = (parseResult.pending || []).find(
+      (item) => item.command && !item.value
+    );
+    if (pending && quickAddError) {
+      quickAddError.textContent = `Add a value for /${pending.command}.`;
+      return;
+    }
+
+    if (parseResult.errors.length && quickAddError) {
+      quickAddError.textContent = parseResult.errors[0];
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const assigneeId = parseResult.state.assigneeId
+      ? Number(parseResult.state.assigneeId)
+      : null;
+
+    const ticketPayload = {
+      title,
+      description: parseResult.state.description || null,
+      type: parseResult.state.type || "Task",
+      priority: parseResult.state.priority || "Medium",
+      status: "Open",
+      requestedBy: parseResult.state.requester || null,
+      assigneeId,
+      createdAt: parseResult.state.createdAt || nowIso,
+      assignedAt: assigneeId
+        ? parseResult.state.assignedAt || nowIso
+        : null,
+      projectId: parseResult.state.projectId
+        ? Number(parseResult.state.projectId)
+        : null,
+      log: [],
+    };
+
+    quickAddSubmitting = true;
+    if (quickAddError) {
+      quickAddError.textContent = "";
+    }
+
+    try {
+      await executeFinalTicketSubmission([ticketPayload]);
+      quickAddInput.value = "";
+      refreshQuickAddUI();
+      closeQuickAddOverlay();
+    } catch (error) {
+      console.error("Quick add submission failed:", error);
+      if (quickAddError) {
+        quickAddError.textContent =
+          "Unable to create ticket right now. Please try again.";
+      }
+    } finally {
+      quickAddSubmitting = false;
+    }
+  }
   
   // --- SUPABASE INITIALIZATION ---
   function waitForSupabase() {
@@ -397,6 +1088,8 @@
       // Inside the DOMContentLoaded listener, after appData.currentUserName is set
       appData.currentUserRole = document.getElementById("user-role").value;
       reconcileSelectedUserName = appData.currentUserName;
+
+      initializeQuickAddSpotlight();
 
       dashboardAssigneeId = appData.currentUserId; // Default to current user
 
@@ -1153,6 +1846,14 @@
       "confirm-and-submit-tickets-btn"
     );
 
+    if (!modal || !listContainer || !confirmBtn) {
+      console.warn(
+        "Quick confirmation modal not available. Submitting tickets immediately."
+      );
+      await executeFinalTicketSubmission(ticketsToConfirm);
+      return;
+    }
+
     // Create a lookup for project and assignee names to avoid repeated searches
     const projectNames = appData.allProjects.reduce((acc, p) => {
       acc[p.id] = p.projectName;
@@ -1206,8 +1907,10 @@
     const addModal = document.getElementById("add-task-modal");
     const submitBtn = document.getElementById("confirm-and-submit-tickets-btn");
 
-    submitBtn.textContent = "Submitting...";
-    submitBtn.disabled = true;
+    if (submitBtn) {
+      submitBtn.textContent = "Submitting...";
+      submitBtn.disabled = true;
+    }
 
     // Set flag to prevent real-time subscription from interfering
     window.userCreatingTickets = true;
@@ -1249,8 +1952,10 @@
       .insert(ticketsToSubmit)
       .select();
 
-    submitBtn.textContent = "Confirm & Submit";
-    submitBtn.disabled = false;
+    if (submitBtn) {
+      submitBtn.textContent = "Confirm & Submit";
+      submitBtn.disabled = false;
+    }
 
     if (error) {
       console.error("Database error:", error);
@@ -1273,8 +1978,12 @@
         );
       }
 
-      confirmModal.style.display = "none";
-      addModal.style.display = "none";
+      if (confirmModal) {
+        confirmModal.style.display = "none";
+      }
+      if (addModal) {
+        addModal.style.display = "none";
+      }
     }
     
     // Clear the flag after processing
@@ -1878,71 +2587,6 @@
       }
     });
 
-    const addNewBtn = document.getElementById("add-new-btn");
-    const addNewMenu = document.getElementById("add-new-menu");
-    const addNewTaskOption = document.getElementById("add-new-task-option");
-    const addNewProjectOption = document.getElementById("add-new-project-option");
-
-    // Add null checks to prevent errors
-    if (addNewTaskOption) {
-      addNewTaskOption.addEventListener("click", () => {
-        openAddTaskModal();
-        if (addNewMenu) addNewMenu.style.display = "none";
-      });
-    }
-
-    if (addNewProjectOption) {
-      addNewProjectOption.addEventListener("click", () => {
-        showAddProjectModal();
-        if (addNewMenu) addNewMenu.style.display = "none";
-      });
-    }
-
-    if (addNewBtn) {
-      addNewBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        // Since we simplified the button, just open the task modal directly
-        openAddTaskModal();
-      });
-    }
-    document.addEventListener("click", (e) => {
-      if (
-        addNewMenu && 
-        addNewMenu.style.display === "block" &&
-        !e.target.closest("#add-new-dropdown")
-      ) {
-        addNewMenu.style.display = "none";
-      }
-    });
-
-    document
-      .getElementById("add-another-ticket-btn")
-      .addEventListener("click", addTicketRowToModal);
-
-    document
-      .getElementById("submit-new-tickets-btn")
-      .addEventListener("click", prepareAndConfirmTickets);
-
-    const confirmModal = document.getElementById("add-ticket-confirm-modal");
-    document
-      .getElementById("confirm-and-submit-tickets-btn")
-      .addEventListener("click", (e) => {
-        const ticketsData = JSON.parse(e.currentTarget.dataset.tickets || "[]");
-        if (ticketsData.length > 0) {
-          executeFinalTicketSubmission(ticketsData);
-        }
-      });
-    document
-      .getElementById("cancel-ticket-confirmation-btn")
-      .addEventListener("click", () => {
-        confirmModal.style.display = "none";
-      });
-    confirmModal
-      .querySelector(".modal-close-btn")
-      .addEventListener("click", () => {
-        confirmModal.style.display = "none";
-      });
-
     // Project modal event listeners are now handled dynamically in showAddProjectModal()
     const updateSelectedBtn = document.getElementById("update-selected-btn");
     if (updateSelectedBtn) {
@@ -2179,7 +2823,7 @@
     if (isSwitchingView) {
       const quickAddBtn = document.getElementById("quick-add-btn");
       if (quickAddBtn) {
-        quickAddBtn.addEventListener("click", addQuickAddTaskRow);
+        quickAddBtn.addEventListener("click", () => openQuickAddOverlay());
       }
 
       const readmeBtn = document.getElementById("readme-btn");
