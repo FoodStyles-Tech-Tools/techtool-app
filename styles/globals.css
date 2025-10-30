@@ -4679,13 +4679,11 @@
 
   .quick-add-editor {
     width: 100%;
-    min-height: 130px;
-    max-height: 280px;
-    border-radius: 14px;
+    border-radius: 6px;
     border: 1px solid rgba(148, 163, 184, 0.45);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(241, 245, 249, 0.92));
     color: var(--text-primary);
-    font-size: 1.05rem;
+    font-size: 0.85rem;
     line-height: 1.55;
     padding: 1.1rem 1.25rem;
     overflow-y: auto;
