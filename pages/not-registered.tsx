@@ -54,7 +54,7 @@ export default function NotRegistered({ email }: NotRegisteredProps) {
             >
               {loading ? (
                 <>
-                  <i className="fas fa-spinner fa-spin"></i>
+                  <i className="fas fa-spinner"></i>
                   Logging Out...
                 </>
               ) : (
@@ -65,12 +65,6 @@ export default function NotRegistered({ email }: NotRegisteredProps) {
               )}
             </button>
           </div>
-        </div>
-        
-        <div className="floating-elements">
-          <div className="floating-shape shape-1"></div>
-          <div className="floating-shape shape-2"></div>
-          <div className="floating-shape shape-3"></div>
         </div>
       </div>
       <style jsx>{`
@@ -201,54 +195,6 @@ export default function NotRegistered({ email }: NotRegisteredProps) {
           cursor: not-allowed;
           transform: none;
           box-shadow: none;
-        }
-        
-        .floating-elements {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          z-index: 1;
-        }
-        
-        .floating-shape {
-          position: absolute;
-          border-radius: 50%;
-          opacity: 0.1;
-          animation: float 6s ease-in-out infinite;
-        }
-        
-        .shape-1 {
-          width: 150px;
-          height: 150px;
-          background: linear-gradient(45deg, #ff6b6b, #feca57);
-          top: 10%;
-          left: 10%;
-          animation-delay: 0s;
-        }
-        
-        .shape-2 {
-          width: 100px;
-          height: 100px;
-          background: linear-gradient(45deg, #48dbfb, #0abde3);
-          top: 60%;
-          right: 15%;
-          animation-delay: 2s;
-        }
-        
-        .shape-3 {
-          width: 120px;
-          height: 120px;
-          background: linear-gradient(45deg, #ff9ff3, #f368e0);
-          bottom: 20%;
-          left: 20%;
-          animation-delay: 4s;
-        }
-        
-        @keyframes float {
-          0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(180deg); }
         }
         
         @media (max-width: 768px) {

@@ -31,7 +31,7 @@
   let currentPage = 1;
   let reconcileWrapper = null; // <--- ADD THIS LINE
   let tableWrapper = null; // <--- ADD THIS LINE
-  let currentView = "my-ticket";
+  let currentView = "projects";
   let currentProjectId = null;
   let projectStatsCache = [];
   const normalizePath = (path) => {
@@ -428,7 +428,7 @@
         forcedInitialView ??
         (rawInitialView && VIEW_ROUTE_MAP[rawInitialView]
           ? rawInitialView
-          : locationView ?? "home");
+          : locationView ?? "projects");
 
       if (urlTicketNumber) {
         ticketNumberFilter = urlTicketNumber;
@@ -437,7 +437,7 @@
 
       if (clearUrlFilterBtn) {
         clearUrlFilterBtn.addEventListener("click", () => {
-          const currentRoute = VIEW_ROUTE_MAP[currentView] ?? "/dashboard";
+        const currentRoute = VIEW_ROUTE_MAP[currentView] ?? "/projects";
           window.top.location.href = currentRoute;
         });
         clearUrlFilterBtn.style.display = urlTicketNumber ? "inline-flex" : "none";
@@ -451,7 +451,7 @@
       window.addEventListener("popstate", (event) => {
         const stateView = event.state?.view;
         const fallbackView =
-          ROUTE_VIEW_MAP[normalizePath(window.location.pathname)] ?? "home";
+          ROUTE_VIEW_MAP[normalizePath(window.location.pathname)] ?? "projects";
         const nextView =
           (stateView && VIEW_ROUTE_MAP[stateView] ? stateView : null) ??
           fallbackView;
@@ -1040,7 +1040,7 @@
         element.classList.contains("priority-tag") || 
         element.classList.contains("type-tag")) {
       element.classList.add("updating");
-      element.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Updating...`;
+      element.innerHTML = `<i class="fas fa-spinner"></i> Updating...`;
     }
     
     try {
@@ -5291,7 +5291,7 @@
             
             // Add updating indicator
             tag.classList.add('updating');
-            tag.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Updating...`;
+            tag.innerHTML = `<i class="fas fa-spinner"></i> Updating...`;
             
             // Close dropdown
             dropdown.style.display = 'none';
@@ -7328,7 +7328,7 @@
 
     saveBtn.disabled = true;
     cancelBtn.disabled = true;
-    saveIcon.className = "fas fa-spinner fa-spin"; // Change to a spinner icon
+    saveIcon.className = "fas fa-spinner"; // Change to a spinner icon
     row.style.opacity = "0.5";
     // --- UI INDICATOR END ---
 

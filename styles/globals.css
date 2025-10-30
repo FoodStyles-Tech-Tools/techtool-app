@@ -1694,13 +1694,8 @@
     align-items: center;
     gap: 0.5rem;
     box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
-    animation: pulse 2s infinite;
   }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.8; }
-  }
+  
 
   .card-content {
     display: flex;
@@ -1756,7 +1751,6 @@
     height: 8px;
     background: var(--warning-color);
     border-radius: 50%;
-    animation: pulse 2s infinite;
   }
 
   .field-label {
@@ -1913,7 +1907,6 @@
     gap: 1rem;
     padding: 1rem 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
-    animation: slideDown 0.2s ease;
     position: relative;
   }
 
@@ -1926,11 +1919,6 @@
     width: 4px;
     background: var(--accent-color);
     border-radius: 8px 0 0 8px;
-  }
-
-  @keyframes slideDown {
-    from { transform: translateY(-10px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
   }
 
   .bulk-actions-panel #selection-count {
@@ -2091,22 +2079,6 @@
     color: var(--accent-color);
   }
 
-  /* Enhanced animations and transitions */
-  .incomplete-ticket-card {
-    animation: fadeInUp 0.5s ease-out;
-  }
-
-  @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
   /* Enhanced focus states */
   .field-input:focus,
   .field-input-wrapper .searchable-dropdown:focus,
@@ -2130,17 +2102,9 @@
     transform: translateY(-50%);
     width: 16px;
     height: 16px;
-    border: 2px solid var(--border-color);
-    border-top: 2px solid var(--accent-color);
+    border: 2px solid var(--accent-color);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
   }
-
-  @keyframes spin {
-    0% { transform: translateY(-50%) rotate(0deg); }
-    100% { transform: translateY(-50%) rotate(360deg); }
-  }
-
   /* Enhanced hover effects */
   .incomplete-ticket-card .field-group:hover {
     transform: translateY(-1px);
@@ -2295,23 +2259,6 @@
     border: 1px solid rgba(255, 165, 0, 0.3) !important;
     box-shadow: 0 0 8px rgba(255, 165, 0, 0.2) !important;
   }
-  .is-successful {
-    animation: success-flash 1.5s ease-out;
-  }
-  @keyframes success-flash {
-    0%,
-    100% {
-      background-color: transparent;
-      border-color: transparent;
-    }
-    25%,
-    75% {
-      background-color: var(--success-bg-color);
-      border-color: #10b981;
-      box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
-    }
-  }
-
   /* --- INTERACTIVE & EDITABLE ELEMENTS --- */
   .editable-field-wrapper {
     position: relative;
@@ -2671,7 +2618,6 @@
   .type-tag.updating {
     background-color: #f59e0b !important;
     color: #ffffff !important;
-    animation: pulse 1.5s ease-in-out infinite;
   }
 
   .status-tag.success,
@@ -2679,28 +2625,6 @@
   .type-tag.success {
     background-color: #10b981 !important;
     color: #ffffff !important;
-    animation: successPulse 0.6s ease-out;
-  }
-
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
-  }
-
-  @keyframes successPulse {
-    0% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.05);
-    }
-    100% {
-      transform: scale(1);
-    }
   }
 
   /* Remove field button styling */
@@ -2991,7 +2915,6 @@
     align-items: center;
     z-index: 10000;
     backdrop-filter: blur(6px);
-    animation: fade-in 0.2s ease-out;
   }
 
   .modal-header {
@@ -3619,112 +3542,49 @@
   }
 
   /* --- LOADER, TOAST, PAGINATION --- */
-  .loader-container,
-  .error-container {
+  .loader-container {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    align-items: stretch;
-    padding: 0;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
     color: var(--text-secondary);
     background: var(--bg-primary);
     min-height: 100vh;
+    text-align: center;
   }
 
-  .loading-content {
-    padding: 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-  }
-
-  .loading-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .loading-logo {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  .loading-text {
-    flex: 1;
-  }
-
-  .loading-filters {
-    display: flex;
-    gap: 2rem;
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    background: var(--bg-secondary);
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    flex-wrap: wrap;
-  }
-
-  .loading-filter-item {
+  .loader-body {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.75rem;
+    max-width: 320px;
   }
 
-  .loading-table {
+  .loader-body p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+  }
+
+  .loader-indicator {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--primary-color);
+  }
+
+  .error-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+    color: var(--text-secondary);
     background: var(--bg-primary);
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    overflow: hidden;
-  }
-
-  .loading-table-header {
-    display: grid;
-    grid-template-columns: 60px 1fr 100px 100px 100px 120px 120px;
-    gap: 1rem;
-    padding: 1rem 1.5rem;
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .loading-table-rows {
-    padding: 0.5rem 0;
-  }
-
-  .loading-table-row {
-    display: grid;
-    grid-template-columns: 60px 1fr 100px 100px 100px 120px 120px;
-    gap: 1rem;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border-color);
-  }
-
-  .loading-table-row:last-child {
-    border-bottom: none;
-  }
-
-  .loading-shimmer {
-    background: linear-gradient(90deg, 
-      var(--border-color) 25%, 
-      rgba(255, 255, 255, 0.1) 50%, 
-      var(--border-color) 75%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 2s infinite;
-    border-radius: 4px;
-  }
-
-  @keyframes shimmer {
-    0% {
-      background-position: -200% 0;
-    }
-    100% {
-      background-position: 200% 0;
-    }
+    min-height: 100vh;
+    text-align: center;
   }
 
   .empty-state {
@@ -3772,19 +3632,9 @@
   .spinner {
     width: 50px;
     height: 50px;
-    border: 5px solid var(--border-color);
-    border-top: 5px solid var(--accent-color);
+    border: 5px solid var(--accent-color);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
     margin-bottom: 1rem;
-  }
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
   }
   .error-container p {
     color: var(--danger-color);
@@ -4964,17 +4814,8 @@
   }
 
   /* 3. New success indicator for a single cell */
-  @keyframes cell-success-fade {
-    from {
-      background-color: var(--success-bg-color);
-    }
-    to {
-      background-color: transparent;
-    }
-  }
   .cell-success-highlight {
-    /* Use a 2-second animation as requested */
-    animation: cell-success-fade 2s ease-out;
+    background-color: var(--success-bg-color);
   }
 
   /* --- HIGHLIGHT FOR REQUIRED/INCOMPLETE FIELDS IN MODAL --- */
@@ -5725,11 +5566,6 @@
     display: none;
   }
 
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-
   /* Modern Analytics Section */
   .analytics-section {
     display: grid;
@@ -6131,17 +5967,6 @@
     border-radius: 4px;
     transition: width 0.5s ease;
     position: relative;
-  }
-
-  .status-fill::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    animation: shimmer 2s infinite;
   }
 
   .status-count {
