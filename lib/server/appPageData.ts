@@ -4,6 +4,7 @@ import { authOptions } from "../../pages/api/auth/[...nextauth]";
 import { getUserByEmail } from "../supabase";
 import type { AppPageConfig, AppPageProps, AppView } from "../appPageTypes";
 import { FAVICON_URL } from "../appPageTypes";
+import { getAppVersionInfo } from "../getAppVersion";
 import path from "path";
 import { promises as fs } from "fs";
 
@@ -85,6 +86,8 @@ export async function resolveAppPageProps(
   );
   const template = await fs.readFile(templatePath, "utf8");
 
+  const versionInfo = getAppVersionInfo();
+
   const replacements: Record<string, string> = {
     "{{EMAIL}}": escapeHtml(email ?? ""),
     "{{NAME}}": escapeHtml(name ?? ""),
@@ -94,6 +97,9 @@ export async function resolveAppPageProps(
     "{{TICKET_NUMBER}}": escapeHtml(ticketNumber),
     "{{INITIAL_VIEW}}": escapeHtml(initialView),
     "{{FAVICON_URL}}": escapeHtml(FAVICON_URL),
+    "{{APP_VERSION}}": escapeHtml(versionInfo.version),
+    "{{APP_VERSION_SHORT}}": escapeHtml(versionInfo.shortVersion),
+    "{{APP_BUILD_TIME}}": escapeHtml(versionInfo.buildTime),
   };
 
   let appHtml = template;

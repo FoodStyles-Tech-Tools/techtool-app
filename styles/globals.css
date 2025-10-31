@@ -4382,6 +4382,114 @@
     gap: 0.75rem;
   }
 
+  .app-header-center {
+    flex: 1.2 1 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .version-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.4rem 0.8rem;
+    border: 1px solid var(--border-color);
+    background: var(--surface-color);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-radius: 10px;
+  }
+
+  .version-banner-icon {
+    font-size: 0.85rem;
+  }
+
+  .version-banner-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1.2;
+  }
+
+  .version-banner-meta {
+    font-size: 0.68rem;
+    text-transform: none;
+    color: var(--text-tertiary);
+  }
+
+  .version-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.65rem;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    border-radius: 0;
+  }
+
+  .version-refresh-btn i {
+    font-size: 0.75rem;
+  }
+
+  .version-refresh-btn:hover,
+  .version-refresh-btn:focus-visible {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+    outline: none;
+  }
+
+  .version-banner.is-stale {
+    border-color: var(--accent-color);
+    background: var(--accent-bg-light);
+    color: var(--text-primary);
+  }
+
+  .version-banner.is-stale .version-banner-meta {
+    color: var(--text-secondary);
+  }
+
+  .version-banner.is-stale .version-refresh-btn {
+    display: inline-flex;
+  .dark .version-banner {
+    border-color: rgba(148, 163, 184, 0.35);
+    background: rgba(36, 41, 56, 0.75);
+    color: rgba(203, 213, 225, 0.85);
+  }
+
+  .dark .version-banner-meta {
+    color: rgba(148, 163, 184, 0.75);
+  }
+
+  .dark .version-refresh-btn {
+    border-color: rgba(148, 163, 184, 0.35);
+    color: rgba(203, 213, 225, 0.85);
+  }
+
+  .dark .version-refresh-btn:hover,
+  .dark .version-refresh-btn:focus-visible {
+    border-color: rgba(129, 140, 248, 0.55);
+    color: #cbd5f5;
+  }
+
+  .dark .version-banner.is-stale {
+    border-color: rgba(129, 140, 248, 0.55);
+    background: rgba(59, 130, 246, 0.18);
+    color: #f8fafc;
+  }
+
+  .dark .version-banner.is-stale .version-banner-meta {
+    color: rgba(203, 213, 225, 0.85);
+  }
+  }
+
   .app-header-brand {
     font-size: 1.5rem;
     font-weight: 600;
@@ -9753,9 +9861,9 @@
   }
 
   .sidebar-user .avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 100%;
     background: linear-gradient(135deg, var(--accent-color), #4f6ded);
     color: #ffffff;
     display: inline-flex;
