@@ -1,121 +1,142 @@
     <div class="container">
-      <aside class="sidebar">
-        <h1 class="sidebar-header">TechTool</h1>
-        <div class="nav-panel">
-          <button id="nav-home" class="nav-btn">
-            <i class="fas fa-home"></i> 
-            <span>Dashboard</span>
-          </button>
-          
-          <button id="nav-projects" class="nav-btn">
-            <i class="fas fa-folder"></i> 
-            <span>Projects</span>
-          </button>
-          
-          <button id="nav-all" class="nav-btn">
-            <i class="fas fa-list-ul"></i> 
-            <span>All Tickets</span>
-            <span
-              id="all-tickets-count"
-              class="nav-badge"
-              style="display: none"
-            ></span>
-          </button>
-          <button id="nav-my-ticket" class="nav-btn">
-            <i class="fas fa-user"></i> 
-            <span>My Tickets</span>
-            <span
-              id="my-ticket-count"
-              class="nav-badge"
-              style="display: none"
-            ></span>
-          </button>
-          <button id="nav-critical" class="nav-btn">
-            <i class="fas fa-exclamation-circle"></i> 
-            <span>Critical</span>
-            <span
-              id="critical-count"
-              class="nav-badge"
-              style="display: none"
-            ></span>
-          </button>
-          <button id="nav-stalled" class="nav-btn">
-            <i class="fas fa-pause-circle"></i> 
-            <span>Stalled</span>
-            <span
-              id="stalled-count"
-              class="nav-badge"
-              style="display: none"
-            ></span>
-          </button>
-          <button id="nav-unassigned" class="nav-btn">
-            <i class="fas fa-inbox"></i> 
-            <span>Unassigned</span>
-            <span
-              id="unassigned-count"
-              class="nav-badge"
-              style="display: none"
-            ></span>
-          </button>
-          <button id="nav-incomplete" class="nav-btn">
-            <i class="fas fa-exclamation-triangle"></i> 
-            <span>Incomplete</span>
-            <span
-              id="incomplete-count"
-              class="nav-badge"
-              style="display: none"
-            ></span>
-          </button>
-          
-          <button id="nav-reconcile" class="nav-btn">
-            <i class="far fa-clock"></i> 
-            <span>Reconcile Hours</span>
-          </button>
-          
-        </div>
-      </aside>
-
-      <div class="main-content-wrapper">
-        <header class="app-header">
-          <div class="app-header-left">
-            <div class="keyboard-shortcut-card">
-              Press ⌘ + A (Mac) or Alt + A (Windows) to quickly add a task
-            </div>
+      <header class="app-header">
+        <div class="app-header-left">
+          <div class="app-header-brand-icon">
+            <i class="fas fa-rocket"></i>
           </div>
-          <div class="app-header-right">
-            <div class="user-profile">
-              <div class="avatar" id="user-avatar"></div>
-              <div class="details">
-                <div class="name">{{NAME}}</div>
-                <div class="email">{{EMAIL}}</div>
+          <span class="app-header-brand">TechTool</span>
+        </div>
+        <div class="app-header-right">
+          <button
+            id="shortcut-trigger"
+            type="button"
+            class="shortcut-button"
+            title="Keyboard shortcuts"
+            aria-haspopup="dialog"
+            aria-controls="shortcut-overlay"
+          >
+            <i class="fas fa-keyboard"></i>
+          </button>
+          <div class="theme-toggle">
+            <input type="checkbox" id="mode-toggle" aria-label="Toggle dark mode" />
+            <label for="mode-toggle" class="theme-toggle-track">
+              <i class="fas fa-sun theme-icon sun" aria-hidden="true"></i>
+              <span class="theme-toggle-thumb"></span>
+              <i class="fas fa-moon theme-icon moon" aria-hidden="true"></i>
+            </label>
+          </div>
+        </div>
+      </header>
+      <div class="app-body">
+        <aside class="sidebar">
+          <div class="nav-panel">
+            <button id="nav-home" class="nav-btn">
+              <i class="fas fa-home"></i>
+              <span>Dashboard</span>
+            </button>
+            <button id="nav-projects" class="nav-btn">
+              <i class="fas fa-folder"></i>
+              <span>Projects</span>
+            </button>
+            <button id="nav-all" class="nav-btn">
+              <i class="fas fa-list-ul"></i>
+              <span>All Tickets</span>
+              <span
+                id="all-tickets-count"
+                class="nav-badge"
+                style="display: none"
+              ></span>
+            </button>
+            <button id="nav-my-ticket" class="nav-btn">
+              <i class="fas fa-user"></i>
+              <span>My Tickets</span>
+              <span
+                id="my-ticket-count"
+                class="nav-badge"
+                style="display: none"
+              ></span>
+            </button>
+            <button id="nav-critical" class="nav-btn">
+              <i class="fas fa-exclamation-circle"></i>
+              <span>Critical</span>
+              <span
+                id="critical-count"
+                class="nav-badge"
+                style="display: none"
+              ></span>
+            </button>
+            <button id="nav-stalled" class="nav-btn">
+              <i class="fas fa-pause-circle"></i>
+              <span>Stalled</span>
+              <span
+                id="stalled-count"
+                class="nav-badge"
+                style="display: none"
+              ></span>
+            </button>
+            <button id="nav-unassigned" class="nav-btn">
+              <i class="fas fa-inbox"></i>
+              <span>Unassigned</span>
+              <span
+                id="unassigned-count"
+                class="nav-badge"
+                style="display: none"
+              ></span>
+            </button>
+            <button id="nav-incomplete" class="nav-btn">
+              <i class="fas fa-exclamation-triangle"></i>
+              <span>Incomplete</span>
+              <span
+                id="incomplete-count"
+                class="nav-badge"
+                style="display: none"
+              ></span>
+            </button>
+            <button id="nav-reconcile" class="nav-btn">
+              <i class="far fa-clock"></i>
+              <span>Reconcile Hours</span>
+            </button>
+          </div>
+          <div class="sidebar-user-profile">
+            <button
+              id="sidebar-user-trigger"
+              class="sidebar-user-trigger"
+              type="button"
+              aria-haspopup="true"
+              aria-expanded="false"
+            >
+              <div class="sidebar-user">
+                <div class="avatar" id="user-avatar"></div>
+                <div class="details">
+                  <div class="name">{{NAME}}</div>
+                  <div class="role">{{ROLE}}</div>
+                </div>
               </div>
-              <button class="logout-button" title="Logout">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"
-                  />
-                </svg>
+              <i class="fas fa-chevron-down sidebar-user-trigger-icon"></i>
+            </button>
+            <div
+              id="sidebar-user-menu"
+              class="sidebar-user-menu"
+              role="menu"
+              aria-hidden="true"
+            >
+              <button type="button" class="sidebar-user-menu-item" data-action="settings">
+                <i class="fas fa-cog"></i>
+                <span>Settings</span>
+              </button>
+              <button
+                type="button"
+                class="sidebar-user-menu-item logout-button"
+                data-action="logout"
+              >
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Logout</span>
               </button>
             </div>
-            <div class="theme-toggle">
-              <input type="checkbox" id="mode-toggle" aria-label="Toggle dark mode" />
-              <label for="mode-toggle" class="theme-toggle-track">
-                <i class="fas fa-sun theme-icon sun" aria-hidden="true"></i>
-                <span class="theme-toggle-thumb"></span>
-                <i class="fas fa-moon theme-icon moon" aria-hidden="true"></i>
-              </label>
-            </div>
           </div>
-        </header>
-        <main>
+        </aside>
+        <div class="main-content-wrapper">
+          <main>
           <div id="dashboard-view-wrapper" style="display: none">
             <!-- Modern Dashboard Header -->
             <div class="dashboard-header-modern">
@@ -571,11 +592,152 @@
             />
             <button id="page-jump-btn">Go</button>
             <button id="next-page">Next &raquo;</button>
-        </div>
+          </div>
 
-      </main>
+        </main>
+      </div>
     </div>
     </div>
+
+    <div
+      id="shortcut-overlay"
+      class="shortcut-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="shortcut-title"
+      aria-hidden="true"
+      style="display: none"
+    >
+      <div class="shortcut-modal">
+        <div class="shortcut-modal-header">
+          <h2 id="shortcut-title">Keyboard Shortcuts</h2>
+          <button
+            id="shortcut-close"
+            class="shortcut-close"
+            type="button"
+            aria-label="Close"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="shortcut-modal-body">
+          <p class="shortcut-intro">
+            Speed up your workflow with these handy shortcuts.
+          </p>
+          <ul class="shortcut-list">
+            <li>
+              <span class="shortcut-keys">&#8984; / Alt + A</span>
+              <span class="shortcut-desc">Add quick task</span>
+            </li>
+            <li>
+              <span class="shortcut-keys">&#8984; / Alt + &#8595;</span>
+              <span class="shortcut-desc">Open shortcuts guide</span>
+            </li>
+            <li>
+              <span class="shortcut-keys">Ctrl + F</span>
+              <span class="shortcut-desc">Search tickets</span>
+            </li>
+            <li>
+              <span class="shortcut-keys">Esc</span>
+              <span class="shortcut-desc">Close dialogs or guides</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="ticket-search-overlay"
+      class="ticket-search-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="ticket-search-title"
+      aria-hidden="true"
+      style="display: none"
+    >
+      <div class="ticket-search-modal">
+        <div class="ticket-search-modal-header">
+          <h2 id="ticket-search-title" class="sr-only">Search Tickets</h2>
+          <i class="fas fa-search"></i>
+          <input
+            type="search"
+            id="ticket-search-input"
+            class="ticket-search-input"
+            placeholder="Search tickets by title, description, or ID..."
+            autocomplete="off"
+          />
+          <button
+            id="ticket-search-close"
+            class="ticket-search-close"
+            type="button"
+            aria-label="Close search"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="ticket-search-results-container" role="listbox">
+          <div id="ticket-search-empty" class="ticket-search-empty">
+            Start typing to search tickets...
+          </div>
+          <ul id="ticket-search-results" class="ticket-search-results"></ul>
+        </div>
+        <div class="ticket-search-hint">
+          Press Enter to open, use arrow keys to navigate, Esc to close.
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="user-settings-overlay"
+      class="user-settings-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="user-settings-title"
+      aria-hidden="true"
+      style="display: none"
+    >
+      <div class="user-settings-modal">
+        <div class="user-settings-header">
+          <div class="user-settings-header-text">
+            <h2 id="user-settings-title">Account Settings</h2>
+            <p id="user-settings-email" class="user-settings-email"></p>
+          </div>
+          <button
+            id="user-settings-close"
+            class="user-settings-close"
+            type="button"
+            aria-label="Close settings"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="user-settings-body">
+          <dl class="user-settings-list">
+            <div class="user-settings-item">
+              <dt>Name</dt>
+              <dd id="user-settings-name"></dd>
+            </div>
+            <div class="user-settings-item">
+              <dt>Role</dt>
+              <dd id="user-settings-role"></dd>
+            </div>
+            <div class="user-settings-item">
+              <dt>Mode</dt>
+              <dd id="user-settings-mode"></dd>
+            </div>
+            <div class="user-settings-item">
+              <dt>Email</dt>
+              <dd id="user-settings-email-value"></dd>
+            </div>
+            <div class="user-settings-item">
+              <dt>Discord</dt>
+              <dd id="user-settings-discord"></dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+
     <div id="logout-overlay" class="logout-overlay" style="display: none">
       <div class="spinner"></div>
       <p>Logging out...</p>

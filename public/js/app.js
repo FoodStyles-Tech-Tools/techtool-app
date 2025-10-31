@@ -1,4 +1,189 @@
-  // --- GLOBAL STATE ---
+function formatRoleDisplay(role) {
+  if (!role) return "Member";
+  return String(role)
+    .replace(/[_-]+/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatModeDisplay(mode) {
+  if (!mode) return "Default";
+  return String(mode)
+    .replace(/[_-]+/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function updateSidebarProfileUI() {
+  const nameEl = document.querySelector(".sidebar-user .details .name");
+  const roleEl = document.querySelector(".sidebar-user .details .role");
+  if (nameEl) {
+    nameEl.textContent = appData.currentUserName || "Guest";
+  }
+  if (roleEl) {
+    roleEl.textContent = formatRoleDisplay(appData.currentUserRole);
+  }
+  const avatarEl = document.getElementById("user-avatar");
+  if (avatarEl && appData.currentUserName) {
+    avatarEl.textContent = appData.currentUserName.charAt(0).toUpperCase();
+  }
+}
+
+function setupSidebarUserProfile() {
+  if (sidebarProfileInitialized) {
+    updateSidebarProfileUI();
+    return;
+  }
+
+  sidebarMenuTrigger = document.getElementById("sidebar-user-trigger");
+  sidebarMenu = document.getElementById("sidebar-user-menu");
+  if (!sidebarMenuTrigger || !sidebarMenu) {
+    return;
+  }
+
+  const settingsBtn = sidebarMenu.querySelector('[data-action="settings"]');
+  const logoutBtn = sidebarMenu.querySelector(".logout-button");
+  userSettingsOverlay = document.getElementById("user-settings-overlay");
+  userSettingsCloseBtn = document.getElementById("user-settings-close");
+
+  sidebarMenuTrigger.setAttribute("aria-expanded", "false");
+  sidebarMenu.setAttribute("aria-hidden", "true");
+
+  const closeMenu = () => {
+    if (!sidebarMenuOpen) return;
+    sidebarMenuOpen = false;
+    sidebarMenu.classList.remove("is-open");
+    sidebarMenuTrigger.setAttribute("aria-expanded", "false");
+    sidebarMenu.setAttribute("aria-hidden", "true");
+    if (sidebarMenuOutsideHandler) {
+      document.removeEventListener("click", sidebarMenuOutsideHandler, true);
+      sidebarMenuOutsideHandler = null;
+    }
+  };
+
+  const handleOutsideClick = (event) => {
+    if (
+      !sidebarMenu.contains(event.target) &&
+      !sidebarMenuTrigger.contains(event.target)
+    ) {
+      closeMenu();
+    }
+  };
+
+  const openMenu = () => {
+    if (sidebarMenuOpen) return;
+    if (userSettingsVisible) {
+      closeUserSettingsOverlay();
+    }
+    sidebarMenuOpen = true;
+    sidebarMenu.classList.add("is-open");
+    sidebarMenuTrigger.setAttribute("aria-expanded", "true");
+    sidebarMenu.setAttribute("aria-hidden", "false");
+    sidebarMenuOutsideHandler = handleOutsideClick;
+    document.addEventListener("click", handleOutsideClick, true);
+  };
+
+  sidebarMenuTrigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (sidebarMenuOpen) {
+      closeMenu();
+    } else {
+      openMenu();
+    }
+  });
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", () => {
+      closeMenu();
+    });
+  }
+
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", () => {
+      closeMenu();
+      openUserSettingsOverlay();
+    });
+  }
+
+  if (userSettingsOverlay) {
+    userSettingsOverlay.addEventListener("click", (event) => {
+      if (event.target === userSettingsOverlay) {
+        closeUserSettingsOverlay();
+      }
+    });
+  }
+
+  if (userSettingsCloseBtn) {
+    userSettingsCloseBtn.addEventListener("click", closeUserSettingsOverlay);
+  }
+
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.key === "Escape") {
+        if (userSettingsVisible) {
+          closeUserSettingsOverlay();
+        } else if (sidebarMenuOpen) {
+          closeMenu();
+        }
+      }
+    },
+    true
+  );
+
+  sidebarProfileInitialized = true;
+  updateSidebarProfileUI();
+}
+
+function populateUserSettingsOverlay() {
+  const emailTop = document.getElementById("user-settings-email");
+  const nameEl = document.getElementById("user-settings-name");
+  const roleEl = document.getElementById("user-settings-role");
+  const modeEl = document.getElementById("user-settings-mode");
+  const emailValue = document.getElementById("user-settings-email-value");
+  const discordEl = document.getElementById("user-settings-discord");
+
+  const email = appData.currentUserEmail || "--";
+  if (emailTop) emailTop.textContent = email;
+  if (emailValue) emailValue.textContent = email;
+  if (nameEl) nameEl.textContent = appData.currentUserName || "Guest";
+  if (roleEl) roleEl.textContent = formatRoleDisplay(appData.currentUserRole);
+  if (modeEl) modeEl.textContent = formatModeDisplay(appData.currentUserMode);
+  if (discordEl) discordEl.textContent = appData.currentUserDiscordId || "Not connected";
+}
+
+function openUserSettingsOverlay() {
+  if (!userSettingsOverlay) return;
+  populateUserSettingsOverlay();
+  userSettingsOverlay.style.display = "flex";
+  userSettingsOverlay.classList.add("active");
+  userSettingsOverlay.setAttribute("aria-hidden", "false");
+  userSettingsVisible = true;
+  lastFocusBeforeSettings =
+    document.activeElement && typeof document.activeElement.focus === "function"
+      ? document.activeElement
+      : null;
+  document.body.classList.add("user-settings-open");
+  if (userSettingsCloseBtn) {
+    userSettingsCloseBtn.focus();
+  }
+}
+
+function closeUserSettingsOverlay() {
+  if (!userSettingsOverlay || !userSettingsVisible) return;
+  userSettingsOverlay.classList.remove("active");
+  userSettingsOverlay.style.display = "none";
+  userSettingsOverlay.setAttribute("aria-hidden", "true");
+  userSettingsVisible = false;
+  document.body.classList.remove("user-settings-open");
+  if (lastFocusBeforeSettings && typeof lastFocusBeforeSettings.focus === "function") {
+    lastFocusBeforeSettings.focus();
+  } else if (sidebarMenuTrigger) {
+    sidebarMenuTrigger.focus();
+  }
+}
+// --- GLOBAL STATE ---
   console.log("🚀 JavaScript file loaded successfully!");
   
   // Global test function
@@ -27,6 +212,11 @@
     reconcileHrs: [],
     currentUserName: "",
     currentUserEmail: "",
+    currentUserId: null,
+    currentUserRole: "",
+    currentUserMode: "",
+    currentUserDiscordId: "",
+    currentUserProfile: null,
   };
   let currentPage = 1;
   let reconcileWrapper = null; // <--- ADD THIS LINE
@@ -137,6 +327,25 @@ let quickAddCommandOptions = [];
 let quickAddActiveCommandIndex = -1;
 let quickAddActiveTrigger = null;
 
+let ticketSearchOverlay = null;
+let ticketSearchInput = null;
+let ticketSearchResultsList = null;
+let ticketSearchEmptyState = null;
+let ticketSearchInitialized = false;
+let ticketSearchOpen = false;
+let ticketSearchMatches = [];
+let ticketSearchHighlightIndex = -1;
+
+let sidebarProfileInitialized = false;
+let sidebarMenuTrigger = null;
+let sidebarMenu = null;
+let sidebarMenuOutsideHandler = null;
+let sidebarMenuOpen = false;
+let userSettingsOverlay = null;
+let userSettingsCloseBtn = null;
+let userSettingsVisible = false;
+let lastFocusBeforeSettings = null;
+
 function initializeQuickAddSpotlight() {
   if (quickAddInitialized) {
     return;
@@ -223,6 +432,10 @@ function openQuickAddOverlay(prefill = "") {
     return;
   }
 
+  if (ticketSearchOpen) {
+    closeTicketSearchOverlay();
+  }
+
   quickAddOpen = true;
   quickAddOverlay.style.display = "flex";
   quickAddOverlay.classList.add("active");
@@ -242,6 +455,294 @@ function closeQuickAddOverlay() {
   quickAddSubmitting = false;
   hideQuickAddCommandList();
 }
+
+function initializeTicketSearchSpotlight() {
+  if (ticketSearchInitialized) {
+    return;
+  }
+
+  ticketSearchOverlay = document.getElementById("ticket-search-overlay");
+  ticketSearchInput = document.getElementById("ticket-search-input");
+  ticketSearchResultsList = document.getElementById("ticket-search-results");
+  ticketSearchEmptyState = document.getElementById("ticket-search-empty");
+  const closeBtn = document.getElementById("ticket-search-close");
+
+  if (!ticketSearchOverlay || !ticketSearchInput || !ticketSearchResultsList) {
+    return;
+  }
+
+  ticketSearchInitialized = true;
+  ticketSearchOverlay.setAttribute("aria-hidden", "true");
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closeTicketSearchOverlay);
+  }
+
+  ticketSearchOverlay.addEventListener("click", (event) => {
+    if (event.target === ticketSearchOverlay) {
+      closeTicketSearchOverlay();
+    }
+  });
+
+  ticketSearchInput.addEventListener("input", () => {
+    updateTicketSearchResults(ticketSearchInput.value);
+  });
+
+  ticketSearchInput.addEventListener("keydown", handleTicketSearchInputKeydown);
+
+  ticketSearchResultsList.addEventListener("mousemove", (event) => {
+    const item = event.target.closest(".ticket-search-result");
+    if (!item || !item.dataset.index) return;
+    const index = Number(item.dataset.index);
+    if (!Number.isNaN(index) && index !== ticketSearchHighlightIndex) {
+      focusTicketSearchResult(index);
+    }
+  });
+
+  ticketSearchResultsList.addEventListener("click", (event) => {
+    const item = event.target.closest(".ticket-search-result");
+    if (!item || !item.dataset.index) return;
+    const index = Number(item.dataset.index);
+    if (!Number.isNaN(index)) {
+      activateTicketSearchResult(index);
+    }
+  });
+
+  document.addEventListener("keydown", handleTicketSearchShortcut, true);
+}
+
+function handleTicketSearchShortcut(event) {
+  const key = event.key.toLowerCase();
+  const isCtrlF =
+    key === "f" &&
+    ((event.ctrlKey && !event.metaKey) || (event.metaKey && !event.ctrlKey)) &&
+    !event.altKey &&
+    !event.shiftKey;
+
+  if (!ticketSearchInitialized) {
+    initializeTicketSearchSpotlight();
+  }
+
+  if (!ticketSearchInitialized) return;
+
+  if (ticketSearchOpen) {
+    if (isCtrlF) {
+      event.preventDefault();
+      return;
+    }
+    if (key === "escape") {
+      event.preventDefault();
+      closeTicketSearchOverlay();
+      return;
+    }
+    if (key === "enter") {
+      event.preventDefault();
+      if (ticketSearchMatches.length > 0) {
+        const index = ticketSearchHighlightIndex >= 0 ? ticketSearchHighlightIndex : 0;
+        activateTicketSearchResult(index);
+      }
+      return;
+    }
+    if (key === "arrowdown" || key === "arrowup") {
+      event.preventDefault();
+      if (ticketSearchMatches.length > 0) {
+        const increment = key === "arrowdown" ? 1 : -1;
+        let nextIndex = ticketSearchHighlightIndex + increment;
+        if (nextIndex < 0) nextIndex = ticketSearchMatches.length - 1;
+        if (nextIndex >= ticketSearchMatches.length) nextIndex = 0;
+        focusTicketSearchResult(nextIndex);
+      }
+      return;
+    }
+  }
+
+  if (!isCtrlF) {
+    return;
+  }
+
+  event.preventDefault();
+  openTicketSearchOverlay("");
+}
+
+function handleTicketSearchInputKeydown(event) {
+  if (!ticketSearchOpen) return;
+
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    if (ticketSearchMatches.length === 0) return;
+    const increment = event.key === "ArrowDown" ? 1 : -1;
+    let nextIndex = ticketSearchHighlightIndex + increment;
+    if (nextIndex < 0) nextIndex = ticketSearchMatches.length - 1;
+    if (nextIndex >= ticketSearchMatches.length) nextIndex = 0;
+    focusTicketSearchResult(nextIndex);
+  } else if (event.key === "Enter") {
+    event.preventDefault();
+    if (ticketSearchMatches.length === 0) return;
+    const index = ticketSearchHighlightIndex >= 0 ? ticketSearchHighlightIndex : 0;
+    activateTicketSearchResult(index);
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    closeTicketSearchOverlay();
+  }
+}
+
+function openTicketSearchOverlay(prefill = "") {
+  initializeTicketSearchSpotlight();
+  if (!ticketSearchOverlay || !ticketSearchInput) {
+    return;
+  }
+
+  if (quickAddOpen) {
+    closeQuickAddOverlay();
+  }
+
+  ticketSearchOpen = true;
+  ticketSearchOverlay.style.display = "flex";
+  ticketSearchOverlay.classList.add("active");
+  ticketSearchOverlay.setAttribute("aria-hidden", "false");
+  document.body.classList.add("ticket-search-open");
+
+  ticketSearchInput.value = prefill;
+  updateTicketSearchResults(prefill);
+
+  requestAnimationFrame(() => {
+    ticketSearchInput.focus();
+    ticketSearchInput.select();
+  });
+}
+
+function closeTicketSearchOverlay() {
+  if (!ticketSearchOverlay) {
+    return;
+  }
+  ticketSearchOpen = false;
+  ticketSearchOverlay.classList.remove("active");
+  ticketSearchOverlay.style.display = "none";
+  ticketSearchOverlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("ticket-search-open");
+
+  ticketSearchMatches = [];
+  ticketSearchHighlightIndex = -1;
+  if (ticketSearchResultsList) {
+    ticketSearchResultsList.innerHTML = "";
+  }
+  if (ticketSearchEmptyState) {
+    ticketSearchEmptyState.textContent = "Start typing to search tickets...";
+    ticketSearchEmptyState.style.display = "block";
+  }
+  if (ticketSearchInput) {
+    ticketSearchInput.value = "";
+  }
+}
+
+function updateTicketSearchResults(rawTerm) {
+  if (!ticketSearchResultsList || !ticketSearchEmptyState) return;
+
+  const term = (rawTerm || "").trim().toLowerCase();
+  ticketSearchResultsList.innerHTML = "";
+  ticketSearchMatches = [];
+  ticketSearchHighlightIndex = -1;
+
+  if (!term) {
+    ticketSearchEmptyState.textContent = "Start typing to search tickets...";
+    ticketSearchEmptyState.style.display = "block";
+    return;
+  }
+
+  const results = (appData.allTickets || [])
+    .map((ticket) => {
+      const title = (ticket.title || "").toLowerCase();
+      const description = (ticket.description || "").toLowerCase();
+      const project = (ticket.projectName || "").toLowerCase();
+      const idString = String(ticket.id ?? "");
+      const hrbId = `hrb-${idString}`.toLowerCase();
+
+      let score = 0;
+      if (idString === term || hrbId === term) {
+        score += 6;
+      } else if (idString.includes(term) || hrbId.includes(term)) {
+        score += 4;
+      }
+      if (title.includes(term)) score += 3;
+      if (project.includes(term)) score += 2;
+      if (description.includes(term)) score += 1;
+
+      return { ticket, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return ticketUpdatedAt(b.ticket) - ticketUpdatedAt(a.ticket);
+    })
+    .slice(0, 15);
+
+  if (results.length === 0) {
+    ticketSearchEmptyState.textContent = `No tickets match "${rawTerm.trim()}"`;
+    ticketSearchEmptyState.style.display = "block";
+    return;
+  }
+
+  ticketSearchMatches = results;
+  ticketSearchEmptyState.style.display = "none";
+
+  ticketSearchResultsList.innerHTML = results
+    .map((entry, index) => {
+      const ticket = entry.ticket;
+      const projectLabel = ticket.projectName || "No project";
+      const statusLabel = ticket.status || "Open";
+      const highlightClass = index === 0 ? " ticket-search-result--active" : "";
+      return `
+        <li
+          class="ticket-search-result${highlightClass}"
+          data-ticket-id="${ticket.id}"
+          data-index="${index}"
+          role="option"
+          aria-selected="${index === 0 ? "true" : "false"}"
+        >
+          <div class="ticket-search-result-main">
+            <span class="ticket-search-result-title">${escapeHtml(ticket.title || "Untitled ticket")}</span>
+            <span class="ticket-search-result-meta">HRB-${escapeHtml(String(ticket.id))} · ${escapeHtml(statusLabel)}</span>
+          </div>
+          <div class="ticket-search-result-side">
+            <span class="ticket-search-result-project">${escapeHtml(projectLabel)}</span>
+          </div>
+        </li>
+      `;
+    })
+    .join("");
+
+  focusTicketSearchResult(0);
+}
+
+function focusTicketSearchResult(index) {
+  if (!ticketSearchResultsList || ticketSearchMatches.length === 0) return;
+  if (index < 0 || index >= ticketSearchMatches.length) return;
+
+  const items = ticketSearchResultsList.querySelectorAll(".ticket-search-result");
+  if (items.length === 0) return;
+
+  items.forEach((item) => {
+    item.classList.remove("ticket-search-result--active");
+    item.setAttribute("aria-selected", "false");
+  });
+
+  const target = items[index];
+  if (target) {
+    target.classList.add("ticket-search-result--active");
+    target.setAttribute("aria-selected", "true");
+    target.scrollIntoView({ block: "nearest" });
+    ticketSearchHighlightIndex = index;
+  }
+}
+
+function activateTicketSearchResult(index) {
+  const match = ticketSearchMatches[index];
+  if (!match) return;
+  closeTicketSearchOverlay();
+  showTaskDetailModal(match.ticket.id);
+}
+
+initializeTicketSearchSpotlight();
 
 function createDefaultQuickAddState() {
   const nowIso = new Date().toISOString();
@@ -1133,7 +1634,7 @@ async function submitQuickAddTicket() {
           .from("member")
           .select("clockify_name")
           .order("clockify_name"),
-        window.supabaseClient.from("user").select("id, name, email").order("name"),
+        window.supabaseClient.from("user").select("id, name, email, role, mode, discordId").order("name"),
         fetchAllPaginatedData(
           window.supabaseClient
             .from("reconcileHrs")
@@ -1213,13 +1714,18 @@ async function submitQuickAddTicket() {
         (u) => u.email === appData.currentUserEmail
       );
 
+      const roleInput = document.getElementById("user-role");
+      const modeInput = document.getElementById("initial-mode");
+
       appData.currentUserId = currentUser ? currentUser.id : null;
       appData.currentUserName = currentUser ? currentUser.name : "Guest";
-      // Inside the DOMContentLoaded listener, after appData.currentUserName is set
-      appData.currentUserRole = document.getElementById("user-role").value;
+      appData.currentUserRole = (currentUser && currentUser.role) || (roleInput ? roleInput.value : "");
+      appData.currentUserMode = (currentUser && currentUser.mode) || (modeInput ? modeInput.value : "");
+      appData.currentUserDiscordId = currentUser?.discordId || "";
+      appData.currentUserProfile = currentUser || null;
       reconcileSelectedUserName = appData.currentUserName;
-
       initializeQuickAddSpotlight();
+      setupSidebarUserProfile();
 
       dashboardAssigneeId = appData.currentUserId; // Default to current user
 
@@ -8763,6 +9269,92 @@ async function submitQuickAddTicket() {
     }
   });
 
+  document.addEventListener("DOMContentLoaded", setupKeyboardShortcutGuide);
+
+  function setupKeyboardShortcutGuide() {
+    const trigger = document.getElementById("shortcut-trigger");
+    const overlay = document.getElementById("shortcut-overlay");
+    const closeBtn = document.getElementById("shortcut-close");
+    if (!trigger || !overlay || !closeBtn) {
+      return;
+    }
+
+    let lastFocus = null;
+    trigger.setAttribute("aria-expanded", "false");
+    overlay.setAttribute("aria-hidden", "true");
+
+    const openGuide = () => {
+      if (overlay.style.display === "flex") return;
+      lastFocus =
+        document.activeElement && typeof document.activeElement.focus === "function"
+          ? document.activeElement
+          : null;
+      overlay.style.display = "flex";
+      overlay.setAttribute("aria-hidden", "false");
+      trigger.setAttribute("aria-expanded", "true");
+      document.body.classList.add("shortcut-modal-open");
+      closeBtn.focus();
+    };
+
+    const closeGuide = () => {
+      if (overlay.style.display === "none" || overlay.style.display === "") return;
+      overlay.style.display = "none";
+      overlay.setAttribute("aria-hidden", "true");
+      trigger.setAttribute("aria-expanded", "false");
+      document.body.classList.remove("shortcut-modal-open");
+      if (lastFocus && typeof lastFocus.focus === "function") {
+        lastFocus.focus();
+      } else {
+        trigger.focus();
+      }
+    };
+
+    const shouldIgnoreShortcut = () => {
+      const activeEl = document.activeElement;
+      if (!activeEl) return false;
+      const tag = activeEl.tagName;
+      return (
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        activeEl.isContentEditable === true
+      );
+    };
+
+    trigger.addEventListener("click", (event) => {
+      event.preventDefault();
+      openGuide();
+    });
+
+    closeBtn.addEventListener("click", closeGuide);
+
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        closeGuide();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      const isGuideVisible = overlay.style.display === "flex";
+      const isShortcutCombo =
+        (event.altKey || event.metaKey) && event.key === "ArrowDown";
+
+      if (isShortcutCombo) {
+        if (shouldIgnoreShortcut() && !isGuideVisible) {
+          return;
+        }
+        event.preventDefault();
+        openGuide();
+        return;
+      }
+
+      if (event.key === "Escape" && isGuideVisible) {
+        event.preventDefault();
+        closeGuide();
+      }
+    });
+  }
+
   // Clean up any existing modals on page load
   function cleanupModals() {
     const existingModal = document.getElementById('add-project-modal');
@@ -11206,6 +11798,9 @@ This document explains each level, when to use it, and provides concrete example
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
   }
+
+
+
 
 
 
