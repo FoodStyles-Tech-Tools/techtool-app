@@ -393,8 +393,11 @@ function initializeQuickAddSpotlight() {
 }
 
 function handleQuickAddShortcut(event) {
-  const isMetaA = event.metaKey && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "a";
-  const isAltA = event.altKey && !event.metaKey && !event.ctrlKey && event.key.toLowerCase() === "a";
+  const key = event.key.toLowerCase();
+  const isMetaA =
+    event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && key === "a";
+  const isAltA =
+    event.altKey && !event.metaKey && !event.ctrlKey && !event.shiftKey && key === "a";
 
   if (quickAddOpen) {
     if (event.key === "Escape" && !event.metaKey && !event.altKey) {
@@ -413,6 +416,7 @@ function handleQuickAddShortcut(event) {
   }
 
   event.preventDefault();
+  event.stopPropagation();
   openQuickAddOverlay();
 }
 
@@ -3458,11 +3462,6 @@ async function submitQuickAddTicket() {
         quickAddBtn.addEventListener("click", () => openQuickAddOverlay());
       }
 
-      const readmeBtn = document.getElementById("readme-btn");
-      if (readmeBtn) {
-        readmeBtn.addEventListener("click", showReadmeModal);
-      }
-
       const addProjectBtn = document.getElementById("add-project-btn");
       if (addProjectBtn) {
         addProjectBtn.removeEventListener("click", showAddProjectModal);
@@ -3537,7 +3536,7 @@ async function submitQuickAddTicket() {
     const navButtons = document.querySelectorAll(".nav-panel .nav-btn");
     navButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (btn.id === "bulk-edit-btn" || btn.id === "readme-btn") {
+        if (btn.id === "bulk-edit-btn") {
           return;
         }
 
@@ -3545,10 +3544,6 @@ async function submitQuickAddTicket() {
         activateView(view);
       });
     });
-
-    document
-      .getElementById("readme-btn")
-      .addEventListener("click", showReadmeModal);
   }
 
   function addBulkEditListeners() {
@@ -5003,8 +4998,8 @@ async function submitQuickAddTicket() {
 
     // Define columns for standard ticket views (incomplete has its own separate rendering)
     const columns = isBulkEditMode
-      ? ["", "ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee", ""]
-      : ["ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee", ""];
+      ? ["", "ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee"]
+      : ["ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee"];
     
     // Define sortable columns (exclude checkbox and actions columns)
     const sortableColumns = isBulkEditMode
@@ -5016,10 +5011,6 @@ async function submitQuickAddTicket() {
         if (index === 0 && isBulkEditMode) {
           return '<th class="checkbox-cell"><input type="checkbox" id="select-all-checkbox" title="Select all on this page"></th>';
         }
-        if (index === columns.length - 1) {
-          return `<th>${h}</th>`; // Actions column - not sortable
-        }
-        
         const sortKey = sortableColumns[index - (isBulkEditMode ? 1 : 0)];
         const currentSort = getCurrentSortState();
         const sortClass = currentSort.field === sortKey ? `sort-${currentSort.direction}` : 'sort-reset';
@@ -5043,7 +5034,7 @@ async function submitQuickAddTicket() {
 
     if (paginatedTickets.length === 0) {
       // Calculate column count for standard ticket views
-      const baseColCount = 8; // ID, Task, Type, Priority, Status, Requested By, Assignee, Actions
+      const baseColCount = 7; // ID, Task, Type, Priority, Status, Requested By, Assignee
       const colCount = isBulkEditMode ? baseColCount + 1 : baseColCount;
       tableBody.innerHTML = `
         <tr>
@@ -5065,7 +5056,7 @@ async function submitQuickAddTicket() {
 
     // Standard table view for other views
     paginatedTickets.forEach((ticket) => {
-      const colCount = isBulkEditMode ? 9 : 8;
+      const colCount = isBulkEditMode ? 8 : 7;
 
       const row = tableBody.insertRow();
       row.id = `ticket-row-${ticket.id}`;
@@ -5150,7 +5141,6 @@ async function submitQuickAddTicket() {
               ticket.id,
               "assigneeId"
             )}</td>
-            <td data-label=""></td>
         `;
       
       row.innerHTML = rowContent;
@@ -8858,17 +8848,20 @@ async function submitQuickAddTicket() {
         
         
         <td data-label="Task">
-            <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
-                
-                <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
-                   <label for="inline-new-createdAt" style="white-space: nowrap; color: var(--text-secondary); font-weight: 500; font-size: 0.8rem;">Created:</label>
-                   <input type="date" id="inline-new-createdAt" class="inline-editor" value="${today}" style="width: auto; padding: 0.25rem 0.5rem;">
+            <div class="inline-task-editor">
+                <div class="inline-task-inputs">
+                    <div class="inline-date-field">
+                       <label for="inline-new-createdAt">Created:</label>
+                       <input type="date" id="inline-new-createdAt" class="inline-editor" value="${today}">
+                    </div>
+                    <div class="inline-title-field">
+                        <input type="text" id="inline-new-title" class="inline-editor" placeholder="Enter task title..." required>
+                    </div>
                 </div>
-
-                <div style="flex-grow: 1;">
-                    <input type="text" id="inline-new-title" class="inline-editor" placeholder="Enter task title..." required>
+                <div class="inline-row-actions">
+                    <button class="action-btn-inline save-inline-btn" title="Save"><i class="fas fa-check"></i></button>
+                    <button class="action-btn-inline cancel-inline-btn" title="Cancel"><i class="fas fa-times"></i></button>
                 </div>
-
             </div>
         </td>
         <td data-label="Type"><select id="inline-new-type" class="inline-editor">${typeOptions}</select></td>
@@ -8876,12 +8869,6 @@ async function submitQuickAddTicket() {
         <td data-label="Status"><span class="status-tag status-open">Open</span></td>
         <td data-label="Requested By" id="inline-new-requestedBy-cell"></td>
         <td data-label="Assignee" id="inline-new-assignee-cell"></td>
-        <td data-label="">
-            <div style="display:flex; gap: 0.5rem;">
-                <button class="action-btn-inline save-inline-btn" title="Save"><i class="fas fa-check"></i></button>
-                <button class="action-btn-inline cancel-inline-btn" title="Cancel"><i class="fas fa-times"></i></button>
-            </div>
-        </td>
     `;
 
     anchorRow.parentNode.insertBefore(newRow, anchorRow.nextSibling);
@@ -9269,7 +9256,11 @@ async function submitQuickAddTicket() {
     }
   });
 
-  document.addEventListener("DOMContentLoaded", setupKeyboardShortcutGuide);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupKeyboardShortcutGuide);
+  } else {
+    setupKeyboardShortcutGuide();
+  }
 
   function setupKeyboardShortcutGuide() {
     const trigger = document.getElementById("shortcut-trigger");
@@ -9679,131 +9670,6 @@ async function submitQuickAddTicket() {
       html += "</ul>";
     }
     return html;
-  }
-
-  /**
-   * Sets up and displays the Readme modal. It contains the Markdown content,
-   * calls the parser, injects the resulting HTML, and makes the modal visible.
-   */
-  function showReadmeModal() {
-    // The full Markdown content is stored here in a template literal.
-    const markdownContent = `
-# TechTool Task Management Guidelines
-
-## 📌 Overview
-As a **TechTool Lead**, our department handles requests similar to a developer team.
-To keep our work structured and scalable, we use the following task hierarchy:
-
-**Project → Epic → Ticket → SubTask**
-
-This document explains each level, when to use it, and provides concrete examples.
-
----
-
-## 🏗 Hierarchy
-
-### 1. Project
-- Represents a **large initiative or new tool** that has not existed before.
-- Projects group related work into one overarching goal.
-- Even if tools share a base technology (e.g., “Discord Bot”), each distinct use case is its own project.
-- **Every Project must have a clearly defined start date and end date.**
-- If new features are added after the project starts, they should be handled as **new Tickets/Epics** but **must not extend or modify the original project’s start–end timeline.**
-
-✅ **Examples**:
-- \`Discord Bot - Harry Botter\`
-- \`Discord Bot - Proxy\`
-- \`Discord Bot - TechTool\`
-
-❌ **Not recommended**:
-- Just calling it \`Discord Bot\` (too broad, unclear purpose).
-
----
-
-### 2. Epic
-- A **major component** or **theme of work** within a project.
-- Usually describes a functional area (backend, frontend, integrations, etc.).
-- Breaks a project down into manageable areas of delivery.
-
-✅ **Examples**:
-- Build Back End
-- Build Front End
-- API Integration with LLM
-
----
-
-### 3. Ticket
-- A **specific piece of work** under an Epic (or standalone if no Epic/Project is required).
-- Tickets are the main unit of work for developers.
-- A Ticket can exist **without being tied** to a Project or Epic (e.g., one-off bugs or requests).
-
-**Ticket Types**:
-- **Request** → Feature request or small enhancement.
-- **Bug** → Fix for an issue in existing functionality.
-- **Task** → Initiative or technical work item not driven by a request/bug.
-
-✅ **Examples** (under Epic: *Build Back End*):
-- Create Python Code
-- Connect to AWS
-
-✅ **Examples** (standalone Tickets):
-- Bug: Fix login error
-- Request: Add new dashboard filter
-
----
-
-### 4. SubTask
-- The **lowest level of work**, representing steps needed to complete a Ticket.
-- Used when a Ticket is too broad and needs to be broken into smaller actionable items.
-- Helps assign parts of a Ticket to multiple team members if needed.
-
-✅ **Examples** (under Ticket: *Create Python Code*):
-- Function A
-- Function B
-- Unit Testing
-
----
-
-## ⚖️ When to Use Each Level
-
-- **Project** → Use when building a **new tool/product** or significantly expanding an existing one. Always define start & end dates.
-- **Epic** → Use when dividing a Project into **major technical or functional areas**.
-- **Ticket** → Use for all actionable tasks. Can exist under an Epic or standalone.
-- **SubTask** → Use to break down **detailed steps** of a Ticket.
-
----
-
-## 📝 Quick Examples
-
-**Project:** \`Discord Bot - TechTool\`
-*(Start: 01 Aug 2025, End: 30 Sep 2025)*
-
-→ **Epic:** Build Back End
- → **Ticket:** Create Python Code
-  → **SubTask:** Function A
-
-**Standalone Tickets**:
-- \`Bug: Fix AWS timeout error\`
-- \`Request: Add export to CSV feature\`
-
----
-
-## ✅ Best Practices
-- Always **choose the lowest meaningful level**: don’t create SubTasks unless a Ticket is too large.
-- Keep **Project scope clear**: separate similar tools into different Projects if their use case differs.
-- Use **Ticket types** (Request, Bug, Task) consistently for tracking work.
-- Ensure **Projects always have defined start & end dates**.
-- New features discovered during or after a Project should **not affect the original timeline**—treat them as separate Tickets or, if significant, as a new Project.
-- Keep naming **descriptive and actionable** (e.g., “Create API Endpoint for LLM” instead of just “API”).
-    `;
-
-    // Get the DOM elements for the modal and its content area.
-    const readmeContentDiv = document.getElementById("readme-content");
-    const readmeModal = document.getElementById("readme-modal");
-
-    // Parse the Markdown and inject the resulting HTML into the modal.
-    readmeContentDiv.innerHTML = parseMarkdown(markdownContent);
-    // Display the modal.
-    readmeModal.style.display = "flex";
   }
 
   // --- ADD THIS TO THE END OF YOUR JavaScript.html FILE ---
@@ -11621,13 +11487,19 @@ This document explains each level, when to use it, and provides concrete example
         ${isBulkEditMode ? "<td></td>" : ""}
         <td data-label="ID"><i class="fas fa-plus" style="color: var(--accent-color);"></i></td>
         <td data-label="Task">
-            <div style="display: flex; align-items: center; gap: 1rem; width: 100%;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
-                   <label for="inline-new-createdAt" style="white-space: nowrap; color: var(--text-secondary); font-weight: 500; font-size: 0.8rem;">Created:</label>
-                   <input type="date" id="inline-new-createdAt" class="inline-editor" value="${today}" style="width: auto; padding: 0.25rem 0.5rem;">
+            <div class="inline-task-editor">
+                <div class="inline-task-inputs">
+                    <div class="inline-date-field">
+                       <label for="inline-new-createdAt">Created:</label>
+                       <input type="date" id="inline-new-createdAt" class="inline-editor" value="${today}">
+                    </div>
+                    <div class="inline-title-field">
+                        <input type="text" id="inline-new-title" class="inline-editor" placeholder="Enter task title..." required>
+                    </div>
                 </div>
-                <div style="flex-grow: 1;">
-                    <input type="text" id="inline-new-title" class="inline-editor" placeholder="Enter task title..." required>
+                <div class="inline-row-actions">
+                    <button class="action-btn-inline save-inline-btn" title="Save"><i class="fas fa-check"></i></button>
+                    <button class="action-btn-inline cancel-inline-btn" title="Cancel"><i class="fas fa-times"></i></button>
                 </div>
             </div>
         </td>
@@ -11636,12 +11508,6 @@ This document explains each level, when to use it, and provides concrete example
         <td data-label="Status"><span class="status-tag status-open">Open</span></td>
         <td data-label="Requested By" id="inline-new-requestedBy-cell"></td>
         <td data-label="Assignee" id="inline-new-assignee-cell"></td>
-        <td data-label="">
-            <div style="display:flex; gap: 0.5rem;">
-                <button class="action-btn-inline save-inline-btn" title="Save"><i class="fas fa-check"></i></button>
-                <button class="action-btn-inline cancel-inline-btn" title="Cancel"><i class="fas fa-times"></i></button>
-            </div>
-        </td>
     `;
     // --- MODIFICATION END ---
 
