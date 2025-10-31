@@ -33,7 +33,11 @@
   let tableWrapper = null; // <--- ADD THIS LINE
   let currentView = "projects";
   let currentProjectId = null;
+  let currentEpicKey = null;
+  let currentTicketId = null;
+  let finderActiveColumn = 0;
   let projectStatsCache = [];
+  const NO_EPIC_KEY = "__NO_EPIC__";
   const normalizePath = (path) => {
     if (!path) return "/";
     return path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
@@ -3474,34 +3478,73 @@ async function submitQuickAddTicket() {
   // Projects view rendering function
   function renderProjectsView() {
     const layout = document.getElementById("projects-view-wrapper");
-    const railList = document.getElementById("jira-project-list");
-    const detailSection = document.getElementById("jira-project-detail");
-    const ticketBody = document.getElementById("jira-ticket-table-body");
-    const emptyState = document.getElementById("jira-ticket-empty");
-    const ticketCount = document.getElementById("jira-ticket-count");
+    const columns = document.getElementById("finder-columns");
+    const projectColumn = document.getElementById("finder-column-projects");
+    const epicColumn = document.getElementById("finder-column-epics");
+    const ticketColumn = document.getElementById("finder-column-tickets");
+    const detailColumn = document.getElementById("finder-column-detail");
+    const breadcrumbTrail = document.getElementById("finder-breadcrumb-trail");
+    const projectEmpty = document.getElementById("finder-project-empty");
+    const epicEmpty = document.getElementById("finder-epic-empty");
+    const ticketEmpty = document.getElementById("finder-ticket-empty");
+    const detailEmpty = document.getElementById("finder-detail-empty");
+    const projectCount = document.getElementById("finder-project-count");
+    const epicCount = document.getElementById("finder-epic-count");
+    const ticketCount = document.getElementById("finder-ticket-count");
+    const searchInput = document.getElementById("jira-project-search");
 
-    if (!layout || !railList || !detailSection || !ticketBody || !emptyState || !ticketCount) {
-      console.error("Projects view markup missing required containers");
+    if (
+      !layout ||
+      !columns ||
+      !projectColumn ||
+      !epicColumn ||
+      !ticketColumn ||
+      !detailColumn ||
+      !breadcrumbTrail ||
+      !projectEmpty ||
+      !epicEmpty ||
+      !ticketEmpty ||
+      !detailEmpty
+    ) {
+      console.error("Projects Finder markup missing required containers");
       return;
     }
 
-    layout.style.display = "grid";
+    layout.style.display = "flex";
 
     if (!appData.projects || appData.projects.length === 0) {
-      railList.innerHTML =
-        '<div class="jira-empty-state">No projects available yet. Use the "+" button to add one.</div>';
-      detailSection.style.display = "none";
-      ticketBody.innerHTML = "";
-      ticketCount.textContent = "";
-      emptyState.style.display = "block";
-      emptyState.textContent = "Create your first project to get started.";
+      projectStatsCache = [];
+      projectColumn.innerHTML = "";
+      projectEmpty.hidden = false;
+      projectEmpty.textContent = "No projects yet. Use the + button to add one.";
+      if (projectCount) projectCount.textContent = "";
+      epicColumn.innerHTML = "";
+      epicEmpty.hidden = false;
+      epicEmpty.textContent = "Add a project to see its epics.";
+      if (epicCount) epicCount.textContent = "";
+      ticketColumn.innerHTML = "";
+      ticketEmpty.hidden = false;
+      ticketEmpty.textContent = "Add a project to see its tickets.";
+      if (ticketCount) ticketCount.textContent = "";
+      detailColumn.innerHTML = "";
+      detailEmpty.hidden = false;
+      currentProjectId = null;
+      currentEpicKey = null;
+      currentTicketId = null;
+      finderActiveColumn = 0;
+      updateFinderBreadcrumb(null, []);
+      columns.style.setProperty("--active-column", finderActiveColumn);
       return;
     }
 
     projectStatsCache = appData.projects.map((project) => {
       const tickets = appData.allTickets.filter((ticket) => ticket.projectId == project.id);
-      const completedTickets = tickets.filter((ticket) => ticket.status === "Completed").length;
-      const inProgressTickets = tickets.filter((ticket) => ticket.status === "In Progress").length;
+      const completedTickets = tickets.filter(
+        (ticket) => (ticket.status || "").toLowerCase() === "completed"
+      ).length;
+      const inProgressTickets = tickets.filter(
+        (ticket) => (ticket.status || "").toLowerCase() === "in progress"
+      ).length;
 
       return {
         id: String(project.id),
@@ -3520,216 +3563,570 @@ async function submitQuickAddTicket() {
       (a.raw.projectName || "").localeCompare(b.raw.projectName || "")
     );
 
-    if (
-      !currentProjectId ||
-      !projectStatsCache.some((item) => item.id === String(currentProjectId))
-    ) {
-      currentProjectId = projectStatsCache[0].id;
-    } else {
-      currentProjectId = String(currentProjectId);
-    }
-
-    renderProjectRail();
-    renderProjectDetailSection();
-    renderProjectTicketsSection();
-  }
-
-  function renderProjectRail() {
-    const railList = document.getElementById("jira-project-list");
-    const searchInput = document.getElementById("jira-project-search");
-    if (!railList) return;
-
     const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
-
     const filteredProjects = projectStatsCache.filter(({ raw }) => {
       if (!query) return true;
       const name = raw.projectName || "";
       return name.toLowerCase().includes(query);
     });
 
-    railList.innerHTML = filteredProjects
+    if (projectCount) {
+      projectCount.textContent =
+        filteredProjects.length > 0
+          ? filteredProjects.length === 1
+            ? "1 project"
+            : `${filteredProjects.length} projects`
+          : "";
+    }
+
+    if (filteredProjects.length === 0) {
+      projectColumn.innerHTML = "";
+      projectEmpty.hidden = false;
+      projectEmpty.textContent = query
+        ? "No projects match your search."
+        : "No projects available.";
+      epicColumn.innerHTML = "";
+      epicEmpty.hidden = false;
+      epicEmpty.textContent = "Select a project to browse its epics.";
+      if (epicCount) epicCount.textContent = "";
+      ticketColumn.innerHTML = "";
+      ticketEmpty.hidden = false;
+      ticketEmpty.textContent = "Select an epic to see its tickets.";
+      if (ticketCount) ticketCount.textContent = "";
+      detailColumn.innerHTML = "";
+      detailEmpty.hidden = false;
+      currentProjectId = null;
+      currentEpicKey = null;
+      currentTicketId = null;
+      finderActiveColumn = 0;
+      updateFinderBreadcrumb(null, []);
+    } else {
+      if (
+        !currentProjectId ||
+        !filteredProjects.some((item) => item.id === String(currentProjectId))
+      ) {
+        currentProjectId = filteredProjects[0].id;
+        currentEpicKey = null;
+        currentTicketId = null;
+      } else {
+        currentProjectId = String(currentProjectId);
+      }
+
+      renderFinderProjectColumn(filteredProjects, projectColumn, projectEmpty);
+
+      const projectEntry =
+        projectStatsCache.find((item) => item.id === String(currentProjectId)) || null;
+
+      const epicGroups = renderFinderEpicColumn(
+        projectEntry,
+        epicColumn,
+        epicEmpty,
+        epicCount
+      );
+
+      const selectedTicket = renderFinderTicketColumn(
+        projectEntry,
+        ticketColumn,
+        ticketEmpty,
+        ticketCount
+      );
+
+      renderFinderDetailColumn(selectedTicket, detailColumn, detailEmpty);
+
+      updateFinderBreadcrumb(projectEntry, epicGroups);
+    }
+
+    syncFinderActiveColumn();
+    columns.style.setProperty("--active-column", finderActiveColumn);
+
+    if (searchInput && !searchInput.dataset.listenerAttached) {
+      searchInput.addEventListener("input", () => {
+        finderActiveColumn = Math.min(finderActiveColumn, 1);
+        currentEpicKey = null;
+        currentTicketId = null;
+        renderProjectsView();
+      });
+      searchInput.dataset.listenerAttached = "true";
+    }
+
+    document.querySelectorAll(".finder-column-back").forEach((button) => {
+      button.onclick = () => {
+        const targetLevel = Number(button.dataset.targetLevel || "0");
+        finderActiveColumn = targetLevel;
+        if (targetLevel < 3) currentTicketId = null;
+        if (targetLevel < 2) currentEpicKey = null;
+        renderProjectsView();
+      };
+    });
+  }
+
+  function renderFinderProjectColumn(projects, container, emptyEl) {
+    if (!container || !emptyEl) return;
+    if (!projects.length) {
+      container.innerHTML = "";
+      emptyEl.hidden = false;
+      return;
+    }
+
+    emptyEl.hidden = true;
+
+    container.innerHTML = projects
       .map((project) => {
-        const projectName = escapeHtml(project.raw.projectName || "Untitled project");
-        const isActive = project.id === String(currentProjectId);
+        const isActive = String(project.id) === String(currentProjectId);
+        const ticketsLabel =
+          project.totalTickets === 1
+            ? "1 ticket"
+            : `${project.totalTickets} tickets`;
+        const completionLabel = `${project.completionRate}%`;
+        const owner = project.raw.projectOwner
+          ? `Owner: ${project.raw.projectOwner}`
+          : "";
+
         return `
-          <button class="jira-project-chip ${isActive ? "jira-project-chip--active" : ""}" data-project-id="${project.id}">
-            <span>${projectName}</span>
-            <span>${project.totalTickets}</span>
+          <button class="finder-row finder-row--project ${isActive ? "finder-row--active" : ""}" data-project-id="${project.id}">
+            <div class="finder-row-main">
+              <span class="finder-row-title">${escapeHtml(
+                project.raw.projectName || "Untitled project"
+              )}</span>
+              ${
+                owner
+                  ? `<span class="finder-row-subtitle">${escapeHtml(owner)}</span>`
+                  : ""
+              }
+            </div>
+            <div class="finder-row-meta">
+              <span class="finder-badge finder-badge--muted">${escapeHtml(
+                ticketsLabel
+              )}</span>
+              <span class="finder-badge finder-badge--pill">${escapeHtml(
+                completionLabel
+              )}</span>
+            </div>
           </button>
         `;
       })
       .join("");
 
-    railList.querySelectorAll("[data-project-id]").forEach((button) => {
+    container.querySelectorAll("[data-project-id]").forEach((button) => {
       button.addEventListener("click", () => {
         const projectId = button.getAttribute("data-project-id");
-        if (!projectId || projectId === currentProjectId) return;
-        currentProjectId = projectId;
-        renderProjectRail();
-        renderProjectDetailSection();
-        renderProjectTicketsSection();
+        if (!projectId) return;
+        currentProjectId = String(projectId);
+        currentEpicKey = null;
+        currentTicketId = null;
+        finderActiveColumn = 1;
+        renderProjectsView();
       });
     });
-
-    if (filteredProjects.length === 0) {
-      return;
-    }
-
-    if (searchInput && !searchInput.dataset.listenerAttached) {
-      searchInput.addEventListener("input", () => {
-        renderProjectRail();
-        const firstVisible = railList.querySelector("[data-project-id]");
-        if (firstVisible && (!currentProjectId || !railList.querySelector(`[data-project-id="${currentProjectId}"]`))) {
-          const projectId = firstVisible.getAttribute("data-project-id");
-          if (projectId) {
-            currentProjectId = projectId;
-            renderProjectDetailSection();
-            renderProjectTicketsSection();
-            renderProjectRail();
-          }
-        }
-      });
-      searchInput.dataset.listenerAttached = "true";
-    }
-
-    const emptyState = document.getElementById("jira-ticket-empty");
-    const detailSection = document.getElementById("jira-project-detail");
-    if (filteredProjects.length === 0) {
-      if (detailSection) detailSection.style.display = "none";
-      if (emptyState) {
-        emptyState.style.display = "block";
-        emptyState.textContent = "No projects match your search.";
-      }
-    } else {
-      if (emptyState) emptyState.style.display = "none";
-    }
   }
 
-  function renderProjectDetailSection() {
-    const detailSection = document.getElementById("jira-project-detail");
-    const nameEl = document.getElementById("jira-project-name");
-    const ownerEl = document.getElementById("jira-project-owner");
-    const updatedEl = document.getElementById("jira-project-updated");
-    const descriptionEl = document.getElementById("jira-project-description");
-    const statsContainer = document.getElementById("jira-project-stats");
+  function renderFinderEpicColumn(projectEntry, container, emptyEl, countEl) {
+    if (!container || !emptyEl) return [];
 
-    if (!detailSection || !nameEl || !ownerEl || !updatedEl || !descriptionEl || !statsContainer) {
-      return;
-    }
-
-    const projectEntry = projectStatsCache.find((item) => item.id === String(currentProjectId));
     if (!projectEntry) {
-      detailSection.style.display = "none";
-      return;
+      container.innerHTML = "";
+      emptyEl.hidden = false;
+      emptyEl.textContent = "Select a project to browse its epics.";
+      if (countEl) countEl.textContent = "";
+      currentEpicKey = null;
+      return [];
     }
 
-    const project = projectEntry.raw;
-    detailSection.style.display = "grid";
+    const projectTickets = appData.allTickets.filter(
+      (ticket) => String(ticket.projectId) === String(projectEntry.id)
+    );
 
-    nameEl.textContent = project.projectName || "Untitled project";
-    ownerEl.textContent = project.projectOwner
-      ? `Owner: ${project.projectOwner}`
-      : "Owner: Unassigned";
-
-    const updatedLabel = formatProjectUpdated(project);
-    updatedEl.textContent = updatedLabel;
-
-    const description = project.description && project.description.trim().length
-      ? project.description.trim()
-      : "No description provided.";
-    descriptionEl.textContent = description;
-
-    statsContainer.innerHTML = `
-      <div class="jira-project-stat">
-        <span>Total issues</span>
-        <span>${projectEntry.totalTickets}</span>
-      </div>
-      <div class="jira-project-stat">
-        <span>In progress</span>
-        <span>${projectEntry.inProgressTickets}</span>
-      </div>
-      <div class="jira-project-stat">
-        <span>Completed</span>
-        <span>${projectEntry.completedTickets}</span>
-      </div>
-      <div class="jira-project-stat">
-        <span>Completion</span>
-        <span>${projectEntry.completionRate}%</span>
-      </div>
-    `;
-
-    const editBtn = document.getElementById("jira-edit-project");
-    const deleteBtn = document.getElementById("jira-delete-project");
-    if (editBtn) {
-      editBtn.onclick = () => editProject(project.id);
-    }
-    if (deleteBtn) {
-      deleteBtn.onclick = () => deleteProject(project.id);
-    }
-  }
-
-  function renderProjectTicketsSection() {
-    const ticketBody = document.getElementById("jira-ticket-table-body");
-    const emptyState = document.getElementById("jira-ticket-empty");
-    const ticketCount = document.getElementById("jira-ticket-count");
-    if (!ticketBody || !emptyState || !ticketCount) return;
-
-    const tickets = appData.allTickets
-      .filter((ticket) => String(ticket.projectId) === String(currentProjectId));
-
-    ticketCount.textContent =
-      tickets.length === 1 ? "1 issue" : `${tickets.length} issues`;
-
-    if (tickets.length === 0) {
-      ticketBody.innerHTML = "";
-      emptyState.style.display = "block";
-      return;
+    if (!projectTickets.length) {
+      container.innerHTML = "";
+      emptyEl.hidden = false;
+      emptyEl.textContent = "No tickets in this project yet.";
+      if (countEl) countEl.textContent = "0 epics";
+      currentEpicKey = null;
+      return [];
     }
 
-    emptyState.style.display = "none";
+    const groupsMap = new Map();
 
-    tickets.sort((a, b) => {
-      const aDate = ticketUpdatedAt(a);
-      const bDate = ticketUpdatedAt(b);
-      return bDate - aDate;
+    projectTickets.forEach((ticket) => {
+      const rawEpic = (ticket.epic || "").trim();
+      const key = rawEpic || NO_EPIC_KEY;
+
+      if (!groupsMap.has(key)) {
+        groupsMap.set(key, {
+          key,
+          label: rawEpic || "No Epic",
+          total: 0,
+          inProgress: 0,
+          completed: 0,
+        });
+      }
+
+      const group = groupsMap.get(key);
+      group.total += 1;
+      const status = (ticket.status || "").toLowerCase();
+      if (status === "completed" || status === "done" || status === "closed") {
+        group.completed += 1;
+      } else if (status === "in progress") {
+        group.inProgress += 1;
+      }
     });
 
-    ticketBody.innerHTML = tickets
-      .map((ticket) => {
-        const summary = escapeHtml(ticket.title || "Untitled issue");
-        const type = escapeHtml(ticket.type || "Task");
-        const status = escapeHtml(ticket.status || "Open");
-        const assignee = escapeHtml(findAssigneeName(ticket.assigneeId) || "Unassigned");
-        const updated = escapeHtml(formatTicketUpdatedLabel(ticket));
+    const groups = Array.from(groupsMap.values()).sort((a, b) => {
+      if (a.key === NO_EPIC_KEY) return 1;
+      if (b.key === NO_EPIC_KEY) return -1;
+      return a.label.localeCompare(b.label);
+    });
+
+    if (countEl) {
+      countEl.textContent =
+        groups.length === 1 ? "1 epic" : `${groups.length} epics`;
+    }
+
+    container.innerHTML = groups
+      .map((group) => {
+        const isActive = currentEpicKey && group.key === currentEpicKey;
+        const metaParts = [
+          group.total === 1 ? "1 ticket" : `${group.total} tickets`,
+        ];
+        if (group.inProgress > 0) {
+          metaParts.push(`${group.inProgress} in progress`);
+        }
+        if (group.completed > 0) {
+          metaParts.push(`${group.completed} done`);
+        }
         return `
-          <tr data-ticket-id="${ticket.id}">
-            <td class="jira-ticket-key">HRB-${ticket.id}</td>
-            <td>${summary}</td>
-            <td>${type}</td>
-            <td><span class="jira-ticket-status">${status}</span></td>
-            <td>${assignee}</td>
-            <td>${updated}</td>
-          </tr>
+          <button class="finder-row finder-row--epic ${isActive ? "finder-row--active" : ""}" data-epic-key="${escapeHtml(
+            group.key
+          )}">
+            <div class="finder-row-main">
+              <span class="finder-row-title">${escapeHtml(group.label)}</span>
+              <span class="finder-row-subtitle">${escapeHtml(
+                metaParts.join(" · ")
+              )}</span>
+            </div>
+          </button>
         `;
       })
       .join("");
 
-    ticketBody.querySelectorAll("tr[data-ticket-id]").forEach((row) => {
-      row.addEventListener("click", () => {
-        const ticketId = row.getAttribute("data-ticket-id");
-        if (ticketId) {
-          showTaskDetailModal(ticketId);
+    emptyEl.hidden = groups.length > 0;
+
+    if (currentEpicKey && !groups.some((group) => group.key === currentEpicKey)) {
+      currentEpicKey = null;
+      currentTicketId = null;
+    }
+
+    container.querySelectorAll("[data-epic-key]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const epicKey = button.getAttribute("data-epic-key");
+        if (typeof epicKey !== "string") return;
+        currentEpicKey = epicKey;
+        currentTicketId = null;
+        finderActiveColumn = 2;
+        renderProjectsView();
+      });
+    });
+
+    return groups;
+  }
+
+  function renderFinderTicketColumn(projectEntry, container, emptyEl, countEl) {
+    if (!container || !emptyEl) return null;
+
+    if (!projectEntry) {
+      container.innerHTML = "";
+      emptyEl.hidden = false;
+      emptyEl.textContent = "Select a project to browse its tickets.";
+      if (countEl) countEl.textContent = "";
+      currentTicketId = null;
+      return null;
+    }
+
+    const projectTickets = appData.allTickets
+      .filter((ticket) => String(ticket.projectId) === String(projectEntry.id))
+      .sort((a, b) => ticketUpdatedAt(b) - ticketUpdatedAt(a));
+
+    if (!currentEpicKey) {
+      container.innerHTML = "";
+      emptyEl.hidden = false;
+      emptyEl.textContent = "Select an epic to see its tickets.";
+      if (countEl) {
+        countEl.textContent =
+          projectTickets.length === 1
+            ? "1 ticket"
+            : `${projectTickets.length} tickets`;
+      }
+      currentTicketId = null;
+      return null;
+    }
+
+    const filteredTickets = projectTickets.filter((ticket) => {
+      if (currentEpicKey === NO_EPIC_KEY) {
+        return !ticket.epic || !ticket.epic.trim();
+      }
+      return (ticket.epic || "").trim() === currentEpicKey;
+    });
+
+    if (countEl) {
+      countEl.textContent =
+        filteredTickets.length === 1
+          ? "1 ticket"
+          : `${filteredTickets.length} tickets`;
+    }
+
+    if (!filteredTickets.length) {
+      container.innerHTML = "";
+      emptyEl.hidden = false;
+      emptyEl.textContent = "No tickets in this epic yet.";
+      currentTicketId = null;
+      return null;
+    }
+
+    emptyEl.hidden = true;
+
+    if (
+      currentTicketId &&
+      !filteredTickets.some((ticket) => String(ticket.id) === String(currentTicketId))
+    ) {
+      currentTicketId = null;
+    }
+
+    container.innerHTML = filteredTickets
+      .map((ticket) => {
+        const isActive =
+          currentTicketId && String(ticket.id) === String(currentTicketId);
+        const assignee = findAssigneeName(ticket.assigneeId) || "Unassigned";
+        const status = ticket.status || "Open";
+        const updated = formatTicketUpdatedLabel(ticket);
+        return `
+          <button class="finder-row finder-row--ticket ${isActive ? "finder-row--active" : ""}" data-ticket-id="${ticket.id}">
+            <div class="finder-row-main">
+              <span class="finder-row-title">${escapeHtml(
+                ticket.title || "Untitled ticket"
+              )}</span>
+              <span class="finder-row-subtitle">HRB-${escapeHtml(
+                String(ticket.id)
+              )} · ${escapeHtml(assignee)}</span>
+            </div>
+            <div class="finder-row-meta">
+              <span class="finder-badge finder-badge--status">${escapeHtml(
+                status
+              )}</span>
+              <span class="finder-row-updated">${escapeHtml(updated)}</span>
+            </div>
+          </button>
+        `;
+      })
+      .join("");
+
+    container.querySelectorAll("[data-ticket-id]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const ticketId = button.getAttribute("data-ticket-id");
+        if (!ticketId) return;
+        currentTicketId = ticketId;
+        finderActiveColumn = 3;
+        renderProjectsView();
+      });
+    });
+
+    return currentTicketId
+      ? filteredTickets.find((ticket) => String(ticket.id) === String(currentTicketId)) ||
+        null
+      : null;
+  }
+
+  function renderFinderDetailColumn(ticket, container, emptyEl) {
+    if (!container || !emptyEl) return;
+
+    if (!ticket) {
+      container.innerHTML = "";
+      emptyEl.hidden = false;
+      emptyEl.textContent = "Select a ticket to view its details.";
+      return;
+    }
+
+    emptyEl.hidden = true;
+
+    const status = ticket.status || "Open";
+    const assignee = findAssigneeName(ticket.assigneeId) || "Unassigned";
+    const priority = ticket.priority || "No priority";
+    const requestedBy = ticket.requestedBy || "Not set";
+    const epicLabel = resolveEpicLabel(ticket.epic || "", []);
+    const updatedLabel = formatTicketUpdatedLabel(ticket);
+    const dueLabel = formatFinderDate(ticket.dueDate) || "No due date";
+    const startedLabel =
+      formatFinderDate(ticket.startedAt || ticket.started_at) || "Not started";
+    const completedLabel =
+      formatFinderDate(ticket.completedAt || ticket.completed_at) || "Not done";
+
+    const description = ticket.description && ticket.description.trim().length
+      ? escapeHtml(ticket.description).replace(/\n/g, "<br>")
+      : "";
+
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const combinedText = `${ticket.description || ""} ${ticket.relevantLink || ""}`;
+    const links = [...new Set(combinedText.match(urlRegex) || [])];
+
+    const linksSection = links.length
+      ? `
+        <div class="finder-detail-section finder-detail-section--links">
+          <h4>Links</h4>
+          <ul>
+            ${links
+              .map(
+                (url) =>
+                  `<li><a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(
+                    url
+                  )}</a></li>`
+              )
+              .join("")}
+          </ul>
+        </div>
+      `
+      : "";
+
+    container.innerHTML = `
+      <div class="finder-detail-header">
+        <span class="finder-detail-key">HRB-${escapeHtml(String(ticket.id))}</span>
+        <span class="finder-badge finder-badge--status">${escapeHtml(status)}</span>
+      </div>
+      <h3 class="finder-detail-title">${escapeHtml(ticket.title || "Untitled ticket")}</h3>
+      <p class="finder-detail-meta">
+        <span>${escapeHtml(ticket.type || "Task")}</span>
+        <span>Updated ${escapeHtml(updatedLabel)}</span>
+      </p>
+      <dl class="finder-detail-grid">
+        <div>
+          <dt>Epic</dt>
+          <dd>${escapeHtml(epicLabel)}</dd>
+        </div>
+        <div>
+          <dt>Assignee</dt>
+          <dd>${escapeHtml(assignee)}</dd>
+        </div>
+        <div>
+          <dt>Priority</dt>
+          <dd>${escapeHtml(priority)}</dd>
+        </div>
+        <div>
+          <dt>Requested By</dt>
+          <dd>${escapeHtml(requestedBy)}</dd>
+        </div>
+        <div>
+          <dt>Started</dt>
+          <dd>${escapeHtml(startedLabel)}</dd>
+        </div>
+        <div>
+          <dt>Completed</dt>
+          <dd>${escapeHtml(completedLabel)}</dd>
+        </div>
+        <div>
+          <dt>Due</dt>
+          <dd>${escapeHtml(dueLabel)}</dd>
+        </div>
+      </dl>
+      <div class="finder-detail-section">
+        <h4>Notes</h4>
+        ${
+          description
+            ? `<p>${description}</p>`
+            : '<p class="finder-detail-empty">No description provided.</p>'
         }
+      </div>
+      ${linksSection}
+    `;
+  }
+
+  function updateFinderBreadcrumb(projectEntry, epicGroups) {
+    const breadcrumbTrail = document.getElementById("finder-breadcrumb-trail");
+    if (!breadcrumbTrail) return;
+
+    const crumbs = [{ label: "Projects", level: 0 }];
+
+    if (projectEntry) {
+      crumbs.push({
+        label: projectEntry.raw.projectName || "Untitled project",
+        level: 1,
+      });
+    }
+
+    if (projectEntry && currentEpicKey) {
+      crumbs.push({
+        label: resolveEpicLabel(currentEpicKey, epicGroups),
+        level: 2,
+      });
+    }
+
+    if (projectEntry && currentTicketId) {
+      crumbs.push({
+        label: `HRB-${currentTicketId}`,
+        level: 3,
+      });
+    }
+
+    breadcrumbTrail.innerHTML = crumbs
+      .map((crumb, index) => {
+        const isLast = index === crumbs.length - 1;
+        if (isLast) {
+          return `<span class="finder-crumb finder-crumb--current">${escapeHtml(
+            crumb.label
+          )}</span>`;
+        }
+        return `<button class="finder-crumb" data-crumb-level="${crumb.level}">${escapeHtml(
+          crumb.label
+        )}</button>`;
+      })
+      .join('<span class="finder-crumb-separator">/</span>');
+
+    breadcrumbTrail.querySelectorAll("button[data-crumb-level]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const level = Number(button.getAttribute("data-crumb-level") || "0");
+        if (Number.isNaN(level)) return;
+        if (level <= 0) {
+          finderActiveColumn = 0;
+          currentEpicKey = null;
+          currentTicketId = null;
+        } else if (level === 1) {
+          finderActiveColumn = 1;
+          currentEpicKey = null;
+          currentTicketId = null;
+        } else if (level === 2) {
+          finderActiveColumn = 2;
+          currentTicketId = null;
+        }
+        renderProjectsView();
       });
     });
   }
 
-  function showProjectTickets(projectId) {
-    if (!projectId) return;
-    currentProjectId = String(projectId);
-    renderProjectRail();
-    renderProjectDetailSection();
-    renderProjectTicketsSection();
+  function syncFinderActiveColumn() {
+    let maxLevel = 0;
+    if (currentProjectId) maxLevel = 1;
+    if (currentEpicKey) maxLevel = 2;
+    if (currentTicketId) maxLevel = 3;
+    finderActiveColumn = Math.min(finderActiveColumn, maxLevel);
+    if (!Number.isFinite(finderActiveColumn) || finderActiveColumn < 0) {
+      finderActiveColumn = 0;
+    }
+  }
+
+  function resolveEpicLabel(epicKey, epicGroups) {
+    if (!epicKey) return "No Epic";
+    if (epicKey === NO_EPIC_KEY) return "No Epic";
+    if (epicGroups && epicGroups.length) {
+      const match = epicGroups.find((group) => group.key === epicKey);
+      if (match) {
+        return match.label;
+      }
+    }
+    return epicKey;
+  }
+
+  function formatFinderDate(value) {
+    if (!value) return "";
+    const iso = String(value);
+    const datePart = iso.includes("T") ? iso.split("T")[0] : iso;
+    return formatDateForUIDisplay(datePart) || "";
   }
 
   function findAssigneeName(assigneeId) {

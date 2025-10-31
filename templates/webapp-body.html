@@ -482,80 +482,78 @@
           </div>
 
           <!-- Projects View -->
-          <div id="projects-view-wrapper" class="jira-projects-layout" style="display: none">
-            <aside class="jira-projects-rail">
-              <div class="jira-projects-rail__header">
-                <h2>Projects</h2>
-                <button id="add-project-btn" class="jira-rail-action" title="Add project">
-                  <i class="fas fa-plus"></i>
-                </button>
-              </div>
-              <div class="jira-projects-rail__search">
-                <i class="fas fa-search"></i>
-                <input
-                  type="search"
-                  id="jira-project-search"
-                  placeholder="Search projects"
-                  autocomplete="off"
-                />
-              </div>
-              <div id="jira-project-list" class="jira-projects-rail__list">
-                <!-- Project list populated via JS -->
-              </div>
-            </aside>
-            <section class="jira-projects-content">
-              <header id="jira-project-detail" class="jira-project-detail" style="display: none">
-                <div class="jira-project-detail__info">
-                  <h1 id="jira-project-name"></h1>
-                  <div class="jira-project-detail__meta">
-                    <span id="jira-project-owner"></span>
-                    <span id="jira-project-updated"></span>
-                  </div>
-                  <p id="jira-project-description" class="jira-project-detail__description"></p>
-                </div>
-                <div class="jira-project-detail__stats" id="jira-project-stats">
-                  <!-- Stats injected via JS -->
-                </div>
-                <div class="jira-project-detail__actions">
-                  <button id="jira-edit-project" class="jira-tertiary-btn">
-                    <i class="fas fa-edit"></i>
-                    Edit
+          <div id="projects-view-wrapper" class="finder-browser" style="display: none">
+            <div class="finder-browser__body">
+              <nav class="finder-breadcrumb" id="finder-breadcrumb" aria-label="Project navigation">
+                <div class="finder-breadcrumb-trail" id="finder-breadcrumb-trail"></div>
+                <div class="finder-breadcrumb-actions">
+                  <button id="add-project-btn" class="finder-action-btn" title="Add project">
+                    <i class="fas fa-plus"></i>
                   </button>
-                  <button id="jira-delete-project" class="jira-tertiary-btn jira-tertiary-btn--danger">
-                    <i class="fas fa-trash"></i>
-                    Delete
-                  </button>
-                </div>
-              </header>
-              <div class="jira-ticket-panel">
-                <div class="jira-ticket-panel__header">
-                  <h2>Issues</h2>
-                  <div class="jira-ticket-panel__info">
-                    <span id="jira-ticket-count"></span>
+                  <div class="finder-search">
+                    <i class="fas fa-search"></i>
+                    <input
+                      type="search"
+                      id="jira-project-search"
+                      placeholder="Search projects"
+                      autocomplete="off"
+                    />
                   </div>
                 </div>
-                <div class="jira-ticket-table-wrapper">
-                  <table class="jira-ticket-table" aria-label="Project issues">
-                    <thead>
-                      <tr>
-                        <th scope="col">Key</th>
-                        <th scope="col">Summary</th>
-                        <th scope="col">Type</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Assignee</th>
-                        <th scope="col">Updated</th>
-                      </tr>
-                    </thead>
-                    <tbody id="jira-ticket-table-body">
-                      <!-- Tickets injected via JS -->
-                    </tbody>
-                  </table>
-                  <div id="jira-ticket-empty" class="jira-empty-state" style="display: none">
-                    No issues in this project yet.
-                  </div>
+              </nav>
+              <div class="finder-columns-viewport">
+                <div class="finder-columns" id="finder-columns" style="--active-column: 0;">
+                  <section class="finder-column" data-level="project" aria-label="Projects">
+                    <header class="finder-column-header">
+                      <span class="finder-column-title">Projects</span>
+                      <span class="finder-column-meta" id="finder-project-count"></span>
+                    </header>
+                    <div class="finder-column-body" id="finder-column-projects" role="tree"></div>
+                    <div class="finder-empty" id="finder-project-empty" hidden>
+                      No projects yet. Use the + button to add one.
+                    </div>
+                  </section>
+                  <section class="finder-column" data-level="epic" aria-label="Epics">
+                    <header class="finder-column-header">
+                      <button class="finder-column-back" data-target-level="0" aria-label="Back to projects">
+                        <i class="fas fa-angle-left"></i>
+                      </button>
+                      <span class="finder-column-title" id="finder-epic-heading">Epics</span>
+                      <span class="finder-column-meta" id="finder-epic-count"></span>
+                    </header>
+                    <div class="finder-column-body" id="finder-column-epics" role="tree"></div>
+                    <div class="finder-empty" id="finder-epic-empty" hidden>
+                      Select a project to browse its epics.
+                    </div>
+                  </section>
+                  <section class="finder-column" data-level="ticket" aria-label="Tickets">
+                    <header class="finder-column-header">
+                      <button class="finder-column-back" data-target-level="1" aria-label="Back to epics">
+                        <i class="fas fa-angle-left"></i>
+                      </button>
+                      <span class="finder-column-title" id="finder-ticket-heading">Tickets</span>
+                      <span class="finder-column-meta" id="finder-ticket-count"></span>
+                    </header>
+                    <div class="finder-column-body" id="finder-column-tickets" role="tree"></div>
+                    <div class="finder-empty" id="finder-ticket-empty" hidden>
+                      Select an epic to see its tickets.
+                    </div>
+                  </section>
+                  <section class="finder-column finder-column--detail" data-level="detail" aria-label="Ticket detail">
+                    <header class="finder-column-header">
+                      <button class="finder-column-back" data-target-level="2" aria-label="Back to tickets">
+                        <i class="fas fa-angle-left"></i>
+                      </button>
+                      <span class="finder-column-title" id="finder-detail-heading">Ticket Detail</span>
+                    </header>
+                    <div class="finder-column-body finder-detail-body" id="finder-column-detail"></div>
+                    <div class="finder-empty" id="finder-detail-empty" hidden>
+                      Select a ticket to view its details.
+                    </div>
+                  </section>
                 </div>
               </div>
-            </section>
+            </div>
           </div>
 
           <div
