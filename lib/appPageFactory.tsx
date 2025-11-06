@@ -233,9 +233,28 @@ export function BaseAppPage({
                 const info = await res.json();
                 const latest = info?.version || info?.shortVersion || '';
                 if(latest && latest !== currentVersion){
+                  // Update available - show red badge
                   banner.classList.add('is-stale');
-                  if (staleBadge) staleBadge.hidden = false;
+                  banner.classList.remove('is-latest');
+                  if (staleBadge) {
+                    staleBadge.hidden = false;
+                    staleBadge.textContent = 'Update available';
+                    staleBadge.classList.remove('is-latest');
+                    staleBadge.classList.add('is-stale');
+                  }
                   refreshBtn.hidden = false; // CSS will show it in stale state
+                  statusText.textContent = 'Version ' + (info?.shortVersion || latest);
+                } else if(latest && latest === currentVersion){
+                  // Latest version - show green badge
+                  banner.classList.remove('is-stale');
+                  banner.classList.add('is-latest');
+                  if (staleBadge) {
+                    staleBadge.hidden = false;
+                    staleBadge.textContent = 'Latest version';
+                    staleBadge.classList.remove('is-stale');
+                    staleBadge.classList.add('is-latest');
+                  }
+                  refreshBtn.hidden = true;
                   statusText.textContent = 'Version ' + (info?.shortVersion || latest);
                 }
               } catch(e){

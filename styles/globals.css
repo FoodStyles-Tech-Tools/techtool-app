@@ -4419,6 +4419,7 @@
 
   .sidebar-version .version-banner-icon {
     font-size: 0.7rem;
+    padding: 0.05rem 0;
   }
 
   .sidebar-version .version-banner-text {
@@ -4470,6 +4471,7 @@
 
   .version-banner-icon {
     font-size: 0.85rem;
+    padding: 0.05rem 0;
   }
 
   .version-banner-text {
@@ -4533,13 +4535,25 @@
     align-items: center;
     padding: 0.05rem 0.4rem;
     border-radius: 999px;
-    background: var(--accent-bg-light, rgba(59,130,246,.12));
-    color: var(--accent-color, #4f46e5);
     font-size: 0.6rem;
     font-weight: 600;
   }
 
+  .version-stale-badge.is-stale {
+    background: rgba(239, 68, 68, 0.12);
+    color: #dc2626;
+  }
+
+  .version-stale-badge.is-latest {
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+  }
+
   .version-banner.is-stale #version-stale-badge[hidden] {
+    display: inline-flex !important;
+  }
+
+  .version-banner.is-latest #version-stale-badge[hidden] {
     display: inline-flex !important;
   }
 
@@ -4597,6 +4611,21 @@
 
   .dark .sidebar-version .version-refresh-btn.is-updating {
     opacity: 0.8;
+  }
+
+  .dark .version-stale-badge.is-stale {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+
+  .dark .version-stale-badge.is-latest {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+  }
+
+  .dark .version-banner.is-latest {
+    border-color: rgba(34, 197, 94, 0.4);
+    background: rgba(34, 197, 94, 0.1);
   }
 
   .app-header-brand {
@@ -4761,6 +4790,23 @@
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
+  }
+
+  .shortcut-section {
+    margin-top: 1.5rem;
+  }
+
+  .shortcut-section-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.75rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .dark .shortcut-section-title {
+    color: rgba(203, 213, 225, 0.9);
   }
 
   .shortcut-list li {

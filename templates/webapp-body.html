@@ -527,11 +527,6 @@
             <div class="finder-browser__body">
               <nav class="finder-breadcrumb" id="finder-breadcrumb" aria-label="Project navigation">
                 <div class="finder-breadcrumb-trail" id="finder-breadcrumb-trail"></div>
-                <div class="finder-breadcrumb-actions">
-                  <button id="add-project-btn" class="finder-action-btn" title="Add project">
-                    <i class="fas fa-plus"></i>
-                  </button>
-                </div>
               </nav>
               <div class="finder-columns-viewport">
                 <div class="finder-columns finder-columns--static" id="finder-columns">
@@ -539,6 +534,9 @@
                     <header class="finder-column-header">
                       <span class="finder-column-title">Projects</span>
                       <span class="finder-column-meta" id="finder-project-count"></span>
+                      <button class="finder-column-action" id="add-project-btn" title="Add project">
+                        <i class="fas fa-plus"></i>
+                      </button>
                     </header>
                     <div class="finder-column-body" id="finder-column-projects" role="tree"></div>
                     <div class="finder-empty" id="finder-project-empty" hidden>
@@ -659,6 +657,15 @@
               <span class="shortcut-desc">Close dialogs or guides</span>
             </li>
           </ul>
+          <div class="shortcut-section">
+            <h3 class="shortcut-section-title">Project Page</h3>
+            <ul class="shortcut-list">
+              <li>
+                <span class="shortcut-keys">s</span>
+                <span class="shortcut-desc">Search project name</span>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
