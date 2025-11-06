@@ -322,7 +322,7 @@ export function BaseAppPage({
                             deleteReq.onsuccess = () => resolve();
                             deleteReq.onerror = () => reject(deleteReq.error);
                             deleteReq.onblocked = () => {
-                              console.warn(`IndexedDB database ${db.name} is blocked, will retry`);
+                              console.warn('IndexedDB database ' + db.name + ' is blocked, will retry');
                               setTimeout(() => resolve(), 100);
                             };
                           });
