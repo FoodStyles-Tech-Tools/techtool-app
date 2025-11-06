@@ -4539,6 +4539,7 @@
   .sidebar-version .version-banner-icon {
     font-size: 0.7rem;
     padding: 0.05rem 0;
+    margin-left: 0.5rem;
   }
 
   .sidebar-version .version-banner-text {
