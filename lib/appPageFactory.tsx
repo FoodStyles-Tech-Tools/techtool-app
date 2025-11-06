@@ -296,13 +296,12 @@ export function BaseAppPage({
               }
               
               // Small delay to show "Updating..." state, then hard refresh (bypass cache)
-              setTimeout(() => {
+              setTimeout(async () => {
                 // Clear all cached data except session/auth
                 try {
                   // Clear localStorage (preserve nothing - NextAuth uses cookies)
                   const localStorageKeys = Object.keys(localStorage);
                   localStorageKeys.forEach(key => {
-                    // Clear everything - NextAuth session is in cookies, not localStorage
                     localStorage.removeItem(key);
                   });
                   
@@ -312,26 +311,104 @@ export function BaseAppPage({
                     sessionStorage.removeItem(key);
                   });
                   
-                  // Clear service worker cache if available
-                  if ('caches' in window) {
-                    caches.keys().then(names => {
-                      names.forEach(name => {
-                        caches.delete(name);
-                      });
-                    });
+                  // Clear IndexedDB databases
+                  if ('indexedDB' in window) {
+                    try {
+                      const databases = await indexedDB.databases();
+                      await Promise.all(
+                        databases.map(db => {
+                          return new Promise((resolve, reject) => {
+                            const deleteReq = indexedDB.deleteDatabase(db.name);
+                            deleteReq.onsuccess = () => resolve();
+                            deleteReq.onerror = () => reject(deleteReq.error);
+                            deleteReq.onblocked = () => {
+                              console.warn(`IndexedDB database ${db.name} is blocked, will retry`);
+                              setTimeout(() => resolve(), 100);
+                            };
+                          });
+                        })
+                      );
+                    } catch (idbError) {
+                      console.warn('Error clearing IndexedDB:', idbError);
+                    }
                   }
                   
-                  // Clear fetch cache by reloading with cache bypass
-                  // Force hard refresh with timestamp to bypass all caches
+                  // Clear all cache storage (including service worker caches)
+                  if ('caches' in window) {
+                    try {
+                      const cacheNames = await caches.keys();
+                      await Promise.all(
+                        cacheNames.map(name => caches.delete(name))
+                      );
+                    } catch (cacheError) {
+                      console.warn('Error clearing cache storage:', cacheError);
+                    }
+                  }
+                  
+                  // Unregister service workers if any
+                  if ('serviceWorker' in navigator) {
+                    try {
+                      const registrations = await navigator.serviceWorker.getRegistrations();
+                      await Promise.all(
+                        registrations.map(registration => registration.unregister())
+                      );
+                    } catch (swError) {
+                      console.warn('Error unregistering service workers:', swError);
+                    }
+                  }
+                  
+                  // Force hard refresh - equivalent to CTRL+SHIFT+R
+                  // First, fetch main resources with cache bypass to clear HTTP cache
+                  try {
+                    await Promise.all([
+                      fetch(window.location.href, { 
+                        cache: 'reload',
+                        headers: {
+                          'Cache-Control': 'no-cache, no-store, must-revalidate',
+                          'Pragma': 'no-cache',
+                          'Expires': '0'
+                        }
+                      }).catch(() => {}),
+                      fetch('/js/app.js', { 
+                        cache: 'reload',
+                        headers: {
+                          'Cache-Control': 'no-cache, no-store, must-revalidate',
+                          'Pragma': 'no-cache'
+                        }
+                      }).catch(() => {}),
+                      fetch('/manifest.webmanifest', { 
+                        cache: 'reload',
+                        headers: {
+                          'Cache-Control': 'no-cache, no-store, must-revalidate',
+                          'Pragma': 'no-cache'
+                        }
+                      }).catch(() => {})
+                    ]);
+                  } catch (fetchError) {
+                    console.warn('Error fetching resources with cache bypass:', fetchError);
+                  }
+                  
+                  // Small delay to ensure all cache clearing operations complete
+                  await new Promise(resolve => setTimeout(resolve, 100));
+                  
+                  // Add timestamp to URL to force cache bypass
                   const url = new URL(window.location.href);
+                  // Remove existing cache-busting params to keep URL clean
+                  url.searchParams.delete('_t');
+                  url.searchParams.delete('_hard');
                   url.searchParams.set('_t', Date.now().toString());
                   url.searchParams.set('_hard', '1');
                   
-                  // Use replace to force reload and bypass cache
+                  // Force a hard reload by using location.replace with timestamp
+                  // This bypasses HTTP cache and forces fresh resource loading
+                  // Using replace instead of href to avoid adding to history
                   window.location.replace(url.toString());
+                  
                 } catch (error) {
                   console.error('Error clearing cache:', error);
-                  // Fallback: just reload with timestamp
+                  // Fallback: force hard reload using location.reload
+                  // Note: location.reload(true) is deprecated but still works in most browsers
+                  // As a last resort, use location.replace with timestamp
                   const url = new URL(window.location.href);
                   url.searchParams.set('_t', Date.now().toString());
                   window.location.replace(url.toString());
