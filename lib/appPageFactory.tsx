@@ -297,11 +297,45 @@ export function BaseAppPage({
               
               // Small delay to show "Updating..." state, then hard refresh (bypass cache)
               setTimeout(() => {
-                // Hard refresh - bypass cache like CTRL+SHIFT+R
-                // Method 1: Use replace with timestamp to force reload
-                const url = new URL(window.location.href);
-                url.searchParams.set('_t', Date.now().toString());
-                window.location.replace(url.toString());
+                // Clear all cached data except session/auth
+                try {
+                  // Clear localStorage (preserve nothing - NextAuth uses cookies)
+                  const localStorageKeys = Object.keys(localStorage);
+                  localStorageKeys.forEach(key => {
+                    // Clear everything - NextAuth session is in cookies, not localStorage
+                    localStorage.removeItem(key);
+                  });
+                  
+                  // Clear sessionStorage
+                  const sessionStorageKeys = Object.keys(sessionStorage);
+                  sessionStorageKeys.forEach(key => {
+                    sessionStorage.removeItem(key);
+                  });
+                  
+                  // Clear service worker cache if available
+                  if ('caches' in window) {
+                    caches.keys().then(names => {
+                      names.forEach(name => {
+                        caches.delete(name);
+                      });
+                    });
+                  }
+                  
+                  // Clear fetch cache by reloading with cache bypass
+                  // Force hard refresh with timestamp to bypass all caches
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('_t', Date.now().toString());
+                  url.searchParams.set('_hard', '1');
+                  
+                  // Use replace to force reload and bypass cache
+                  window.location.replace(url.toString());
+                } catch (error) {
+                  console.error('Error clearing cache:', error);
+                  // Fallback: just reload with timestamp
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('_t', Date.now().toString());
+                  window.location.replace(url.toString());
+                }
               }, 500);
             });
 
