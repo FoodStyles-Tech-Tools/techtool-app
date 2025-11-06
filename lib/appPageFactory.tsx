@@ -211,6 +211,83 @@ export function BaseAppPage({
           }
         `}
       </Script>
+      <Script id="version-refresh-init" strategy="afterInteractive">
+        {`
+          (function setupVersionRefresh(){
+            const banner = document.getElementById('version-banner');
+            const statusText = document.getElementById('version-status-text');
+            const refreshBtn = document.getElementById('version-refresh-btn');
+            const staleBadge = document.getElementById('version-stale-badge');
+            const currentVersionInput = document.getElementById('app-version');
+
+            if(!banner || !statusText || !refreshBtn || !currentVersionInput){
+              return;
+            }
+
+            const currentVersion = currentVersionInput.value;
+
+            async function checkVersion(){
+              try {
+                const res = await fetch('/api/version', { cache: 'no-store' });
+                if(!res.ok) return;
+                const info = await res.json();
+                const latest = info?.version || info?.shortVersion || '';
+                if(latest && latest !== currentVersion){
+                  banner.classList.add('is-stale');
+                  if (staleBadge) staleBadge.hidden = false;
+                  refreshBtn.hidden = false; // CSS will show it in stale state
+                  statusText.textContent = 'Version ' + (info?.shortVersion || latest);
+                }
+              } catch(e){
+                console.warn('Version check failed', e);
+              }
+            }
+
+            refreshBtn.addEventListener('click', async function(){
+              if(refreshBtn.disabled) return;
+              
+              const icon = refreshBtn.querySelector('.version-refresh-icon');
+              const label = refreshBtn.querySelector('.version-refresh-label');
+              
+              // Show loading state
+              refreshBtn.disabled = true;
+              refreshBtn.classList.add('is-updating');
+              if(icon) icon.classList.add('fa-spin');
+              if(label) label.textContent = 'Updating...';
+              
+              try {
+                // Fetch the latest version info to ensure cache is updated
+                const res = await fetch('/api/version', { 
+                  cache: 'no-store',
+                  headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache'
+                  }
+                });
+                
+                if(res.ok) {
+                  // Also fetch main app resources to bust cache
+                  await Promise.all([
+                    fetch('/js/app.js', { cache: 'reload' }).catch(() => {}),
+                    fetch('/manifest.webmanifest', { cache: 'reload' }).catch(() => {})
+                  ]);
+                }
+              } catch(e) {
+                console.warn('Failed to fetch latest version:', e);
+              }
+              
+              // Small delay to show "Updating..." state, then reload
+              setTimeout(() => {
+                window.location.reload(true);
+              }, 500);
+            });
+
+            // Initial check and a periodic re-check while the app runs
+            checkVersion();
+            setInterval(checkVersion, 60 * 1000);
+          })();
+        `}
+      </Script>
       <Script src="/js/app.js" strategy="afterInteractive" />
     </>
   );

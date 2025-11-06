@@ -1102,6 +1102,28 @@ function activateProjectSearchResult(index) {
     currentTicketId = null;
     finderActiveColumn = 1;
     renderProjectsView();
+    
+    // Scroll to the selected project after rendering
+    // Use double requestAnimationFrame to ensure DOM is fully updated
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        scrollToSelectedProject(projectId);
+      });
+    });
+  }
+}
+
+function scrollToSelectedProject(projectId) {
+  const projectColumn = document.getElementById("finder-column-projects");
+  if (!projectColumn) return;
+  
+  const projectElement = projectColumn.querySelector(`[data-project-id="${projectId}"]`);
+  if (projectElement) {
+    projectElement.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest"
+    });
   }
 }
 

@@ -6,33 +6,6 @@
           </div>
           <span class="app-header-brand">TechTool</span>
         </div>
-        <div class="app-header-center">
-          <div
-            id="version-banner"
-            class="version-banner"
-            role="status"
-            aria-live="polite"
-            data-state="current"
-          >
-            <i class="fas fa-info-circle version-banner-icon" aria-hidden="true"></i>
-            <div class="version-banner-text">
-              <span id="version-status-text">Version {{APP_VERSION_SHORT}}</span>
-              <span id="version-meta-text" class="version-banner-meta">
-                Deployed {{APP_BUILD_TIME}}
-              </span>
-            </div>
-            <button
-              id="version-refresh-btn"
-              type="button"
-              class="version-refresh-btn"
-              aria-label="Refresh to latest version"
-              hidden
-            >
-              <i class="fas fa-sync-alt" aria-hidden="true"></i>
-              <span class="version-refresh-label">Refresh</span>
-            </button>
-          </div>
-        </div>
         <div class="app-header-right">
           <button
             id="shortcut-trigger"
@@ -160,6 +133,29 @@
                 <span>Logout</span>
               </button>
             </div>
+          </div>
+          <div
+            id="version-banner"
+            class="version-banner sidebar-version"
+            role="status"
+            aria-live="polite"
+            data-state="current"
+          >
+            <i class="fas fa-info-circle version-banner-icon" aria-hidden="true"></i>
+            <div class="version-banner-text">
+              <span id="version-status-text">Version {{APP_VERSION_SHORT}}</span>
+              <span id="version-stale-badge" class="version-stale-badge" hidden>Update available</span>
+            </div>
+            <button
+              id="version-refresh-btn"
+              type="button"
+              class="version-refresh-btn"
+              aria-label="Refresh to latest version"
+              hidden
+            >
+              <i class="fas fa-sync-alt version-refresh-icon" aria-hidden="true"></i>
+              <span class="version-refresh-label">Refresh</span>
+            </button>
           </div>
         </aside>
         <div class="main-content-wrapper">
