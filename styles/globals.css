@@ -2282,6 +2282,7 @@
   .dark textarea {
     background-color: var(--input-bg);
     color: var(--text-primary);
+    padding: 10px
   }
   input[type="checkbox"] {
     width: 1rem;
@@ -2890,6 +2891,124 @@
   }
   .multi-select-option input {
     margin-right: 0.5rem;
+  }
+
+  /* Tag Input for Collaborators */
+  .tag-input-wrapper {
+    position: relative;
+    width: 100%;
+  }
+
+  .tag-input-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    background: var(--row-alt-color, rgba(255, 255, 255, 0.05));
+    min-height: 42px;
+    cursor: text;
+    transition: background-color 0.2s ease;
+  }
+
+  .tag-input-container:focus-within {
+    background: var(--surface-color);
+    outline: none;
+  }
+
+  .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--accent-color);
+    color: #ffffff;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border: none;
+  }
+
+  .tag-chip-remove {
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 2px 4px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    color: #ffffff;
+    opacity: 0.8;
+  }
+
+  .tag-chip-remove:hover {
+    opacity: 1;
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .tag-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    padding: 0;
+    min-width: 120px;
+    outline: none;
+    box-shadow: none;
+  }
+
+  .tag-input::placeholder {
+    color: var(--text-secondary);
+  }
+
+  .tag-dropdown {
+    display: none;
+    position: top;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1001;
+    margin-top: 4px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .tag-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .tag-option:hover {
+    background-color: var(--row-alt-color);
+  }
+
+  .tag-option-selected {
+    background-color: var(--accent-bg-light);
+  }
+
+  .tag-option-selected:hover {
+    background-color: var(--accent-bg-light);
+  }
+
+  .tag-option-text {
+    flex: 1;
+    color: var(--text-primary);
+  }
+
+  .tag-option-check {
+    color: var(--accent-color);
+    font-size: 0.85rem;
+    margin-left: 8px;
   }
 
   /* --- GENERIC MODAL STYLES --- */
@@ -9969,13 +10088,15 @@
   }
 
   .finder-row--input {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px;
     padding: 12px 14px;
     background: var(--row-alt-color);
     border-radius: 10px;
     border: 1px dashed var(--border-color);
+    box-sizing: border-box;
+    align-items: stretch;
   }
 
   .finder-inline-input {
@@ -9986,6 +10107,11 @@
     color: var(--text-primary);
     background: var(--surface-color);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    display: block;
+    flex-shrink: 0;
   }
 
   .finder-inline-input:focus {
@@ -10003,13 +10129,24 @@
     background: var(--surface-color);
     min-height: 80px;
     resize: vertical;
+    width: 100%;
+    font-family: inherit;
+    box-sizing: border-box;
+    margin: 0;
+    display: block;
+    flex-shrink: 0;
   }
 
   .finder-inline-actions {
-    display: flex;
+    display: flex !important;
+    flex-direction: row !important;
     align-items: center;
     gap: 8px;
-    margin-top: 4px;
+    margin-top: 0;
+    width: 100%;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    flex-shrink: 0;
   }
 
   .finder-inline-btn {
@@ -10363,21 +10500,71 @@
     border: none;
     background: transparent;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: 10px;
     width: 100%;
     padding: 12px 14px;
     border-radius: 0;
-    cursor: pointer;
     color: var(--text-primary);
     transition: background 0.2s ease, color 0.2s ease;
     text-align: left;
+    position: relative;
+  }
+
+  /* For button elements that are directly .finder-row */
+  button.finder-row {
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
   }
 
   .finder-row:hover {
     background: var(--row-hover-color);
+  }
+
+  .finder-row-button {
+    border: none;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 10px;
+    flex: 1;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+    text-align: left;
+  }
+
+  .finder-row-edit-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .finder-row:hover .finder-row-edit-btn {
+    opacity: 1;
+  }
+
+  .finder-row-edit-btn:hover {
+    background: var(--row-alt-color);
+    color: var(--accent-color);
+  }
+
+  .finder-row-edit-btn i {
+    font-size: 0.85rem;
   }
 
   .finder-row--active {

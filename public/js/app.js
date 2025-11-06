@@ -235,6 +235,7 @@ function closeUserSettingsOverlay() {
   };
   let finderDragState = null;
   let finderEpicDraft = null;
+  let finderEpicEditing = null; // { projectId, epicKey }
   let finderTicketDraft = null;
   let finderDetailOriginal = null;
   let finderDetailCleanup = null;
@@ -3945,11 +3946,8 @@ async function submitQuickAddTicket() {
         quickAddBtn.addEventListener("click", () => openQuickAddOverlay());
       }
 
-      const addProjectBtn = document.getElementById("add-project-btn");
-      if (addProjectBtn) {
-        addProjectBtn.removeEventListener("click", showAddProjectModal);
-        addProjectBtn.addEventListener("click", showAddProjectModal);
-      }
+      // Note: Add Project button is handled by global event listener
+      // No need to attach individual listeners here to avoid conflicts
     }
 
     currentView = view;
@@ -4705,64 +4703,83 @@ async function submitQuickAddTicket() {
         const ownerHtml = owner ? highlightFinderMatch(owner, searchTerm) : "";
 
         return `
-          <button class="finder-row finder-row--project ${
+          <div class="finder-row finder-row--project ${
             isActive ? "finder-row--active" : ""
           }" data-project-id="${project.id}">
-            <div class="finder-row-main">
-              <span class="finder-row-title">${titleHtml}</span>
-              ${
-                ownerHtml
-                  ? `<span class="finder-row-subtitle">${ownerHtml}</span>`
-                  : ""
-              }
-            </div>
-            <div class="finder-row-meta">
-              <span class="finder-badge finder-badge--muted">${escapeHtml(
-                ticketsLabel
-              )}</span>
-              <span class="finder-badge finder-badge--pill">${escapeHtml(
-                completionLabel
-              )}</span>
-            </div>
-          </button>
+            <button class="finder-row-button" data-project-id="${project.id}">
+              <div class="finder-row-main">
+                <span class="finder-row-title">${titleHtml}</span>
+                ${
+                  ownerHtml
+                    ? `<span class="finder-row-subtitle">${ownerHtml}</span>`
+                    : ""
+                }
+              </div>
+              <div class="finder-row-meta">
+                <span class="finder-badge finder-badge--muted">${escapeHtml(
+                  ticketsLabel
+                )}</span>
+                <span class="finder-badge finder-badge--pill">${escapeHtml(
+                  completionLabel
+                )}</span>
+              </div>
+            </button>
+            <button class="finder-row-edit-btn" data-project-id="${project.id}" title="Edit project">
+              <i class="fas fa-edit"></i>
+            </button>
+          </div>
         `;
       })
       .join("");
 
-    container.querySelectorAll("[data-project-id]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const projectId = button.getAttribute("data-project-id");
-        if (!projectId) return;
-        currentProjectId = String(projectId);
-        finderFilters.project = String(projectId);
-        currentEpicKey = null;
-        finderFilters.epic = "all";
-        currentTicketId = null;
-        finderActiveColumn = 1;
-        renderProjectsView();
-      });
+    container.querySelectorAll("[data-project-id]").forEach((row) => {
+      const projectId = row.getAttribute("data-project-id");
+      if (!projectId) return;
 
-      button.addEventListener("dragover", (event) => {
-        if (!finderDragState) return;
-        event.preventDefault();
-        button.classList.add("finder-row--drop-target");
-        if (event.dataTransfer) {
-          event.dataTransfer.dropEffect = "move";
-        }
-      });
+      const rowButton = row.querySelector(".finder-row-button");
+      const editButton = row.querySelector(".finder-row-edit-btn");
 
-      button.addEventListener("dragleave", () => {
-        button.classList.remove("finder-row--drop-target");
-      });
+      // Handle main row click
+      if (rowButton) {
+        rowButton.addEventListener("click", (event) => {
+          if (event.target.closest(".finder-row-edit-btn")) return;
+          currentProjectId = String(projectId);
+          finderFilters.project = String(projectId);
+          currentEpicKey = null;
+          finderFilters.epic = "all";
+          currentTicketId = null;
+          finderActiveColumn = 1;
+          renderProjectsView();
+        });
 
-      button.addEventListener("drop", (event) => {
-        if (!finderDragState) return;
-        event.preventDefault();
-        button.classList.remove("finder-row--drop-target");
-        const targetProjectId = button.getAttribute("data-project-id");
-        if (!targetProjectId) return;
-        moveTicketToProject(finderDragState.ticketId, targetProjectId);
-      });
+        rowButton.addEventListener("dragover", (event) => {
+          if (!finderDragState) return;
+          event.preventDefault();
+          row.classList.add("finder-row--drop-target");
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "move";
+          }
+        });
+
+        rowButton.addEventListener("dragleave", () => {
+          row.classList.remove("finder-row--drop-target");
+        });
+
+        rowButton.addEventListener("drop", (event) => {
+          if (!finderDragState) return;
+          event.preventDefault();
+          row.classList.remove("finder-row--drop-target");
+          moveTicketToProject(finderDragState.ticketId, projectId);
+        });
+      }
+
+      // Handle edit button click
+      if (editButton) {
+        editButton.addEventListener("click", (event) => {
+          event.stopPropagation();
+          editProject(Number(projectId));
+        });
+      }
     });
   }
     function renderFinderEpicColumn(projectEntry, container, emptyEl, countEl) {
@@ -4838,10 +4855,52 @@ async function submitQuickAddTicket() {
     }
 
     const activeEpicKey = currentEpicKey;
+    const isEditingEpic = finderEpicEditing && 
+      String(finderEpicEditing.projectId) === String(projectEntry.id);
 
     let rowsHtml = groups
       .map((group) => {
         const isActive = activeEpicKey && group.key === activeEpicKey;
+        const isEditing = isEditingEpic && finderEpicEditing.epicKey === group.key;
+        
+        // Skip edit functionality for "No Epic"
+        if (group.key === NO_EPIC_KEY) {
+          return `
+            <button class="finder-row finder-row--epic ${
+              isActive ? "finder-row--active" : ""
+            }" data-epic-key="${escapeHtml(group.key)}">
+              <div class="finder-row-main">
+                <span class="finder-row-title">${escapeHtml(group.label)}</span>
+                <span class="finder-row-subtitle">${escapeHtml(
+                  group.total === 1 ? "1 ticket" : `${group.total} tickets`
+                )}</span>
+              </div>
+            </button>
+          `;
+        }
+
+        // Show inline editing mode
+        if (isEditing) {
+          return `
+            <div class="finder-row finder-row--epic finder-row--input ${
+              isActive ? "finder-row--active" : ""
+            }" data-epic-key="${escapeHtml(group.key)}" data-epic-editing="true">
+              <input type="text" class="finder-inline-input" placeholder="Epic name" value="${escapeHtml(
+                group.label
+              )}">
+              <div class="finder-inline-actions">
+                <button type="button" class="finder-inline-btn finder-inline-btn--save">
+                  <i class="fas fa-check"></i><span>Save</span>
+                </button>
+                <button type="button" class="finder-inline-btn finder-inline-btn--secondary finder-inline-btn--cancel">
+                  <i class="fas fa-times"></i><span>Cancel</span>
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
+        // Normal display mode with edit button
         const metaParts = [
           group.total === 1 ? "1 ticket" : `${group.total} tickets`,
         ];
@@ -4854,15 +4913,21 @@ async function submitQuickAddTicket() {
         const subtitleHtml = metaParts
           .map((part) => escapeHtml(part))
           .join('<span class="finder-meta-separator">&bull;</span>');
+
         return `
-          <button class="finder-row finder-row--epic ${
+          <div class="finder-row finder-row--epic ${
             isActive ? "finder-row--active" : ""
-          }" data-epic-key="${escapeHtml(group.key)}">
-            <div class="finder-row-main">
-              <span class="finder-row-title">${escapeHtml(group.label)}</span>
-              <span class="finder-row-subtitle">${subtitleHtml}</span>
-            </div>
-          </button>
+          }" data-epic-key="${escapeHtml(group.key)}" data-epic-editing="false">
+            <button class="finder-row-button" data-epic-key="${escapeHtml(group.key)}">
+              <div class="finder-row-main">
+                <span class="finder-row-title">${escapeHtml(group.label)}</span>
+                <span class="finder-row-subtitle">${subtitleHtml}</span>
+              </div>
+            </button>
+            <button class="finder-row-edit-btn" data-epic-key="${escapeHtml(group.key)}" title="Edit epic">
+              <i class="fas fa-edit"></i>
+            </button>
+          </div>
         `;
       })
       .join("");
@@ -4894,42 +4959,103 @@ async function submitQuickAddTicket() {
     container.innerHTML = rowsHtml;
     emptyEl.hidden = groups.length > 0 || showDraft;
 
-    container.querySelectorAll("[data-epic-key]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const epicKey = button.getAttribute("data-epic-key");
-        if (typeof epicKey !== "string") return;
-        currentEpicKey = epicKey;
-        finderFilters.epic = epicKey;
-        finderTicketDraft = null;
-        currentTicketId = null;
-        finderActiveColumn = 2;
-        renderProjectsView();
-      });
+    container.querySelectorAll("[data-epic-key]").forEach((row) => {
+      const epicKey = row.getAttribute("data-epic-key");
+      if (typeof epicKey !== "string") return;
 
-      button.addEventListener("dragover", (event) => {
-        if (!finderDragState) return;
-        event.preventDefault();
-        button.classList.add("finder-row--drop-target");
-        if (event.dataTransfer) {
-          event.dataTransfer.dropEffect = "move";
+      const isEditing = row.getAttribute("data-epic-editing") === "true";
+      const rowButton = row.querySelector(".finder-row-button");
+      const editButton = row.querySelector(".finder-row-edit-btn");
+
+      // Handle inline editing mode
+      if (isEditing) {
+        const input = row.querySelector("input.finder-inline-input");
+        const saveBtn = row.querySelector(".finder-inline-btn--save");
+        const cancelBtn = row.querySelector(".finder-inline-btn--cancel");
+
+        if (input) {
+          requestAnimationFrame(() => {
+            input.focus();
+            input.select();
+          });
+
+          input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              saveBtn?.click();
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              cancelBtn?.click();
+            }
+          });
         }
-      });
 
-      button.addEventListener("dragleave", () => {
-        button.classList.remove("finder-row--drop-target");
-      });
+        if (saveBtn) {
+          saveBtn.addEventListener("click", () => {
+            const newName = input?.value.trim() || "";
+            if (newName && newName !== epicKey) {
+              renameEpic(projectEntry.id, epicKey, newName);
+            } else {
+              cancelEpicEdit(projectEntry.id, epicKey);
+            }
+          });
+        }
 
-      button.addEventListener("drop", (event) => {
-        if (!finderDragState) return;
-        event.preventDefault();
-        button.classList.remove("finder-row--drop-target");
-        const epicKey = button.getAttribute("data-epic-key");
-        moveTicketToEpic(
-          finderDragState.ticketId,
-          projectEntry.id,
-          epicKey || NO_EPIC_KEY
-        );
-      });
+        if (cancelBtn) {
+          cancelBtn.addEventListener("click", () => {
+            cancelEpicEdit(projectEntry.id, epicKey);
+          });
+        }
+        return;
+      }
+
+      // Handle main row click (only for button rows, not editing rows)
+      // For "No Epic", the row itself is a button, so handle it directly
+      const clickTarget = rowButton || (row.tagName === "BUTTON" ? row : null);
+      
+      if (clickTarget) {
+        clickTarget.addEventListener("click", (event) => {
+          if (event.target.closest(".finder-row-edit-btn")) return;
+          currentEpicKey = epicKey;
+          finderFilters.epic = epicKey;
+          finderTicketDraft = null;
+          currentTicketId = null;
+          finderActiveColumn = 2;
+          renderProjectsView();
+        });
+
+        clickTarget.addEventListener("dragover", (event) => {
+          if (!finderDragState) return;
+          event.preventDefault();
+          row.classList.add("finder-row--drop-target");
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "move";
+          }
+        });
+
+        clickTarget.addEventListener("dragleave", () => {
+          row.classList.remove("finder-row--drop-target");
+        });
+
+        clickTarget.addEventListener("drop", (event) => {
+          if (!finderDragState) return;
+          event.preventDefault();
+          row.classList.remove("finder-row--drop-target");
+          moveTicketToEpic(
+            finderDragState.ticketId,
+            projectEntry.id,
+            epicKey || NO_EPIC_KEY
+          );
+        });
+      }
+
+      // Handle edit button click
+      if (editButton) {
+        editButton.addEventListener("click", (event) => {
+          event.stopPropagation();
+          openEpicEdit(projectEntry.id, epicKey);
+        });
+      }
     });
 
     if (showDraft) {
@@ -6214,6 +6340,140 @@ async function submitQuickAddTicket() {
     showToast("New epic ready. Add the first ticket to complete it.", "success");
   }
 
+  function openEpicEdit(projectId, epicKey) {
+    if (!projectId || !epicKey || epicKey === NO_EPIC_KEY) return;
+    
+    finderEpicEditing = {
+      projectId: String(projectId),
+      epicKey: String(epicKey),
+    };
+    
+    currentProjectId = String(projectId);
+    finderFilters.project = String(projectId);
+    currentEpicKey = epicKey;
+    finderFilters.epic = epicKey;
+    finderActiveColumn = 1;
+    renderProjectsView();
+  }
+
+  function cancelEpicEdit(projectId, epicKey) {
+    if (!finderEpicEditing) return;
+    if (
+      String(finderEpicEditing.projectId) !== String(projectId) ||
+      finderEpicEditing.epicKey !== String(epicKey)
+    ) {
+      return;
+    }
+    
+    finderEpicEditing = null;
+    renderProjectsView();
+  }
+
+  async function renameEpic(projectId, oldEpicKey, newEpicName) {
+    if (!projectId || !oldEpicKey || oldEpicKey === NO_EPIC_KEY) return;
+    
+    const trimmedNewName = (newEpicName || "").trim();
+    if (!trimmedNewName) {
+      showToast("Epic name cannot be empty.", "error");
+      return;
+    }
+
+    if (trimmedNewName === oldEpicKey) {
+      cancelEpicEdit(projectId, oldEpicKey);
+      return;
+    }
+
+    // Check if epic name already exists in this project
+    const projectTickets = appData.allTickets.filter(
+      (ticket) => String(ticket.projectId) === String(projectId)
+    );
+    
+    const epicExists = projectTickets.some((ticket) => {
+      const ticketEpic = (ticket.epic || "").trim().toLowerCase();
+      return ticketEpic === trimmedNewName.toLowerCase();
+    });
+
+    if (epicExists) {
+      showToast(
+        "An epic with that name already exists in this project.",
+        "error"
+      );
+      const input = document.querySelector(
+        `#finder-column-epics [data-epic-key="${escapeHtml(oldEpicKey)}"] input`
+      );
+      if (input) {
+        input.focus();
+        input.select();
+      }
+      return;
+    }
+
+    // Find all tickets with the old epic name in this project
+    const ticketsToUpdate = projectTickets.filter(
+      (ticket) => (ticket.epic || "").trim() === oldEpicKey
+    );
+
+    if (ticketsToUpdate.length === 0) {
+      showToast("No tickets found with this epic name.", "error");
+      cancelEpicEdit(projectId, oldEpicKey);
+      return;
+    }
+
+    try {
+      const client = window.supabaseClient || (await waitForSupabase());
+      
+      // Update all tickets with the old epic name to the new epic name
+      const { error } = await client
+        .from("ticket")
+        .update({ epic: trimmedNewName })
+        .eq("projectId", Number(projectId))
+        .eq("epic", oldEpicKey);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local cache
+      ticketsToUpdate.forEach((ticket) => {
+        ticket.epic = trimmedNewName;
+      });
+
+      // Update epics list if needed
+      if (
+        !appData.epics.some(
+          (epic) => epic.toLowerCase() === trimmedNewName.toLowerCase()
+        )
+      ) {
+        appData.epics.push(trimmedNewName);
+        appData.epics.sort((a, b) => a.localeCompare(b));
+      }
+
+      // Remove old epic from list if no tickets use it anymore
+      const oldEpicStillUsed = appData.allTickets.some(
+        (ticket) => (ticket.epic || "").trim() === oldEpicKey
+      );
+      if (!oldEpicStillUsed) {
+        appData.epics = appData.epics.filter(
+          (epic) => epic.toLowerCase() !== oldEpicKey.toLowerCase()
+        );
+      }
+
+      finderEpicEditing = null;
+      currentEpicKey = trimmedNewName;
+      finderFilters.epic = trimmedNewName;
+      
+      showToast(
+        `Epic renamed from "${oldEpicKey}" to "${trimmedNewName}" (${ticketsToUpdate.length} ticket${ticketsToUpdate.length === 1 ? "" : "s"} updated)`,
+        "success"
+      );
+      
+      renderProjectsView();
+    } catch (error) {
+      console.error("Failed to rename epic:", error);
+      showToast(`Failed to rename epic: ${error.message}`, "error");
+    }
+  }
+
   function openFinderTicketDraft(projectId, epicKey) {
     if (!projectId) return;
 
@@ -6766,11 +7026,17 @@ async function submitQuickAddTicket() {
 
   // Edit project function
   function editProject(projectId) {
-    const project = appData.projects.find(p => p.id == projectId);
-    if (!project) return;
+    // Check both appData.projects and appData.allProjects
+    const project = (appData.allProjects || appData.projects || []).find(
+      (p) => p.id == projectId || p.id == Number(projectId)
+    );
+    if (!project) {
+      showToast("Project not found.", "error");
+      return;
+    }
 
-    // Open the existing project detail modal
-    showProjectDetailModal(projectId);
+    // Use the unified project modal for editing
+    showProjectModal(Number(projectId), project);
   }
 
   // Delete project function
@@ -9604,6 +9870,48 @@ async function submitQuickAddTicket() {
     return html;
   }
 
+  function createTagInputForCollaborators(options, selectedValuesStr, id) {
+    const selectedValues = selectedValuesStr
+      ? selectedValuesStr.split(",").map((s) => s.trim()).filter(s => s)
+      : [];
+
+    // Create chips HTML for selected items
+    let chipsHTML = selectedValues
+      .map(
+        (val) =>
+          `<span class="tag-chip">${escapeHtml(
+            val
+          )}<i class="fas fa-times tag-chip-remove" data-value="${escapeHtml(
+            val
+          )}"></i></span>`
+      )
+      .join("");
+
+    // Create input field
+    const inputHTML = `<input type="text" class="tag-input" id="${id}-input" placeholder="${selectedValues.length === 0 ? 'Select collaborators...' : ''}" autocomplete="off">`;
+
+    // Create dropdown options with checkmarks
+    const optionsHTML = options
+      .map((opt) => {
+        const isChecked = selectedValues.includes(opt);
+        return `<div class="tag-option ${isChecked ? 'tag-option-selected' : ''}" data-value="${escapeHtml(opt)}">
+          <span class="tag-option-text">${escapeHtml(opt)}</span>
+          ${isChecked ? '<i class="fas fa-check tag-option-check"></i>' : ''}
+        </div>`;
+      })
+      .join("");
+
+    return `<div class="tag-input-wrapper" data-id="${id}">
+      <div class="tag-input-container">
+        ${chipsHTML}
+        ${inputHTML}
+      </div>
+      <div class="tag-dropdown" id="${id}-dropdown">
+        ${optionsHTML}
+      </div>
+    </div>`;
+  }
+
   function createMultiSelectDropdown(
     options,
     selectedValuesStr,
@@ -11124,7 +11432,20 @@ async function submitQuickAddTicket() {
   }
 
   function showAddProjectModal() {
-    console.log("Add Project button clicked");
+    // Prevent multiple calls
+    if (document.getElementById('add-project-modal')) {
+      const existingModal = document.getElementById('add-project-modal');
+      if (existingModal && existingModal.style.display !== 'none') {
+        // Modal already open, don't do anything
+        return;
+      }
+    }
+    showProjectModal();
+  }
+
+  function showProjectModal(projectId = null, projectData = null) {
+    const isEditMode = projectId !== null && projectData !== null;
+    console.log(isEditMode ? "Show Edit Project Modal" : "Show Add Project Modal");
     
     // Remove any existing modal first
     const existingModal = document.getElementById('add-project-modal');
@@ -11132,12 +11453,32 @@ async function submitQuickAddTicket() {
       existingModal.remove();
     }
     
+    // Ensure teamMembers is available
+    const teamMembers = appData.teamMembers || [];
+    
+    // Get collaborators value for edit mode - keep as string for createMultiSelectDropdown
+    const collaboratorsValueStr = isEditMode && projectData && projectData.collaborators 
+      ? (typeof projectData.collaborators === 'string' 
+          ? projectData.collaborators
+          : Array.isArray(projectData.collaborators)
+          ? projectData.collaborators.join(', ')
+          : '')
+      : '';
+    
+    // Get owner value - could be ID or name
+    const ownerValue = isEditMode && projectData && projectData.projectOwner
+      ? (teamMembers.find(m => 
+          String(m.id) === String(projectData.projectOwner) || 
+          m.name === projectData.projectOwner
+        )?.id || '')
+      : '';
+    
     // Create modal HTML
     const modalHTML = `
       <div id="add-project-modal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 600px;">
           <div class="modal-header">
-            <h3>Add New Project</h3>
+            <h3>${isEditMode ? 'Edit Project' : 'Add New Project'}</h3>
             <button class="modal-close" id="close-add-project-modal">
               <i class="fas fa-times"></i>
             </button>
@@ -11145,25 +11486,36 @@ async function submitQuickAddTicket() {
           <div class="modal-body">
             <div class="form-group">
               <label for="new-project-name">Project Name *</label>
-              <input type="text" id="new-project-name" class="form-input" placeholder="Enter project name" required>
+              <input type="text" id="new-project-name" class="form-input" placeholder="Enter project name" value="${isEditMode && projectData ? (escapeHtml(projectData.projectName || '') || '') : ''}" required>
             </div>
             <div class="form-group">
               <label for="new-project-description">Description</label>
-              <textarea id="new-project-description" class="form-textarea" placeholder="Enter project description" rows="3"></textarea>
+              <textarea id="new-project-description" class="form-textarea" placeholder="Enter project description" rows="3">${isEditMode && projectData ? (escapeHtml(projectData.description || '') || '') : ''}</textarea>
             </div>
             <div class="form-group">
               <label for="new-project-owner">Project Owner</label>
               <select id="new-project-owner" class="form-select">
                 <option value="">Select owner...</option>
-                ${appData.teamMembers.map(member => 
-                  `<option value="${member.id}">${member.name}</option>`
-                ).join('')}
+                ${teamMembers.map(member => {
+                  const selected = isEditMode && ownerValue && String(member.id) === String(ownerValue);
+                  return `<option value="${member.id}" ${selected ? 'selected' : ''}>${escapeHtml(member.name)}</option>`;
+                }).join('')}
               </select>
+            </div>
+            <div class="form-group">
+              <label for="new-project-collaborators">Collaborators</label>
+              <div id="new-project-collaborators-container" class="tag-input-container">
+                ${createTagInputForCollaborators(
+                  teamMembers.map((m) => m.name),
+                  collaboratorsValueStr,
+                  "new-project-collaborators"
+                )}
+              </div>
             </div>
           </div>
           <div class="modal-footer">
             <button class="cancel-btn" onclick="closeAddProjectModal()">Cancel</button>
-            <button class="primary-btn" onclick="saveNewProject()">Create Project</button>
+            <button class="primary-btn" onclick="${isEditMode ? `saveEditedProject(${projectId})` : 'saveNewProject()'}">${isEditMode ? 'Save Changes' : 'Create Project'}</button>
           </div>
         </div>
       </div>
@@ -11174,37 +11526,48 @@ async function submitQuickAddTicket() {
     
     console.log("Modal added to DOM");
     
-    // Add click-outside-to-close functionality
+    // Get modal reference immediately
     const modal = document.getElementById('add-project-modal');
-    if (modal) {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          closeAddProjectModal();
-        }
-      });
-      
-      // Add close button event listener
-      const closeBtn = document.getElementById('close-add-project-modal');
-      if (closeBtn) {
-        closeBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          closeAddProjectModal();
-        });
-      }
-      
-      // Add ESC key listener
-      const escHandler = (e) => {
-        if (e.key === 'Escape') {
-          closeAddProjectModal();
-          document.removeEventListener('keydown', escHandler);
-        }
-      };
-      document.addEventListener('keydown', escHandler);
-      
-      // Show the modal after setting up all event listeners
-      modal.style.display = 'flex';
+    if (!modal) {
+      console.error("Modal not found after creation");
+      return;
     }
+    
+    // Setup tag input for collaborators
+    setTimeout(() => {
+      setupTagInputForCollaborators('new-project-collaborators', teamMembers.map(m => m.name));
+    }, 50);
+    
+    // Add click-outside-to-close functionality
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        closeAddProjectModal();
+      }
+    });
+    
+    // Add close button event listener
+    const closeBtn = document.getElementById('close-add-project-modal');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAddProjectModal();
+      });
+    }
+    
+    // Add ESC key listener
+    const escHandler = (e) => {
+      if (e.key === 'Escape' && modal.style.display === 'flex') {
+        closeAddProjectModal();
+        document.removeEventListener('keydown', escHandler);
+      }
+    };
+    document.addEventListener('keydown', escHandler);
+    
+    // Show the modal immediately
+    requestAnimationFrame(() => {
+      modal.style.display = 'flex';
+    });
     
     // Focus on project name input
     setTimeout(() => {
@@ -11229,14 +11592,237 @@ async function submitQuickAddTicket() {
     }
   }
 
+  function setupTagInputForCollaborators(id, options) {
+    const wrapper = document.querySelector(`[data-id="${id}"]`);
+    if (!wrapper) return;
+
+    const input = wrapper.querySelector('.tag-input');
+    const dropdown = wrapper.querySelector('.tag-dropdown');
+    const container = wrapper.querySelector('.tag-input-container');
+
+    if (!input || !dropdown || !container) return;
+
+    let selectedValues = [];
+    const updateSelectedValues = () => {
+      selectedValues = Array.from(container.querySelectorAll('.tag-chip'))
+        .map(chip => chip.dataset.value || chip.textContent.replace('×', '').trim())
+        .filter(v => v);
+    };
+
+    // Get initial selected values from chips
+    updateSelectedValues();
+
+    // Toggle dropdown on input click/focus
+    input.addEventListener('focus', () => {
+      dropdown.style.display = 'block';
+      filterOptions('');
+    });
+
+    input.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'block';
+      filterOptions('');
+    });
+
+    // Filter options as user types
+    input.addEventListener('input', (e) => {
+      filterOptions(e.target.value);
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!wrapper.contains(e.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    // Handle option clicks
+    dropdown.querySelectorAll('.tag-option').forEach(option => {
+      option.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const value = option.dataset.value;
+        toggleCollaborator(value);
+      });
+    });
+
+    // Handle chip remove clicks
+    container.addEventListener('click', (e) => {
+      if (e.target.classList.contains('tag-chip-remove') || e.target.closest('.tag-chip-remove')) {
+        e.stopPropagation();
+        const removeBtn = e.target.classList.contains('tag-chip-remove') ? e.target : e.target.closest('.tag-chip-remove');
+        const value = removeBtn.dataset.value;
+        removeCollaborator(value);
+      }
+    });
+
+    function toggleCollaborator(value) {
+      const index = selectedValues.indexOf(value);
+      if (index > -1) {
+        removeCollaborator(value);
+      } else {
+        addCollaborator(value);
+      }
+      filterOptions(input.value);
+    }
+
+    function addCollaborator(value) {
+      if (selectedValues.includes(value)) return;
+      selectedValues.push(value);
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.dataset.value = value;
+      chip.innerHTML = `${escapeHtml(value)}<i class="fas fa-times tag-chip-remove" data-value="${escapeHtml(value)}"></i>`;
+      input.parentNode.insertBefore(chip, input);
+      updateOptionState(value, true);
+      input.placeholder = '';
+      input.value = '';
+    }
+
+    function removeCollaborator(value) {
+      selectedValues = selectedValues.filter(v => v !== value);
+      const chip = container.querySelector(`.tag-chip[data-value="${escapeHtml(value)}"]`);
+      if (chip) chip.remove();
+      updateOptionState(value, false);
+      if (selectedValues.length === 0) {
+        input.placeholder = 'Select collaborators...';
+      }
+    }
+
+    function updateOptionState(value, isSelected) {
+      const option = dropdown.querySelector(`[data-value="${escapeHtml(value)}"]`);
+      if (option) {
+        if (isSelected) {
+          option.classList.add('tag-option-selected');
+          if (!option.querySelector('.tag-option-check')) {
+            const check = document.createElement('i');
+            check.className = 'fas fa-check tag-option-check';
+            option.appendChild(check);
+          }
+        } else {
+          option.classList.remove('tag-option-selected');
+          const check = option.querySelector('.tag-option-check');
+          if (check) check.remove();
+        }
+      }
+    }
+
+    function filterOptions(searchTerm) {
+      const term = searchTerm.toLowerCase();
+      dropdown.querySelectorAll('.tag-option').forEach(option => {
+        const text = option.textContent.toLowerCase();
+        option.style.display = text.includes(term) ? 'block' : 'none';
+      });
+    }
+  }
+
+  async function saveEditedProject(projectId) {
+    console.log("Save edited project called", projectId);
+    
+    const nameInput = document.getElementById('new-project-name');
+    const descriptionInput = document.getElementById('new-project-description');
+    const ownerSelect = document.getElementById('new-project-owner');
+    const collaboratorsWrapper = document.querySelector('[data-id="new-project-collaborators"]');
+    
+    if (!nameInput || !descriptionInput || !ownerSelect || !collaboratorsWrapper) {
+      showToast('Form elements not found', 'error');
+      return;
+    }
+    
+    const name = nameInput.value.trim();
+    const description = descriptionInput.value.trim();
+    const ownerId = ownerSelect.value;
+    
+    // Get selected collaborators from tag chips
+    const selectedCollaborators = Array.from(collaboratorsWrapper.querySelectorAll('.tag-chip'))
+      .map(chip => chip.dataset.value || chip.textContent.replace('×', '').trim())
+      .filter(v => v);
+    const collaborators = selectedCollaborators.join(', ');
+
+    if (!name) {
+      showToast('Project name is required', 'error');
+      return;
+    }
+
+    // Check if project name already exists (excluding current project)
+    const existingProject = (appData.allProjects || appData.projects || []).find(
+      p => p.id !== projectId && p.projectName && p.projectName.toLowerCase() === name.toLowerCase()
+    );
+    if (existingProject) {
+      showToast('A project with this name already exists', 'error');
+      return;
+    }
+
+    try {
+      const updates = {
+        projectName: name,
+        description: description,
+        projectOwner: ownerId || null,
+        collaborators: collaborators,
+      };
+
+      const { error } = await window.supabaseClient
+        .from("project")
+        .update(updates)
+        .eq("id", projectId);
+
+      if (error) {
+        showToast(`Error updating project: ${error.message}`, "error");
+        return;
+      }
+
+      // Update local cache
+      const projectIndex = (appData.allProjects || []).findIndex(p => p.id == projectId);
+      if (projectIndex !== -1) {
+        appData.allProjects[projectIndex] = {
+          ...appData.allProjects[projectIndex],
+          ...updates,
+        };
+      }
+      
+      const projectIndexInProjects = (appData.projects || []).findIndex(p => p.id == projectId);
+      if (projectIndexInProjects !== -1) {
+        appData.projects[projectIndexInProjects] = {
+          ...appData.projects[projectIndexInProjects],
+          ...updates,
+        };
+      }
+
+      // Close modal
+      closeAddProjectModal();
+
+      // Show success message
+      showToast(`Project "${name}" updated successfully`, 'success');
+
+      // Re-render projects view if currently viewing projects
+      if (currentView === 'projects') {
+        renderProjectsView();
+      } else {
+        applyFilterAndRender();
+      }
+      
+    } catch (error) {
+      console.error("Error updating project:", error);
+      showToast("Error updating project. Please try again.", "error");
+    }
+  }
+
   async function saveNewProject() {
     console.log("Save new project called");
     
     const name = document.getElementById('new-project-name').value.trim();
     const description = document.getElementById('new-project-description').value.trim();
     const ownerId = document.getElementById('new-project-owner').value;
+    const collaboratorsWrapper = document.querySelector('[data-id="new-project-collaborators"]');
+    
+    // Get selected collaborators from tag chips
+    const selectedCollaborators = collaboratorsWrapper
+      ? Array.from(collaboratorsWrapper.querySelectorAll('.tag-chip'))
+          .map(chip => chip.dataset.value || chip.textContent.replace('×', '').trim())
+          .filter(v => v)
+      : [];
+    const collaborators = selectedCollaborators.join(', ');
 
-    console.log("Project data:", { name, description, ownerId });
+    console.log("Project data:", { name, description, ownerId, collaborators });
 
     if (!name) {
       showToast('Project name is required', 'error');
@@ -11244,7 +11830,9 @@ async function submitQuickAddTicket() {
     }
 
     // Check if project name already exists
-    const existingProject = appData.projects.find(p => p.name && p.name.toLowerCase() === name.toLowerCase());
+    const existingProject = (appData.allProjects || appData.projects || []).find(
+      p => p.projectName && p.projectName.toLowerCase() === name.toLowerCase()
+    );
     if (existingProject) {
       showToast('A project with this name already exists', 'error');
       return;
@@ -11272,7 +11860,7 @@ async function submitQuickAddTicket() {
         description: description,
         projectOwner: ownerId || null,
         priority: 'Medium', // Default priority
-        collaborators: '', // Default empty
+        collaborators: collaborators,
         createdAt: new Date().toISOString()
       };
       
@@ -11316,13 +11904,20 @@ async function submitQuickAddTicket() {
   window.showAddProjectModal = showAddProjectModal;
   window.closeAddProjectModal = closeAddProjectModal;
   window.saveNewProject = saveNewProject;
+  window.saveEditedProject = saveEditedProject;
 
   // Global event listener for Add Project button (delegated event handling)
   document.addEventListener('click', (e) => {
-    if (e.target && e.target.id === 'add-project-btn') {
+    const target = e.target.closest('#add-project-btn');
+    if (target && target.id === 'add-project-btn') {
       console.log("Add Project button clicked (global listener)");
       e.preventDefault();
       e.stopPropagation();
+      // Check if modal is already open
+      const existingModal = document.getElementById('add-project-modal');
+      if (existingModal && existingModal.style.display === 'flex') {
+        return; // Modal already open
+      }
       showAddProjectModal();
     }
   });
@@ -11449,23 +12044,35 @@ async function submitQuickAddTicket() {
     }
 
     const modal = document.getElementById("project-detail-modal");
+    if (!modal) {
+      console.error("Project detail modal not found in DOM");
+      showToast("Project detail modal not found. Please refresh the page.", "error");
+      return;
+    }
+
     const toDateInputString = (isoString) =>
       isoString ? isoString.split("T")[0] : "";
 
     const nameTextarea = modal.querySelector("#edit-project-name");
     const descTextarea = modal.querySelector("#edit-project-description");
+    if (!nameTextarea || !descTextarea) {
+      console.error("Project modal form elements not found");
+      showToast("Project modal form not properly initialized. Please refresh the page.", "error");
+      return;
+    }
+    
     nameTextarea.value = project.projectName || "";
     descTextarea.value = project.description || "";
 
-    modal.querySelector("#edit-project-priority").value =
-      project.priority || "Medium";
-    modal.querySelector("#edit-project-attachment").value =
-      project.attachment || "";
-    modal.querySelector("#edit-project-start-date").value = toDateInputString(
-      project.startDate
-    );
-    modal.querySelector("#edit-project-est-completed-date").value =
-      toDateInputString(project.estCompletedDate);
+    const prioritySelect = modal.querySelector("#edit-project-priority");
+    const attachmentInput = modal.querySelector("#edit-project-attachment");
+    const startDateInput = modal.querySelector("#edit-project-start-date");
+    const estCompletedDateInput = modal.querySelector("#edit-project-est-completed-date");
+    
+    if (prioritySelect) prioritySelect.value = project.priority || "Medium";
+    if (attachmentInput) attachmentInput.value = project.attachment || "";
+    if (startDateInput) startDateInput.value = toDateInputString(project.startDate);
+    if (estCompletedDateInput) estCompletedDateInput.value = toDateInputString(project.estCompletedDate);
 
     // MODIFIED: Use .map(m => ({ value: m.name, text: m.name })) to correctly pass name strings
     createSearchableDropdownForModal(
@@ -11559,7 +12166,24 @@ async function submitQuickAddTicket() {
           ...updates,
         };
       }
-      applyFilterAndRender();
+      
+      // Also update appData.projects if it exists
+      const projectIndexInProjects = appData.projects.findIndex(
+        (p) => p.id == projectId
+      );
+      if (projectIndexInProjects !== -1) {
+        appData.projects[projectIndexInProjects] = {
+          ...appData.projects[projectIndexInProjects],
+          ...updates,
+        };
+      }
+      
+      // Re-render projects view if currently viewing projects
+      if (currentView === 'projects') {
+        renderProjectsView();
+      } else {
+        applyFilterAndRender();
+      }
     }
   }
 

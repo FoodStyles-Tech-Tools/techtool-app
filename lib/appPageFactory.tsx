@@ -295,9 +295,13 @@ export function BaseAppPage({
                 console.warn('Failed to fetch latest version:', e);
               }
               
-              // Small delay to show "Updating..." state, then reload
+              // Small delay to show "Updating..." state, then hard refresh (bypass cache)
               setTimeout(() => {
-                window.location.reload(true);
+                // Hard refresh - bypass cache like CTRL+SHIFT+R
+                // Method 1: Use replace with timestamp to force reload
+                const url = new URL(window.location.href);
+                url.searchParams.set('_t', Date.now().toString());
+                window.location.replace(url.toString());
               }, 500);
             });
 
