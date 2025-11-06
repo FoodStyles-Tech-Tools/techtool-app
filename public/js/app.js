@@ -227,7 +227,35 @@ function closeUserSettingsOverlay() {
   let currentTicketId = null;
   let finderActiveColumn = 0;
   let projectStatsCache = [];
+  let finderSearchTerm = "";
+  const finderFilters = {
+    project: "all",
+    epic: "all",
+    status: "all",
+  };
+  let finderDragState = null;
+  let finderEpicDraft = null;
+  let finderTicketDraft = null;
+  let finderDetailOriginal = null;
+  let finderDetailCleanup = null;
+  let searchableDropdownUidCounter = 0;
   const NO_EPIC_KEY = "__NO_EPIC__";
+  const FINDER_STATUS_OPTIONS = [
+    "Open",
+    "In Progress",
+    "On Hold",
+    "Blocked",
+    "Cancelled",
+    "Rejected",
+    "Completed",
+  ];
+  const TICKET_DATE_FIELDS = new Set([
+    "createdAt",
+    "assignedAt",
+    "startedAt",
+    "completedAt",
+    "dueDate",
+  ]);
   const normalizePath = (path) => {
     if (!path) return "/";
     return path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
@@ -335,6 +363,15 @@ let ticketSearchInitialized = false;
 let ticketSearchOpen = false;
 let ticketSearchMatches = [];
 let ticketSearchHighlightIndex = -1;
+
+let projectSearchOverlay = null;
+let projectSearchInput = null;
+let projectSearchResultsList = null;
+let projectSearchEmptyState = null;
+let projectSearchInitialized = false;
+let projectSearchOpen = false;
+let projectSearchMatches = [];
+let projectSearchHighlightIndex = -1;
 
 let sidebarProfileInitialized = false;
 let sidebarMenuTrigger = null;
@@ -747,6 +784,328 @@ function activateTicketSearchResult(index) {
 }
 
 initializeTicketSearchSpotlight();
+
+// Project Search Spotlight
+function initializeProjectSearchSpotlight() {
+  if (projectSearchInitialized) {
+    return;
+  }
+
+  projectSearchOverlay = document.getElementById("project-search-overlay");
+  projectSearchInput = document.getElementById("project-search-input");
+  projectSearchResultsList = document.getElementById("project-search-results");
+  projectSearchEmptyState = document.getElementById("project-search-empty");
+  const closeBtn = document.getElementById("project-search-close");
+
+  if (!projectSearchOverlay || !projectSearchInput || !projectSearchResultsList) {
+    return;
+  }
+
+  projectSearchInitialized = true;
+  projectSearchOverlay.setAttribute("aria-hidden", "true");
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closeProjectSearchOverlay);
+  }
+
+  projectSearchOverlay.addEventListener("click", (event) => {
+    if (event.target === projectSearchOverlay) {
+      closeProjectSearchOverlay();
+    }
+  });
+
+  projectSearchInput.addEventListener("input", () => {
+    updateProjectSearchResults(projectSearchInput.value);
+  });
+
+  projectSearchInput.addEventListener("keydown", handleProjectSearchInputKeydown);
+
+  projectSearchResultsList.addEventListener("mousemove", (event) => {
+    const item = event.target.closest(".project-search-result");
+    if (!item || !item.dataset.index) return;
+    const index = Number(item.dataset.index);
+    if (!Number.isNaN(index) && index !== projectSearchHighlightIndex) {
+      focusProjectSearchResult(index);
+    }
+  });
+
+  projectSearchResultsList.addEventListener("click", (event) => {
+    const item = event.target.closest(".project-search-result");
+    if (!item || !item.dataset.index) return;
+    const index = Number(item.dataset.index);
+    if (!Number.isNaN(index)) {
+      activateProjectSearchResult(index);
+    }
+  });
+
+  document.addEventListener("keydown", handleProjectSearchShortcut, true);
+}
+
+function handleProjectSearchShortcut(event) {
+  const key = event.key.toLowerCase();
+
+  // Only activate when on projects view
+  if (currentView !== "projects") {
+    return;
+  }
+
+  if (!projectSearchInitialized) {
+    initializeProjectSearchSpotlight();
+  }
+
+  if (!projectSearchInitialized) return;
+
+  // Check if "s" key is pressed (not in an input field)
+  const isSKey = key === "s" && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey;
+
+  if (projectSearchOpen) {
+    if (isSKey) {
+      event.preventDefault();
+      return;
+    }
+    if (key === "escape") {
+      event.preventDefault();
+      closeProjectSearchOverlay();
+      return;
+    }
+    if (key === "enter") {
+      event.preventDefault();
+      if (projectSearchMatches.length > 0) {
+        const index = projectSearchHighlightIndex >= 0 ? projectSearchHighlightIndex : 0;
+        activateProjectSearchResult(index);
+      }
+      return;
+    }
+    if (key === "arrowdown" || key === "arrowup") {
+      event.preventDefault();
+      if (projectSearchMatches.length > 0) {
+        const increment = key === "arrowdown" ? 1 : -1;
+        let nextIndex = projectSearchHighlightIndex + increment;
+        if (nextIndex < 0) nextIndex = projectSearchMatches.length - 1;
+        if (nextIndex >= projectSearchMatches.length) nextIndex = 0;
+        focusProjectSearchResult(nextIndex);
+      }
+      return;
+    }
+  }
+
+  if (!isSKey) {
+    return;
+  }
+
+  // Don't trigger if user is typing in an input field
+  if (isTextInputTarget(event.target)) {
+    return;
+  }
+
+  event.preventDefault();
+  openProjectSearchOverlay("");
+}
+
+function handleProjectSearchInputKeydown(event) {
+  if (!projectSearchOpen) return;
+
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    if (projectSearchMatches.length === 0) return;
+    const increment = event.key === "ArrowDown" ? 1 : -1;
+    let nextIndex = projectSearchHighlightIndex + increment;
+    if (nextIndex < 0) nextIndex = projectSearchMatches.length - 1;
+    if (nextIndex >= projectSearchMatches.length) nextIndex = 0;
+    focusProjectSearchResult(nextIndex);
+  } else if (event.key === "Enter") {
+    event.preventDefault();
+    if (projectSearchMatches.length === 0) return;
+    const index = projectSearchHighlightIndex >= 0 ? projectSearchHighlightIndex : 0;
+    activateProjectSearchResult(index);
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    closeProjectSearchOverlay();
+  }
+}
+
+function openProjectSearchOverlay(prefill = "") {
+  initializeProjectSearchSpotlight();
+  if (!projectSearchOverlay || !projectSearchInput) {
+    return;
+  }
+
+  if (quickAddOpen) {
+    closeQuickAddOverlay();
+  }
+
+  if (ticketSearchOpen) {
+    closeTicketSearchOverlay();
+  }
+
+  projectSearchOpen = true;
+  projectSearchOverlay.style.display = "flex";
+  projectSearchOverlay.classList.add("active");
+  projectSearchOverlay.setAttribute("aria-hidden", "false");
+  document.body.classList.add("project-search-open");
+
+  projectSearchInput.value = prefill;
+  updateProjectSearchResults(prefill);
+
+  requestAnimationFrame(() => {
+    projectSearchInput.focus();
+    projectSearchInput.select();
+  });
+}
+
+function closeProjectSearchOverlay() {
+  if (!projectSearchOverlay) {
+    return;
+  }
+  projectSearchOpen = false;
+  projectSearchOverlay.classList.remove("active");
+  projectSearchOverlay.style.display = "none";
+  projectSearchOverlay.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("project-search-open");
+
+  projectSearchMatches = [];
+  projectSearchHighlightIndex = -1;
+  if (projectSearchResultsList) {
+    projectSearchResultsList.innerHTML = "";
+  }
+  if (projectSearchEmptyState) {
+    projectSearchEmptyState.textContent = "Start typing to search projects...";
+    projectSearchEmptyState.style.display = "block";
+  }
+  if (projectSearchInput) {
+    projectSearchInput.value = "";
+  }
+}
+
+function updateProjectSearchResults(rawTerm) {
+  if (!projectSearchResultsList || !projectSearchEmptyState) return;
+
+  const term = (rawTerm || "").trim().toLowerCase();
+  projectSearchResultsList.innerHTML = "";
+  projectSearchMatches = [];
+  projectSearchHighlightIndex = -1;
+
+  if (!term) {
+    projectSearchEmptyState.textContent = "Start typing to search projects...";
+    projectSearchEmptyState.style.display = "block";
+    return;
+  }
+
+  // Get all projects from projectStatsCache or appData.projects
+  const allProjects = projectStatsCache.length > 0 
+    ? projectStatsCache 
+    : (appData.projects || []).map((project) => ({
+        id: String(project.id),
+        raw: project,
+        totalTickets: 0,
+        completedTickets: 0,
+        inProgressTickets: 0,
+        completionRate: 0,
+      }));
+
+  const results = allProjects
+    .map((project) => {
+      const projectName = (project.raw.projectName || "").toLowerCase();
+      
+      let score = 0;
+      if (projectName.startsWith(term)) {
+        score += 3;
+      } else if (projectName.includes(term)) {
+        score += 2;
+      }
+
+      return { project, score };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      // Sort alphabetically by project name
+      const nameA = (a.project.raw.projectName || "").toLowerCase();
+      const nameB = (b.project.raw.projectName || "").toLowerCase();
+      return nameA.localeCompare(nameB);
+    })
+    .slice(0, 15);
+
+  if (results.length === 0) {
+    projectSearchEmptyState.textContent = `No projects match "${rawTerm.trim()}"`;
+    projectSearchEmptyState.style.display = "block";
+    return;
+  }
+
+  projectSearchMatches = results;
+  projectSearchEmptyState.style.display = "none";
+
+  projectSearchResultsList.innerHTML = results
+    .map((entry, index) => {
+      const project = entry.project;
+      const projectName = project.raw.projectName || "Untitled project";
+      const ticketsLabel =
+        project.totalTickets === 1
+          ? "1 ticket"
+          : `${project.totalTickets} tickets`;
+      const completionLabel = `${project.completionRate}%`;
+      const highlightClass = index === 0 ? " project-search-result--active" : "";
+      return `
+        <li
+          class="project-search-result${highlightClass}"
+          data-project-id="${project.id}"
+          data-index="${index}"
+          role="option"
+          aria-selected="${index === 0 ? "true" : "false"}"
+        >
+          <div class="project-search-result-main">
+            <span class="project-search-result-title">${escapeHtml(projectName)}</span>
+            <span class="project-search-result-meta">${escapeHtml(ticketsLabel)} · ${escapeHtml(completionLabel)}</span>
+          </div>
+        </li>
+      `;
+    })
+    .join("");
+
+  focusProjectSearchResult(0);
+}
+
+function focusProjectSearchResult(index) {
+  if (!projectSearchResultsList || projectSearchMatches.length === 0) return;
+  if (index < 0 || index >= projectSearchMatches.length) return;
+
+  const items = projectSearchResultsList.querySelectorAll(".project-search-result");
+  if (items.length === 0) return;
+
+  items.forEach((item) => {
+    item.classList.remove("project-search-result--active");
+    item.setAttribute("aria-selected", "false");
+  });
+
+  const target = items[index];
+  if (target) {
+    target.classList.add("project-search-result--active");
+    target.setAttribute("aria-selected", "true");
+    target.scrollIntoView({ block: "nearest" });
+    projectSearchHighlightIndex = index;
+  }
+}
+
+function activateProjectSearchResult(index) {
+  const match = projectSearchMatches[index];
+  if (!match) return;
+  
+  const projectId = match.project.id;
+  closeProjectSearchOverlay();
+  
+  // Select the project
+  if (currentView === "projects") {
+    currentProjectId = String(projectId);
+    finderFilters.project = String(projectId);
+    currentEpicKey = null;
+    finderFilters.epic = "all";
+    currentTicketId = null;
+    finderActiveColumn = 1;
+    renderProjectsView();
+  }
+}
+
+initializeProjectSearchSpotlight();
 
 function createDefaultQuickAddState() {
   const nowIso = new Date().toISOString();
@@ -1553,8 +1912,16 @@ async function submitQuickAddTicket() {
 
   // Add global event listener for ticket field updates to ensure UI consistency
   document.addEventListener('ticketFieldUpdated', (event) => {
-    const { ticketId, field, newValue, oldValue } = event.detail;
+    const { ticketId, field, newValue, oldValue, source } = event.detail;
     console.log(`Field updated: ${field} for ticket ${ticketId}`, { oldValue, newValue });
+    
+    if (source === "finder-detail") {
+      if (currentView === "projects") {
+        renderProjectsView();
+      }
+      updateNavBadgeCounts();
+      return;
+    }
     
     // Force a UI refresh to ensure all views are updated
     setTimeout(() => {
@@ -2142,7 +2509,7 @@ async function submitQuickAddTicket() {
   }
 
   // REPLACE the existing handleUpdate function with this new ASYNC version
-  async function handleUpdate(event, newValueFromSearchable) {
+  async function handleUpdate(event, newValueFromSearchable, options = {}) {
     const element = event.target;
     const parentContainer = element.closest("td, .sidebar-property-editable");
     if (!parentContainer) return;
@@ -2175,16 +2542,57 @@ async function submitQuickAddTicket() {
       newValue = parseInt(newValue, 10);
     }
 
-    if (String(oldValue || "") === String(newValue || "")) {
+    if (field === "projectId" && newValue && newValue !== "") {
+      newValue = parseInt(newValue, 10);
+    }
+
+    const isDateField = TICKET_DATE_FIELDS.has(field);
+    const comparableOldValue = isDateField
+      ? normalizeDateInput(oldValue)
+      : String(oldValue ?? "");
+    const comparableNewValueRaw = isDateField
+      ? normalizeDateInput(newValue)
+      : String(newValue ?? "");
+
+    if (comparableOldValue === comparableNewValueRaw) {
       if (element.closest(".tag-editor"))
         element.closest(".tag-editor").classList.remove("is-editing");
       return;
     }
 
-    let updates = { [field]: newValue };
+    const source = options.source || element.dataset.updateSource || null;
+
+    const supabaseClient =
+      window.supabaseClient || (await waitForSupabase().catch(() => null));
+    if (!supabaseClient) {
+      showToast("Supabase client unavailable.", "error");
+      return;
+    }
+
+    let valueForUpdate;
+    if (isDateField) {
+      valueForUpdate =
+        comparableNewValueRaw && comparableNewValueRaw !== ""
+          ? new Date(`${comparableNewValueRaw}T00:00:00`).toISOString()
+          : null;
+    } else if (field === "epic") {
+      valueForUpdate = newValue ? newValue : null;
+    } else if (newValue === "") {
+      valueForUpdate = null;
+    } else {
+      valueForUpdate = newValue;
+    }
+
+    let updates = { [field]: valueForUpdate };
     const nowIso = new Date().toISOString();
 
-    if (field === "assigneeId" && newValue) updates.assignedAt = nowIso;
+    if (field === "assigneeId") {
+      if (valueForUpdate) {
+        updates.assignedAt = nowIso;
+      } else {
+        updates.assignedAt = null;
+      }
+    }
 
     // --- COMPREHENSIVE STATUS TRANSITION LOGIC ---
     if (field === "status") {
@@ -2353,7 +2761,7 @@ async function submitQuickAddTicket() {
       timestamp: nowIso,
       field: field,
       oldValue: oldValue,
-      newValue: newValue,
+      newValue: valueForUpdate,
       reason: updates.logReason || null,
     };
 
@@ -2402,7 +2810,11 @@ async function submitQuickAddTicket() {
       if (error) {
         console.error("Final update error after retries:", error);
         showToast("Update failed: " + error.message, "error");
-        element.value = oldValue;
+        if (isDateField) {
+          element.value = comparableOldValue;
+        } else {
+          element.value = oldValue;
+        }
         
         // Revert any UI changes
         if (element.classList.contains("status-tag") || 
@@ -2416,10 +2828,24 @@ async function submitQuickAddTicket() {
         }
       } else {
         // Update local data
-        ticket[field] = newValue;
-        
-        element.dataset.oldValue = newValue;
-        element.dataset.value = newValue;
+        ticket[field] = valueForUpdate;
+        if (field === "epic") {
+          const nextEpicKey =
+            valueForUpdate === null || valueForUpdate === ""
+              ? NO_EPIC_KEY
+              : String(valueForUpdate);
+          if (source === "finder-detail") {
+            currentEpicKey = nextEpicKey;
+            finderFilters.epic = nextEpicKey;
+          }
+        }
+        Object.entries(updates).forEach(([key, value]) => {
+          if (key === "log") {
+            ticket.log = value;
+          } else if (key !== field) {
+            ticket[key] = value;
+          }
+        });
         
         // For Jira-style dropdowns, also update the tag element's oldValue and text
         if (element.classList.contains("status-tag") || 
@@ -2445,15 +2871,46 @@ async function submitQuickAddTicket() {
         
         parentContainer.classList.add("is-successful");
         if (fieldWrapper) {
+          fieldWrapper.classList.add("is-successful");
           fieldWrapper.classList.remove("is-dirty");
+        }
+        element.dataset.oldValue = isDateField
+          ? comparableNewValueRaw
+          : String(valueForUpdate ?? "");
+        if (element.classList.contains("searchable-dropdown-input")) {
+          element.dataset.value = String(valueForUpdate ?? "");
+        }
+        if (isDateField) {
+          element.value = comparableNewValueRaw;
+        }
+        if (field === "epic") {
+          const epicValue = valueForUpdate;
+          if (
+            epicValue &&
+            !appData.epics.some(
+              (epic) => epic.toLowerCase() === String(epicValue).toLowerCase()
+            )
+          ) {
+            appData.epics.push(epicValue);
+            appData.epics.sort((a, b) => a.localeCompare(b));
+          }
         }
         
         // Force UI refresh after successful update
         setTimeout(() => {
           parentContainer.classList.remove("is-successful");
+          if (fieldWrapper) {
+            fieldWrapper.classList.remove("is-successful");
+          }
           // Trigger a custom event for real-time updates
           const updateEvent = new CustomEvent('ticketFieldUpdated', {
-            detail: { ticketId: ticket.id, field: field, newValue: newValue, oldValue: oldValue }
+            detail: {
+              ticketId: ticket.id,
+              field: field,
+              newValue: newValue,
+              oldValue: oldValue,
+              source: source
+            }
           });
           document.dispatchEvent(updateEvent);
         }, 1200);
@@ -2464,6 +2921,10 @@ async function submitQuickAddTicket() {
       showToast("Network error. Please check your connection and try again.", "error");
       element.value = oldValue;
     }
+  }
+
+  function handleProjectUpdate(event, newValueFromSearchable, options = {}) {
+    return handleUpdate(event, newValueFromSearchable, options);
   }
 
   /**
@@ -3992,7 +4453,6 @@ async function submitQuickAddTicket() {
     const projectCount = document.getElementById("finder-project-count");
     const epicCount = document.getElementById("finder-epic-count");
     const ticketCount = document.getElementById("finder-ticket-count");
-    const searchInput = document.getElementById("jira-project-search");
 
     if (
       !layout ||
@@ -4064,28 +4524,29 @@ async function submitQuickAddTicket() {
       (a.raw.projectName || "").localeCompare(b.raw.projectName || "")
     );
 
-    const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
-    const filteredProjects = projectStatsCache.filter(({ raw }) => {
-      if (!query) return true;
-      const name = raw.projectName || "";
-      return name.toLowerCase().includes(query);
-    });
+    finderFilters.status = "all";
+
+    let filteredProjects = projectStatsCache;
+
+    if (finderFilters.project !== "all" && finderFilters.project) {
+      filteredProjects = filteredProjects.filter(
+        (project) => project.id === String(finderFilters.project)
+      );
+    }
 
     if (projectCount) {
       projectCount.textContent =
-        filteredProjects.length > 0
-          ? filteredProjects.length === 1
+        projectStatsCache.length > 0
+          ? projectStatsCache.length === 1
             ? "1 project"
-            : `${filteredProjects.length} projects`
+            : `${projectStatsCache.length} projects`
           : "";
     }
 
     if (filteredProjects.length === 0) {
       projectColumn.innerHTML = "";
       projectEmpty.hidden = false;
-      projectEmpty.textContent = query
-        ? "No projects match your search."
-        : "No projects available.";
+      projectEmpty.textContent = "No projects available.";
       epicColumn.innerHTML = "";
       epicEmpty.hidden = false;
       epicEmpty.textContent = "Select a project to browse its epics.";
@@ -4098,25 +4559,34 @@ async function submitQuickAddTicket() {
       detailEmpty.hidden = false;
       currentProjectId = null;
       currentEpicKey = null;
+      finderFilters.epic = "all";
       currentTicketId = null;
       finderActiveColumn = 0;
       updateFinderBreadcrumb(null, []);
+      finderEpicDraft = null;
+      finderTicketDraft = null;
     } else {
       if (
         !currentProjectId ||
         !filteredProjects.some((item) => item.id === String(currentProjectId))
       ) {
-        currentProjectId = filteredProjects[0].id;
+        currentProjectId = String(filteredProjects[0].id);
+        finderFilters.project = currentProjectId;
         currentEpicKey = null;
+        finderFilters.epic = "all";
         currentTicketId = null;
       } else {
         currentProjectId = String(currentProjectId);
       }
 
-      renderFinderProjectColumn(filteredProjects, projectColumn, projectEmpty);
+      finderFilters.project = String(currentProjectId);
+
+      renderFinderProjectColumn(projectStatsCache, projectColumn, projectEmpty);
 
       const projectEntry =
-        projectStatsCache.find((item) => item.id === String(currentProjectId)) || null;
+        projectStatsCache.find(
+          (item) => item.id === String(currentProjectId)
+        ) || null;
 
       const epicGroups = renderFinderEpicColumn(
         projectEntry,
@@ -4135,27 +4605,52 @@ async function submitQuickAddTicket() {
       renderFinderDetailColumn(selectedTicket, detailColumn, detailEmpty);
 
       updateFinderBreadcrumb(projectEntry, epicGroups);
-    }
 
-    syncFinderActiveColumn();
-    columns.style.setProperty("--active-column", finderActiveColumn);
+      const addEpicBtn = document.getElementById("finder-add-epic");
+      if (addEpicBtn) {
+        addEpicBtn.onclick = () => {
+          if (!currentProjectId) {
+            showToast("Select a project first.", "error");
+            return;
+          }
+          openFinderEpicDraft(currentProjectId);
+        };
+      }
 
-    if (searchInput && !searchInput.dataset.listenerAttached) {
-      searchInput.addEventListener("input", () => {
-        finderActiveColumn = Math.min(finderActiveColumn, 1);
-        currentEpicKey = null;
-        currentTicketId = null;
-        renderProjectsView();
-      });
-      searchInput.dataset.listenerAttached = "true";
-    }
+      const addTicketBtn = document.getElementById("finder-add-ticket");
+      if (addTicketBtn) {
+        addTicketBtn.onclick = () => {
+          if (!currentProjectId) {
+            showToast("Select a project and epic first.", "error");
+            return;
+          }
+          const targetEpic =
+            currentEpicKey ||
+            (finderFilters.epic !== "all" ? finderFilters.epic : null);
+          if (!targetEpic) {
+            showToast("Select an epic before adding a ticket.", "error");
+            return;
+          }
+          openFinderTicketDraft(currentProjectId, targetEpic);
+        };
+      }
+  }
+
+  syncFinderActiveColumn();
+  columns.style.setProperty("--active-column", finderActiveColumn);
 
     document.querySelectorAll(".finder-column-back").forEach((button) => {
       button.onclick = () => {
         const targetLevel = Number(button.dataset.targetLevel || "0");
         finderActiveColumn = targetLevel;
         if (targetLevel < 3) currentTicketId = null;
-        if (targetLevel < 2) currentEpicKey = null;
+        if (targetLevel < 2) {
+          currentEpicKey = null;
+          finderFilters.epic = "all";
+        }
+        if (targetLevel < 1) {
+          finderFilters.project = "all";
+        }
         renderProjectsView();
       };
     });
@@ -4171,6 +4666,8 @@ async function submitQuickAddTicket() {
 
     emptyEl.hidden = true;
 
+    const searchTerm = finderSearchTerm.trim();
+
     container.innerHTML = projects
       .map((project) => {
         const isActive = String(project.id) === String(currentProjectId);
@@ -4182,16 +4679,21 @@ async function submitQuickAddTicket() {
         const owner = project.raw.projectOwner
           ? `Owner: ${project.raw.projectOwner}`
           : "";
+        const titleHtml = highlightFinderMatch(
+          project.raw.projectName || "Untitled project",
+          searchTerm
+        );
+        const ownerHtml = owner ? highlightFinderMatch(owner, searchTerm) : "";
 
         return `
-          <button class="finder-row finder-row--project ${isActive ? "finder-row--active" : ""}" data-project-id="${project.id}">
+          <button class="finder-row finder-row--project ${
+            isActive ? "finder-row--active" : ""
+          }" data-project-id="${project.id}">
             <div class="finder-row-main">
-              <span class="finder-row-title">${escapeHtml(
-                project.raw.projectName || "Untitled project"
-              )}</span>
+              <span class="finder-row-title">${titleHtml}</span>
               ${
-                owner
-                  ? `<span class="finder-row-subtitle">${escapeHtml(owner)}</span>`
+                ownerHtml
+                  ? `<span class="finder-row-subtitle">${ownerHtml}</span>`
                   : ""
               }
             </div>
@@ -4213,15 +4715,38 @@ async function submitQuickAddTicket() {
         const projectId = button.getAttribute("data-project-id");
         if (!projectId) return;
         currentProjectId = String(projectId);
+        finderFilters.project = String(projectId);
         currentEpicKey = null;
+        finderFilters.epic = "all";
         currentTicketId = null;
         finderActiveColumn = 1;
         renderProjectsView();
       });
+
+      button.addEventListener("dragover", (event) => {
+        if (!finderDragState) return;
+        event.preventDefault();
+        button.classList.add("finder-row--drop-target");
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = "move";
+        }
+      });
+
+      button.addEventListener("dragleave", () => {
+        button.classList.remove("finder-row--drop-target");
+      });
+
+      button.addEventListener("drop", (event) => {
+        if (!finderDragState) return;
+        event.preventDefault();
+        button.classList.remove("finder-row--drop-target");
+        const targetProjectId = button.getAttribute("data-project-id");
+        if (!targetProjectId) return;
+        moveTicketToProject(finderDragState.ticketId, targetProjectId);
+      });
     });
   }
-
-  function renderFinderEpicColumn(projectEntry, container, emptyEl, countEl) {
+    function renderFinderEpicColumn(projectEntry, container, emptyEl, countEl) {
     if (!container || !emptyEl) return [];
 
     if (!projectEntry) {
@@ -4229,22 +4754,13 @@ async function submitQuickAddTicket() {
       emptyEl.hidden = false;
       emptyEl.textContent = "Select a project to browse its epics.";
       if (countEl) countEl.textContent = "";
-      currentEpicKey = null;
+      finderEpicDraft = null;
       return [];
     }
 
     const projectTickets = appData.allTickets.filter(
       (ticket) => String(ticket.projectId) === String(projectEntry.id)
     );
-
-    if (!projectTickets.length) {
-      container.innerHTML = "";
-      emptyEl.hidden = false;
-      emptyEl.textContent = "No tickets in this project yet.";
-      if (countEl) countEl.textContent = "0 epics";
-      currentEpicKey = null;
-      return [];
-    }
 
     const groupsMap = new Map();
 
@@ -4272,6 +4788,25 @@ async function submitQuickAddTicket() {
       }
     });
 
+    const pendingTicketDraftEpic =
+      finderTicketDraft &&
+      String(finderTicketDraft.projectId) === String(projectEntry.id) &&
+      finderTicketDraft.epicKey &&
+      finderTicketDraft.epicKey !== NO_EPIC_KEY
+        ? finderTicketDraft.epicKey
+        : null;
+
+    if (pendingTicketDraftEpic && !groupsMap.has(pendingTicketDraftEpic)) {
+      groupsMap.set(pendingTicketDraftEpic, {
+        key: pendingTicketDraftEpic,
+        label: pendingTicketDraftEpic,
+        total: 0,
+        inProgress: 0,
+        completed: 0,
+        isNew: true,
+      });
+    }
+
     const groups = Array.from(groupsMap.values()).sort((a, b) => {
       if (a.key === NO_EPIC_KEY) return 1;
       if (b.key === NO_EPIC_KEY) return -1;
@@ -4283,9 +4818,11 @@ async function submitQuickAddTicket() {
         groups.length === 1 ? "1 epic" : `${groups.length} epics`;
     }
 
-    container.innerHTML = groups
+    const activeEpicKey = currentEpicKey;
+
+    let rowsHtml = groups
       .map((group) => {
-        const isActive = currentEpicKey && group.key === currentEpicKey;
+        const isActive = activeEpicKey && group.key === activeEpicKey;
         const metaParts = [
           group.total === 1 ? "1 ticket" : `${group.total} tickets`,
         ];
@@ -4295,42 +4832,127 @@ async function submitQuickAddTicket() {
         if (group.completed > 0) {
           metaParts.push(`${group.completed} done`);
         }
+        const subtitleHtml = metaParts
+          .map((part) => escapeHtml(part))
+          .join('<span class="finder-meta-separator">&bull;</span>');
         return `
-          <button class="finder-row finder-row--epic ${isActive ? "finder-row--active" : ""}" data-epic-key="${escapeHtml(
-            group.key
-          )}">
+          <button class="finder-row finder-row--epic ${
+            isActive ? "finder-row--active" : ""
+          }" data-epic-key="${escapeHtml(group.key)}">
             <div class="finder-row-main">
               <span class="finder-row-title">${escapeHtml(group.label)}</span>
-              <span class="finder-row-subtitle">${escapeHtml(
-                metaParts.join(" · ")
-              )}</span>
+              <span class="finder-row-subtitle">${subtitleHtml}</span>
             </div>
           </button>
         `;
       })
       .join("");
 
-    emptyEl.hidden = groups.length > 0;
+    const showDraft =
+      finderEpicDraft &&
+      String(finderEpicDraft.projectId) === String(projectEntry.id);
 
-    if (currentEpicKey && !groups.some((group) => group.key === currentEpicKey)) {
-      currentEpicKey = null;
-      currentTicketId = null;
+    if (showDraft) {
+      const draftValue = finderEpicDraft.value || "";
+      const draftRow = `
+        <div class="finder-row finder-row--input" data-finder-epic-input="true">
+          <input type="text" class="finder-inline-input" placeholder="New epic name" value="${escapeHtml(
+            draftValue
+          )}">
+          <div class="finder-inline-actions">
+            <button type="button" class="finder-inline-btn finder-inline-btn--save">
+              <i class="fas fa-check"></i><span>Save</span>
+            </button>
+            <button type="button" class="finder-inline-btn finder-inline-btn--secondary finder-inline-btn--cancel">
+              <i class="fas fa-times"></i><span>Cancel</span>
+            </button>
+          </div>
+        </div>
+      `;
+      rowsHtml = draftRow + rowsHtml;
     }
+
+    container.innerHTML = rowsHtml;
+    emptyEl.hidden = groups.length > 0 || showDraft;
 
     container.querySelectorAll("[data-epic-key]").forEach((button) => {
       button.addEventListener("click", () => {
         const epicKey = button.getAttribute("data-epic-key");
         if (typeof epicKey !== "string") return;
         currentEpicKey = epicKey;
+        finderFilters.epic = epicKey;
+        finderTicketDraft = null;
         currentTicketId = null;
         finderActiveColumn = 2;
         renderProjectsView();
       });
+
+      button.addEventListener("dragover", (event) => {
+        if (!finderDragState) return;
+        event.preventDefault();
+        button.classList.add("finder-row--drop-target");
+        if (event.dataTransfer) {
+          event.dataTransfer.dropEffect = "move";
+        }
+      });
+
+      button.addEventListener("dragleave", () => {
+        button.classList.remove("finder-row--drop-target");
+      });
+
+      button.addEventListener("drop", (event) => {
+        if (!finderDragState) return;
+        event.preventDefault();
+        button.classList.remove("finder-row--drop-target");
+        const epicKey = button.getAttribute("data-epic-key");
+        moveTicketToEpic(
+          finderDragState.ticketId,
+          projectEntry.id,
+          epicKey || NO_EPIC_KEY
+        );
+      });
     });
+
+    if (showDraft) {
+      const draftRow = container.querySelector("[data-finder-epic-input]");
+      if (draftRow) {
+        const input = draftRow.querySelector("input");
+        const saveBtn = draftRow.querySelector(".finder-inline-btn--save");
+        const cancelBtn = draftRow.querySelector(".finder-inline-btn--cancel");
+
+        if (input) {
+          requestAnimationFrame(() => {
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+          });
+
+          input.addEventListener("input", () => {
+            finderEpicDraft.value = input.value;
+          });
+
+          input.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              submitFinderEpicDraft();
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              cancelFinderEpicDraft();
+            }
+          });
+        }
+
+        if (saveBtn) {
+          saveBtn.addEventListener("click", () => submitFinderEpicDraft());
+        }
+
+        if (cancelBtn) {
+          cancelBtn.addEventListener("click", () => cancelFinderEpicDraft());
+        }
+      }
+    }
 
     return groups;
   }
-
   function renderFinderTicketColumn(projectEntry, container, emptyEl, countEl) {
     if (!container || !emptyEl) return null;
 
@@ -4340,6 +4962,7 @@ async function submitQuickAddTicket() {
       emptyEl.textContent = "Select a project to browse its tickets.";
       if (countEl) countEl.textContent = "";
       currentTicketId = null;
+      finderTicketDraft = null;
       return null;
     }
 
@@ -4347,7 +4970,9 @@ async function submitQuickAddTicket() {
       .filter((ticket) => String(ticket.projectId) === String(projectEntry.id))
       .sort((a, b) => ticketUpdatedAt(b) - ticketUpdatedAt(a));
 
-    if (!currentEpicKey) {
+    const activeEpicKey = currentEpicKey;
+
+    if (!activeEpicKey) {
       container.innerHTML = "";
       emptyEl.hidden = false;
       emptyEl.textContent = "Select an epic to see its tickets.";
@@ -4358,24 +4983,37 @@ async function submitQuickAddTicket() {
             : `${projectTickets.length} tickets`;
       }
       currentTicketId = null;
+      finderTicketDraft = null;
       return null;
     }
 
-    const filteredTickets = projectTickets.filter((ticket) => {
-      if (currentEpicKey === NO_EPIC_KEY) {
-        return !ticket.epic || !ticket.epic.trim();
+    const filteredTickets = projectTickets.filter((ticket) =>
+      ticketMatchesFinderFilters(ticket, {
+        overrideProjectId: projectEntry.id,
+      })
+    );
+
+    const epicFilteredTickets = filteredTickets.filter((ticket) => {
+      const key = (ticket.epic || "").trim() || NO_EPIC_KEY;
+      if (activeEpicKey === NO_EPIC_KEY) {
+        return key === NO_EPIC_KEY;
       }
-      return (ticket.epic || "").trim() === currentEpicKey;
+      return key === activeEpicKey;
     });
 
     if (countEl) {
       countEl.textContent =
-        filteredTickets.length === 1
+        epicFilteredTickets.length === 1
           ? "1 ticket"
-          : `${filteredTickets.length} tickets`;
+          : `${epicFilteredTickets.length} tickets`;
     }
 
-    if (!filteredTickets.length) {
+    const showDraft =
+      finderTicketDraft &&
+      String(finderTicketDraft.projectId) === String(projectEntry.id) &&
+      finderTicketDraft.epicKey === activeEpicKey;
+
+    if (!epicFilteredTickets.length && !showDraft) {
       container.innerHTML = "";
       emptyEl.hidden = false;
       emptyEl.textContent = "No tickets in this epic yet.";
@@ -4387,27 +5025,42 @@ async function submitQuickAddTicket() {
 
     if (
       currentTicketId &&
-      !filteredTickets.some((ticket) => String(ticket.id) === String(currentTicketId))
+      !epicFilteredTickets.some(
+        (ticket) => String(ticket.id) === String(currentTicketId)
+      )
     ) {
       currentTicketId = null;
     }
 
-    container.innerHTML = filteredTickets
+    const searchTerm = finderSearchTerm.trim();
+
+    let rowsHtml = epicFilteredTickets
       .map((ticket) => {
         const isActive =
           currentTicketId && String(ticket.id) === String(currentTicketId);
         const assignee = findAssigneeName(ticket.assigneeId) || "Unassigned";
         const status = ticket.status || "Open";
         const updated = formatTicketUpdatedLabel(ticket);
+        const titleHtml = highlightFinderMatch(
+          ticket.title || "Untitled ticket",
+          searchTerm
+        );
+        const idHtml = highlightFinderMatch(
+          `HRB-${String(ticket.id)}`,
+          searchTerm
+        );
+        const assigneeHtml = highlightFinderMatch(assignee, searchTerm);
         return `
-          <button class="finder-row finder-row--ticket ${isActive ? "finder-row--active" : ""}" data-ticket-id="${ticket.id}">
+          <button class="finder-row finder-row--ticket ${
+            isActive ? "finder-row--active" : ""
+          }"
+            data-ticket-id="${ticket.id}"
+            data-project-id="${projectEntry.id}"
+            data-epic-key="${escapeHtml(activeEpicKey)}"
+            draggable="true">
             <div class="finder-row-main">
-              <span class="finder-row-title">${escapeHtml(
-                ticket.title || "Untitled ticket"
-              )}</span>
-              <span class="finder-row-subtitle">HRB-${escapeHtml(
-                String(ticket.id)
-              )} · ${escapeHtml(assignee)}</span>
+              <span class="finder-row-title">${titleHtml}</span>
+              <span class="finder-row-subtitle">${idHtml}<span class="finder-meta-separator">&bull;</span>${assigneeHtml}</span>
             </div>
             <div class="finder-row-meta">
               <span class="finder-badge finder-badge--status">${escapeHtml(
@@ -4420,6 +5073,32 @@ async function submitQuickAddTicket() {
       })
       .join("");
 
+    if (showDraft) {
+      const draftTitle = finderTicketDraft.title || "";
+      const draftDescription = finderTicketDraft.description || "";
+      const draftRow = `
+        <div class="finder-row finder-row--input" data-finder-ticket-input="true">
+          <input type="text" class="finder-inline-input finder-inline-input--title" placeholder="Ticket title" value="${escapeHtml(
+            draftTitle
+          )}">
+          <textarea class="finder-inline-textarea" placeholder="Description (optional)">${escapeHtml(
+            draftDescription
+          )}</textarea>
+          <div class="finder-inline-actions">
+            <button type="button" class="finder-inline-btn finder-inline-btn--save">
+              <i class="fas fa-check"></i><span>Create</span>
+            </button>
+            <button type="button" class="finder-inline-btn finder-inline-btn--secondary finder-inline-btn--cancel">
+              <i class="fas fa-times"></i><span>Cancel</span>
+            </button>
+          </div>
+        </div>
+      `;
+      rowsHtml = draftRow + rowsHtml;
+    }
+
+    container.innerHTML = rowsHtml;
+
     container.querySelectorAll("[data-ticket-id]").forEach((button) => {
       button.addEventListener("click", () => {
         const ticketId = button.getAttribute("data-ticket-id");
@@ -4428,16 +5107,102 @@ async function submitQuickAddTicket() {
         finderActiveColumn = 3;
         renderProjectsView();
       });
+
+      button.addEventListener("dragstart", (event) => {
+        const ticketId = button.getAttribute("data-ticket-id");
+        if (!ticketId) return;
+        finderDragState = {
+          ticketId,
+          fromProjectId: String(projectEntry.id),
+          fromEpicKey: button.getAttribute("data-epic-key") || NO_EPIC_KEY,
+        };
+        button.classList.add("finder-row--dragging");
+        if (event.dataTransfer) {
+          event.dataTransfer.setData("text/plain", ticketId);
+          event.dataTransfer.effectAllowed = "move";
+        }
+      });
+
+      button.addEventListener("dragend", () => {
+        finderDragState = null;
+        button.classList.remove("finder-row--dragging");
+        document
+          .querySelectorAll(".finder-row--drop-target")
+          .forEach((el) => el.classList.remove("finder-row--drop-target"));
+      });
     });
 
+    if (showDraft) {
+      const draftRow = container.querySelector("[data-finder-ticket-input]");
+      if (draftRow) {
+        const titleInput = draftRow.querySelector(".finder-inline-input--title");
+        const descriptionInput = draftRow.querySelector(".finder-inline-textarea");
+        const saveBtn = draftRow.querySelector(".finder-inline-btn--save");
+        const cancelBtn = draftRow.querySelector(".finder-inline-btn--cancel");
+
+        if (titleInput) {
+          requestAnimationFrame(() => {
+            titleInput.focus();
+            titleInput.setSelectionRange(
+              titleInput.value.length,
+              titleInput.value.length
+            );
+          });
+
+          titleInput.addEventListener("input", () => {
+            finderTicketDraft.title = titleInput.value;
+          });
+
+          titleInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              submitFinderTicketDraft();
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              cancelFinderTicketDraft();
+            }
+          });
+        }
+
+        if (descriptionInput) {
+          descriptionInput.addEventListener("input", () => {
+            finderTicketDraft.description = descriptionInput.value;
+          });
+
+          descriptionInput.addEventListener("keydown", (event) => {
+            if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+              event.preventDefault();
+              submitFinderTicketDraft();
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              cancelFinderTicketDraft();
+            }
+          });
+        }
+
+        if (saveBtn) {
+          saveBtn.addEventListener("click", () => submitFinderTicketDraft());
+        }
+
+        if (cancelBtn) {
+          cancelBtn.addEventListener("click", () => cancelFinderTicketDraft());
+        }
+      }
+    }
+
     return currentTicketId
-      ? filteredTickets.find((ticket) => String(ticket.id) === String(currentTicketId)) ||
-        null
+      ? epicFilteredTickets.find(
+          (ticket) => String(ticket.id) === String(currentTicketId)
+        ) || null
       : null;
   }
-
   function renderFinderDetailColumn(ticket, container, emptyEl) {
     if (!container || !emptyEl) return;
+
+    if (typeof finderDetailCleanup === "function") {
+      finderDetailCleanup();
+      finderDetailCleanup = null;
+    }
 
     if (!ticket) {
       container.innerHTML = "";
@@ -4448,21 +5213,66 @@ async function submitQuickAddTicket() {
 
     emptyEl.hidden = true;
 
-    const status = ticket.status || "Open";
-    const assignee = findAssigneeName(ticket.assigneeId) || "Unassigned";
-    const priority = ticket.priority || "No priority";
-    const requestedBy = ticket.requestedBy || "Not set";
-    const epicLabel = resolveEpicLabel(ticket.epic || "", []);
-    const updatedLabel = formatTicketUpdatedLabel(ticket);
-    const dueLabel = formatFinderDate(ticket.dueDate) || "No due date";
-    const startedLabel =
-      formatFinderDate(ticket.startedAt || ticket.started_at) || "Not started";
-    const completedLabel =
-      formatFinderDate(ticket.completedAt || ticket.completed_at) || "Not done";
+    const statusTag = createTagEditor(
+      getStatusTransitionOptions(ticket.status),
+      ticket.status || "Open",
+      ticket.id,
+      "status"
+    );
 
-    const description = ticket.description && ticket.description.trim().length
-      ? escapeHtml(ticket.description).replace(/\n/g, "<br>")
-      : "";
+    const priorityTag = createTagEditor(
+      ["Urgent", "High", "Medium", "Low"],
+      ticket.priority || "",
+      ticket.id,
+      "priority"
+    );
+
+    const epicOptions = [
+      { value: "", text: "No Epic" },
+      ...appData.epics.map((epic) => ({ value: epic, text: epic })),
+    ];
+
+    const assigneeOptions = appData.teamMembers.map((member) => ({
+      value: member.id,
+      text: member.name,
+    }));
+
+    const requesterOptions = appData.users.map((user) => ({
+      value: user,
+      text: user,
+    }));
+
+    const toDateInput = (value) => {
+      if (!value) return "";
+      const iso = String(value);
+      return iso.includes("T") ? iso.split("T")[0] : iso;
+    };
+
+    const renderDateEditor = (field, rawValue) => {
+      const value = rawValue || "";
+      const inputValue = toDateInput(value);
+      const hasValue = value ? "has-value" : "";
+      return `
+        <div class="editable-field-wrapper ${hasValue}">
+          <input
+            type="date"
+            class="inline-editor finder-date-input"
+            data-id="${ticket.id}"
+            data-field="${field}"
+            data-old-value="${escapeHtml(value)}"
+            value="${escapeHtml(inputValue)}"
+          />
+        </div>
+      `;
+    };
+
+    const updatedLabel = formatTicketUpdatedLabel(ticket);
+    const typeLabel = ticket.type || "Task";
+    const projectName =
+      appData.projects.find((proj) => proj.id == ticket.projectId)?.projectName ||
+      "No project";
+
+    const description = ticket.description || "";
 
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const combinedText = `${ticket.description || ""} ${ticket.relevantLink || ""}`;
@@ -4487,57 +5297,1215 @@ async function submitQuickAddTicket() {
       : "";
 
     container.innerHTML = `
-      <div class="finder-detail-header">
-        <span class="finder-detail-key">HRB-${escapeHtml(String(ticket.id))}</span>
-        <span class="finder-badge finder-badge--status">${escapeHtml(status)}</span>
+      <div class="ticket-main-content finder-detail-content" data-ticket-id="${ticket.id}">
+        <div class="finder-detail-header">
+          <div class="finder-detail-header-info">
+            <span class="finder-detail-key">HRB-${escapeHtml(String(ticket.id))}</span>
+            <span class="finder-detail-chip">${escapeHtml(projectName)}</span>
+          </div>
+          <div class="finder-detail-actions">
+            <button type="button" class="finder-open-modal" data-ticket-id="${ticket.id}" title="Open full ticket view">
+              <i class="fas fa-external-link-alt"></i>
+            </button>
+          </div>
+        </div>
+        <div class="finder-detail-status-group">
+          ${statusTag}
+          <span class="finder-detail-type">${escapeHtml(typeLabel)}</span>
+          <span class="finder-detail-updated">Updated ${escapeHtml(updatedLabel)}</span>
+        </div>
+        <div class="finder-detail-title-group sidebar-property-editable" data-field-group="title">
+          <label for="finder-detail-title-${ticket.id}">Title</label>
+          <input
+            id="finder-detail-title-${ticket.id}"
+            type="text"
+            class="finder-detail-input inline-editor"
+            data-id="${ticket.id}"
+            data-field="title"
+            data-old-value="${escapeHtml(ticket.title || "")}"
+            data-requires-save="true"
+            value="${escapeHtml(ticket.title || "")}"
+            placeholder="Ticket title..."
+          />
+          <div class="finder-inline-actions finder-inline-actions--detail" data-save-actions="title" hidden>
+            <button type="button" class="finder-inline-btn finder-inline-btn--save" data-finder-save="title">
+              <i class="fas fa-check"></i><span>Save</span>
+            </button>
+            <button type="button" class="finder-inline-btn finder-inline-btn--secondary" data-finder-cancel="title">
+              <i class="fas fa-times"></i><span>Cancel</span>
+            </button>
+          </div>
+        </div>
+        <div class="finder-detail-grid">
+          <div class="finder-detail-field finder-detail-field--static">
+            <span class="finder-detail-label">Project</span>
+            <span class="finder-detail-value">${escapeHtml(projectName)}</span>
+          </div>
+        <div class="finder-detail-field" data-ticket-field="priority">
+            <span class="finder-detail-label">Priority</span>
+            ${priorityTag}
+          </div>
+          <div class="finder-detail-field finder-detail-field--static">
+            <span class="finder-detail-label">Epic</span>
+            <span class="finder-detail-value">${escapeHtml(ticket.epic || "No Epic")}</span>
+          </div>
+          <div class="finder-detail-field">
+            <span class="finder-detail-label">Assignee</span>
+            ${createSearchableDropdown(assigneeOptions, ticket.assigneeId, ticket.id, "assigneeId")}
+          </div>
+          <div class="finder-detail-field">
+            <span class="finder-detail-label">Requested By</span>
+            ${createSearchableDropdown(requesterOptions, ticket.requestedBy, ticket.id, "requestedBy")}
+          </div>
+          <div class="finder-detail-field">
+            <span class="finder-detail-label">Started</span>
+            ${renderDateEditor("startedAt", ticket.startedAt || ticket.started_at)}
+          </div>
+          <div class="finder-detail-field">
+            <span class="finder-detail-label">Due</span>
+            ${renderDateEditor("dueDate", ticket.dueDate || ticket.due_date)}
+          </div>
+          <div class="finder-detail-field">
+            <span class="finder-detail-label">Completed</span>
+            ${renderDateEditor("completedAt", ticket.completedAt || ticket.completed_at)}
+          </div>
+        </div>
+        <div class="finder-detail-section sidebar-property-editable" data-field-group="description">
+          <div class="finder-detail-section-header">
+            <label for="finder-detail-description-${ticket.id}">Description</label>
+          </div>
+          <textarea
+            id="finder-detail-description-${ticket.id}"
+            class="finder-detail-textarea inline-editor"
+            data-id="${ticket.id}"
+            data-field="description"
+            data-old-value="${escapeHtml(description)}"
+            data-requires-save="true"
+            placeholder="Add a description..."
+          >${escapeHtml(description)}</textarea>
+          <div class="finder-inline-actions finder-inline-actions--detail" data-save-actions="description" hidden>
+            <button type="button" class="finder-inline-btn finder-inline-btn--save" data-finder-save="description">
+              <i class="fas fa-check"></i><span>Save</span>
+            </button>
+            <button type="button" class="finder-inline-btn finder-inline-btn--secondary" data-finder-cancel="description">
+              <i class="fas fa-times"></i><span>Cancel</span>
+            </button>
+          </div>
+        </div>
+        <div class="finder-detail-section finder-detail-section--subtasks" data-subtask-container="${ticket.id}"></div>
+        ${linksSection}
       </div>
-      <h3 class="finder-detail-title">${escapeHtml(ticket.title || "Untitled ticket")}</h3>
-      <p class="finder-detail-meta">
-        <span>${escapeHtml(ticket.type || "Task")}</span>
-        <span>Updated ${escapeHtml(updatedLabel)}</span>
-      </p>
-      <dl class="finder-detail-grid">
-        <div>
-          <dt>Epic</dt>
-          <dd>${escapeHtml(epicLabel)}</dd>
-        </div>
-        <div>
-          <dt>Assignee</dt>
-          <dd>${escapeHtml(assignee)}</dd>
-        </div>
-        <div>
-          <dt>Priority</dt>
-          <dd>${escapeHtml(priority)}</dd>
-        </div>
-        <div>
-          <dt>Requested By</dt>
-          <dd>${escapeHtml(requestedBy)}</dd>
-        </div>
-        <div>
-          <dt>Started</dt>
-          <dd>${escapeHtml(startedLabel)}</dd>
-        </div>
-        <div>
-          <dt>Completed</dt>
-          <dd>${escapeHtml(completedLabel)}</dd>
-        </div>
-        <div>
-          <dt>Due</dt>
-          <dd>${escapeHtml(dueLabel)}</dd>
-        </div>
-      </dl>
-      <div class="finder-detail-section">
-        <h4>Notes</h4>
-        ${
-          description
-            ? `<p>${description}</p>`
-            : '<p class="finder-detail-empty">No description provided.</p>'
-        }
-      </div>
-      ${linksSection}
     `;
+
+    const detailRoot = container.querySelector(".finder-detail-content");
+    if (!detailRoot) {
+      return;
+    }
+
+    setupFinderDetailManualSave(detailRoot, "title");
+    setupFinderDetailManualSave(detailRoot, "description");
+
+    setupFinderDetailInteractiveFields(detailRoot, ticket);
+
+    const closeFinderEditors = () => {
+      document.querySelectorAll(".searchable-dropdown-list").forEach((dropdown) => {
+        if (dropdown.style.display === "block") {
+          dropdown.style.display = "none";
+          reattachDropdownToOrigin(dropdown);
+        }
+      });
+      document
+        .querySelectorAll(".jira-dropdown")
+        .forEach((dropdown) => (dropdown.style.display = "none"));
+    };
+
+    const subtasksContainer = detailRoot.querySelector("[data-subtask-container]");
+    if (subtasksContainer) {
+      renderSubtasks(ticket, subtasksContainer);
+    }
+
+    addTagEditorEventListeners(detailRoot);
+    
+    // Add click-outside handler for tag editor dropdowns in finder-detail
+    const closeTagEditorDropdowns = (e) => {
+      // Don't close if clicking on the tag editor or its dropdown
+      if (e.target.closest(".tag-editor") || e.target.closest(".jira-dropdown")) {
+        return;
+      }
+      
+      // Close all jira-dropdowns in finder-detail
+      detailRoot.querySelectorAll(".jira-dropdown").forEach(dropdown => {
+        if (dropdown.style.display === "block") {
+          dropdown.style.display = "none";
+        }
+      });
+    };
+    document.addEventListener("click", closeTagEditorDropdowns, true);
+
+    const descriptionEl = detailRoot.querySelector(".finder-detail-textarea");
+    if (descriptionEl) {
+      autoSizeTextarea(descriptionEl);
+    }
+
+    detailRoot.addEventListener("change", (event) => {
+      const target = event.target;
+      if (target.dataset.commitScope === "finder-detail") return;
+      if (!target.classList.contains("inline-editor")) return;
+      if (target.type === "date") {
+        handleUpdate(event);
+      } else if (!target.classList.contains("searchable-dropdown-input")) {
+        handleTableChange(event);
+      }
+    });
+
+    detailRoot.addEventListener("click", handleTableClick);
+    detailRoot.addEventListener("click", handleSearchableDropdownClick);
+    detailRoot.addEventListener("focusin", handleTableFocusIn);
+    detailRoot.addEventListener("focusout", handleTableFocusOut);
+    
+    // Add global mousedown handler for dropdown items (since they're moved to document.body)
+    // Use mousedown to prevent blur from firing before selection
+    const globalDropdownClickHandler = (e) => {
+      const dropdownItem = e.target.closest(".searchable-dropdown-list div[data-value]");
+      if (!dropdownItem) return;
+      
+      const dropdown = dropdownItem.closest(".searchable-dropdown-list");
+      if (!dropdown) return;
+      
+      // Only handle if it's a finder-detail dropdown
+      if (dropdown.dataset.commitScope === "finder-detail") {
+        // Find the input and mark that dropdown item was clicked
+        const dropdownUid = dropdown.dataset.dropdownUid;
+        let input = null;
+        if (dropdownUid) {
+          input = document.querySelector(
+            `.searchable-dropdown-input[data-dropdown-uid="${dropdownUid}"]`
+          );
+        }
+        if (!input && dropdown.dataset.ticketField && dropdown.dataset.ticketId) {
+          input = document.querySelector(
+            `.searchable-dropdown-input[data-ticket-field="${dropdown.dataset.ticketField}"][data-ticket-id="${dropdown.dataset.ticketId}"]`
+          );
+        }
+        if (input && input._markDropdownClick) {
+          input._markDropdownClick();
+        }
+        
+        e.preventDefault();
+        e.stopPropagation();
+        handleDropdownItemClick(e);
+      }
+    };
+    document.addEventListener("mousedown", globalDropdownClickHandler, true);
+    
+    // Store cleanup function for global dropdown handler and tag editor dropdowns
+    const originalFinderCleanup = finderDetailCleanup;
+    finderDetailCleanup = () => {
+      if (originalFinderCleanup) originalFinderCleanup();
+      document.removeEventListener("mousedown", globalDropdownClickHandler, true);
+      document.removeEventListener("click", closeTagEditorDropdowns, true);
+    };
+
+    detailRoot.addEventListener("keyup", (event) => {
+      if (event.target.classList.contains("searchable-dropdown-input")) {
+        handleTableKeyUp(event);
+      }
+    });
+
+    detailRoot.addEventListener("keydown", (event) => {
+      const target = event.target;
+      if (target.dataset.commitScope === "finder-detail") return;
+      if (
+        target.type === "date" &&
+        target.classList.contains("inline-editor") &&
+        (event.key === "Enter" || event.key === "Tab")
+      ) {
+        event.preventDefault();
+        handleUpdate(event);
+        target.blur();
+      }
+    });
+
+    detailRoot.addEventListener("input", (event) => {
+      if (event.target.matches(".finder-detail-textarea")) {
+        autoSizeTextarea(event.target);
+      }
+      if (event.target.classList.contains("searchable-dropdown-input")) {
+        // Allow filtering for finder-detail dropdowns
+        const filter = event.target.value.toLowerCase();
+        const dropdownUid = event.target.dataset.dropdownUid;
+        let list = null;
+        
+        if (dropdownUid) {
+          list = document.querySelector(`.searchable-dropdown-list[data-dropdown-uid="${dropdownUid}"]`);
+        }
+        
+        if (!list) {
+          const container = event.target.closest(".searchable-dropdown");
+          if (container) {
+            list = container.querySelector(".searchable-dropdown-list");
+          }
+        }
+        
+        if (list) {
+          list.querySelectorAll("div[data-value]").forEach((item) => {
+            const text = item.textContent.toLowerCase();
+            item.style.display = text.includes(filter) ? "" : "none";
+          });
+          // Reposition dropdown after filtering if visible
+          if (list.style.display === "block") {
+            positionDropdownFixed(event.target, list);
+          }
+        }
+        
+        // Don't call handleTableKeyUp for finder-detail dropdowns as it has early return
+        if (event.target.dataset.commitScope !== "finder-detail") {
+          handleTableKeyUp(event);
+        }
+      }
+    });
+
+    const modalTrigger = detailRoot.querySelector(".finder-open-modal");
+    if (modalTrigger) {
+      modalTrigger.addEventListener("click", () => {
+        showTaskDetailModal(ticket.id);
+      });
+    }
+
+    const handleDetailOutsideClick = (event) => {
+      if (!detailRoot.contains(event.target)) {
+        closeFinderEditors();
+      }
+    };
+
+    const handleDetailEscape = (event) => {
+      if (event.key === "Escape") {
+        closeFinderEditors();
+      }
+    };
+
+    document.addEventListener("click", handleDetailOutsideClick, true);
+    document.addEventListener("keydown", handleDetailEscape, true);
+
+    finderDetailCleanup = () => {
+      closeFinderEditors();
+      document.removeEventListener("click", handleDetailOutsideClick, true);
+      document.removeEventListener("keydown", handleDetailEscape, true);
+    };
   }
 
+  function setupFinderDetailInteractiveFields(detailRoot, ticket) {
+    if (!detailRoot || !ticket) return;
+
+    // Epic is now read-only, only configure Assignee and Requested By
+    ["assigneeId", "requestedBy"].forEach((field) => {
+      configureFinderDropdown(detailRoot, ticket, field);
+    });
+
+    ["startedAt", "dueDate", "completedAt"].forEach((field) => {
+      configureFinderDate(detailRoot, ticket, field);
+    });
+  }
+
+  function configureFinderDropdown(root, ticket, field) {
+    const input = root.querySelector(
+      `.searchable-dropdown-input[data-field="${field}"]`
+    );
+    if (!input) return;
+
+    input.dataset.commitScope = "finder-detail";
+    input.dataset.ticketField = field;
+    input.dataset.ticketId = String(ticket.id);
+    input.dataset.displayValue = input.value || "";
+    input.dataset.value = input.dataset.value || "";
+    input.dataset.oldValue = input.dataset.value;
+    input.dataset.committing = "false";
+
+    if (field === "assigneeId") {
+      const name = findAssigneeName(ticket.assigneeId);
+      if (name) {
+        input.dataset.displayValue = name;
+        if (!input.value) input.value = name;
+      }
+    }
+
+    const wrapper =
+      input.closest(".sidebar-property-editable") ||
+      input.closest(".finder-detail-field");
+    if (wrapper) {
+      wrapper.dataset.ticketField = field;
+    }
+
+    // Set up commit handlers for editable dropdown fields (Assignee and Requested By)
+    if (field === "requestedBy" || field === "assigneeId") {
+      let blurTimeout = null;
+      let dropdownItemClicked = false;
+      
+      // Mark when a dropdown item is clicked (set by global handler)
+      const markDropdownClick = () => {
+        dropdownItemClicked = true;
+        setTimeout(() => {
+          dropdownItemClicked = false;
+        }, 300);
+      };
+      
+      // Store the mark function on input so global handler can call it
+      input.dataset.markDropdownClick = "true";
+      input._markDropdownClick = markDropdownClick;
+      
+      const commit = () => {
+        if (input.dataset.committing === "true") return;
+        if (dropdownItemClicked) {
+          // Dropdown item was clicked, don't commit here - let the click handler do it
+          return;
+        }
+        
+        // For assigneeId, we must use dataset.value (the numeric ID), fallback to empty string if not set
+        // For requestedBy, use dataset.value if available, otherwise use input.value (allows custom text)
+        const rawValue = field === "assigneeId" 
+          ? (input.dataset.value !== undefined && input.dataset.value !== "" ? input.dataset.value : "")
+          : (input.dataset.value !== undefined ? input.dataset.value : input.value);
+        commitFinderDetailUpdate({
+          ticketId: ticket.id,
+          field,
+          rawValue: rawValue,
+          displayValue: input.value,
+          previousDisplayValue: input.dataset.displayValue || "",
+          previousDatasetValue: input.dataset.value || "",
+          input,
+        });
+      };
+      
+      // Delay blur to allow click events to complete
+      input.addEventListener("blur", () => {
+        blurTimeout = setTimeout(() => {
+          commit();
+        }, 250);
+      });
+      
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          if (blurTimeout) clearTimeout(blurTimeout);
+          commit();
+        }
+      });
+    }
+  }
+
+  function configureFinderDate(root, ticket, field) {
+    const input = root.querySelector(`input[data-field="${field}"]`);
+    if (!input) return;
+
+    input.dataset.commitScope = "finder-detail";
+    input.dataset.ticketField = field;
+    input.dataset.ticketId = String(ticket.id);
+    const normalized = normalizeDateInput(ticket[field]);
+    input.dataset.displayValue = normalized || "";
+    input.dataset.value = normalized || "";
+    input.dataset.oldValue = normalized || "";
+    input.dataset.committing = "false";
+    if (!input.value && normalized) {
+      input.value = normalized;
+    }
+
+    const wrapper =
+      input.closest(".sidebar-property-editable") ||
+      input.closest(".finder-detail-field");
+    if (wrapper) {
+      wrapper.dataset.ticketField = field;
+    }
+
+    const commit = () => {
+      if (input.dataset.committing === "true") return;
+      commitFinderDetailUpdate({
+        ticketId: ticket.id,
+        field,
+        rawValue: input.value,
+        displayValue: input.value,
+        previousDisplayValue: input.dataset.displayValue || "",
+        previousDatasetValue: input.dataset.value || "",
+        input,
+      });
+    };
+
+    input.addEventListener("change", commit);
+    input.addEventListener("blur", commit);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        commit();
+      }
+    });
+  }
+
+  function normalizeDateInput(value) {
+    if (!value) return "";
+    const str = String(value);
+    return str.includes("T") ? str.split("T")[0] : str;
+  }
+
+  function setFinderFieldState(wrapper, state) {
+    if (!wrapper) return;
+    wrapper.classList.remove("is-saving", "is-successful", "has-error");
+    if (state === "saving") {
+      wrapper.classList.add("is-saving");
+    } else if (state === "success") {
+      wrapper.classList.add("is-successful");
+    } else if (state === "error") {
+      wrapper.classList.add("has-error");
+    }
+  }
+
+  async function commitFinderDetailUpdate({
+    ticketId,
+    field,
+    rawValue,
+    displayValue,
+    previousDisplayValue = "",
+    previousDatasetValue = "",
+    input,
+  }) {
+    const ticket = appData.allTickets.find(
+      (t) => String(t.id) === String(ticketId)
+    );
+    if (!ticket) {
+      showToast("Ticket not found.", "error");
+      return;
+    }
+
+    const normalization = normalizeFinderDetailValue(ticket, field, rawValue);
+    if (!normalization.hasChanged) {
+      if (input && normalization.displayValue !== undefined) {
+        input.value = normalization.displayValue || "";
+        input.dataset.displayValue = normalization.displayValue || "";
+        input.dataset.value = normalization.datasetValue || "";
+      }
+      return;
+    }
+
+    const wrapper =
+      input?.closest(".sidebar-property-editable") ||
+      input?.closest(".finder-detail-field") ||
+      null;
+
+    if (input) {
+      input.dataset.committing = "true";
+    }
+    setFinderFieldState(wrapper, "saving");
+
+    try {
+      const client = window.supabaseClient || (await waitForSupabase());
+      // Database uses camelCase: startedAt, dueDate, completedAt (no mapping needed)
+      const updates = { [field]: normalization.valueForDb };
+      if (normalization.extraUpdates) {
+        Object.assign(updates, normalization.extraUpdates);
+      }
+
+      const { data, error } = await client
+        .from("ticket")
+        .update(updates)
+        .eq("id", ticketId)
+        .select()
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      const patchSource = data ? data : updates;
+      applyTicketPatchToCaches(ticketId, patchSource);
+
+      if (normalization.ensureEpic) {
+        normalization.ensureEpic();
+      }
+
+      if (String(currentTicketId || "") === String(ticketId)) {
+        if (field === "epic") {
+          const nextEpic =
+            normalization.valueForDb === null
+              ? NO_EPIC_KEY
+              : normalization.valueForDb || NO_EPIC_KEY;
+          currentEpicKey = nextEpic;
+          finderFilters.epic = nextEpic;
+        }
+      }
+
+      if (input) {
+        input.dataset.displayValue = normalization.displayValue || "";
+        input.dataset.value = normalization.datasetValue || "";
+        input.dataset.oldValue = normalization.datasetValue || normalization.displayValue || "";
+        input.value = normalization.displayValue || "";
+      }
+
+      setFinderFieldState(wrapper, "success");
+      setTimeout(() => setFinderFieldState(wrapper, null), 1500);
+
+      setTimeout(() => {
+        renderProjectsView();
+      }, 300);
+    } catch (error) {
+      console.error("Ticket update failed", error);
+      showToast(
+        error?.message ? `Update failed: ${error.message}` : "Update failed.",
+        "error"
+      );
+      if (input) {
+        input.value = previousDisplayValue || input.dataset.displayValue || "";
+        input.dataset.displayValue = previousDisplayValue || "";
+        input.dataset.value = previousDatasetValue || "";
+      }
+      setFinderFieldState(wrapper, "error");
+      setTimeout(() => setFinderFieldState(wrapper, null), 2000);
+    } finally {
+      if (input) {
+        input.dataset.committing = "false";
+      }
+    }
+  }
+
+  function normalizeFinderDetailValue(ticket, field, rawValue) {
+    const result = {
+      hasChanged: false,
+      valueForDb: rawValue,
+      valueForTicket: rawValue,
+      displayValue: rawValue,
+      datasetValue: rawValue,
+      extraUpdates: null,
+      ensureEpic: null,
+    };
+
+    switch (field) {
+      case "epic": {
+        const trimmed = (rawValue || "").trim();
+        const newValue = trimmed === "" ? null : trimmed;
+        const previous = ticket.epic || null;
+        result.hasChanged = previous !== newValue;
+        result.valueForDb = newValue;
+        result.valueForTicket = newValue;
+        result.displayValue = newValue || "";
+        result.datasetValue = newValue || "";
+        result.ensureEpic = () => {
+          if (
+            newValue &&
+            !appData.epics.some(
+              (epic) => epic.toLowerCase() === newValue.toLowerCase()
+            )
+          ) {
+            appData.epics.push(newValue);
+            appData.epics.sort((a, b) => a.localeCompare(b));
+          }
+        };
+        break;
+      }
+      case "requestedBy": {
+        const trimmed = (rawValue || "").trim();
+        const newValue = trimmed === "" ? null : trimmed;
+        const previous = ticket.requestedBy || null;
+        result.hasChanged = previous !== newValue;
+        result.valueForDb = newValue;
+        result.valueForTicket = newValue;
+        result.displayValue = newValue || "";
+        result.datasetValue = newValue || "";
+        break;
+      }
+      case "assigneeId": {
+        const numeric = rawValue ? Number(rawValue) : null;
+        const previous = ticket.assigneeId ?? null;
+        result.hasChanged = String(previous ?? "") !== String(numeric ?? "");
+        result.valueForDb = numeric;
+        result.valueForTicket = numeric;
+        result.datasetValue = numeric !== null ? String(numeric) : "";
+        result.displayValue = findAssigneeName(numeric) || "";
+        if (numeric) {
+          result.extraUpdates = {
+            assignedAt: ticket.assignedAt || new Date().toISOString(),
+          };
+        } else {
+          result.extraUpdates = { assignedAt: null };
+        }
+        break;
+      }
+      case "startedAt":
+      case "dueDate":
+      case "completedAt": {
+        // Check both camelCase and snake_case when reading previous value
+        const snakeCaseField = field.replace(/([A-Z])/g, '_$1').toLowerCase();
+        const previousValue = ticket[field] || ticket[snakeCaseField];
+        const previous = normalizeDateInput(previousValue);
+        const trimmed = rawValue ? rawValue.trim() : "";
+        result.hasChanged = (previous || "") !== trimmed;
+        // Use UTC timezone (Z suffix) to ensure date is saved as UTC midnight
+        result.valueForDb = trimmed ? new Date(`${trimmed}T00:00:00Z`).toISOString() : null;
+        result.valueForTicket = result.valueForDb;
+        result.displayValue = trimmed;
+        result.datasetValue = trimmed;
+        break;
+      }
+      default: {
+        result.hasChanged = true;
+        break;
+      }
+    }
+
+    return result;
+  }
+
+  function applyTicketPatchToCaches(ticketId, patch) {
+    if (!patch) return;
+    const patchEntries = Object.entries(patch).map(([key, value]) => {
+      const camelKey = key.includes("_")
+        ? key.replace(/_([a-z])/g, (_, char) => char.toUpperCase())
+        : key;
+      return [camelKey, value];
+    });
+
+    const applyPatch = (ticket) => {
+      if (!ticket) return;
+      patchEntries.forEach(([key, value]) => {
+        if (key === "log" && Array.isArray(value)) {
+          ticket.log = value;
+        } else {
+          ticket[key] = value;
+        }
+      });
+    };
+
+    const ticket = appData.allTickets.find(
+      (t) => String(t.id) === String(ticketId)
+    );
+    applyPatch(ticket);
+
+    const listIndex = appData.tickets.findIndex(
+      (t) => String(t.id) === String(ticketId)
+    );
+    if (listIndex !== -1) {
+      applyPatch(appData.tickets[listIndex]);
+    }
+  }
+
+  function setupFinderDetailManualSave(detailRoot, field) {
+    if (!detailRoot) return;
+
+    const input = detailRoot.querySelector(`[data-field="${field}"]`);
+    const actions = detailRoot.querySelector(
+      `[data-save-actions="${field}"]`
+    );
+    if (!input || !actions) return;
+
+    const saveBtn = actions.querySelector('[data-finder-save]');
+    const cancelBtn = actions.querySelector('[data-finder-cancel]');
+    const wrapper = input.closest(".sidebar-property-editable");
+
+    const getBaseline = () => {
+      const baseline = input.dataset.oldValue;
+      return baseline !== undefined ? baseline : "";
+    };
+
+    const setDirtyState = (dirty) => {
+      actions.hidden = !dirty;
+      if (dirty) {
+        actions.classList.add("is-visible");
+        if (wrapper) wrapper.classList.add("has-unsaved");
+      } else {
+        actions.classList.remove("is-visible");
+        if (wrapper) wrapper.classList.remove("has-unsaved");
+      }
+    };
+
+    const syncDirtyState = () => {
+      setDirtyState(input.value !== getBaseline());
+    };
+
+    const resetToBaseline = () => {
+      input.value = getBaseline();
+      if (input.tagName === "TEXTAREA") {
+        autoSizeTextarea(input);
+      }
+      syncDirtyState();
+      input.focus();
+    };
+
+    const performSave = async () => {
+      if (actions.hidden) return;
+      if (saveBtn) saveBtn.disabled = true;
+      if (cancelBtn) cancelBtn.disabled = true;
+      actions.classList.add("is-saving");
+      try {
+        await handleUpdate(
+          { target: input },
+          undefined,
+          { source: "finder-detail" }
+        );
+        syncDirtyState();
+      } finally {
+        actions.classList.remove("is-saving");
+        if (saveBtn) saveBtn.disabled = false;
+        if (cancelBtn) cancelBtn.disabled = false;
+      }
+    };
+
+    input.addEventListener("input", () => {
+      syncDirtyState();
+    });
+
+    if (field === "description") {
+      input.addEventListener("input", () => {
+        autoSizeTextarea(input);
+      });
+    }
+
+    if (saveBtn) {
+      saveBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        performSave();
+      });
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        resetToBaseline();
+      });
+    }
+
+    if (field === "title") {
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          performSave();
+        }
+      });
+    } else if (field === "description") {
+      input.addEventListener("keydown", (event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+          event.preventDefault();
+          performSave();
+        }
+      });
+    }
+
+    syncDirtyState();
+  }
+
+
+  function openFinderEpicDraft(projectId) {
+    if (!projectId) return;
+    const normalizedProjectId = String(projectId);
+
+    finderActiveColumn = 1;
+    currentProjectId = normalizedProjectId;
+    finderFilters.project = normalizedProjectId;
+    currentTicketId = null;
+
+    if (
+      finderEpicDraft &&
+      String(finderEpicDraft.projectId) === normalizedProjectId
+    ) {
+      renderProjectsView();
+      return;
+    }
+
+    finderEpicDraft = {
+      projectId: normalizedProjectId,
+      value: "",
+    };
+    finderTicketDraft = null;
+    renderProjectsView();
+  }
+
+  function cancelFinderEpicDraft() {
+    if (!finderEpicDraft) return;
+    finderEpicDraft = null;
+    renderProjectsView();
+  }
+
+  async function submitFinderEpicDraft() {
+    if (!finderEpicDraft) return;
+
+    const projectId =
+      finderEpicDraft.projectId !== undefined
+        ? String(finderEpicDraft.projectId)
+        : currentProjectId
+        ? String(currentProjectId)
+        : null;
+
+    if (!projectId) {
+      showToast("Select a project first.", "error");
+      return;
+    }
+
+    const epicName = (finderEpicDraft.value || "").trim();
+    if (!epicName) {
+      showToast("Epic name cannot be empty.", "error");
+      const input = document.querySelector(
+        "#finder-column-epics [data-finder-epic-input] input"
+      );
+      if (input) input.focus();
+      return;
+    }
+
+    const epicExists = appData.allTickets.some((ticket) => {
+      if (String(ticket.projectId) !== projectId) return false;
+      const ticketEpic = (ticket.epic || "").trim().toLowerCase();
+      return ticketEpic === epicName.toLowerCase();
+    });
+
+    if (epicExists) {
+      showToast(
+        "An epic with that name already exists in this project.",
+        "error"
+      );
+      const input = document.querySelector(
+        "#finder-column-epics [data-finder-epic-input] input"
+      );
+      if (input) {
+        input.focus();
+        input.select();
+      }
+      return;
+    }
+
+    if (
+      !appData.epics.some(
+        (epic) => epic.toLowerCase() === epicName.toLowerCase()
+      )
+    ) {
+      appData.epics.push(epicName);
+      appData.epics.sort((a, b) => a.localeCompare(b));
+    }
+
+    finderEpicDraft = null;
+    finderTicketDraft = {
+      projectId,
+      epicKey: epicName,
+      title: "",
+      description: "",
+      isSaving: false,
+    };
+
+    currentProjectId = projectId;
+    finderFilters.project = projectId;
+    currentEpicKey = epicName;
+    finderFilters.epic = epicName;
+    currentTicketId = null;
+    finderActiveColumn = 2;
+
+    renderProjectsView();
+    showToast("New epic ready. Add the first ticket to complete it.", "success");
+  }
+
+  function openFinderTicketDraft(projectId, epicKey) {
+    if (!projectId) return;
+
+    const normalizedProjectId = String(projectId);
+    const normalizedEpicKey =
+      epicKey === null || epicKey === undefined || epicKey === ""
+        ? NO_EPIC_KEY
+        : String(epicKey);
+
+    currentProjectId = normalizedProjectId;
+    finderFilters.project = normalizedProjectId;
+    currentEpicKey = normalizedEpicKey;
+    finderFilters.epic = normalizedEpicKey;
+    currentTicketId = null;
+    finderActiveColumn = 2;
+
+    if (
+      finderTicketDraft &&
+      String(finderTicketDraft.projectId) === normalizedProjectId &&
+      finderTicketDraft.epicKey === normalizedEpicKey
+    ) {
+      renderProjectsView();
+      return;
+    }
+
+    finderTicketDraft = {
+      projectId: normalizedProjectId,
+      epicKey: normalizedEpicKey,
+      title: "",
+      description: "",
+      isSaving: false,
+    };
+
+    renderProjectsView();
+  }
+
+  function cancelFinderTicketDraft() {
+    if (!finderTicketDraft) return;
+    finderTicketDraft = null;
+    renderProjectsView();
+  }
+
+  async function submitFinderTicketDraft() {
+    if (!finderTicketDraft || finderTicketDraft.isSaving) return;
+
+    const projectId =
+      finderTicketDraft.projectId !== undefined
+        ? String(finderTicketDraft.projectId)
+        : currentProjectId
+        ? String(currentProjectId)
+        : null;
+
+    if (!projectId) {
+      showToast("Select a project first.", "error");
+      return;
+    }
+
+    const projectIdNumber = Number(projectId);
+    if (!Number.isFinite(projectIdNumber)) {
+      showToast("Invalid project selection.", "error");
+      return;
+    }
+
+    const title = (finderTicketDraft.title || "").trim();
+    if (!title) {
+      showToast("Ticket title is required.", "error");
+      const titleInput = document.querySelector(
+        "#finder-column-tickets [data-finder-ticket-input] .finder-inline-input--title"
+      );
+      if (titleInput) {
+        titleInput.focus();
+        titleInput.select();
+      }
+      return;
+    }
+
+    const description = (finderTicketDraft.description || "").trim();
+    const epicKey =
+      finderTicketDraft.epicKey === NO_EPIC_KEY
+        ? NO_EPIC_KEY
+        : String(finderTicketDraft.epicKey || "");
+
+    const draftRow = document.querySelector(
+      "#finder-column-tickets [data-finder-ticket-input]"
+    );
+    const saveBtn = draftRow
+      ? draftRow.querySelector(".finder-inline-btn--save")
+      : null;
+    const cancelBtn = draftRow
+      ? draftRow.querySelector(".finder-inline-btn--cancel")
+      : null;
+
+    if (draftRow) draftRow.classList.add("finder-row--saving");
+    if (saveBtn) saveBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+
+    finderTicketDraft.isSaving = true;
+
+    try {
+      const supabaseClient = await waitForSupabase();
+      const nowIso = new Date().toISOString();
+      const assigneeId = appData.currentUserId
+        ? Number(appData.currentUserId)
+        : null;
+
+      const payload = {
+        title,
+        description: description ? description : null,
+        projectId: projectIdNumber,
+        epic: epicKey === NO_EPIC_KEY ? null : epicKey,
+        status: "Open",
+        priority: "Medium",
+        type: "Task",
+        requestedBy: appData.currentUserName || null,
+        assigneeId,
+        createdAt: nowIso,
+        assignedAt: assigneeId ? nowIso : null,
+        log: [],
+      };
+
+      const { data: insertedTickets, error } = await supabaseClient
+        .from("ticket")
+        .insert(payload)
+        .select();
+
+      if (error) {
+        console.error("Finder ticket creation failed:", error);
+        showToast("Could not create ticket. Please try again.", "error");
+        return;
+      }
+
+      finderTicketDraft = null;
+      finderEpicDraft = null;
+
+      currentProjectId = String(projectIdNumber);
+      finderFilters.project = currentProjectId;
+
+      if (insertedTickets && insertedTickets.length > 0) {
+        await updateTicketDataAfterCreation(insertedTickets);
+
+        const createdTicket = insertedTickets[0];
+        const createdEpic = createdTicket.epic;
+
+        if (
+          createdEpic &&
+          !appData.epics.some(
+            (epic) => epic.toLowerCase() === createdEpic.toLowerCase()
+          )
+        ) {
+          appData.epics.push(createdEpic);
+          appData.epics.sort((a, b) => a.localeCompare(b));
+        }
+
+        currentEpicKey =
+          createdEpic === null ? NO_EPIC_KEY : createdEpic || NO_EPIC_KEY;
+        finderFilters.epic = currentEpicKey;
+        currentTicketId = createdTicket.id
+          ? String(createdTicket.id)
+          : currentTicketId;
+        finderActiveColumn = currentTicketId ? 3 : 2;
+      } else {
+        currentEpicKey = epicKey;
+        finderFilters.epic = epicKey;
+        finderActiveColumn = 2;
+      }
+
+      showToast("Ticket created successfully.", "success");
+    } catch (error) {
+      console.error("Finder ticket creation error:", error);
+      showToast("Could not create ticket. Please try again.", "error");
+    } finally {
+      if (draftRow) draftRow.classList.remove("finder-row--saving");
+      if (saveBtn) saveBtn.disabled = false;
+      if (cancelBtn) cancelBtn.disabled = false;
+      if (finderTicketDraft) {
+        finderTicketDraft.isSaving = false;
+      }
+      renderProjectsView();
+    }
+  }
+
+  async function moveTicketToProject(ticketId, targetProjectId) {
+    await updateTicketLocation(ticketId, targetProjectId, undefined);
+  }
+
+  async function moveTicketToEpic(ticketId, targetProjectId, targetEpicKey) {
+    await updateTicketLocation(ticketId, targetProjectId, targetEpicKey);
+  }
+
+  async function updateTicketLocation(ticketId, targetProjectId, targetEpicKey) {
+    const ticket = appData.allTickets.find((t) => String(t.id) === String(ticketId));
+    if (!ticket) {
+      showToast("Ticket not found", "error");
+      return;
+    }
+
+    const projectIdNumber = Number(targetProjectId);
+    if (!Number.isFinite(projectIdNumber)) {
+      showToast("Invalid project target", "error");
+      return;
+    }
+
+    const normalizedEpic =
+      targetEpicKey === undefined
+        ? ticket.epic || null
+        : targetEpicKey === NO_EPIC_KEY || targetEpicKey === ""
+        ? null
+        : targetEpicKey;
+
+    const projectChanged =
+      String(ticket.projectId) !== String(projectIdNumber);
+    const epicChanged =
+      targetEpicKey === undefined
+        ? false
+        : (ticket.epic || null) !== normalizedEpic;
+
+    if (!projectChanged && !epicChanged) {
+      finderDragState = null;
+      return;
+    }
+
+
+    const updates = {};
+    const logEntries = [];
+    const nowIso = new Date().toISOString();
+
+    if (projectChanged) {
+      updates.projectId = projectIdNumber;
+      logEntries.push({
+        user: appData.currentUserEmail,
+        timestamp: nowIso,
+        field: "projectId",
+        oldValue: ticket.projectId,
+        newValue: projectIdNumber,
+      });
+    }
+
+    if (targetEpicKey !== undefined) {
+      updates.epic = normalizedEpic;
+      logEntries.push({
+        user: appData.currentUserEmail,
+        timestamp: nowIso,
+        field: "epic",
+        oldValue: ticket.epic || null,
+        newValue: normalizedEpic,
+      });
+    } else if (projectChanged) {
+      updates.epic = null;
+      logEntries.push({
+        user: appData.currentUserEmail,
+        timestamp: nowIso,
+        field: "epic",
+        oldValue: ticket.epic || null,
+        newValue: null,
+      });
+    }
+
+    updates.log = Array.isArray(ticket.log)
+      ? [...ticket.log, ...logEntries]
+      : logEntries;
+
+    try {
+      const { error } = await window.supabaseClient
+        .from("ticket")
+        .update(updates)
+        .eq("id", ticket.id);
+
+      if (error) {
+        throw error;
+      }
+
+      if (projectChanged) {
+        ticket.projectId = projectIdNumber;
+        const projectName =
+          appData.projects.find(
+            (project) => String(project.id) === String(projectIdNumber)
+          )?.projectName || "Untitled project";
+        ticket.projectName = projectName;
+      }
+
+      if (updates.hasOwnProperty("epic")) {
+        ticket.epic = updates.epic;
+      }
+
+      ticket.log = updates.log;
+
+      finderFilters.project = String(projectIdNumber);
+      currentProjectId = String(projectIdNumber);
+
+      if (targetEpicKey === undefined) {
+        finderFilters.epic = "all";
+          currentEpicKey = null;
+          finderActiveColumn = 1;
+      } else {
+        finderFilters.epic =
+          normalizedEpic === null ? NO_EPIC_KEY : normalizedEpic;
+        currentEpicKey =
+          normalizedEpic === null ? NO_EPIC_KEY : normalizedEpic;
+      }
+
+      currentTicketId = String(ticket.id);
+      finderActiveColumn = 3;
+      showToast(`Ticket HRB-${ticket.id} updated`, "success");
+      renderProjectsView();
+    } catch (error) {
+      console.error("Failed to update ticket location", error);
+      showToast(`Move failed: ${error.message}`, "error");
+    } finally {
+      finderDragState = null;
+    }
+  }
   function updateFinderBreadcrumb(projectEntry, epicGroups) {
     const breadcrumbTrail = document.getElementById("finder-breadcrumb-trail");
     if (!breadcrumbTrail) return;
@@ -4628,6 +6596,75 @@ async function submitQuickAddTicket() {
     const iso = String(value);
     const datePart = iso.includes("T") ? iso.split("T")[0] : iso;
     return formatDateForUIDisplay(datePart) || "";
+  }
+
+  function escapeRegex(term) {
+    return term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+
+  function highlightFinderMatch(text, term) {
+    const source = text || "";
+    const safeText = escapeHtml(source);
+    const normalized = term?.trim();
+    if (!normalized) return safeText;
+    try {
+      const regex = new RegExp(escapeRegex(normalized), "gi");
+      return safeText.replace(regex, (match) => `<mark>${match}</mark>`);
+    } catch (error) {
+      console.warn("Highlight failed for term:", normalized, error);
+      return safeText;
+    }
+  }
+
+  function ticketMatchesFinderFilters(ticket, options = {}) {
+    const { overrideProjectId = null, includeEpicFilter = true } = options;
+
+    if (
+      overrideProjectId !== null &&
+      String(ticket.projectId) !== String(overrideProjectId)
+    ) {
+      return false;
+    }
+
+    if (
+      finderFilters.project !== "all" &&
+      String(ticket.projectId) !== finderFilters.project
+    ) {
+      return false;
+    }
+
+    if (
+      finderFilters.status !== "all" &&
+      (ticket.status || "") !== finderFilters.status
+    ) {
+      return false;
+    }
+
+    if (includeEpicFilter && finderFilters.epic !== "all") {
+      const ticketEpicKey = ticket.epic || NO_EPIC_KEY;
+      if (finderFilters.epic === NO_EPIC_KEY) {
+        if (ticketEpicKey !== NO_EPIC_KEY) return false;
+      } else if (ticketEpicKey !== finderFilters.epic) {
+        return false;
+      }
+    }
+
+    const trimmedTerm = finderSearchTerm.trim().toLowerCase();
+    if (trimmedTerm) {
+      const assigneeName = findAssigneeName(ticket.assigneeId);
+      const idMatch = `hrb-${ticket.id}`.toLowerCase().includes(trimmedTerm);
+      const titleMatch = (ticket.title || "")
+        .toLowerCase()
+        .includes(trimmedTerm);
+      const assigneeMatch = (assigneeName || "")
+        .toLowerCase()
+        .includes(trimmedTerm);
+      if (!idMatch && !titleMatch && !assigneeMatch) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   function findAssigneeName(assigneeId) {
@@ -5228,18 +7265,10 @@ async function submitQuickAddTicket() {
             
             // Clear any active selection
             const allDropdowns = document.querySelectorAll(".searchable-dropdown-list");
-            allDropdowns.forEach(dropdown => {
+            allDropdowns.forEach((dropdown) => {
               if (dropdown.parentNode === document.body) {
                 dropdown.style.display = "none";
-                // Return dropdown to original parent
-                const inputs = document.querySelectorAll(".searchable-dropdown-input");
-                for (let inp of inputs) {
-                  const container = inp.closest(".searchable-dropdown");
-                  if (container && !container.querySelector(".searchable-dropdown-list")) {
-                    container.appendChild(dropdown);
-                    break;
-                  }
-                }
+                reattachDropdownToOrigin(dropdown);
               }
             });
           }
@@ -5320,19 +7349,10 @@ async function submitQuickAddTicket() {
           input.dataset.value = originalValue;
           
           // Close dropdown
-          const allDropdowns = document.querySelectorAll(".searchable-dropdown-list");
-          allDropdowns.forEach(dropdown => {
+          document.querySelectorAll(".searchable-dropdown-list").forEach((dropdown) => {
             if (dropdown.parentNode === document.body) {
               dropdown.style.display = "none";
-              // Return dropdown to original parent
-              const inputs = document.querySelectorAll(".searchable-dropdown-input");
-              for (let inp of inputs) {
-                const container = inp.closest(".searchable-dropdown");
-                if (container && !container.querySelector(".searchable-dropdown-list")) {
-                  container.appendChild(dropdown);
-                  break;
-                }
-              }
+              reattachDropdownToOrigin(dropdown);
             }
           });
           return;
@@ -5341,31 +7361,7 @@ async function submitQuickAddTicket() {
         console.log("Keyup event triggered on searchable dropdown:", e.target.value);
         const filter = e.target.value.toLowerCase();
         
-        // Find the dropdown list - it might be a sibling or moved to document.body
-        let list = e.target.nextElementSibling;
-        if (!list || !list.classList.contains("searchable-dropdown-list")) {
-          // If not found as sibling, look for it in the same searchable dropdown container
-          const container = e.target.closest(".searchable-dropdown");
-          list = container ? container.querySelector(".searchable-dropdown-list") : null;
-        }
-        
-        // If still not found, it might be moved to document.body
-        if (!list) {
-          // Find the dropdown that belongs to this input by looking for one that was moved to body
-          const allDropdowns = document.querySelectorAll(".searchable-dropdown-list");
-          for (let dropdown of allDropdowns) {
-            if (dropdown.parentNode === document.body) {
-              // Check if this dropdown belongs to our input by looking for matching data attributes
-              const inputId = e.target.dataset.id;
-              const inputField = e.target.dataset.field;
-              // We can't easily match them, so we'll use the first visible dropdown
-              if (dropdown.style.display === "block") {
-                list = dropdown;
-                break;
-              }
-            }
-          }
-        }
+        const list = findDropdownForInput(e.target);
         
         if (list && list.classList.contains("searchable-dropdown-list")) {
           console.log("Keyup filtering with:", filter);
@@ -5510,19 +7506,7 @@ async function submitQuickAddTicket() {
       document.querySelectorAll(".searchable-dropdown-list").forEach(dropdown => {
         if (dropdown.style.display === "block") {
           dropdown.style.display = "none";
-          // Return dropdown to its original parent if it was moved to body
-          if (dropdown.parentNode === document.body) {
-            // Find the input that corresponds to this dropdown
-            const inputs = document.querySelectorAll(".searchable-dropdown-input");
-            for (let input of inputs) {
-              const container = input.closest(".searchable-dropdown");
-              if (container && !container.querySelector(".searchable-dropdown-list")) {
-                // This container doesn't have its dropdown, so this must be it
-                container.appendChild(dropdown);
-                break;
-              }
-            }
-          }
+          reattachDropdownToOrigin(dropdown);
         }
       });
     };
@@ -5606,6 +7590,7 @@ async function submitQuickAddTicket() {
     const actualElement = document.querySelector(`[data-id="${id}"][data-field="${field}"]`);
     const parentContainer = actualElement ? actualElement.closest("td, .sidebar-property-editable") : null;
     const oldValue = actualElement ? actualElement.dataset.oldValue || "" : "";
+    const updateSource = actualElement?.dataset.updateSource || null;
     
     // Create a fake event object to match the expected format
     const fakeEvent = {
@@ -5615,7 +7600,8 @@ async function submitQuickAddTicket() {
           field: field,
           type: type,
           oldValue: oldValue,
-          value: value // Add the actual value for searchable dropdowns
+          value: value, // Add the actual value for searchable dropdowns
+          updateSource: updateSource || undefined
         },
         value: value,
         classList: actualElement ? actualElement.classList : { contains: () => false },
@@ -5625,11 +7611,13 @@ async function submitQuickAddTicket() {
       }
     };
     
+    const handlerOptions = updateSource ? { source: updateSource } : undefined;
+    
     // For searchable dropdowns, pass the value as newValueFromSearchable
     if (actualElement && actualElement.classList.contains("searchable-dropdown-input")) {
-      handler(fakeEvent, value); // Pass as second parameter for newValueFromSearchable
+      handler(fakeEvent, value, handlerOptions); // Pass as second parameter for newValueFromSearchable
     } else {
-      handler(fakeEvent);
+      handler(fakeEvent, undefined, handlerOptions);
     }
   }
 
@@ -5674,20 +7662,10 @@ async function submitQuickAddTicket() {
               if (d !== dropdown) d.style.display = "none";
             });
             // Close all searchable dropdowns
-            document.querySelectorAll(".searchable-dropdown-list").forEach(searchableDropdown => {
+            document.querySelectorAll(".searchable-dropdown-list").forEach((searchableDropdown) => {
               if (searchableDropdown.style.display === "block") {
                 searchableDropdown.style.display = "none";
-                // Return dropdown to its original parent if it was moved to body
-                if (searchableDropdown.parentNode === document.body) {
-                  const inputs = document.querySelectorAll(".searchable-dropdown-input");
-                  for (let input of inputs) {
-                    const container = input.closest(".searchable-dropdown");
-                    if (container && !container.querySelector(".searchable-dropdown-list")) {
-                      container.appendChild(searchableDropdown);
-                      break;
-                    }
-                  }
-                }
+                reattachDropdownToOrigin(searchableDropdown);
               }
             });
             // Position dropdown to be fully visible
@@ -5747,20 +7725,10 @@ async function submitQuickAddTicket() {
               if (d !== dropdown) d.style.display = "none";
             });
             // Close all searchable dropdowns
-            document.querySelectorAll(".searchable-dropdown-list").forEach(searchableDropdown => {
+            document.querySelectorAll(".searchable-dropdown-list").forEach((searchableDropdown) => {
               if (searchableDropdown.style.display === "block") {
                 searchableDropdown.style.display = "none";
-                // Return dropdown to its original parent if it was moved to body
-                if (searchableDropdown.parentNode === document.body) {
-                  const inputs = document.querySelectorAll(".searchable-dropdown-input");
-                  for (let input of inputs) {
-                    const container = input.closest(".searchable-dropdown");
-                    if (container && !container.querySelector(".searchable-dropdown-list")) {
-                      container.appendChild(searchableDropdown);
-                      break;
-                    }
-                  }
-                }
+                reattachDropdownToOrigin(searchableDropdown);
               }
             });
             // Position dropdown to be fully visible
@@ -5816,20 +7784,10 @@ async function submitQuickAddTicket() {
               if (d !== dropdown) d.style.display = "none";
             });
             // Close all searchable dropdowns
-            document.querySelectorAll(".searchable-dropdown-list").forEach(searchableDropdown => {
+            document.querySelectorAll(".searchable-dropdown-list").forEach((searchableDropdown) => {
               if (searchableDropdown.style.display === "block") {
                 searchableDropdown.style.display = "none";
-                // Return dropdown to its original parent if it was moved to body
-                if (searchableDropdown.parentNode === document.body) {
-                  const inputs = document.querySelectorAll(".searchable-dropdown-input");
-                  for (let input of inputs) {
-                    const container = input.closest(".searchable-dropdown");
-                    if (container && !container.querySelector(".searchable-dropdown-list")) {
-                      container.appendChild(searchableDropdown);
-                      break;
-                    }
-                  }
-                }
+                reattachDropdownToOrigin(searchableDropdown);
               }
             });
             // Toggle current dropdown
@@ -5878,79 +7836,6 @@ async function submitQuickAddTicket() {
       return;
     }
 
-    // --- FIX: Correctly handle dropdown selection for both new and existing rows ---
-    let dropdownItem = null;
-    
-    // Check if the target itself is a dropdown item
-    if (target.hasAttribute('data-value') && target.closest('.searchable-dropdown-list')) {
-      dropdownItem = target;
-      console.log("Target itself is dropdown item:", dropdownItem);
-    }
-    
-    // If not, try closest search
-    if (!dropdownItem) {
-      dropdownItem = target.closest(".searchable-dropdown-list div[data-value]");
-      console.log("First attempt dropdown item:", dropdownItem);
-    }
-    
-    // If still not found, try a more specific selector
-    if (!dropdownItem) {
-      dropdownItem = target.closest("div[data-value]");
-      console.log("Second attempt dropdown item:", dropdownItem);
-      // Make sure it's within a searchable dropdown list
-      if (dropdownItem && !dropdownItem.closest(".searchable-dropdown-list")) {
-        console.log("Dropdown item not in searchable dropdown list, setting to null");
-        dropdownItem = null;
-      }
-    }
-    
-    console.log("Final dropdown item:", dropdownItem);
-    if (dropdownItem) {
-      e.stopPropagation(); // Prevent event bubbling
-      e.preventDefault(); // Prevent default behavior
-      
-      // Use setTimeout to ensure this is processed before global click handlers
-      setTimeout(() => {
-        console.log("Processing dropdown item selection");
-      const input = dropdownItem
-        .closest(".searchable-dropdown")
-        .querySelector("input");
-      const newValue = dropdownItem.dataset.value;
-        
-        console.log("Input element:", input);
-        console.log("New value:", newValue);
-
-        // Store the current value as oldValue before updating
-        if (!input.dataset.oldValue) {
-          input.dataset.oldValue = input.dataset.value || "";
-        }
-
-      // Set the display text and the underlying ID value
-      input.value = dropdownItem.textContent.trim();
-      input.dataset.value = newValue;
-
-      // ONLY trigger the database update if it's an existing ticket row
-      if (input.dataset.id !== "new-inline") {
-        const handler =
-          input.dataset.type === "project" ? handleProjectUpdate : handleUpdate;
-        handler({ target: input }, newValue);
-      }
-
-        // Hide the dropdown list after selection and return to original parent
-        const dropdown = dropdownItem.closest(".searchable-dropdown-list");
-        dropdown.style.display = "none";
-        
-        // Return dropdown to original parent if it was moved to body
-        if (dropdown.parentNode === document.body) {
-          const container = input.closest(".searchable-dropdown");
-          if (container && !container.querySelector(".searchable-dropdown-list")) {
-            container.appendChild(dropdown);
-          }
-        }
-      }, 10);
-      return;
-    }
-
     if (target.closest("select, input, textarea")) {
       return;
     }
@@ -5994,6 +7879,9 @@ async function submitQuickAddTicket() {
   // REPLACE the existing handleTableChange function.
   function handleTableChange(e) {
     const target = e.target;
+    if (target.dataset && target.dataset.requiresSave === "true") {
+      return;
+    }
     // MODIFIED: Only trigger updates for non-date inputs on the 'change' event.
     // Date inputs are now handled by a 'keydown' listener to update on 'Enter'.
     if (target.classList.contains("inline-editor") && target.type !== "date") {
@@ -6002,6 +7890,20 @@ async function submitQuickAddTicket() {
       handler(e);
     }
   }
+  function reattachDropdownToOrigin(dropdown) {
+    if (!dropdown || dropdown.parentNode !== document.body) return;
+    const dropdownUid = dropdown.dataset.dropdownUid;
+    if (!dropdownUid) return;
+    const ownerInput = document.querySelector(
+      `.searchable-dropdown-input[data-dropdown-uid="${dropdownUid}"]`
+    );
+    if (!ownerInput) return;
+    const container = ownerInput.closest(".searchable-dropdown");
+    if (container && !container.querySelector(".searchable-dropdown-list")) {
+      container.appendChild(dropdown);
+    }
+  }
+
   // Helper function to find the dropdown list associated with an input
   function findDropdownForInput(input) {
     // First try nextElementSibling (if dropdown hasn't been moved)
@@ -6018,8 +7920,10 @@ async function submitQuickAddTicket() {
     }
     
     // If still not found, it might have been moved to body - search by data attribute
-    if (input.dataset.dropdownId) {
-      dropdown = document.querySelector(`.searchable-dropdown-list[data-dropdown-id="${input.dataset.dropdownId}"]`);
+    if (input.dataset.dropdownUid) {
+      dropdown = document.querySelector(
+        `.searchable-dropdown-list[data-dropdown-uid="${input.dataset.dropdownUid}"]`
+      );
       if (dropdown) return dropdown;
     }
     
@@ -6033,27 +7937,36 @@ async function submitQuickAddTicket() {
     const viewportWidth = window.innerWidth;
     
     // Close all other dropdowns first
-    document.querySelectorAll(".searchable-dropdown-list").forEach(otherDropdown => {
+    document.querySelectorAll(".searchable-dropdown-list").forEach((otherDropdown) => {
       if (otherDropdown !== dropdown && otherDropdown.style.display === "block") {
         otherDropdown.style.display = "none";
-        // Return other dropdowns to their original parents
-        if (otherDropdown.parentNode === document.body) {
-          const inputs = document.querySelectorAll(".searchable-dropdown-input");
-          for (let otherInput of inputs) {
-            const container = otherInput.closest(".searchable-dropdown");
-            if (container && !container.querySelector(".searchable-dropdown-list")) {
-              container.appendChild(otherDropdown);
-              break;
-            }
-          }
-        }
+        reattachDropdownToOrigin(otherDropdown);
       }
     });
+
+    let assignedUid = input.dataset.dropdownUid;
+    if (!assignedUid) {
+      assignedUid = dropdown.dataset.dropdownUid;
+    }
+    if (!assignedUid) {
+      searchableDropdownUidCounter += 1;
+      assignedUid = `dropdown-${searchableDropdownUidCounter}`;
+    }
+    input.dataset.dropdownUid = assignedUid;
+    dropdown.dataset.dropdownUid = assignedUid;
     
-    // Store reference to the input on the dropdown for later retrieval
-    dropdown.dataset.connectedInput = input.dataset.reconcileId || "default";
-    input.dataset.dropdownId = "dropdown-" + (input.dataset.reconcileId || "default");
-    dropdown.dataset.dropdownId = "dropdown-" + (input.dataset.reconcileId || "default");
+    // Store metadata on dropdown for finding input later
+    if (input.dataset.field) dropdown.dataset.field = input.dataset.field;
+    if (input.dataset.id) dropdown.dataset.ticketId = input.dataset.id;
+    if (input.dataset.commitScope) dropdown.dataset.commitScope = input.dataset.commitScope;
+    if (input.dataset.ticketField) dropdown.dataset.ticketField = input.dataset.ticketField;
+    if (input.dataset.ticketId) dropdown.dataset.ticketId = input.dataset.ticketId;
+    
+    // Store original container selector for finding input
+    const originalContainer = input.closest(".searchable-dropdown");
+    if (originalContainer) {
+      dropdown.dataset.originalContainer = `.searchable-dropdown[data-dropdown-uid="${assignedUid}"]`;
+    }
     
     // Move dropdown to body to escape any container stacking contexts
     if (dropdown.parentNode !== document.body) {
@@ -6148,13 +8061,32 @@ async function submitQuickAddTicket() {
         positionDropdownFixed(e.target, dropdown);
         e.target.focus();
         
+        // Ensure dropdown is visible
+        dropdown.style.display = "block";
+        
         // Add direct event listeners to dropdown items since they're now in document.body
+        // Use mousedown to prevent blur from firing first
         const dropdownItems = dropdown.querySelectorAll('div[data-value]');
         dropdownItems.forEach(item => {
           // Remove any existing listeners first
-          item.removeEventListener('click', handleDropdownItemClick);
-          // Add new listener
-          item.addEventListener('click', handleDropdownItemClick);
+          const existingHandler = item.dataset.clickHandler;
+          if (existingHandler) {
+            item.removeEventListener('mousedown', existingHandler);
+            delete item.dataset.clickHandler;
+          }
+          
+          // Create a new handler that prevents default and calls handleDropdownItemClick
+          const clickHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDropdownItemClick(e);
+          };
+          
+          // Store handler reference for cleanup
+          item.dataset.clickHandler = clickHandler.toString();
+          
+          // Add mousedown listener (fires before blur)
+          item.addEventListener('mousedown', clickHandler, true);
         });
       }
     }
@@ -6162,58 +8094,125 @@ async function submitQuickAddTicket() {
   
   // Handle dropdown item clicks directly
   function handleDropdownItemClick(e) {
-    console.log("Direct dropdown item click handler called");
-    e.stopPropagation();
-    e.preventDefault();
-    
-    const dropdownItem = e.target;
-    const dropdown = dropdownItem.closest('.searchable-dropdown-list');
-    
-    // Find the input - it might be in the original container
-    let input = null;
-    const inputs = document.querySelectorAll('.searchable-dropdown-input');
-    for (let inp of inputs) {
-      const container = inp.closest('.searchable-dropdown');
-      if (container && !container.querySelector('.searchable-dropdown-list')) {
-        // This container is missing its dropdown, so this must be the right input
-        input = inp;
-        break;
-      }
-    }
-    
-    if (!input || !dropdownItem) {
-      console.log("Could not find input or dropdown item");
+    const dropdownItem = e.target.closest(
+      ".searchable-dropdown-list div[data-value]"
+    );
+    if (!dropdownItem) {
       return;
     }
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const dropdown = dropdownItem.closest(".searchable-dropdown-list");
+    const dropdownUid = dropdown?.dataset.dropdownUid;
+
+    let input = null;
     
-    const newValue = dropdownItem.dataset.value;
-    console.log("Processing dropdown item with value:", newValue);
+    // First try to find by dropdown UID
+    if (dropdownUid) {
+      input = document.querySelector(
+        `.searchable-dropdown-input[data-dropdown-uid="${dropdownUid}"]`
+      );
+    }
     
-    // Store the current value as oldValue before updating
+    // If not found by UID, try to find by stored metadata on dropdown
+    if (!input && dropdown) {
+      const field = dropdown.dataset.field || dropdown.dataset.ticketField;
+      const ticketId = dropdown.dataset.ticketId || dropdown.dataset.id;
+      
+      if (field && ticketId) {
+        input = document.querySelector(
+          `.searchable-dropdown-input[data-field="${field}"][data-id="${ticketId}"]`
+        );
+      }
+      
+      // Also try by ticketField and ticketId attributes
+      if (!input) {
+        const ticketField = dropdown.dataset.ticketField;
+        const ticketId2 = dropdown.dataset.ticketId;
+        if (ticketField && ticketId2) {
+          input = document.querySelector(
+            `.searchable-dropdown-input[data-ticket-field="${ticketField}"][data-ticket-id="${ticketId2}"]`
+          );
+        }
+      }
+      
+      // Fallback: try to find by closest container (if dropdown is still in DOM)
+      if (!input) {
+        const container = dropdown.closest(".searchable-dropdown");
+        if (container) {
+          input = container.querySelector(".searchable-dropdown-input");
+        }
+      }
+    }
+
+    if (!input) {
+      console.warn("Dropdown item click without matching input", {
+        dropdownUid,
+        dropdown: dropdown,
+        field: dropdown?.dataset?.field,
+        ticketField: dropdown?.dataset?.ticketField,
+        ticketId: dropdown?.dataset?.ticketId,
+        id: dropdown?.dataset?.id
+      });
+      return;
+    }
+
+    const newValue = dropdownItem.dataset.value || "";
+
+    const commitScope = input.dataset.commitScope;
+    const ticketField = input.dataset.ticketField || input.dataset.field;
+    const ticketId = input.dataset.ticketId || input.dataset.id;
+    const displayText = dropdownItem.textContent.trim();
+
+    if (dropdown) {
+      dropdown.style.display = "none";
+      reattachDropdownToOrigin(dropdown);
+    }
+
+    if (commitScope === "finder-detail" && ticketField && ticketId) {
+      const previousDisplay = input.dataset.displayValue || input.value || "";
+      const previousDataset = input.dataset.value || "";
+      
+      console.log("Finder detail dropdown selection:", {
+        field: ticketField,
+        ticketId,
+        newValue,
+        displayText,
+        previousValue: previousDataset,
+        previousDisplay
+      });
+      
+      // Update input values immediately for visual feedback
+      input.value = displayText;
+      input.dataset.value = newValue;
+      input.dataset.displayValue = displayText;
+      
+      // Commit the change immediately
+      commitFinderDetailUpdate({
+        ticketId,
+        field: ticketField,
+        rawValue: newValue,
+        displayValue: displayText,
+        previousDisplayValue: previousDisplay,
+        previousDatasetValue: previousDataset,
+        input,
+      });
+      return;
+    }
+
     if (!input.dataset.oldValue) {
       input.dataset.oldValue = input.dataset.value || "";
     }
 
-    // Set the display text and the underlying ID value
-    input.value = dropdownItem.textContent.trim();
+    input.value = displayText;
     input.dataset.value = newValue;
 
-    // ONLY trigger the database update if it's an existing ticket row
     if (input.dataset.id !== "new-inline") {
       const handler =
         input.dataset.type === "project" ? handleProjectUpdate : handleUpdate;
       handler({ target: input }, newValue);
-    }
-
-    // Hide the dropdown list after selection and return to original parent
-    dropdown.style.display = "none";
-    
-    // Return dropdown to original parent if it was moved to body
-    if (dropdown.parentNode === document.body) {
-      const container = input.closest(".searchable-dropdown");
-      if (container && !container.querySelector(".searchable-dropdown-list")) {
-        container.appendChild(dropdown);
-      }
     }
   }
   function handleTableFocusOut(e) {
@@ -6235,11 +8234,7 @@ async function submitQuickAddTicket() {
         
         if (dropdown && dropdown.style.display === "block") {
           dropdown.style.display = "none";
-          // Return dropdown to its original parent if it was moved to body
-          const originalParent = e.target.closest(".searchable-dropdown");
-          if (dropdown.parentNode === document.body && originalParent) {
-            originalParent.appendChild(dropdown);
-          }
+          reattachDropdownToOrigin(dropdown);
         }
       }, 150);
     }
@@ -6610,13 +8605,13 @@ async function submitQuickAddTicket() {
                 }">Update</button>
             </div>
             ${attachmentsHtml}
-            <div id="subtask-container-modal"></div>
+            <div id="subtask-container-modal" data-subtask-container="${ticket.id}"></div>
         </div>`;
 
     const sidebarHtml = `
         <div class="ticket-details-sidebar" data-ticket-id="${ticket.id}">
             <div class="sidebar-section">
-                <div class="sidebar-property-editable">
+                <div class="sidebar-property-editable" data-ticket-field="status">
                     <label class="prop-label">Status</label>
                     <div class="prop-value">
                         ${createTagEditor(
@@ -6627,7 +8622,7 @@ async function submitQuickAddTicket() {
                         )}
                     </div>
                 </div>
-                <div class="sidebar-property-editable">
+                <div class="sidebar-property-editable" data-ticket-field="priority">
                     <label class="prop-label">Priority</label>
                     <div class="prop-value">
                         ${createTagEditor(
@@ -6642,7 +8637,7 @@ async function submitQuickAddTicket() {
                   warnings.some((w) => w.field === "dueDate")
                     ? "has-warning"
                     : ""
-                }">
+                }" data-ticket-field="dueDate">
                     <label class="prop-label">Due date</label>
                     <div class="prop-value">
                         ${createDateField(
@@ -6657,7 +8652,7 @@ async function submitQuickAddTicket() {
                   warnings.some((w) => w.field === "assigneeId")
                     ? "has-warning"
                     : ""
-                }">
+                }" data-ticket-field="assigneeId">
                     <label class="prop-label">Assignee</label>
                     <div class="prop-value">
                         ${createSearchableDropdown(
@@ -6673,7 +8668,7 @@ async function submitQuickAddTicket() {
                   warnings.some((w) => w.field === "requestedBy")
                     ? "has-warning"
                     : ""
-                }">
+                }" data-ticket-field="requestedBy">
                     <label class="prop-label">Requested By</label>
                     <div class="prop-value">
                         ${createSearchableDropdown(
@@ -6684,7 +8679,7 @@ async function submitQuickAddTicket() {
                         )}
             </div>
                 </div>
-                <div class="sidebar-property-editable">
+                <div class="sidebar-property-editable" data-ticket-field="projectId">
                     <label class="prop-label">Project</label>
                     <div class="prop-value">
                         ${createSearchableDropdown(
@@ -6696,7 +8691,7 @@ async function submitQuickAddTicket() {
                         )}
                     </div>
                 </div>
-                <div class="sidebar-property-editable">
+                <div class="sidebar-property-editable" data-ticket-field="epic">
                     <label class="prop-label">Epic</label>
                     <div class="prop-value">
                         <div class="editable-field-wrapper epic-field-wrapper ${
@@ -6730,7 +8725,7 @@ async function submitQuickAddTicket() {
                       warnings.some((w) => w.field === "assignedAt")
                         ? "has-warning"
                         : ""
-                }">
+                }" data-ticket-field="assignedAt">
                     <label class="prop-label">Assigned date</label>
                     <div class="prop-value">
                         ${createDateField(
@@ -6745,7 +8740,7 @@ async function submitQuickAddTicket() {
                       warnings.some((w) => w.field === "startedAt")
                         ? "has-warning"
                         : ""
-                }">
+                }" data-ticket-field="startedAt">
                     <label class="prop-label">Started date</label>
                     <div class="prop-value">
                         ${createDateField(
@@ -6760,7 +8755,7 @@ async function submitQuickAddTicket() {
                       warnings.some((w) => w.field === "completedAt")
                         ? "has-warning"
                         : ""
-                }">
+                }" data-ticket-field="completedAt">
                     <label class="prop-label">Completed date</label>
                     <div class="prop-value">
                         ${createDateField(
@@ -7104,18 +9099,12 @@ async function submitQuickAddTicket() {
                 tag.classList.add('success');
                 tag.innerHTML = `<i class="fas fa-check"></i> ${newValue}`;
                 
-                // Show success toast
-                showToast(`${field} updated successfully`, 'success');
-                
                 // Update the UI
                 applyFilterAndRender();
                 if (currentView === "home") {
                   renderDashboard();
                 }
                 updateNavBadgeCounts();
-                
-                // Refresh the modal to show updated date fields
-                showTaskDetailModal(ticketId);
                 
                 // Remove success indicator after 2 seconds
                 setTimeout(() => {
@@ -7564,6 +9553,8 @@ async function submitQuickAddTicket() {
     const clearIconHTML = isClearable
       ? '<i class="fas fa-times-circle clear-icon"></i>'
       : "";
+    searchableDropdownUidCounter += 1;
+    const dropdownUid = `dropdown-${searchableDropdownUidCounter}`;
     
     // Add remove button for specific fields in modal context
      const removeButtonHTML = (type === "modal" && (field === "assigneeId" || field === "projectId" || field === "epic") && selectedValue)
@@ -7578,13 +9569,13 @@ async function submitQuickAddTicket() {
     }
     
     let html = `<div class="editable-field-wrapper ${hasValueClass}">
-                    <div class="searchable-dropdown">
+                    <div class="searchable-dropdown" data-dropdown-uid="${dropdownUid}">
                         <input type="text" class="searchable-dropdown-input" value="${escapeHtml(
                           selectedText
                         )}" placeholder="Search..." data-id="${id}" data-field="${field}" data-type="${type}" data-old-value="${escapeHtml(
       selectedValue || ""
-    )}" data-value="${escapeHtml(selectedValue || "")}" autocomplete="off">
-                        <div class="searchable-dropdown-list">`;
+    )}" data-value="${escapeHtml(selectedValue || "")}" data-dropdown-uid="${dropdownUid}" autocomplete="off">
+                        <div class="searchable-dropdown-list" data-dropdown-uid="${dropdownUid}">`;
     combinedOptions.forEach((opt) => {
       html += `<div data-value="${escapeHtml(opt.value)}">${escapeHtml(
         opt.text
@@ -8623,9 +10614,29 @@ async function submitQuickAddTicket() {
   // --- NEW & UPDATED SUBTASK/COMMENT FUNCTIONS ---
 
   // Render Functions
-  function renderSubtasks(ticket) {
-    const container = document.getElementById("subtask-container-modal");
-    if (!container) return;
+  function renderSubtasks(ticket, targetContainer) {
+    if (!ticket) return;
+
+    const resolveContainers = () => {
+      if (targetContainer) {
+        if (typeof targetContainer === "string") {
+          const el = document.getElementById(targetContainer);
+          return el ? [el] : [];
+        }
+        if (targetContainer instanceof Element) {
+          return [targetContainer];
+        }
+        return [];
+      }
+      return Array.from(
+        document.querySelectorAll(
+          `[data-subtask-container="${ticket.id}"]`
+        )
+      );
+    };
+
+    const containers = resolveContainers();
+    if (!containers.length) return;
 
     const subtasks = ticket.subtask || [];
     const subtasksListHtml = subtasks
@@ -8645,20 +10656,51 @@ async function submitQuickAddTicket() {
       )
       .join("");
 
-    container.innerHTML = `
-            <div class="ticket-subtasks-container">
-                <h4 class="modal-section-label">Subtasks</h4>
-                <ul class="subtask-list">${subtasksListHtml}</ul>
-                <div class="add-subtask-area">
-                    <input type="text" id="new-subtask-input" class="inline-editor" placeholder="Add a new subtask...">
-                    <button id="add-subtask-btn" class="action-btn">Add</button>
-                </div>
-            </div>`;
+    containers.forEach((container) => {
+      container.innerHTML = `
+        <div class="ticket-subtasks-container">
+          <h4 class="modal-section-label">Subtasks</h4>
+          <ul class="subtask-list">
+            ${
+              subtasks.length
+                ? subtasksListHtml
+                : '<li class="subtask-empty">No subtasks yet.</li>'
+            }
+          </ul>
+          <div class="add-subtask-area">
+            <input type="text" class="inline-editor new-subtask-input" placeholder="Add a new subtask...">
+            <button type="button" class="action-btn add-subtask-btn">Add</button>
+          </div>
+        </div>
+      `;
 
-    // Add event listeners for subtask checkboxes
-    const checkboxes = container.querySelectorAll('.subtask-checkbox');
-    checkboxes.forEach(checkbox => {
-      checkbox.addEventListener('change', handleSubtaskToggle);
+      container
+        .querySelectorAll(".subtask-checkbox")
+        .forEach((checkbox) => {
+          checkbox.addEventListener("change", handleSubtaskToggle);
+        });
+
+      container
+        .querySelectorAll(".remove-subtask-btn")
+        .forEach((btn) => btn.addEventListener("click", handleSubtaskRemove));
+
+      container
+        .querySelectorAll(".subtask-copy-icon")
+        .forEach((icon) => icon.addEventListener("click", copySubtaskInfo));
+
+      const addBtn = container.querySelector(".add-subtask-btn");
+      if (addBtn) {
+        addBtn.addEventListener("click", handleSubtaskAdd);
+      }
+
+      const input = container.querySelector(".new-subtask-input");
+      if (input) {
+        input.addEventListener("keyup", (event) => {
+          if (event.key === "Enter") {
+            handleSubtaskAdd(event);
+          }
+        });
+      }
     });
   }
 
@@ -8686,13 +10728,17 @@ async function submitQuickAddTicket() {
 
   // Event Triggers
   function handleSubtaskAdd(e) {
-    const modal = e.target.closest(".ticket-main-content");
-    const ticketId = modal.dataset.ticketId;
-    const input = document.getElementById("new-subtask-input");
+    const wrapper = e.target.closest(".ticket-main-content");
+    const container = e.target.closest("[data-subtask-container]");
+    if (!wrapper || !container) return;
+    const ticketId = wrapper.dataset.ticketId;
+    const input = container.querySelector(".new-subtask-input");
+    if (!ticketId || !input) return;
     const text = input.value.trim();
     if (!text) return;
 
     const ticket = appData.allTickets.find((t) => t.id == ticketId);
+    if (!ticket) return;
     const newSubtask = { text: text, done: false };
     const updatedSubtasks = [...(ticket.subtask || []), newSubtask];
 
@@ -8702,11 +10748,14 @@ async function submitQuickAddTicket() {
 
   function handleSubtaskRemove(e) {
     const button = e.target.closest(".remove-subtask-btn");
-    const modal = e.target.closest(".ticket-main-content");
-    const ticketId = modal.dataset.ticketId;
+    const wrapper = e.target.closest(".ticket-main-content");
+    if (!button || !wrapper) return;
+    const ticketId = wrapper.dataset.ticketId;
     const index = parseInt(button.dataset.index, 10);
+    if (!ticketId || Number.isNaN(index)) return;
 
     const ticket = appData.allTickets.find((t) => t.id == ticketId);
+    if (!ticket) return;
     const updatedSubtasks = (ticket.subtask || []).filter(
       (_, i) => i !== index
     );
@@ -8716,11 +10765,14 @@ async function submitQuickAddTicket() {
 
   function handleSubtaskToggle(e) {
     const checkbox = e.target;
-    const modal = e.target.closest(".ticket-main-content");
-    const ticketId = modal.dataset.ticketId;
+    const wrapper = checkbox.closest(".ticket-main-content");
+    if (!wrapper) return;
+    const ticketId = wrapper.dataset.ticketId;
     const index = parseInt(checkbox.dataset.index, 10);
+    if (!ticketId || Number.isNaN(index)) return;
 
     const ticket = appData.allTickets.find((t) => t.id == ticketId);
+    if (!ticket) return;
     const updatedSubtasks = [...(ticket.subtask || [])];
     updatedSubtasks[index].done = checkbox.checked;
 
@@ -11664,31 +13716,3 @@ async function submitQuickAddTicket() {
     const year = date.getFullYear();
     return `${day}-${month}-${year}`;
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

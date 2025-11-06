@@ -535,19 +535,10 @@
                   <button id="add-project-btn" class="finder-action-btn" title="Add project">
                     <i class="fas fa-plus"></i>
                   </button>
-                  <div class="finder-search">
-                    <i class="fas fa-search"></i>
-                    <input
-                      type="search"
-                      id="jira-project-search"
-                      placeholder="Search projects"
-                      autocomplete="off"
-                    />
-                  </div>
                 </div>
               </nav>
               <div class="finder-columns-viewport">
-                <div class="finder-columns" id="finder-columns" style="--active-column: 0;">
+                <div class="finder-columns finder-columns--static" id="finder-columns">
                   <section class="finder-column" data-level="project" aria-label="Projects">
                     <header class="finder-column-header">
                       <span class="finder-column-title">Projects</span>
@@ -565,6 +556,9 @@
                       </button>
                       <span class="finder-column-title" id="finder-epic-heading">Epics</span>
                       <span class="finder-column-meta" id="finder-epic-count"></span>
+                      <button class="finder-column-action" id="finder-add-epic" title="New epic">
+                        <i class="fas fa-plus"></i>
+                      </button>
                     </header>
                     <div class="finder-column-body" id="finder-column-epics" role="tree"></div>
                     <div class="finder-empty" id="finder-epic-empty" hidden>
@@ -578,6 +572,9 @@
                       </button>
                       <span class="finder-column-title" id="finder-ticket-heading">Tickets</span>
                       <span class="finder-column-meta" id="finder-ticket-count"></span>
+                      <button class="finder-column-action" id="finder-add-ticket" title="New ticket">
+                        <i class="fas fa-plus"></i>
+                      </button>
                     </header>
                     <div class="finder-column-body" id="finder-column-tickets" role="tree"></div>
                     <div class="finder-empty" id="finder-ticket-empty" hidden>
@@ -589,7 +586,7 @@
                       <button class="finder-column-back" data-target-level="2" aria-label="Back to tickets">
                         <i class="fas fa-angle-left"></i>
                       </button>
-                      <span class="finder-column-title" id="finder-detail-heading">Ticket Detail</span>
+                      <span class="finder-column-title" id="finder-detail-heading">Ticket Details</span>
                     </header>
                     <div class="finder-column-body finder-detail-body" id="finder-column-detail"></div>
                     <div class="finder-empty" id="finder-detail-empty" hidden>
@@ -707,6 +704,47 @@
         </div>
         <div class="ticket-search-hint">
           Press Enter to open, use arrow keys to navigate, Esc to close.
+        </div>
+      </div>
+    </div>
+
+    <div
+      id="project-search-overlay"
+      class="project-search-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="project-search-title"
+      aria-hidden="true"
+      style="display: none"
+    >
+      <div class="project-search-modal">
+        <div class="project-search-modal-header">
+          <h2 id="project-search-title" class="sr-only">Search Projects</h2>
+          <i class="fas fa-search"></i>
+          <input
+            type="search"
+            id="project-search-input"
+            class="project-search-input"
+            placeholder="Search projects by name..."
+            autocomplete="off"
+          />
+          <button
+            id="project-search-close"
+            class="project-search-close"
+            type="button"
+            aria-label="Close search"
+          >
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="project-search-results-container" role="listbox">
+          <div id="project-search-empty" class="project-search-empty">
+            Start typing to search projects...
+          </div>
+          <ul id="project-search-results" class="project-search-results"></ul>
+        </div>
+        <div class="project-search-hint">
+          Press Enter to select, use arrow keys to navigate, Esc to close.
         </div>
       </div>
     </div>
