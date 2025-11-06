@@ -4643,17 +4643,14 @@ async function submitQuickAddTicket() {
       if (addTicketBtn) {
         addTicketBtn.onclick = () => {
           if (!currentProjectId) {
-            showToast("Select a project and epic first.", "error");
+            showToast("Select a project first.", "error");
             return;
           }
           const targetEpic =
             currentEpicKey ||
-            (finderFilters.epic !== "all" ? finderFilters.epic : null);
-          if (!targetEpic) {
-            showToast("Select an epic before adding a ticket.", "error");
-            return;
-          }
-          openFinderTicketDraft(currentProjectId, targetEpic);
+            (finderFilters.epic !== "all" && finderFilters.epic !== null ? finderFilters.epic : null);
+          // Allow creating tickets without an epic - pass null if no epic is selected
+          openFinderTicketDraft(currentProjectId, targetEpic || null);
         };
       }
   }
