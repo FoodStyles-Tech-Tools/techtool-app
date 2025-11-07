@@ -184,18 +184,8 @@ function closeUserSettingsOverlay() {
   }
 }
 // --- GLOBAL STATE ---
-  console.log("🚀 JavaScript file loaded successfully!");
-  
   // Global test function
   window.testApp = function() {
-    console.log("🧪 Testing app initialization...");
-    console.log("🧪 DOM ready state:", document.readyState);
-    console.log("🧪 Required elements:", {
-      loader: !!document.getElementById("loader"),
-      tableWrapper: !!document.querySelector(".table-wrapper"),
-      errorMessage: !!document.getElementById("error-message"),
-      supabaseClient: !!window.supabaseClient
-    });
     initializeApp();
   };
   
@@ -1816,10 +1806,8 @@ async function submitQuickAddTicket() {
       
       const checkSupabase = () => {
         attempts++;
-        console.log(`Checking for Supabase... attempt ${attempts}`);
         
         if (typeof window !== 'undefined' && window.supabaseClient) {
-          console.log("Supabase client found!");
           resolve(window.supabaseClient);
         } else if (attempts >= maxAttempts) {
           console.error("Supabase initialization timeout");
@@ -1883,7 +1871,6 @@ async function submitQuickAddTicket() {
 
   function setupNotifications() {
     if (!("Notification" in window)) {
-      console.log("This browser does not support desktop notifications.");
     } else if (Notification.permission === "default") {
       // We need to ask the user for permission
       Notification.requestPermission();
@@ -1912,20 +1899,11 @@ async function submitQuickAddTicket() {
 
   // Multiple initialization approaches to ensure the app starts
   function initializeApp() {
-    console.log("🚀 Initializing app...");
-    console.log("🚀 DOM ready state:", document.readyState);
-    console.log("🚀 Document body exists:", !!document.body);
     
     // Check if required elements exist
     const loader = document.getElementById("loader");
     const tableWrapper = document.querySelector(".table-wrapper");
     const errorMessage = document.getElementById("error-message");
-    
-    console.log("🚀 Required elements found:", {
-      loader: !!loader,
-      tableWrapper: !!tableWrapper,
-      errorMessage: !!errorMessage
-    });
     
     if (!loader || !tableWrapper || !errorMessage) {
       console.error("❌ Required elements not found, retrying in 100ms...");
@@ -1933,7 +1911,6 @@ async function submitQuickAddTicket() {
       return;
     }
     
-    console.log("✅ All required elements found, starting app...");
     startApp();
   }
 
@@ -1943,7 +1920,6 @@ async function submitQuickAddTicket() {
   // Add global event listener for ticket field updates to ensure UI consistency
   document.addEventListener('ticketFieldUpdated', (event) => {
     const { ticketId, field, newValue, oldValue, source } = event.detail;
-    console.log(`Field updated: ${field} for ticket ${ticketId}`, { oldValue, newValue });
     
     if (source === "finder-detail") {
       if (currentView === "projects") {
@@ -1964,8 +1940,6 @@ async function submitQuickAddTicket() {
   });
   
   async function startApp() {
-    console.log("🚀 App.js loaded and starting...");
-    console.log("🚀 JavaScript file loaded successfully!");
     const loader = document.getElementById("loader");
     reconcileWrapper = document.getElementById("reconcile-view-wrapper");
     tableWrapper = document.querySelector(".table-wrapper");
@@ -1975,14 +1949,9 @@ async function submitQuickAddTicket() {
       setupNotifications();
       
       // Wait for Supabase to be available
-      console.log("Waiting for Supabase to initialize...");
       const supabaseClient = await waitForSupabase();
-      console.log("Supabase initialized successfully");
-      console.log("Supabase URL:", window.SUPABASE_URL);
-      console.log("Supabase Key:", window.SUPABASE_KEY ? "Present" : "Missing");
       
       // Test Supabase connection with retry logic for Vercel
-      console.log("Testing Supabase connection...");
       let connectionTestPassed = false;
       let testRetries = 0;
       const maxTestRetries = 3;
@@ -1997,7 +1966,6 @@ async function submitQuickAddTicket() {
               await new Promise(resolve => setTimeout(resolve, 1000 * testRetries));
             }
           } else {
-            console.log("✅ Supabase connection test successful");
             connectionTestPassed = true;
           }
         } catch (testError) {
@@ -2043,14 +2011,6 @@ async function submitQuickAddTicket() {
             .order("id", { ascending: false })
         ),
       ]);
-
-      console.log("Data fetch results:", {
-        ticketData: ticketData?.length || 0,
-        projectData: projectData?.length || 0,
-        memberData: memberData?.length || 0,
-        userData: userData?.length || 0,
-        reconcileData: reconcileData?.length || 0,
-      });
 
       if (
         ticketError ||
@@ -2234,10 +2194,8 @@ async function submitQuickAddTicket() {
         
         // Add a fallback polling mechanism for Vercel reliability
         if (window.location.href.includes('vercel.app')) {
-          console.log("Vercel environment detected, setting up fallback polling");
           setInterval(async () => {
             if (!window.realtimeSubscribed) {
-              console.log("Real-time subscription lost, attempting to reconnect...");
               subscribeToTicketChanges();
             }
           }, 30000); // Check every 30 seconds
@@ -2269,9 +2227,7 @@ async function submitQuickAddTicket() {
   
   // Fallback initialization - only if not already initialized
   window.addEventListener('load', () => {
-    console.log("🚀 Window load event fired");
     if (document.getElementById("loader") && document.getElementById("loader").style.display !== "none") {
-      console.log("🚀 App still loading, triggering initialization...");
       // Only initialize if not already done
       if (!window.appInitialized) {
         initializeApp();
@@ -2284,7 +2240,6 @@ async function submitQuickAddTicket() {
   startApp = async function() {
     await originalStartApp();
     window.appInitialized = true;
-    console.log("✅ App initialization completed and marked");
   };
 
   /**
@@ -2292,7 +2247,6 @@ async function submitQuickAddTicket() {
    */
   function subscribeToTicketChanges() {
     try {
-      console.log("Setting up real-time subscription...");
       
       if (!window.supabaseClient) {
         console.error("❌ Supabase client not available for real-time subscription");
@@ -2311,7 +2265,6 @@ async function submitQuickAddTicket() {
           "postgres_changes",
           { event: "*", schema: "public", table: "ticket" },
           (payload) => {
-            console.log("Real-time change received!", payload);
             try {
               handleRealtimeChange(payload);
             } catch (error) {
@@ -2320,16 +2273,13 @@ async function submitQuickAddTicket() {
           }
         )
         .subscribe((status) => {
-          console.log("Subscription status:", status);
           if (status === "SUBSCRIBED") {
-            console.log("✅ Successfully subscribed to real-time ticket changes!");
             window.realtimeSubscribed = true;
           } else if (status === "CHANNEL_ERROR") {
             console.error("❌ Real-time subscription error");
             window.realtimeSubscribed = false;
             // Retry subscription after error
             setTimeout(() => {
-              console.log("🔄 Retrying real-time subscription...");
               subscribeToTicketChanges();
             }, 5000);
           } else if (status === "TIMED_OUT") {
@@ -2337,7 +2287,6 @@ async function submitQuickAddTicket() {
             window.realtimeSubscribed = false;
             // Retry subscription after timeout
             setTimeout(() => {
-              console.log("🔄 Retrying real-time subscription after timeout...");
               subscribeToTicketChanges();
             }, 3000);
           } else if (status === "CLOSED") {
@@ -2354,7 +2303,6 @@ async function submitQuickAddTicket() {
       window.realtimeSubscribed = false;
       // Retry after error
       setTimeout(() => {
-        console.log("🔄 Retrying real-time subscription after error...");
         subscribeToTicketChanges();
       }, 3000);
     }
@@ -2368,7 +2316,6 @@ async function submitQuickAddTicket() {
   // REPLACE the existing handleRealtimeChange function with this one
 
   function handleRealtimeChange(payload) {
-    console.log("Real-time payload received:", payload);
     
     // Handle different payload structures
     const eventType = payload.eventType || payload.event_type || payload.type;
@@ -2383,20 +2330,17 @@ async function submitQuickAddTicket() {
       return;
     }
 
-    console.log("Processing event:", eventType, "newRecord:", newRecord, "oldRecord:", oldRecord);
 
     switch (eventType) {
       case "INSERT":
         // Skip real-time insert if user is currently creating tickets
         if (window.userCreatingTickets) {
-          console.log("User is creating tickets, skipping real-time insert to prevent duplicates");
           return;
         }
         
         // Check if this ticket already exists in our local state
         const existingTicket = appData.allTickets.find(t => t.id === newRecord.id);
         if (existingTicket) {
-          console.log("Ticket already exists in local state, skipping real-time insert");
           return;
         }
         
@@ -2447,7 +2391,6 @@ async function submitQuickAddTicket() {
     }
 
     if (isChanged) {
-      console.log("Data changed, updating UI...");
       
       // Force UI refresh with a small delay to ensure DOM is ready
       setTimeout(() => {
@@ -2456,7 +2399,6 @@ async function submitQuickAddTicket() {
           
           // Update dashboard if it's currently visible
           if (currentView === "home") {
-            console.log("Updating dashboard...");
             renderDashboard();
           }
           
@@ -2468,7 +2410,6 @@ async function submitQuickAddTicket() {
           if (modal && modal.style.display === "flex") {
             const modalTicketId = modal.querySelector(".ticket-main-content")?.dataset.ticketId;
             if (modalTicketId == ticketId) {
-              console.log("Refreshing open modal for updated ticket:", ticketId);
               // Trigger a modal refresh
               const event = new CustomEvent('ticketUpdated', { 
                 detail: { ticketId: ticketId, eventType: eventType } 
@@ -2480,7 +2421,6 @@ async function submitQuickAddTicket() {
           console.error("Error during UI refresh:", uiError);
           // Fallback: try a simple page refresh if UI update fails
           if (window.location.href.includes('vercel.app')) {
-            console.log("Vercel environment detected, attempting fallback refresh");
             setTimeout(() => {
               window.location.reload();
             }, 2000);
@@ -3072,7 +3012,6 @@ async function submitQuickAddTicket() {
     const createdTicketIds = ticketsToSubmit.map(t => t.id).filter(id => id);
 
     // Log ticket submission for debugging
-    console.log(`Submitting ${ticketsToSubmit.length} tickets`);
     
     // Ensure no manual IDs are present
     ticketsToSubmit.forEach((ticket, index) => {
@@ -3096,7 +3035,6 @@ async function submitQuickAddTicket() {
         await supabaseClient.rpc('reset_ticket_sequence', { 
           new_start_value: lastTicket.id + 1 
         });
-        console.log(`Sequence reset to: ${lastTicket.id + 1}`);
       }
     } catch (seqError) {
       console.warn("⚠️ Could not reset sequence (this is normal if function doesn't exist):", seqError.message);
@@ -3116,7 +3054,6 @@ async function submitQuickAddTicket() {
       console.error("Database error:", error);
       showToast("Error: " + error.message, "error");
     } else {
-      console.log(`${insertedTickets.length} tickets inserted successfully`);
       showToast(
         `${insertedTickets.length} ticket(s) added successfully!`,
         "success"
@@ -3149,13 +3086,11 @@ async function submitQuickAddTicket() {
   async function updateTicketDataAfterCreation(newTickets) {
     // Prevent multiple simultaneous updates
     if (window.updatingTickets) {
-      console.log("Ticket update already in progress, skipping duplicate call");
       return;
     }
     
     try {
       window.updatingTickets = true;
-      console.log("Updating frontend state with new tickets...");
       
       // Prevent duplicate processing of the same tickets
       const ticketIds = newTickets.map(t => t.id).filter(id => id);
@@ -3163,7 +3098,6 @@ async function submitQuickAddTicket() {
       const newTicketIds = ticketIds.filter(id => !existingIds.includes(id));
       
       if (newTicketIds.length === 0) {
-        console.log("All tickets already exist in frontend state, skipping update");
         return;
       }
       
@@ -3231,7 +3165,6 @@ async function submitQuickAddTicket() {
         appData.allTickets = [...uniqueNewTickets, ...appData.allTickets];
         appData.tickets = appData.allTickets;
         
-        console.log("Added new tickets to existing state (fallback)");
       } else {
         // Update with fresh data from database
         appData.allTickets = freshTicketData.map((t) => ({
@@ -3260,14 +3193,12 @@ async function submitQuickAddTicket() {
         }));
         
         appData.tickets = appData.allTickets;
-        console.log("Updated with fresh data from database");
       }
       
       // Apply current filters and refresh the display
       applyFilters();
       renderTickets();
       
-      console.log("Frontend state updated successfully");
       
     } catch (error) {
       console.error("Error updating frontend state:", error);
@@ -3649,7 +3580,6 @@ async function submitQuickAddTicket() {
   function addModalEventListeners() {
     // Prevent duplicate event listeners
     if (document.body.hasAttribute('data-modal-listeners-added')) {
-      console.log("Modal event listeners already added, skipping...");
       return;
     }
     
@@ -3913,7 +3843,6 @@ async function submitQuickAddTicket() {
     
     // Mark that modal event listeners have been added
     document.body.setAttribute('data-modal-listeners-added', 'true');
-    console.log("Modal event listeners added successfully");
   }
 
   function autoSizeTextarea(textarea) {
@@ -4065,14 +3994,12 @@ async function submitQuickAddTicket() {
     
     // If elements not found and we haven't exceeded max retries, try again
     if (!ticketsButton && retryCount < maxRetries) {
-      console.log(`Navigation elements not ready, retrying... (${retryCount + 1}/${maxRetries})`);
       setTimeout(() => {
         addNavListenersWithRetry(retryCount + 1);
       }, retryDelay);
     } else if (!ticketsButton) {
       console.error("Failed to initialize navigation after maximum retries");
     } else {
-      console.log("Navigation listeners successfully initialized");
     }
   }
 
@@ -4349,7 +4276,6 @@ async function submitQuickAddTicket() {
     if (currentView === "home") {
       dashboardWrapper.style.display = "flex";
       setTimeout(() => {
-        console.log("Rendering dashboard with delay...");
         renderDashboard();
       }, 50);
       return;
@@ -7173,16 +7099,12 @@ async function submitQuickAddTicket() {
     // Apply member filter (get value AFTER population)
     const memberFilterElement = document.getElementById("simple-member-filter");
     const selectedMember = memberFilterElement?.value || "all";
-    console.log("Member filter value:", selectedMember, "Total incomplete tickets:", incompleteTickets.length);
     
     if (selectedMember !== "all") {
-      console.log("Filtering tickets for assigneeId:", selectedMember);
       const beforeFilter = incompleteTickets.length;
       incompleteTickets = incompleteTickets.filter(t => {
-        console.log(`Ticket ${t.id}: assigneeId = ${t.assigneeId}, matches filter: ${t.assigneeId == selectedMember}`);
         return t.assigneeId == selectedMember;
       });
-      console.log(`After member filter: ${incompleteTickets.length} tickets (was ${beforeFilter})`);
     }
 
     // Update count
@@ -7212,11 +7134,9 @@ async function submitQuickAddTicket() {
       // First time loading - default to current logged-in user
       memberFilter.value = appData.currentUserId;
       isFirstIncompleteLoad = false;
-      console.log("First load: Setting default member filter to current user:", appData.currentUserId);
     } else if (currentSelection && currentSelection !== "") {
       // Restore previous selection
       memberFilter.value = currentSelection;
-      console.log("Restoring previous selection:", currentSelection);
     }
   }
 
@@ -7293,7 +7213,6 @@ async function submitQuickAddTicket() {
       
       // Add new listener with explicit function
       memberFilter.addEventListener("change", function(e) {
-        console.log("Member filter changed to:", e.target.value);
         renderSimpleIncompleteView();
       });
     } else {
@@ -7392,7 +7311,6 @@ async function submitQuickAddTicket() {
     const tableHead = document.querySelector("table thead tr");
     const tableBody = document.querySelector("table tbody");
 
-    console.log("🔍 renderPage called with currentView:", currentView); // Debug log
 
     // Update section header
     updateSectionHeader();
@@ -7623,7 +7541,6 @@ async function submitQuickAddTicket() {
           
           // If no selection was made and we have original values, reset
           if (wasSelectionMade && (originalValue !== input.dataset.value || originalText !== input.value)) {
-            console.log("Resetting searchable dropdown to original values");
             input.value = originalText;
             input.dataset.value = originalValue;
             
@@ -7655,7 +7572,6 @@ async function submitQuickAddTicket() {
     // Add input and keyup event listeners for searchable dropdown filtering
     newBody.addEventListener("input", (e) => {
       if (e.target.classList.contains("searchable-dropdown-input")) {
-        console.log("Input event triggered on searchable dropdown:", e.target.value);
         const filter = e.target.value.toLowerCase();
         
         // Find the dropdown list - it might be a sibling or moved to document.body
@@ -7684,14 +7600,11 @@ async function submitQuickAddTicket() {
           }
         }
         
-        console.log("Found list element:", list);
         if (list && list.classList.contains("searchable-dropdown-list")) {
-          console.log("Filtering with:", filter);
           list.querySelectorAll("div").forEach((item) => {
             const text = item.textContent.toLowerCase();
             const shouldShow = text.includes(filter);
             item.style.display = shouldShow ? "" : "none";
-            console.log(`Item "${item.textContent}" - should show: ${shouldShow}`);
           });
           // Clear any active selection when user types
           const activeItem = list.querySelector(".dropdown-active");
@@ -7708,7 +7621,6 @@ async function submitQuickAddTicket() {
           const originalValue = input.dataset.originalValue || "";
           const originalText = input.dataset.originalText || "";
           
-          console.log("Escape pressed - resetting searchable dropdown to original values");
           input.value = originalText;
           input.dataset.value = originalValue;
           
@@ -7722,18 +7634,15 @@ async function submitQuickAddTicket() {
           return;
         }
         
-        console.log("Keyup event triggered on searchable dropdown:", e.target.value);
         const filter = e.target.value.toLowerCase();
         
         const list = findDropdownForInput(e.target);
         
         if (list && list.classList.contains("searchable-dropdown-list")) {
-          console.log("Keyup filtering with:", filter);
           list.querySelectorAll("div").forEach((item) => {
             const text = item.textContent.toLowerCase();
             const shouldShow = text.includes(filter);
             item.style.display = shouldShow ? "" : "none";
-            console.log(`Keyup - Item "${item.textContent}" - should show: ${shouldShow}`);
           });
           // Clear any active selection when user types
           const activeItem = list.querySelector(".dropdown-active");
@@ -7746,7 +7655,6 @@ async function submitQuickAddTicket() {
     document.addEventListener("click", (e) => {
       // Check if clicking on a dropdown item
       if (e.target.hasAttribute('data-value') && e.target.closest('.searchable-dropdown-list')) {
-        console.log("Global dropdown item click detected");
         handleDropdownItemClick(e);
         return;
       }
@@ -7755,7 +7663,6 @@ async function submitQuickAddTicket() {
     // Add global input listener for searchable dropdown filtering
     document.addEventListener("input", (e) => {
       if (e.target.classList.contains("searchable-dropdown-input")) {
-        console.log("Global input event triggered on searchable dropdown:", e.target.value);
         const filter = e.target.value.toLowerCase();
         
         // Find the dropdown list - it might be a sibling or moved to document.body
@@ -7785,12 +7692,10 @@ async function submitQuickAddTicket() {
         }
         
         if (list && list.classList.contains("searchable-dropdown-list")) {
-          console.log("Global filtering with:", filter);
           list.querySelectorAll("div").forEach((item) => {
             const text = item.textContent.toLowerCase();
             const shouldShow = text.includes(filter);
             item.style.display = shouldShow ? "" : "none";
-            console.log(`Global - Item "${item.textContent}" - should show: ${shouldShow}`);
           });
           // Clear any active selection when user types
           const activeItem = list.querySelector(".dropdown-active");
@@ -7802,7 +7707,6 @@ async function submitQuickAddTicket() {
     // Add global click listener to close Jira dropdowns when clicking outside
     document.addEventListener("click", (e) => {
       // Don't prevent default or stop propagation here - let the event bubble
-      console.log("Global click detected on:", e.target);
       
       if (!e.target.closest(".tag-editor.jira-style")) {
         document.querySelectorAll(".jira-dropdown").forEach(dropdown => {
@@ -7831,13 +7735,11 @@ async function submitQuickAddTicket() {
                                         e.target.closest(".dropdown-list");
       
       if (isClickingOnOtherDropdown || isClickingOnDropdownElement) {
-        console.log("Clicking on other dropdown element, closing searchable dropdowns");
         closeAllDropdowns();
       }
       
       // Close searchable dropdowns when clicking outside
       if (!e.target.closest(".searchable-dropdown") && !e.target.closest(".searchable-dropdown-list")) {
-        console.log("Clicking outside dropdown, closing all searchable dropdowns");
         closeAllDropdowns();
       }
     });
@@ -7848,7 +7750,6 @@ async function submitQuickAddTicket() {
       if ((e.target.closest("td") || e.target.closest("th") || e.target.closest("tr")) && 
           !e.target.closest(".searchable-dropdown") && 
           !e.target.closest(".searchable-dropdown-list")) {
-        console.log("Clicking on table element (not dropdown), closing dropdowns");
         closeAllDropdowns();
       }
     });
@@ -7987,9 +7888,6 @@ async function submitQuickAddTicket() {
 
   function handleTableClick(e) {
     const target = e.target;
-    console.log("handleTableClick - target:", target);
-    console.log("handleTableClick - target classes:", target.className);
-    console.log("handleTableClick - target closest dropdown item:", target.closest(".searchable-dropdown-list div[data-value]"));
 
     // --- Specific Action Handlers (These take priority) ---
     const addTaskBtn = target.closest(".add-task-inline-btn");
@@ -8539,7 +8437,7 @@ async function submitQuickAddTicket() {
       const previousDisplay = input.dataset.displayValue || input.value || "";
       const previousDataset = input.dataset.value || "";
       
-      console.log("Finder detail dropdown selection:", {
+      commitFinderDetailUpdate({
         field: ticketField,
         ticketId,
         newValue,
@@ -8874,7 +8772,6 @@ async function submitQuickAddTicket() {
     if (modal) {
       const handleTicketUpdate = (event) => {
         if (event.detail.ticketId == ticketId) {
-          console.log("Refreshing modal for ticket update:", ticketId);
           // Re-render the modal with updated data
           const updatedTicket = appData.allTickets.find((t) => t.id == ticketId);
           if (updatedTicket) {
@@ -10484,7 +10381,6 @@ async function submitQuickAddTicket() {
     );
     
     // Initialize Requested By dropdown as simple select
-    console.log("Initializing Requested By dropdown with users:", appData.users);
     const reporterContainer = document.getElementById("jira-reporter");
     if (reporterContainer && appData.users && appData.users.length > 0) {
       reporterContainer.innerHTML = `
@@ -10493,14 +10389,12 @@ async function submitQuickAddTicket() {
           ${appData.users.map(u => `<option value="${u}">${u}</option>`).join('')}
         </select>
       `;
-      console.log("Requested By dropdown initialized successfully");
     } else {
       console.error("Requested By dropdown not initialized - missing container or users data");
       reporterContainer.innerHTML = '<input type="text" class="jira-input" placeholder="Select User..." readonly>';
     }
     
     // Initialize Assignee dropdown as simple select
-    console.log("Initializing Assignee dropdown with team members:", appData.teamMembers);
     const assigneeContainer = document.getElementById("jira-assignee");
     if (assigneeContainer && appData.teamMembers && appData.teamMembers.length > 0) {
       assigneeContainer.innerHTML = `
@@ -10509,7 +10403,6 @@ async function submitQuickAddTicket() {
           ${appData.teamMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('')}
         </select>
       `;
-      console.log("Assignee dropdown initialized successfully");
     } else {
       console.error("Assignee dropdown not initialized - missing container or team members data");
       assigneeContainer.innerHTML = '<input type="text" class="jira-input" placeholder="Select Assignee..." readonly>';
@@ -11524,7 +11417,6 @@ async function submitQuickAddTicket() {
 
   function showProjectModal(projectId = null, projectData = null) {
     const isEditMode = projectId !== null && projectData !== null;
-    console.log(isEditMode ? "Show Edit Project Modal" : "Show Add Project Modal");
     
     // Remove any existing modal first
     const existingModal = document.getElementById('add-project-modal');
@@ -11603,7 +11495,6 @@ async function submitQuickAddTicket() {
     // Add modal to body
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     
-    console.log("Modal added to DOM");
     
     // Get modal reference immediately
     const modal = document.getElementById('add-project-modal');
@@ -11653,7 +11544,6 @@ async function submitQuickAddTicket() {
       const nameInput = document.getElementById('new-project-name');
       if (nameInput) {
         nameInput.focus();
-        console.log("Focused on name input");
       } else {
         console.error("Name input not found");
       }
@@ -11661,13 +11551,10 @@ async function submitQuickAddTicket() {
   }
 
   function closeAddProjectModal() {
-    console.log("Closing Add Project modal");
     const modal = document.getElementById('add-project-modal');
     if (modal) {
       modal.remove();
-      console.log("Modal removed from DOM");
     } else {
-      console.log("Modal not found");
     }
   }
 
@@ -11795,7 +11682,6 @@ async function submitQuickAddTicket() {
   }
 
   async function saveEditedProject(projectId) {
-    console.log("Save edited project called", projectId);
     
     const nameInput = document.getElementById('new-project-name');
     const descriptionInput = document.getElementById('new-project-description');
@@ -11886,7 +11772,6 @@ async function submitQuickAddTicket() {
   }
 
   async function saveNewProject() {
-    console.log("Save new project called");
     
     const name = document.getElementById('new-project-name').value.trim();
     const description = document.getElementById('new-project-description').value.trim();
@@ -11901,7 +11786,6 @@ async function submitQuickAddTicket() {
       : [];
     const collaborators = selectedCollaborators.join(', ');
 
-    console.log("Project data:", { name, description, ownerId, collaborators });
 
     if (!name) {
       showToast('Project name is required', 'error');
@@ -11989,7 +11873,6 @@ async function submitQuickAddTicket() {
   document.addEventListener('click', (e) => {
     const target = e.target.closest('#add-project-btn');
     if (target && target.id === 'add-project-btn') {
-      console.log("Add Project button clicked (global listener)");
       e.preventDefault();
       e.stopPropagation();
       // Check if modal is already open
@@ -12096,7 +11979,6 @@ async function submitQuickAddTicket() {
     const existingModal = document.getElementById('add-project-modal');
     if (existingModal) {
       existingModal.remove();
-      console.log("Cleaned up existing modal on page load");
     }
   }
 
@@ -12109,7 +11991,6 @@ async function submitQuickAddTicket() {
     // Check if navigation is already initialized
     const ticketsButton = document.getElementById("nav-tickets");
     if (ticketsButton && !ticketsButton.hasAttribute('data-listener-added')) {
-      console.log("Initializing navigation on DOMContentLoaded (production fallback)");
       addNavListeners();
       ticketsButton.setAttribute('data-listener-added', 'true');
     }
@@ -12307,7 +12188,6 @@ async function submitQuickAddTicket() {
   function isProjectModalDirty() {
     if (!initialProjectData) {
       // DEBUG LOG
-      console.log("Dirty Check: No initial data stored. Returning false.");
       return false;
     }
 
@@ -12338,11 +12218,6 @@ async function submitQuickAddTicket() {
     const isDirty = initialJSON !== currentJSON;
 
     // DEBUG LOGS
-    console.log("--- Dirty Check Running ---");
-    console.log("Initial Data:", initialJSON);
-    console.log("Current Data:", currentJSON);
-    console.log("Are they different? (Is Dirty?):", isDirty);
-    console.log("--------------------------");
 
     return isDirty;
   }
@@ -12635,26 +12510,22 @@ async function submitQuickAddTicket() {
         const newValue = item.dataset.value;
         const dropdown = item.closest(".searchable-dropdown-list");
         
-        console.log("Dropdown item clicked:", { newValue, connectedInput: dropdown.dataset.connectedInput });
         
         // Find the input associated with this dropdown
         let input = null;
         if (dropdown.dataset.connectedInput) {
           // Find input by reconcileId
           input = wrapper.querySelector(`input[data-reconcile-id="${dropdown.dataset.connectedInput}"]`);
-          console.log("Found input by connectedInput:", input);
         }
         if (!input) {
           // Fallback: look for input in the searchable-dropdown container (if dropdown hasn't been moved)
           const container = dropdown.closest(".searchable-dropdown");
           if (container) {
             input = container.querySelector("input");
-            console.log("Found input in container:", input);
           }
         }
         
         if (input) {
-          console.log("Calling handleReconcileUpdate with:", { reconcileId: input.dataset.reconcileId, newValue });
           handleReconcileUpdate({ target: input }, newValue);
           dropdown.style.display = "none";
         } else {
@@ -12709,10 +12580,8 @@ async function submitQuickAddTicket() {
           const newValue = item.dataset.value;
           const input = wrapper.querySelector(`input[data-reconcile-id="${dropdown.dataset.connectedInput}"]`);
           
-          console.log("Global click handler - Dropdown item clicked:", { newValue, input });
           
           if (input) {
-            console.log("Calling handleReconcileUpdate from global handler");
             handleReconcileUpdate({ target: input }, newValue);
             dropdown.style.display = "none";
             e.stopPropagation();
@@ -13109,10 +12978,8 @@ async function submitQuickAddTicket() {
     const oldValue = element.dataset.oldValue;
     const newValue = newValueFromDropdown; // Only use value from dropdown click
 
-    console.log("handleReconcileUpdate called:", { reconcileId, oldValue, newValue });
 
     if (String(oldValue || "") === String(newValue || "")) {
-      console.log("No change detected, skipping update");
       return;
     }
 
@@ -13126,7 +12993,6 @@ async function submitQuickAddTicket() {
     
     td.classList.add("updating");
 
-    console.log("Updating database:", { reconcileId, ticketNumber: newValue });
     const { error } = await supabaseClient
       .from("reconcileHrs")
       .update({ ticketNumber: newValue })
@@ -13138,7 +13004,6 @@ async function submitQuickAddTicket() {
       console.error("Database update error:", error);
       showToast(`Update failed: ${error.message}`, "error");
     } else {
-      console.log("Database update successful!");
       showToast(`Ticket linked successfully!`, "success");
       td.classList.add("cell-success-highlight");
       setTimeout(() => {
@@ -13584,7 +13449,6 @@ async function submitQuickAddTicket() {
     
     // Re-render dashboard after filters are set up to ensure numbers are visible
     if (currentView === "home") {
-      console.log('Re-rendering dashboard after filter setup...');
       setTimeout(() => {
         renderDashboard();
       }, 50);
@@ -13636,16 +13500,13 @@ async function submitQuickAddTicket() {
    * Main function to calculate and render all dashboard components.
    */
   function renderDashboard() {
-    console.log('renderDashboard called - currentView:', currentView);
     
     // Check if dashboard is visible
     const dashboardWrapper = document.getElementById("dashboard-view-wrapper");
     if (!dashboardWrapper || dashboardWrapper.style.display === 'none') {
-      console.log('Dashboard not visible, skipping render');
       return;
     }
     
-    console.log('Dashboard elements found, proceeding with render...');
     
     // 1. Filter tickets based on dashboard controls
     const startDate = new Date(dashboardStartDate);
@@ -13678,17 +13539,6 @@ async function submitQuickAddTicket() {
     const blockedCount = ticketsToUse.filter(t => t.status === "Blocked").length;
     
     // Debug logging
-    console.log('Dashboard metrics calculation:');
-    console.log('- Total allTickets:', appData.allTickets.length);
-    console.log('- Filtered tickets:', filteredTickets.length);
-    console.log('- All user tickets:', allUserTickets.length);
-    console.log('- Tickets being used:', ticketsToUse.length);
-    console.log('- Total count:', totalCount);
-    console.log('- Completed count:', completedCount);
-    console.log('- In Progress count:', inProgressCount);
-    console.log('- Blocked count:', blockedCount);
-    console.log('- Dashboard assignee filter:', dashboardAssigneeId);
-    console.log('- Date range:', dashboardStartDate, 'to', dashboardEndDate);
     
     // Calculate more relevant metrics
     const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;

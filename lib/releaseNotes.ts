@@ -46,7 +46,7 @@ function parseReleaseNotes(content: string): ReleaseNote[] {
   const lines = content.split("\n");
   
   let currentRelease: Partial<ReleaseNote> | null = null;
-  let currentSection: { type: string; title: string; items: string[] } | null = null;
+  let currentSection: ReleaseNote["sections"][0] | null = null;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
