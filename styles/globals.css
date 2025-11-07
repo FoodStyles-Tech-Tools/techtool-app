@@ -11131,3 +11131,107 @@
   .dark .user-settings-item dd {
     color: #f8fafc;
   }
+
+  /* --- TICKETS TABS STYLES --- */
+  .tickets-tabs-wrapper {
+    background: var(--surface-color);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0;
+    margin: 0;
+  }
+
+  .tickets-tabs {
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+  }
+
+  .tickets-tabs::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .tickets-tabs::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .tickets-tabs::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+  }
+
+  .ticket-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.25rem;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    position: relative;
+  }
+
+  .ticket-tab:hover {
+    color: var(--text-primary);
+    background: var(--row-hover-color);
+  }
+
+  .ticket-tab.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+    font-weight: 600;
+    background: var(--accent-bg-light);
+  }
+
+  .ticket-tab .tab-badge {
+    display: inline;
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+  }
+
+  .ticket-tab.active .tab-badge {
+    color: var(--accent-color);
+    opacity: 0.8;
+  }
+
+  .ticket-tab:not(.active) .tab-badge {
+    color: var(--text-secondary);
+    opacity: 0.6;
+  }
+
+  /* Dark mode adjustments for tabs */
+  .dark .ticket-tab {
+    color: rgba(148, 163, 184, 0.85);
+  }
+
+  .dark .ticket-tab:hover {
+    color: #f8fafc;
+    background: rgba(30, 41, 59, 0.5);
+  }
+
+  .dark .ticket-tab.active {
+    color: #60a5fa;
+    border-bottom-color: #60a5fa;
+    background: rgba(37, 99, 235, 0.15);
+  }
+
+  .dark .ticket-tab.active .tab-badge {
+    color: #60a5fa;
+    opacity: 0.8;
+  }
+
+  .dark .ticket-tab:not(.active) .tab-badge {
+    color: rgba(148, 163, 184, 0.7);
+    opacity: 0.6;
+  }

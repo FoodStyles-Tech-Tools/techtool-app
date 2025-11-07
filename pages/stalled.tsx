@@ -1,12 +1,14 @@
-import type { AppPageProps } from "../lib/appPageTypes";
-import BaseAppPage from "../lib/appPageFactory";
-import { createAppPageGetServerSideProps } from "../lib/server/appPageData";
+import type { GetServerSideProps } from "next";
 
-export default function StalledPage(props: AppPageProps) {
-  return <BaseAppPage {...props} />;
+export default function StalledPage() {
+  return null;
 }
 
-export const getServerSideProps = createAppPageGetServerSideProps({
-  defaultView: "stalled",
-  routePath: "/stalled",
-});
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    redirect: {
+      destination: "/tickets?tab=stalled",
+      permanent: false,
+    },
+  };
+};

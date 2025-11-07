@@ -38,50 +38,9 @@
               <i class="fas fa-folder"></i>
               <span>Projects</span>
             </button>
-            <button id="nav-all" class="nav-btn">
-              <i class="fas fa-list-ul"></i>
-              <span>All Tickets</span>
-              <span
-                id="all-tickets-count"
-                class="nav-badge"
-                style="display: none"
-              ></span>
-            </button>
-            <button id="nav-my-ticket" class="nav-btn">
-              <i class="fas fa-user"></i>
-              <span>My Tickets</span>
-              <span
-                id="my-ticket-count"
-                class="nav-badge"
-                style="display: none"
-              ></span>
-            </button>
-            <button id="nav-critical" class="nav-btn">
-              <i class="fas fa-exclamation-circle"></i>
-              <span>Critical</span>
-              <span
-                id="critical-count"
-                class="nav-badge"
-                style="display: none"
-              ></span>
-            </button>
-            <button id="nav-stalled" class="nav-btn">
-              <i class="fas fa-pause-circle"></i>
-              <span>Stalled</span>
-              <span
-                id="stalled-count"
-                class="nav-badge"
-                style="display: none"
-              ></span>
-            </button>
-            <button id="nav-unassigned" class="nav-btn">
-              <i class="fas fa-inbox"></i>
-              <span>Unassigned</span>
-              <span
-                id="unassigned-count"
-                class="nav-badge"
-                style="display: none"
-              ></span>
+            <button id="nav-tickets" class="nav-btn">
+              <i class="fas fa-ticket-alt"></i>
+              <span>Tickets</span>
             </button>
             <button id="nav-incomplete" class="nav-btn">
               <i class="fas fa-exclamation-triangle"></i>
@@ -407,6 +366,32 @@
           </div>
           <div id="error-message" class="error-container" style="display: none">
             <p>Could not load data. Please try again later.</p>
+          </div>
+
+          <!-- Tickets Tabs Navigation -->
+          <div id="tickets-tabs-wrapper" class="tickets-tabs-wrapper" style="display: none">
+            <div class="tickets-tabs">
+              <button id="ticket-tab-all" class="ticket-tab active" data-view="all">
+                <span>All Tickets</span>
+                <span id="all-tickets-count" class="tab-badge" style="display: none"></span>
+              </button>
+              <button id="ticket-tab-my-ticket" class="ticket-tab" data-view="my-ticket">
+                <span>My Tickets</span>
+                <span id="my-ticket-count" class="tab-badge" style="display: none"></span>
+              </button>
+              <button id="ticket-tab-critical" class="ticket-tab" data-view="critical">
+                <span>Critical</span>
+                <span id="critical-count" class="tab-badge" style="display: none"></span>
+              </button>
+              <button id="ticket-tab-stalled" class="ticket-tab" data-view="stalled">
+                <span>Stalled</span>
+                <span id="stalled-count" class="tab-badge" style="display: none"></span>
+              </button>
+              <button id="ticket-tab-unassigned" class="ticket-tab" data-view="unassigned">
+                <span>Unassigned</span>
+                <span id="unassigned-count" class="tab-badge" style="display: none"></span>
+              </button>
+            </div>
           </div>
 
           <div class="table-wrapper" style="display: none">

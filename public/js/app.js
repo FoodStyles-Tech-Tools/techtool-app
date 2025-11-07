@@ -264,18 +264,25 @@ function closeUserSettingsOverlay() {
 
   const VIEW_ROUTE_MAP = {
     home: "/dashboard",
-    all: "/all-tickets",
-    "my-ticket": "/my-tickets",
-    critical: "/critical",
-    stalled: "/stalled",
-    unassigned: "/unassigned",
+    tickets: "/tickets",
+    all: "/tickets",
+    "my-ticket": "/tickets",
+    critical: "/tickets",
+    stalled: "/tickets",
+    unassigned: "/tickets",
     incomplete: "/incomplete",
     projects: "/projects",
     reconcile: "/reconcile",
   };
   const ROUTE_VIEW_MAP = Object.entries(VIEW_ROUTE_MAP).reduce(
     (acc, [view, route]) => {
-      acc[normalizePath(route)] = view;
+      const normalizedRoute = normalizePath(route);
+      // For /tickets route, map to "tickets" view
+      if (normalizedRoute === "/tickets") {
+        acc[normalizedRoute] = "tickets";
+      } else {
+        acc[normalizedRoute] = view;
+      }
       return acc;
     },
     {}
@@ -2125,7 +2132,11 @@ async function submitQuickAddTicket() {
 
       let forcedInitialView = null;
       if (!appData.currentUserName) {
-        document.getElementById("nav-my-ticket").style.display = "none";
+        // Hide "My Tickets" tab if user is not logged in
+        const myTicketTab = document.getElementById("ticket-tab-my-ticket");
+        if (myTicketTab) {
+          myTicketTab.style.display = "none";
+        }
         forcedInitialView = "all";
       }
 
@@ -2147,11 +2158,22 @@ async function submitQuickAddTicket() {
       const rawInitialView = urlInitialViewInput ? urlInitialViewInput.value : "";
       const locationView =
         ROUTE_VIEW_MAP[normalizePath(window.location.pathname)] ?? null;
-      const initialView =
+      
+      // Check for tab query parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get("tab");
+      const ticketTabViews = ["all", "my-ticket", "critical", "stalled", "unassigned"];
+      
+      let initialView =
         forcedInitialView ??
         (rawInitialView && VIEW_ROUTE_MAP[rawInitialView]
           ? rawInitialView
           : locationView ?? "projects");
+      
+      // If on tickets route and tab param exists, use the tab view
+      if (locationView === "tickets" && tabParam && ticketTabViews.includes(tabParam)) {
+        initialView = tabParam;
+      }
 
       if (urlTicketNumber) {
         ticketNumberFilter = urlTicketNumber;
@@ -2173,11 +2195,24 @@ async function submitQuickAddTicket() {
 
       window.addEventListener("popstate", (event) => {
         const stateView = event.state?.view;
+        const pathname = normalizePath(window.location.pathname);
         const fallbackView =
-          ROUTE_VIEW_MAP[normalizePath(window.location.pathname)] ?? "projects";
-        const nextView =
+          ROUTE_VIEW_MAP[pathname] ?? "projects";
+        
+        // Check for tab query parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get("tab");
+        const ticketTabViews = ["all", "my-ticket", "critical", "stalled", "unassigned"];
+        
+        let nextView =
           (stateView && VIEW_ROUTE_MAP[stateView] ? stateView : null) ??
           fallbackView;
+        
+        // If on tickets route and tab param exists, use the tab view
+        if (fallbackView === "tickets" && tabParam && ticketTabViews.includes(tabParam)) {
+          nextView = tabParam;
+        }
+        
         if (!nextView || nextView === currentView) {
           return;
         }
@@ -3924,18 +3959,24 @@ async function submitQuickAddTicket() {
       preserveFilters = false,
     } = {}
   ) {
-    if (!VIEW_ROUTE_MAP[view]) {
-      console.warn("Attempted to activate unknown view:", view);
+    // Handle ticket tab views - they all use the tickets route
+    const ticketTabViews = ["all", "my-ticket", "critical", "stalled", "unassigned"];
+    const isTicketTabView = ticketTabViews.includes(view);
+    const actualView = isTicketTabView ? "tickets" : view;
+    
+    if (!VIEW_ROUTE_MAP[actualView]) {
+      console.warn("Attempted to activate unknown view:", actualView);
       return;
     }
 
-    const isSwitchingView = currentView !== view;
+    const isSwitchingView = currentView !== actualView;
+    const isSwitchingTab = isTicketTabView && (currentView === "tickets" || ticketTabViews.includes(currentView)) && currentView !== view;
 
     if (
-      isSwitchingView &&
+      (isSwitchingView || isSwitchingTab) &&
       !preserveFilters &&
-      view !== "home" &&
-      view !== "reconcile"
+      actualView !== "home" &&
+      actualView !== "reconcile"
     ) {
       resetFilters();
     }
@@ -3950,16 +3991,36 @@ async function submitQuickAddTicket() {
       // No need to attach individual listeners here to avoid conflicts
     }
 
-    currentView = view;
+    // Update current view - use the actual view for routing, but track the tab view
+    currentView = isTicketTabView ? view : actualView;
     currentPage = 1;
     reconcileCurrentPage = 1;
 
+    // Update navigation buttons
     document
       .querySelectorAll(".nav-panel .nav-btn")
       .forEach((btn) => btn.classList.remove("active"));
-    const activeBtn = document.getElementById(`nav-${view}`);
-    if (activeBtn) {
-      activeBtn.classList.add("active");
+    const activeNavBtn = document.getElementById(`nav-${actualView}`);
+    if (activeNavBtn) {
+      activeNavBtn.classList.add("active");
+    }
+
+    // Show/hide tickets tabs
+    const ticketsTabsWrapper = document.getElementById("tickets-tabs-wrapper");
+    if (ticketsTabsWrapper) {
+      if (actualView === "tickets") {
+        ticketsTabsWrapper.style.display = "block";
+        // Update active tab
+        document.querySelectorAll(".ticket-tab").forEach((tab) => {
+          tab.classList.remove("active");
+        });
+        const activeTab = document.querySelector(`.ticket-tab[data-view="${view}"]`);
+        if (activeTab) {
+          activeTab.classList.add("active");
+        }
+      } else {
+        ticketsTabsWrapper.style.display = "none";
+      }
     }
 
     if (isBulkEditMode) {
@@ -3968,7 +4029,9 @@ async function submitQuickAddTicket() {
 
     applyFilterAndRender();
 
-    const route = VIEW_ROUTE_MAP[view];
+    const route = VIEW_ROUTE_MAP[actualView];
+    // Add tab query parameter for ticket views
+    const finalRoute = isTicketTabView ? `${route}?tab=${view}` : route;
     const scriptUrlInputEl = document.getElementById("script-url");
     if (scriptUrlInputEl && route) {
       scriptUrlInputEl.value = route;
@@ -3978,14 +4041,14 @@ async function submitQuickAddTicket() {
       !suppressHistoryUpdate &&
       updateHistory &&
       route &&
-      (isSwitchingView || replaceHistory);
+      (isSwitchingView || isSwitchingTab || replaceHistory);
 
     if (shouldUpdateHistory) {
-      const state = { view };
+      const state = { view: isTicketTabView ? view : actualView };
       if (replaceHistory) {
-        window.history.replaceState(state, "", route);
+        window.history.replaceState(state, "", finalRoute);
       } else {
-        window.history.pushState(state, "", route);
+        window.history.pushState(state, "", finalRoute);
       }
     }
   }
@@ -3998,15 +4061,15 @@ async function submitQuickAddTicket() {
     addNavListeners();
     
     // Check if elements were found
-    const allTicketsButton = document.getElementById("nav-all");
+    const ticketsButton = document.getElementById("nav-tickets");
     
     // If elements not found and we haven't exceeded max retries, try again
-    if (!allTicketsButton && retryCount < maxRetries) {
+    if (!ticketsButton && retryCount < maxRetries) {
       console.log(`Navigation elements not ready, retrying... (${retryCount + 1}/${maxRetries})`);
       setTimeout(() => {
         addNavListenersWithRetry(retryCount + 1);
       }, retryDelay);
-    } else if (!allTicketsButton) {
+    } else if (!ticketsButton) {
       console.error("Failed to initialize navigation after maximum retries");
     } else {
       console.log("Navigation listeners successfully initialized");
@@ -4022,7 +4085,23 @@ async function submitQuickAddTicket() {
         }
 
         const view = btn.id.replace("nav-", "");
-        activateView(view);
+        // If clicking on tickets nav button, default to "all" tab
+        if (view === "tickets") {
+          activateView("all");
+        } else {
+          activateView(view);
+        }
+      });
+    });
+
+    // Add tab listeners
+    const ticketTabs = document.querySelectorAll(".ticket-tab");
+    ticketTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const tabView = tab.getAttribute("data-view");
+        if (tabView) {
+          activateView(tabView);
+        }
       });
     });
   }

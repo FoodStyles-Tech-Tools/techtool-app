@@ -1,12 +1,14 @@
-import type { AppPageProps } from "../lib/appPageTypes";
-import BaseAppPage from "../lib/appPageFactory";
-import { createAppPageGetServerSideProps } from "../lib/server/appPageData";
+import type { GetServerSideProps } from "next";
 
-export default function MyTicketsPage(props: AppPageProps) {
-  return <BaseAppPage {...props} />;
+export default function MyTicketsPage() {
+  return null;
 }
 
-export const getServerSideProps = createAppPageGetServerSideProps({
-  defaultView: "my-ticket",
-  routePath: "/my-tickets",
-});
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    redirect: {
+      destination: "/tickets?tab=my-ticket",
+      permanent: false,
+    },
+  };
+};

@@ -29,7 +29,7 @@ export async function resolveAppPageProps(
   if (!session?.user?.email) {
     return {
       redirect: {
-        destination: "/",
+        destination: "/login",
         permanent: false,
       },
     };
@@ -67,11 +67,20 @@ export async function resolveAppPageProps(
 
   const ticketParam = context.query.ticket;
   const unassignedParam = context.query.unassigned;
+  const tabParam = context.query.tab;
 
   let initialView: AppView = config.defaultView;
   let ticketNumber = "";
 
-  if (typeof unassignedParam === "string" && unassignedParam) {
+  // Handle tab parameter for tickets page
+  if (config.defaultView === "tickets" && typeof tabParam === "string") {
+    const validTabs: AppView[] = ["all", "my-ticket", "critical", "stalled", "unassigned"];
+    if (validTabs.includes(tabParam as AppView)) {
+      initialView = tabParam as AppView;
+    } else {
+      initialView = "all"; // Default to "all" if invalid tab
+    }
+  } else if (typeof unassignedParam === "string" && unassignedParam) {
     initialView = "unassigned";
     ticketNumber = unassignedParam;
   } else if (typeof ticketParam === "string" && ticketParam) {

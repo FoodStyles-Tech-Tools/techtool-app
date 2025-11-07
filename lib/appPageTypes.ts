@@ -1,5 +1,6 @@
 export type AppView =
   | "home"
+  | "tickets"
   | "all"
   | "my-ticket"
   | "critical"
