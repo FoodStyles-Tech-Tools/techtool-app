@@ -18,7 +18,7 @@ export default async function handler(
   }
 
   const session = await requireAuth(req, res);
-  if (!session) {
+  if (!session || !session.user?.email) {
     return;
   }
 
@@ -29,7 +29,7 @@ export default async function handler(
   }
 
   try {
-    await setUserMode(session.user.email!, mode);
+    await setUserMode(session.user.email, mode);
     return res.status(200).json({ success: true });
   } catch (error) {
     handleApiError(res, error, "Failed to update mode");

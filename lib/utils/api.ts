@@ -47,6 +47,12 @@ export async function requireAuth(
     return null;
   }
 
+  // TypeScript type guard: ensure session.user.email exists
+  if (!session.user.email) {
+    res.status(401).json({ error: "Unauthorized" });
+    return null;
+  }
+
   return session;
 }
 

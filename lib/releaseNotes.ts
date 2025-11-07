@@ -56,10 +56,18 @@ function parseReleaseNotes(content: string): ReleaseNote[] {
     if (versionMatch) {
       // Save previous release if exists
       if (currentRelease && currentSection) {
-        currentRelease.sections!.push(currentSection);
+        // Ensure sections array exists
+        if (!currentRelease.sections) {
+          currentRelease.sections = [];
+        }
+        currentRelease.sections.push(currentSection);
         currentSection = null;
       }
       if (currentRelease) {
+        // Ensure sections array exists before pushing
+        if (!currentRelease.sections) {
+          currentRelease.sections = [];
+        }
         releases.push(currentRelease as ReleaseNote);
       }
       
@@ -91,9 +99,14 @@ function parseReleaseNotes(content: string): ReleaseNote[] {
     // Match section headers: #### 🎉 Major Changes, #### ✨ New Features, etc.
     const sectionMatch = line.match(/^####\s+(.+)$/);
     if (sectionMatch && currentRelease) {
+      // Ensure sections array exists
+      if (!currentRelease.sections) {
+        currentRelease.sections = [];
+      }
+      
       // Save previous section if exists
       if (currentSection) {
-        currentRelease.sections!.push(currentSection);
+        currentRelease.sections.push(currentSection);
       }
       
       const sectionTitle = sectionMatch[1].trim();
@@ -117,9 +130,17 @@ function parseReleaseNotes(content: string): ReleaseNote[] {
   
   // Save last section and release
   if (currentSection && currentRelease) {
+    // Ensure sections array exists
+    if (!currentRelease.sections) {
+      currentRelease.sections = [];
+    }
     currentRelease.sections.push(currentSection);
   }
   if (currentRelease) {
+    // Ensure sections array exists before pushing
+    if (!currentRelease.sections) {
+      currentRelease.sections = [];
+    }
     releases.push(currentRelease as ReleaseNote);
   }
   
