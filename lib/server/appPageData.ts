@@ -5,21 +5,14 @@ import { getUserByEmail } from "../supabase";
 import type { AppPageConfig, AppPageProps, AppView } from "../appPageTypes";
 import { FAVICON_URL } from "../appPageTypes";
 import { getAppVersionInfo } from "../getAppVersion";
+import { escapeHtml, replaceTemplateTokens } from "../utils/string";
+import { getSupabaseCredentials } from "../utils/supabase";
 import path from "path";
 import { promises as fs } from "fs";
 
 type AppPageResult =
   | { props: AppPageProps }
   | { redirect: { destination: string; permanent: boolean } };
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 export async function resolveAppPageProps(
   context: GetServerSidePropsContext,
@@ -35,18 +28,8 @@ export async function resolveAppPageProps(
     };
   }
 
-  const supabaseUrl =
-    process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const supabaseAnonKey =
-    process.env.SUPABASE_ANON_KEY ??
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
-    "";
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "Supabase credentials are missing. Set SUPABASE_URL and SUPABASE_ANON_KEY."
-    );
-  }
+  const { url: supabaseUrl, anonKey: supabaseAnonKey } =
+    getSupabaseCredentials();
 
   const user = await getUserByEmail(session.user.email);
   if (!user) {
@@ -111,10 +94,7 @@ export async function resolveAppPageProps(
     "{{APP_BUILD_TIME}}": escapeHtml(versionInfo.buildTime),
   };
 
-  let appHtml = template;
-  for (const [token, value] of Object.entries(replacements)) {
-    appHtml = appHtml.replace(new RegExp(token, "g"), value);
-  }
+  const appHtml = replaceTemplateTokens(template, replacements);
 
   return {
     props: {

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: false,
+  reactStrictMode: true, // Enable React strict mode for better development experience
   // Disable aggressive caching for JavaScript files to ensure real-time updates work
   async headers() {
     return [
@@ -15,10 +15,15 @@ const nextConfig = {
       },
     ];
   },
-  // Ensure proper script loading order
-  experimental: {
-    optimizeCss: false,
+  // Performance optimizations
+  compress: true,
+  poweredByHeader: false,
+  // Optimize images
+  images: {
+    formats: ['image/avif', 'image/webp'],
   },
+  // Enable SWC minification for better performance
+  swcMinify: true,
 };
 
 module.exports = nextConfig;

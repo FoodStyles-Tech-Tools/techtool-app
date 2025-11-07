@@ -1,7 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]";
 import { getSupabaseServerClient } from "../../../lib/supabase";
+import {
+  validateMethod,
+  requireAuth,
+  handleApiError,
+  type ApiError,
+} from "../../../lib/utils/api";
 
 type TicketPayload = {
   id: number;
@@ -17,18 +21,19 @@ type DiscordUserInfo = {
   name?: string | null;
 };
 
+type DiscordNotifyResponse = { success: boolean } | ApiError;
+
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<DiscordNotifyResponse>
 ) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method not allowed" });
+  if (!validateMethod(req, res, ["POST"])) {
+    return;
   }
 
-  const session = await getServerSession(req, res, authOptions);
-  if (!session?.user?.email) {
-    return res.status(401).json({ error: "Unauthorized" });
+  const session = await requireAuth(req, res);
+  if (!session) {
+    return;
   }
 
   const { insertedTickets, creatorName } = req.body as {
@@ -142,10 +147,7 @@ export default async function handler(
     }
 
     return res.status(200).json({ success: true });
-  } catch (error: any) {
-    console.error("Failed to send Discord notification", error);
-    return res
-      .status(500)
-      .json({ error: error?.message ?? "Failed to send Discord notification" });
+  } catch (error) {
+    handleApiError(res, error, "Failed to send Discord notification");
   }
 }

@@ -1,21 +1,25 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]";
 import { setUserMode } from "../../../lib/supabase";
+import {
+  validateMethod,
+  requireAuth,
+  handleApiError,
+  type ApiError,
+} from "../../../lib/utils/api";
+
+type ModeResponse = { success: boolean } | ApiError;
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse<ModeResponse>
 ) {
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return res.status(405).json({ error: "Method not allowed" });
+  if (!validateMethod(req, res, ["POST"])) {
+    return;
   }
 
-  const session = await getServerSession(req, res, authOptions);
-
-  if (!session?.user?.email) {
-    return res.status(401).json({ error: "Unauthorized" });
+  const session = await requireAuth(req, res);
+  if (!session) {
+    return;
   }
 
   const { mode } = req.body as { mode?: string };
@@ -25,12 +29,9 @@ export default async function handler(
   }
 
   try {
-    await setUserMode(session.user.email, mode);
+    await setUserMode(session.user.email!, mode);
     return res.status(200).json({ success: true });
-  } catch (error: any) {
-    console.error("Failed to update mode", error);
-    return res
-      .status(500)
-      .json({ error: error?.message ?? "Failed to update mode" });
+  } catch (error) {
+    handleApiError(res, error, "Failed to update mode");
   }
 }

@@ -4748,6 +4748,304 @@
     background: rgba(34, 197, 94, 0.1);
   }
 
+  /* --- Release Notes Modal --- */
+  .release-notes-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+
+  .release-notes-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+  }
+
+  .release-notes-modal-content {
+    position: relative;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 700px;
+    width: 100%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  .release-notes-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .release-notes-modal-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .release-notes-modal-close {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .release-notes-modal-close:hover {
+    background: var(--row-hover-color);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+  }
+
+  .release-notes-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2rem;
+    color: var(--text-primary);
+  }
+
+  .release-note-item {
+    margin-bottom: 2rem;
+  }
+
+  .release-note-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .release-note-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .release-note-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+  }
+
+  .release-note-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+  }
+
+  .release-note-date {
+    color: var(--text-secondary);
+  }
+
+  .release-note-status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .release-note-status.status-stable {
+    background: rgba(34, 197, 94, 0.12);
+    color: #16a34a;
+  }
+
+  .release-note-status.status-beta {
+    background: rgba(59, 130, 246, 0.12);
+    color: #2563eb;
+  }
+
+  .release-note-status.status-alpha {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+  }
+
+  .release-note-status.status-development {
+    background: rgba(148, 163, 184, 0.12);
+    color: #64748b;
+  }
+
+  .release-note-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .release-note-section {
+    margin: 0;
+  }
+
+  .release-note-section h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.75rem 0;
+  }
+
+  .release-note-section ul {
+    margin: 0;
+    padding-left: 1.5rem;
+    list-style-type: disc;
+  }
+
+  .release-note-section li {
+    margin-bottom: 0.5rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .release-note-section li:last-child {
+    margin-bottom: 0;
+  }
+
+  .release-notes-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--border-color);
+    background: var(--row-alt-color);
+  }
+
+  .release-notes-modal-update-btn,
+  .release-notes-modal-close-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid transparent;
+  }
+
+  .release-notes-modal-update-btn {
+    background: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+  }
+
+  .release-notes-modal-update-btn:hover {
+    background: var(--accent-color-hover, var(--accent-color));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  }
+
+  .release-notes-modal-close-btn {
+    background: transparent;
+    color: var(--text-secondary);
+    border-color: var(--border-color);
+  }
+
+  .release-notes-modal-close-btn:hover {
+    background: var(--row-hover-color);
+    color: var(--text-primary);
+    border-color: var(--accent-color);
+  }
+
+  /* Dark mode styles for release notes modal */
+  .dark .release-notes-modal-content {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(148, 163, 184, 0.2);
+  }
+
+  .dark .release-notes-modal-header {
+    border-color: rgba(148, 163, 184, 0.2);
+  }
+
+  .dark .release-notes-modal-close {
+    border-color: rgba(148, 163, 184, 0.2);
+    color: rgba(203, 213, 225, 0.8);
+  }
+
+  .dark .release-notes-modal-close:hover {
+    background: rgba(51, 65, 85, 0.5);
+    color: #f8fafc;
+  }
+
+  .dark .release-note-header {
+    border-color: rgba(148, 163, 184, 0.2);
+  }
+
+  .dark .release-notes-modal-footer {
+    border-color: rgba(148, 163, 184, 0.2);
+    background: rgba(30, 41, 59, 0.5);
+  }
+
+  .dark .release-notes-modal-close-btn {
+    border-color: rgba(148, 163, 184, 0.2);
+    color: rgba(203, 213, 225, 0.8);
+  }
+
+  .dark .release-notes-modal-close-btn:hover {
+    background: rgba(51, 65, 85, 0.5);
+    color: #f8fafc;
+  }
+
+  @media (max-width: 768px) {
+    .release-notes-modal {
+      padding: 1rem;
+    }
+
+    .release-notes-modal-content {
+      max-height: 90vh;
+    }
+
+    .release-notes-modal-header,
+    .release-notes-modal-body,
+    .release-notes-modal-footer {
+      padding: 1rem 1.5rem;
+    }
+
+    .release-note-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .release-notes-modal-footer {
+      flex-direction: column-reverse;
+    }
+
+    .release-notes-modal-update-btn,
+    .release-notes-modal-close-btn {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+
   .app-header-brand {
     font-size: 1.5rem;
     font-weight: 600;

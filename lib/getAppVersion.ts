@@ -25,6 +25,16 @@ export type AppVersionInfo = {
   version: string;
   buildTime: string;
   shortVersion: string;
+  releaseNotes?: {
+    version: string;
+    releaseDate: string;
+    status: string;
+    sections: Array<{
+      type: string;
+      title: string;
+      items: string[];
+    }>;
+  }[];
 };
 
 const appVersionInfo: AppVersionInfo = {
