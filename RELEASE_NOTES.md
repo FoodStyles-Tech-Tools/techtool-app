@@ -4,6 +4,42 @@ This document tracks all version updates and changes to the TechTool application
 
 ## Version History
 
+### Version: 1.1.0
+**Release Date**: 2024-12-19
+**Status**: Stable
+
+#### ✨ New Features
+- **Project Collaborators Management**: Added multi-select dropdown for selecting collaborators when creating or editing projects
+  - Collaborators stored as JSONB array format in database
+  - Options populated from `public.user` "name" field
+  - Visual tag/pill display for collaborators in project list view
+- **Copy to Clipboard**: Added copy functionality for tickets in Projects view
+  - Copy icon appears on each ticket row
+  - Copies ticket summary in format: `[HRB-{id}] - Project: {project} / Epic: {epic} / {title}`
+  - Visual feedback with toast notification
+
+#### 🔧 Improvements
+- **Project Filtering**: Enhanced project filtering logic to include projects where logged-in user is a collaborator
+  - When "Show all projects" is false, now shows projects where user is owner OR collaborator
+  - Filtering based on user name matching (not ID)
+- **Project Search Navigation**: Fixed arrow key navigation in project search
+  - Arrow down now moves one project at a time instead of jumping
+  - Improved keyboard navigation with proper event handling
+- **Collaborators UI**: Improved visual display of collaborators
+  - Collaborators displayed as styled tags/pills below owner information
+  - Better visual hierarchy and readability
+- **Archived Tickets Exclusion**: Excluded archived tickets from Projects view
+  - Archived tickets no longer appear in ticket lists
+  - Archived tickets excluded from epic and project ticket counts
+  - Consistent filtering across all project view components
+
+#### 🐛 Bug Fixes
+- Fixed project search arrow down navigation jumping to second item instead of moving sequentially
+- Fixed archived tickets appearing in project ticket counts and epic statistics
+- Improved event handling to prevent duplicate event listeners
+
+---
+
 ### Version: dev (Current Development)
 **Release Date**: Ongoing
 **Status**: Development
