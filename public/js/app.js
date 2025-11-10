@@ -689,6 +689,7 @@ function updateTicketSearchResults(rawTerm) {
   }
 
   const results = (appData.allTickets || [])
+    .filter((ticket) => ticket.status !== "Archived") // Filter out archived tickets
     .map((ticket) => {
       const title = (ticket.title || "").toLowerCase();
       const description = (ticket.description || "").toLowerCase();
@@ -2994,6 +2995,114 @@ async function submitQuickAddTicket() {
   }
 
   /**
+   * Syncs the ticket sequence to prevent duplicate key errors.
+   * This ensures the sequence is always higher than the max ID in the table.
+   * @returns {Promise<boolean>} True if sync was successful or not needed, false otherwise
+   */
+  async function syncTicketSequence() {
+    try {
+      // Get the maximum ID from the ticket table
+      const { data: lastTicket, error: queryError } = await supabaseClient
+        .from("ticket")
+        .select("id")
+        .order("id", { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (queryError && queryError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.warn("⚠️ Could not query max ticket ID:", queryError.message);
+        return false;
+      }
+      
+      if (!lastTicket || !lastTicket.id) {
+        // No tickets exist yet, sequence should be fine
+        return true;
+      }
+      
+      const maxId = lastTicket.id;
+      
+      // Try to sync the sequence using RPC function (if it exists)
+      try {
+        const { error: rpcError } = await supabaseClient.rpc('sync_ticket_sequence', {
+          max_id: maxId
+        });
+        
+        if (!rpcError) {
+          return true;
+        }
+      } catch (rpcErr) {
+        // RPC function doesn't exist, try API endpoint
+      }
+      
+      // Fallback: Try using the API endpoint
+      try {
+        const response = await fetch('/api/ticket/sync-sequence', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          return true;
+        }
+      } catch (apiErr) {
+        // API endpoint not available or failed
+        console.warn("⚠️ API endpoint sync failed:", apiErr);
+      }
+      
+      // If all methods fail, we'll handle it on insert with retry logic
+      return true;
+    } catch (error) {
+      console.warn("⚠️ Error syncing ticket sequence:", error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Inserts tickets with automatic sequence sync and retry logic.
+   * This prevents duplicate key errors by ensuring the sequence is in sync.
+   * @param {Array<object>} tickets - Array of ticket objects to insert
+   * @param {number} retryCount - Internal retry counter
+   * @returns {Promise<{data: Array, error: object|null}>} Insert result
+   */
+  async function insertTicketsWithSequenceSync(tickets, retryCount = 0) {
+    const MAX_RETRIES = 2;
+    
+    // Ensure no manual IDs are present
+    tickets.forEach((ticket) => {
+      if (ticket.id !== undefined) {
+        delete ticket.id;
+      }
+    });
+    
+    // Sync sequence before insert
+    await syncTicketSequence();
+    
+    // Attempt insert
+    const { data: insertedTickets, error } = await supabaseClient
+      .from("ticket")
+      .insert(tickets)
+      .select();
+    
+    // If we get a duplicate key error, sync sequence and retry
+    if (error && error.code === '23505' && retryCount < MAX_RETRIES) {
+      console.warn(`⚠️ Duplicate key error detected, syncing sequence and retrying (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+      
+      // Force sync the sequence
+      await syncTicketSequence();
+      
+      // Wait a bit before retry to avoid race conditions
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Retry the insert
+      return insertTicketsWithSequenceSync(tickets, retryCount + 1);
+    }
+    
+    return { data: insertedTickets, error };
+  }
+
+  /**
    * NEW: The final step that inserts ticket data into Supabase.
    * @param {Array<object>} ticketsToSubmit - The confirmed array of ticket data.
    */
@@ -3021,29 +3130,8 @@ async function submitQuickAddTicket() {
       }
     });
 
-    // Try to fix sequence if it's out of sync
-    try {
-      const { data: lastTicket } = await supabaseClient
-        .from("ticket")
-        .select("id")
-        .order("id", { ascending: false })
-        .limit(1)
-        .single();
-      
-      if (lastTicket) {
-        // Reset the sequence to be higher than the last ticket ID
-        await supabaseClient.rpc('reset_ticket_sequence', { 
-          new_start_value: lastTicket.id + 1 
-        });
-      }
-    } catch (seqError) {
-      console.warn("⚠️ Could not reset sequence (this is normal if function doesn't exist):", seqError.message);
-    }
-
-    const { data: insertedTickets, error } = await supabaseClient
-      .from("ticket")
-      .insert(ticketsToSubmit)
-      .select();
+    // Use the new insert function with automatic sequence sync
+    const { data: insertedTickets, error } = await insertTicketsWithSequenceSync(ticketsToSubmit);
 
     if (submitBtn) {
       submitBtn.textContent = "Confirm & Submit";
@@ -3786,6 +3874,20 @@ async function submitQuickAddTicket() {
         if (e.target.closest(".remove-field-btn")) {
           handleRemoveField(e);
         }
+        if (e.target.closest("#archive-ticket-btn") || e.target.closest(".archive-ticket-btn")) {
+          const btn = e.target.closest("#archive-ticket-btn") || e.target.closest(".archive-ticket-btn");
+          const ticketId = btn.dataset.ticketId;
+          if (ticketId) {
+            archiveTicket(ticketId);
+          }
+        }
+        if (e.target.closest(".delete-ticket-btn")) {
+          const btn = e.target.closest(".delete-ticket-btn");
+          const ticketId = btn.dataset.ticketId;
+          if (ticketId) {
+            archiveTicket(ticketId);
+          }
+        }
       });
 
       taskDetailModal.addEventListener("input", (e) => {
@@ -4448,6 +4550,11 @@ async function submitQuickAddTicket() {
       });
     }
 
+    // Filter out archived tickets - they should never be shown in the list
+    finalFilteredTickets = finalFilteredTickets.filter(
+      (t) => t.status !== "Archived"
+    );
+
     appData.tickets = finalFilteredTickets;
     if (
       appData.tickets.length > 0 &&
@@ -4524,7 +4631,9 @@ async function submitQuickAddTicket() {
     }
 
     projectStatsCache = appData.projects.map((project) => {
-      const tickets = appData.allTickets.filter((ticket) => ticket.projectId == project.id);
+      const tickets = appData.allTickets
+        .filter((ticket) => ticket.projectId == project.id)
+        .filter((ticket) => ticket.status !== "Archived"); // Exclude archived tickets from counts
       const completedTickets = tickets.filter(
         (ticket) => (ticket.status || "").toLowerCase() === "completed"
       ).length;
@@ -5118,6 +5227,7 @@ async function submitQuickAddTicket() {
 
     const projectTickets = appData.allTickets
       .filter((ticket) => String(ticket.projectId) === String(projectEntry.id))
+      .filter((ticket) => ticket.status !== "Archived") // Filter out archived tickets
       .sort((a, b) => ticketUpdatedAt(b) - ticketUpdatedAt(a));
 
     const activeEpicKey = currentEpicKey;
@@ -6599,10 +6709,7 @@ async function submitQuickAddTicket() {
         log: [],
       };
 
-      const { data: insertedTickets, error } = await supabaseClient
-        .from("ticket")
-        .insert(payload)
-        .select();
+      const { data: insertedTickets, error } = await insertTicketsWithSequenceSync([payload]);
 
       if (error) {
         console.error("Finder ticket creation failed:", error);
@@ -7317,8 +7424,8 @@ async function submitQuickAddTicket() {
 
     // Define columns for standard ticket views (incomplete has its own separate rendering)
     const columns = isBulkEditMode
-      ? ["", "ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee"]
-      : ["ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee"];
+      ? ["", "ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee", ""]
+      : ["ID", "Task", "Type", "Priority", "Status", "Requested By", "Assignee", ""];
     
     // Define sortable columns (exclude checkbox and actions columns)
     const sortableColumns = isBulkEditMode
@@ -7353,7 +7460,7 @@ async function submitQuickAddTicket() {
 
     if (paginatedTickets.length === 0) {
       // Calculate column count for standard ticket views
-      const baseColCount = 7; // ID, Task, Type, Priority, Status, Requested By, Assignee
+      const baseColCount = 8; // ID, Task, Type, Priority, Status, Requested By, Assignee, Actions
       const colCount = isBulkEditMode ? baseColCount + 1 : baseColCount;
       tableBody.innerHTML = `
         <tr>
@@ -7460,6 +7567,11 @@ async function submitQuickAddTicket() {
               ticket.id,
               "assigneeId"
             )}</td>
+            <td data-label="Actions" class="actions-cell">
+              <button class="delete-ticket-btn" data-ticket-id="${ticket.id}" title="Delete ticket (archive)">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </td>
         `;
       
       row.innerHTML = rowContent;
@@ -7909,6 +8021,15 @@ async function submitQuickAddTicket() {
           ? null
           : addEpicBtn.dataset.projectId;
       handleAddNewEpic(addEpicBtn.closest("tr"), projectId);
+      return;
+    }
+    const deleteTicketBtn = target.closest(".delete-ticket-btn");
+    if (deleteTicketBtn) {
+      e.stopPropagation();
+      const ticketId = deleteTicketBtn.dataset.ticketId;
+      if (ticketId) {
+        archiveTicket(ticketId);
+      }
       return;
     }
     if (target.classList.contains("status-tag")) {
@@ -9028,6 +9149,11 @@ async function submitQuickAddTicket() {
                     </div>
                 </div>
             </div>
+            <div class="sidebar-section" style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--border-color);">
+                <button id="archive-ticket-btn" class="archive-ticket-btn" data-ticket-id="${ticket.id}" title="Delete this ticket (archive)" ${ticket.status === "Archived" ? 'disabled' : ''}>
+                    <i class="fas fa-trash-alt"></i> ${ticket.status === "Archived" ? "Archived" : "Delete Ticket"}
+                </button>
+            </div>
         </div>
         ${epicDatalist}`;
 
@@ -9074,6 +9200,109 @@ async function submitQuickAddTicket() {
     
     // Store cleanup function for later use (not in dataset since it's not a string)
     modal._cleanupDropdowns = cleanup;
+  }
+
+  // Function to archive a ticket (set status to "Archived")
+  async function archiveTicket(ticketId) {
+    const ticket = appData.allTickets.find((t) => t.id == ticketId);
+    if (!ticket) {
+      showToast("Ticket not found", "error");
+      return;
+    }
+
+    // Check if already archived
+    if (ticket.status === "Archived") {
+      showToast("Ticket is already archived", "info");
+      return;
+    }
+
+    // Confirm action
+    const confirmed = confirm(
+      `Are you sure you want to delete ticket HRB-${ticketId}?\n\nThis will set the status to "Archived". The ticket will not be permanently deleted.`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const modal = document.getElementById("task-detail-modal");
+    const archiveBtn = modal?.querySelector("#archive-ticket-btn");
+    
+    if (archiveBtn) {
+      archiveBtn.disabled = true;
+      archiveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting...';
+    }
+
+    const supabaseClient =
+      window.supabaseClient || (await waitForSupabase().catch(() => null));
+    if (!supabaseClient) {
+      showToast("Supabase client unavailable.", "error");
+      if (archiveBtn) {
+        archiveBtn.disabled = false;
+        archiveBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete Ticket';
+      }
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const oldStatus = ticket.status || "Open";
+
+    // Prepare updates
+    const updates = {
+      status: "Archived",
+    };
+
+    // Add log entry
+    const logEntry = {
+      user: appData.currentUserEmail,
+      timestamp: nowIso,
+      field: "status",
+      oldValue: oldStatus,
+      newValue: "Archived",
+      reason: "Ticket archived by user",
+    };
+
+    updates.log = Array.isArray(ticket.log)
+      ? [...ticket.log, logEntry]
+      : [logEntry];
+
+    // Update the ticket in the database
+    const { error } = await supabaseClient
+      .from("ticket")
+      .update(updates)
+      .eq("id", ticketId);
+
+    if (error) {
+      showToast("Failed to delete ticket: " + error.message, "error");
+      if (archiveBtn) {
+        archiveBtn.disabled = false;
+        archiveBtn.innerHTML = '<i class="fas fa-trash-alt"></i> Delete Ticket';
+      }
+    } else {
+      showToast(`Ticket HRB-${ticketId} has been deleted (archived)`, "success");
+      
+      // Update local ticket data
+      const ticketIndex = appData.allTickets.findIndex((t) => t.id == ticketId);
+      if (ticketIndex !== -1) {
+        appData.allTickets[ticketIndex] = {
+          ...appData.allTickets[ticketIndex],
+          ...updates,
+        };
+      }
+
+      // Dispatch event to update UI
+      const updateEvent = new CustomEvent("ticketUpdated", {
+        detail: { ticketId: ticketId },
+      });
+      document.dispatchEvent(updateEvent);
+
+      // Close the modal after a short delay
+      setTimeout(() => {
+        if (modal) {
+          modal.style.display = "none";
+        }
+      }, 1000);
+    }
   }
 
   function addTagEditorEventListeners(modal) {
@@ -9732,45 +9961,50 @@ async function submitQuickAddTicket() {
 
     const doneStatuses = ["Completed", "Rejected", "Cancelled"];
 
-    // MODIFIED: Filter by assigneeId and the current user's ID
+    // MODIFIED: Filter by assigneeId and the current user's ID, excluding archived tickets
     const myTicketCount = appData.allTickets.filter((t) => {
+      const isNotArchived = t.status !== "Archived";
       const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
       const isNotCompleted = excludeDoneSettings['my-ticket'] ? !doneStatuses.includes(t.status) : true;
-      return isAssignedToCurrentUser && isNotCompleted;
+      return isNotArchived && isAssignedToCurrentUser && isNotCompleted;
     }).length;
 
-    // MODIFIED: Filter where assigneeId is null or undefined
+    // MODIFIED: Filter where assigneeId is null or undefined, excluding archived tickets
     const unassignedCount = appData.allTickets.filter((t) => {
+      const isNotArchived = t.status !== "Archived";
       const isUnassigned = t.assigneeId == null;
       const isNotCompleted = excludeDoneSettings['unassigned'] ? !doneStatuses.includes(t.status) : true;
-      return isUnassigned && isNotCompleted;
+      return isNotArchived && isUnassigned && isNotCompleted;
     }).length;
 
-    // Count tickets with incomplete data (default to current user)
+    // Count tickets with incomplete data (default to current user), excluding archived tickets
     const incompleteCount = appData.allTickets.filter((t) => {
+      const isNotArchived = t.status !== "Archived";
       const warnings = getTicketWarnings(t);
-      return warnings.length > 0 && t.assigneeId == appData.currentUserId;
+      return isNotArchived && warnings.length > 0 && t.assigneeId == appData.currentUserId;
     }).length;
 
-    // Count critical tickets (Urgent or High priority assigned to current user)
+    // Count critical tickets (Urgent or High priority assigned to current user), excluding archived tickets
     const criticalCount = appData.allTickets.filter((t) => {
+      const isNotArchived = t.status !== "Archived";
       const isHighPriority = t.priority === "Urgent" || t.priority === "High";
       const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
       const isNotCompleted = excludeDoneSettings['critical'] ? !doneStatuses.includes(t.status) : true;
-      return isHighPriority && isAssignedToCurrentUser && isNotCompleted;
+      return isNotArchived && isHighPriority && isAssignedToCurrentUser && isNotCompleted;
     }).length;
 
-    // Count stalled tickets (On Hold or Blocked assigned to current user)
+    // Count stalled tickets (On Hold or Blocked assigned to current user), excluding archived tickets
     const stalledCount = appData.allTickets.filter((t) => {
+      const isNotArchived = t.status !== "Archived";
       const isStalledStatus = t.status === "On Hold" || t.status === "Blocked";
       const isAssignedToCurrentUser = t.assigneeId == appData.currentUserId;
-      return isStalledStatus && isAssignedToCurrentUser;
+      return isNotArchived && isStalledStatus && isAssignedToCurrentUser;
     }).length;
 
-    // Count all tickets (respecting excludeDone for consistency)
+    // Count all tickets (respecting excludeDone for consistency), excluding archived tickets
     const allTicketsCount = excludeDoneSettings['all'] 
-      ? appData.allTickets.filter((t) => !doneStatuses.includes(t.status)).length
-      : appData.allTickets.length;
+      ? appData.allTickets.filter((t) => t.status !== "Archived" && !doneStatuses.includes(t.status)).length
+      : appData.allTickets.filter((t) => t.status !== "Archived").length;
 
     myTicketCountEl.textContent = myTicketCount;
     myTicketCountEl.style.display = myTicketCount > 0 ? "inline-block" : "none";
@@ -10582,10 +10816,7 @@ async function submitQuickAddTicket() {
       });
       
       // Use Supabase directly like the existing ticket creation
-      const { data: insertedTickets, error } = await window.supabaseClient
-        .from("ticket")
-        .insert(tickets)
-        .select();
+      const { data: insertedTickets, error } = await insertTicketsWithSequenceSync(tickets);
 
       if (error) {
         throw new Error(error.message);
@@ -11320,10 +11551,7 @@ async function submitQuickAddTicket() {
       log: [],
     };
 
-    const { data: insertedTickets, error } = await supabaseClient
-      .from("ticket")
-      .insert(newTicketData)
-      .select();
+    const { data: insertedTickets, error } = await insertTicketsWithSequenceSync([newTicketData]);
 
     if (error) {
       showToast("Error: " + error.message, "error");
@@ -12929,14 +13157,11 @@ async function submitQuickAddTicket() {
     }
 
     // --- Supabase Operations ---
-    const { data: insertedTicket, error: insertError } = await supabaseClient
-      .from("ticket")
-      .insert(newTicketData)
-      .select()
-      .single();
+    const { data: insertedTickets, error: insertError } = await insertTicketsWithSequenceSync([newTicketData]);
+    const insertedTicket = insertedTickets && insertedTickets.length > 0 ? insertedTickets[0] : null;
 
-    if (insertError) {
-      showToast("Error creating ticket: " + insertError.message, "error");
+    if (insertError || !insertedTicket) {
+      showToast("Error creating ticket: " + (insertError?.message || "Unknown error"), "error");
       submitBtn.textContent = "Create Ticket";
       submitBtn.disabled = false;
       return;
@@ -12964,7 +13189,9 @@ async function submitQuickAddTicket() {
     }
 
     // Update frontend state with new ticket
-    await updateTicketDataAfterCreation([insertedTicket]);
+    if (insertedTicket) {
+      await updateTicketDataAfterCreation([insertedTicket]);
+    }
 
     // --- Finalize ---
     modal.style.display = "none";
