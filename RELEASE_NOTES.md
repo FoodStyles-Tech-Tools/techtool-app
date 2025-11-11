@@ -44,8 +44,12 @@ This document tracks all version updates and changes to the TechTool application
 **Release Date**: Ongoing
 **Status**: Development
 
-- Initial development phase
-- Core features in development
+#### 🐛 Bug Fixes
+- **Dark Mode Search Modal**: Fixed CTRL+F search modal UI in dark mode
+  - Added explicit dark mode styles for ticket search modal overlay, background, and borders
+  - Improved text color contrast for input fields, placeholders, and result text
+  - Enhanced visibility of icons, close button, and keyboard hints in dark mode
+  - Fixed scrollbar styling and interactive element hover states for dark theme
 
 ---
 

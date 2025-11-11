@@ -313,14 +313,14 @@ function closeUserSettingsOverlay() {
   let dashboardEndDate = null;
   let reconcileSelectedUserName = null;
 const QUICK_ADD_COMMANDS = [
-  { key: "assignee", label: "Assignee", description: "Assign to a teammate" },
-  { key: "requester", label: "Requester", description: "Set who requested the work" },
-  { key: "project", label: "Project", description: "Link to a project" },
-  { key: "created", label: "Created Date", description: "Pick ticket creation date" },
-  { key: "assigned", label: "Assigned Date", description: "Pick when the ticket was assigned" },
-  { key: "priority", label: "Priority", description: "Urgent, High, Medium, Low" },
-  { key: "type", label: "Type", description: "Task, Bug, Request" },
-  { key: "description", label: "Description", description: "Add a short note" },
+  { key: "assignee", label: "Assignee", description: "Assign to a teammate", icon: "fa-user", shortcut: null, section: "suggested" },
+  { key: "project", label: "Project", description: "Link to a project", icon: "fa-folder", shortcut: null, section: "suggested" },
+  { key: "priority", label: "Priority", description: "Urgent, High, Medium, Low", icon: "fa-flag", shortcut: null, section: "suggested" },
+  { key: "requester", label: "Requester", description: "Set who requested the work", icon: "fa-user-tag", shortcut: null, section: "basic" },
+  { key: "created", label: "Created Date", description: "Pick ticket creation date", icon: "fa-calendar", shortcut: null, section: "basic" },
+  { key: "assigned", label: "Assigned Date", description: "Pick when the ticket was assigned", icon: "fa-calendar-check", shortcut: null, section: "basic" },
+  { key: "type", label: "Type", description: "Task, Bug, Request", icon: "fa-tag", shortcut: null, section: "basic" },
+  { key: "description", label: "Description", description: "Add a short note", icon: "fa-align-left", shortcut: null, section: "basic" },
 ];
 
 const QUICK_ADD_COMMAND_ALIASES = {
@@ -1339,16 +1339,70 @@ function showQuickAddCommandList(query = "") {
     return;
   }
 
-  quickAddCommandList.innerHTML = availableCommands
-    .map(
-      (command) => `
-        <button type="button" class="quick-add-command" data-command="${command.key}">
-          <span>/${command.key}</span>
-          <small>${command.description}</small>
+  // Group commands by section
+  const suggestedCommands = availableCommands.filter(cmd => cmd.section === "suggested");
+  const basicCommands = availableCommands.filter(cmd => cmd.section === "basic");
+
+  let html = "";
+  let commandIndex = 0;
+
+  // Render Suggested section
+  if (suggestedCommands.length > 0) {
+    html += `<div class="quick-add-command-section">
+      <div class="quick-add-command-section-header">Suggested</div>
+      <div class="quick-add-command-section-items">`;
+    
+    suggestedCommands.forEach((command) => {
+      html += `
+        <button type="button" class="quick-add-command" data-command="${command.key}" data-index="${commandIndex}">
+          <div class="quick-add-command-icon">
+            <i class="fas ${command.icon}"></i>
+          </div>
+          <div class="quick-add-command-content">
+            <div class="quick-add-command-label">${escapeHtml(command.label)}</div>
+            <div class="quick-add-command-description">${escapeHtml(command.description)}</div>
+          </div>
+          ${command.shortcut ? `<div class="quick-add-command-shortcut">${escapeHtml(command.shortcut)}</div>` : ''}
         </button>
-      `
-    )
-    .join("");
+      `;
+      commandIndex++;
+    });
+    
+    html += `</div></div>`;
+  }
+
+  // Render Basic blocks section
+  if (basicCommands.length > 0) {
+    html += `<div class="quick-add-command-section">
+      <div class="quick-add-command-section-header">Basic blocks</div>
+      <div class="quick-add-command-section-items">`;
+    
+    basicCommands.forEach((command) => {
+      html += `
+        <button type="button" class="quick-add-command" data-command="${command.key}" data-index="${commandIndex}">
+          <div class="quick-add-command-icon">
+            <i class="fas ${command.icon}"></i>
+          </div>
+          <div class="quick-add-command-content">
+            <div class="quick-add-command-label">${escapeHtml(command.label)}</div>
+            <div class="quick-add-command-description">${escapeHtml(command.description)}</div>
+          </div>
+          ${command.shortcut ? `<div class="quick-add-command-shortcut">${escapeHtml(command.shortcut)}</div>` : ''}
+        </button>
+      `;
+      commandIndex++;
+    });
+    
+    html += `</div></div>`;
+  }
+
+  // Add footer hint
+  html += `<div class="quick-add-command-footer">
+    <span>Type '/' on the page</span>
+    <span class="quick-add-command-footer-shortcut">esc</span>
+  </div>`;
+
+  quickAddCommandList.innerHTML = html;
 
   quickAddCommandOptions = Array.from(
     quickAddCommandList.querySelectorAll(".quick-add-command")
@@ -1373,10 +1427,27 @@ function positionQuickAddCommandList(range) {
   }
   const caretRect = range.getBoundingClientRect();
   const panelRect = quickAddEditor.getBoundingClientRect();
-  const top = caretRect.bottom - panelRect.top + quickAddEditor.scrollTop + 8;
-  const left = caretRect.left - panelRect.left + quickAddEditor.scrollLeft;
-  quickAddCommandList.style.top = `${Math.max(top, 0)}px`;
-  quickAddCommandList.style.left = `${Math.max(left, 0)}px`;
+  const listRect = quickAddCommandList.getBoundingClientRect();
+  
+  let top = caretRect.bottom - panelRect.top + quickAddEditor.scrollTop + 8;
+  let left = caretRect.left - panelRect.left + quickAddEditor.scrollLeft;
+  
+  // Adjust if menu would go off-screen
+  const editorRight = panelRect.left + panelRect.width;
+  const menuRight = caretRect.left + listRect.width;
+  if (menuRight > editorRight) {
+    left = Math.max(0, panelRect.width - listRect.width - 8);
+  }
+  
+  // Adjust if menu would go below editor
+  const editorBottom = panelRect.top + panelRect.height;
+  const menuBottom = caretRect.bottom + listRect.height + 16;
+  if (menuBottom > editorBottom && top > listRect.height) {
+    top = caretRect.top - panelRect.top + quickAddEditor.scrollTop - listRect.height - 8;
+  }
+  
+  quickAddCommandList.style.top = `${Math.max(0, top)}px`;
+  quickAddCommandList.style.left = `${Math.max(0, left)}px`;
 }
 
 function hideQuickAddCommandList() {
@@ -1399,6 +1470,12 @@ function setActiveCommandIndex(index) {
   quickAddCommandOptions.forEach((option, optionIndex) => {
     option.classList.toggle("active", optionIndex === quickAddActiveCommandIndex);
   });
+  
+  // Scroll active item into view
+  const activeOption = quickAddCommandOptions[quickAddActiveCommandIndex];
+  if (activeOption && quickAddCommandList) {
+    activeOption.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
 }
 
 function acceptActiveCommand() {
@@ -1563,6 +1640,38 @@ function createQuickAddChip(commandKey) {
         return;
       }
     });
+  } else {
+    // Add Tab key handling for searchable dropdowns
+    if (control) {
+      control.addEventListener("keydown", (event) => {
+        if (event.key === "Tab" && !event.shiftKey) {
+          // Close dropdown if open
+          const dropdownList = control.closest(".searchable-dropdown")?.querySelector(".searchable-dropdown-list");
+          if (dropdownList && dropdownList.style.display === "block") {
+            dropdownList.style.display = "none";
+          }
+          // Move focus to editor
+          event.preventDefault();
+          event.stopPropagation();
+          quickAddEditor.focus();
+          placeCaretAtEnd(quickAddEditor);
+          return;
+        }
+        if (event.key === "Tab" && event.shiftKey) {
+          // Close dropdown if open
+          const dropdownList = control.closest(".searchable-dropdown")?.querySelector(".searchable-dropdown-list");
+          if (dropdownList && dropdownList.style.display === "block") {
+            dropdownList.style.display = "none";
+          }
+          // Move focus to editor
+          event.preventDefault();
+          event.stopPropagation();
+          quickAddEditor.focus();
+          placeCaretAtEnd(quickAddEditor);
+          return;
+        }
+      });
+    }
   }
 
   const updateStateFromControl = () => {
