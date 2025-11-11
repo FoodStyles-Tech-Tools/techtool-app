@@ -30,10 +30,6 @@
       <div class="app-body">
         <aside class="sidebar">
           <div class="nav-panel">
-            <button id="nav-home" class="nav-btn">
-              <i class="fas fa-home"></i>
-              <span>Dashboard</span>
-            </button>
             <button id="nav-projects" class="nav-btn">
               <i class="fas fa-folder"></i>
               <span>Projects</span>
@@ -41,19 +37,6 @@
             <button id="nav-tickets" class="nav-btn">
               <i class="fas fa-ticket-alt"></i>
               <span>Tickets</span>
-            </button>
-            <button id="nav-incomplete" class="nav-btn">
-              <i class="fas fa-exclamation-triangle"></i>
-              <span>Incomplete</span>
-              <span
-                id="incomplete-count"
-                class="nav-badge"
-                style="display: none"
-              ></span>
-            </button>
-            <button id="nav-reconcile" class="nav-btn">
-              <i class="far fa-clock"></i>
-              <span>Reconcile Hours</span>
             </button>
           </div>
           <div class="sidebar-user-profile">
@@ -119,218 +102,6 @@
         </aside>
         <div class="main-content-wrapper">
           <main>
-          <div id="dashboard-view-wrapper" style="display: none">
-            <!-- Modern Dashboard Header -->
-            <div class="dashboard-header-modern">
-              <div class="header-content">
-                <div class="header-text">
-                  <h1 class="dashboard-title-modern">Analytics Dashboard</h1>
-                  <p class="dashboard-subtitle-modern">Real-time insights and performance metrics</p>
-                </div>
-                <div class="header-filters-modern">
-                  <div class="filter-group-modern">
-                    <label for="dashboard-assignee-filter">Team</label>
-                    <select id="dashboard-assignee-filter" class="filter-select-modern">
-                      <option value="all">All Members</option>
-                    </select>
-                  </div>
-                  <div class="filter-group-modern">
-                    <label for="dashboard-start-date">From</label>
-                    <input type="date" id="dashboard-start-date" class="filter-input-modern" />
-                  </div>
-                  <div class="filter-group-modern">
-                    <label for="dashboard-end-date">To</label>
-                    <input type="date" id="dashboard-end-date" class="filter-input-modern" />
-                  </div>
-                  <button class="refresh-btn" onclick="renderDashboard()">
-                    <i class="fas fa-sync-alt"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-
-            <!-- Enhanced Metrics Grid -->
-            <div class="metrics-grid-modern">
-              <div class="metric-card-modern primary-gradient">
-                <div class="metric-header">
-                  <div class="metric-icon-modern">
-                    <i class="fas fa-chart-line"></i>
-                  </div>
-                  <div class="metric-trend positive" id="tickets-trend">
-                    <i class="fas fa-arrow-up"></i>
-                    <span id="tickets-change">+12%</span>
-                  </div>
-                </div>
-                <div class="metric-content-modern">
-                  <div class="metric-value-modern" id="total-tickets-count">0</div>
-                  <div class="metric-label-modern">Total Tickets</div>
-                  <div class="metric-description">All time tickets created</div>
-                </div>
-                <div class="metric-chart-mini" id="total-chart-mini"></div>
-              </div>
-              
-              <div class="metric-card-modern success-gradient">
-                <div class="metric-header">
-                  <div class="metric-icon-modern">
-                    <i class="fas fa-check-circle"></i>
-                  </div>
-                  <div class="metric-trend positive" id="completed-trend">
-                    <i class="fas fa-arrow-up"></i>
-                    <span id="completed-change">+8%</span>
-                  </div>
-                </div>
-                <div class="metric-content-modern">
-                  <div class="metric-value-modern" id="completed-tickets-count">0</div>
-                  <div class="metric-label-modern">Completed</div>
-                  <div class="metric-description">Successfully resolved</div>
-                </div>
-                <div class="metric-chart-mini" id="completed-chart-mini"></div>
-              </div>
-              
-              <div class="metric-card-modern warning-gradient">
-                <div class="metric-header">
-                  <div class="metric-icon-modern">
-                    <i class="fas fa-clock"></i>
-                  </div>
-                  <div class="metric-trend positive" id="progress-trend">
-                    <i class="fas fa-arrow-up"></i>
-                    <span id="progress-change">+5%</span>
-                  </div>
-                </div>
-                <div class="metric-content-modern">
-                  <div class="metric-value-modern" id="in-progress-count">0</div>
-                  <div class="metric-label-modern">In Progress</div>
-                  <div class="metric-description">Currently being worked on</div>
-                </div>
-                <div class="metric-chart-mini" id="progress-chart-mini"></div>
-              </div>
-              
-              <div class="metric-card-modern danger-gradient">
-                <div class="metric-header">
-                  <div class="metric-icon-modern">
-                    <i class="fas fa-exclamation-triangle"></i>
-                  </div>
-                  <div class="metric-trend negative" id="blocked-trend">
-                    <i class="fas fa-arrow-down"></i>
-                    <span id="blocked-change">-3%</span>
-                  </div>
-                </div>
-                <div class="metric-content-modern">
-                  <div class="metric-value-modern" id="blocked-count">0</div>
-                  <div class="metric-label-modern">Blocked</div>
-                  <div class="metric-description">Requiring attention</div>
-                </div>
-                <div class="metric-chart-mini" id="blocked-chart-mini"></div>
-              </div>
-            </div>
-
-            <!-- Advanced Analytics Section -->
-            <div class="analytics-section">
-              <div class="chart-container-modern">
-                <div class="chart-header-modern">
-                  <div class="chart-title-section">
-                    <h3>Performance Trends</h3>
-                    <p>Ticket creation and completion over time</p>
-                  </div>
-                </div>
-                <div class="chart-wrapper">
-                  <canvas id="trends-chart"></canvas>
-                </div>
-                
-                <!-- Extended Chart Metrics -->
-                <div class="chart-metrics-section">
-                  <div class="chart-metrics-grid">
-                    <div class="chart-metric-item">
-                      <div class="metric-label">Peak Week</div>
-                      <div class="metric-value" id="peak-week">Week 36</div>
-                    </div>
-                    <div class="chart-metric-item">
-                      <div class="metric-label">Avg Created/Day</div>
-                      <div class="metric-value" id="avg-created-per-day">3.2</div>
-                    </div>
-                    <div class="chart-metric-item">
-                      <div class="metric-label">Avg Completed/Day</div>
-                      <div class="metric-value" id="avg-completed-per-day">2.8</div>
-                    </div>
-                    <div class="chart-metric-item">
-                      <div class="metric-label">Backlog Trend</div>
-                      <div class="metric-value" id="backlog-trend">+12%</div>
-                    </div>
-                    <div class="chart-metric-item">
-                      <div class="metric-label">Velocity Score</div>
-                      <div class="metric-value" id="velocity-score">High</div>
-                    </div>
-                  </div>
-                </div>
-                </div>
-              
-              <div class="insights-panel">
-                <div class="insight-card">
-                  <div class="insight-header">
-                    <h4>Priority Distribution</h4>
-                    <div class="insight-value" id="priority-insight">Medium Heavy</div>
-                </div>
-                  <div class="priority-chart-modern">
-                    <canvas id="priority-chart"></canvas>
-              </div>
-                  <div class="priority-legend-modern" id="priority-legend"></div>
-            </div>
-
-                <div class="insight-card">
-                  <div class="insight-header">
-                    <h4>Velocity Metrics</h4>
-                    <div class="insight-value" id="velocity-insight">High</div>
-              </div>
-                  <div class="velocity-metrics">
-                    <div class="velocity-item">
-                      <span class="velocity-label">Avg. Response</span>
-                      <span class="velocity-value" id="avg-response-time">0d</span>
-                    </div>
-                    <div class="velocity-item">
-                      <span class="velocity-label">Avg. Resolution</span>
-                      <span class="velocity-value" id="avg-resolution-time">0d</span>
-                    </div>
-                    <div class="velocity-item">
-                      <span class="velocity-label">Completion Rate</span>
-                      <span class="velocity-value" id="completion-rate">0%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-
-          </div>
-          <div
-            id="reconcile-filters"
-            class="filter-panel"
-            style="display: none"
-          >
-            <div
-              id="reconcile-user-filter-container"
-              class="filter-item"
-              style="display: none"
-            >
-              <label for="reconcile-user-select"
-                ><i class="fas fa-user-friends"></i> Team Member</label
-              >
-              <select
-                id="reconcile-user-select"
-                class="inline-editor"
-              ></select>
-            </div>
-            <div class="filter-item">
-              <label>
-                <input
-                  type="checkbox"
-                  id="reconcile-exclude-done"
-                  checked
-                />
-                Exclude Done
-              </label>
-            </div>
-          </div>
 
           <div
             id="task-detail-modal"
@@ -390,6 +161,10 @@
               <button id="ticket-tab-unassigned" class="ticket-tab" data-view="unassigned">
                 <span>Unassigned</span>
                 <span id="unassigned-count" class="tab-badge" style="display: none"></span>
+              </button>
+              <button id="ticket-tab-incomplete" class="ticket-tab" data-view="incomplete">
+                <span>Incomplete</span>
+                <span id="incomplete-count" class="tab-badge" style="display: none"></span>
               </button>
             </div>
           </div>
@@ -483,27 +258,6 @@
                 </thead>
                 <tbody></tbody>
               </table>
-            </div>
-          </div>
-
-          <div
-            id="reconcile-view-wrapper"
-            class="table-wrapper"
-            style="display: none"
-          >
-            <div
-              id="reconcile-pagination-controls"
-              class="pagination-controls"
-              style="display: none"
-            >
-              <span
-                id="reconcile-total-count"
-                class="page-info"
-                style="margin-right: auto"
-              ></span>
-              <button id="reconcile-prev-page">&laquo; Previous</button>
-              <span id="reconcile-page-info" class="page-info"></span>
-              <button id="reconcile-next-page">Next &raquo;</button>
             </div>
           </div>
 

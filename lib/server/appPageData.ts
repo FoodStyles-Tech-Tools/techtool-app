@@ -57,7 +57,7 @@ export async function resolveAppPageProps(
 
   // Handle tab parameter for tickets page
   if (config.defaultView === "tickets" && typeof tabParam === "string") {
-    const validTabs: AppView[] = ["all", "my-ticket", "critical", "stalled", "unassigned"];
+    const validTabs: AppView[] = ["all", "my-ticket", "critical", "stalled", "unassigned", "incomplete"];
     if (validTabs.includes(tabParam as AppView)) {
       initialView = tabParam as AppView;
     } else {

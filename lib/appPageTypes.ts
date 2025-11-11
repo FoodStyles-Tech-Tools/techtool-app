@@ -1,5 +1,4 @@
 export type AppView =
-  | "home"
   | "tickets"
   | "all"
   | "my-ticket"
@@ -7,8 +6,7 @@ export type AppView =
   | "stalled"
   | "unassigned"
   | "incomplete"
-  | "projects"
-  | "reconcile";
+  | "projects";
 
 export type AppPageConfig = {
   defaultView: AppView;

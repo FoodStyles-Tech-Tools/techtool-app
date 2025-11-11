@@ -1,4 +1,4 @@
-function formatRoleDisplay(role) {
+﻿function formatRoleDisplay(role) {
   if (!role) return "Member";
   return String(role)
     .replace(/[_-]+/g, " ")
@@ -198,8 +198,6 @@ function closeUserSettingsOverlay() {
     users: [],
     teamMembers: [],
     epics: [],
-    allReconcileHrs: [],
-    reconcileHrs: [],
     currentUserName: "",
     currentUserEmail: "",
     currentUserId: null,
@@ -209,7 +207,6 @@ function closeUserSettingsOverlay() {
     currentUserProfile: null,
   };
   let currentPage = 1;
-  let reconcileWrapper = null; // <--- ADD THIS LINE
   let tableWrapper = null; // <--- ADD THIS LINE
   let currentView = "projects";
   let currentProjectId = null;
@@ -253,16 +250,14 @@ function closeUserSettingsOverlay() {
   };
 
   const VIEW_ROUTE_MAP = {
-    home: "/dashboard",
     tickets: "/tickets",
     all: "/tickets",
     "my-ticket": "/tickets",
     critical: "/tickets",
     stalled: "/tickets",
     unassigned: "/tickets",
-    incomplete: "/incomplete",
+    incomplete: "/tickets",
     projects: "/projects",
-    reconcile: "/reconcile",
   };
   const ROUTE_VIEW_MAP = Object.entries(VIEW_ROUTE_MAP).reduce(
     (acc, [view, route]) => {
@@ -288,8 +283,6 @@ function closeUserSettingsOverlay() {
     selectedProjectFilter = "all",
     selectedEpicFilter = "all",
     selectedAssigneeFilter = "all",
-    reconcileExcludeDone = true,
-    reconcileCurrentPage = 1,
     selectedIncompleteMemberFilter = "all";
   
   // Sorting state
@@ -304,14 +297,9 @@ function closeUserSettingsOverlay() {
     'my-ticket': true,
     'critical': true,
     'stalled': true,
-    'unassigned': true
+    'unassigned': true,
+    'incomplete': true
   };
-  // --- ADD THESE NEW VARIABLES AT THE TOP ---
-  let trendsChart = null;
-  let dashboardAssigneeId = null;
-  let dashboardStartDate = null;
-  let dashboardEndDate = null;
-  let reconcileSelectedUserName = null;
 const QUICK_ADD_COMMANDS = [
   { key: "assignee", label: "Assignee", description: "Assign to a teammate", icon: "fa-user", shortcut: null, section: "suggested" },
   { key: "project", label: "Project", description: "Link to a project", icon: "fa-folder", shortcut: null, section: "suggested" },
@@ -768,7 +756,7 @@ function updateTicketSearchResults(rawTerm) {
         >
           <div class="ticket-search-result-main">
             <span class="ticket-search-result-title">${escapeHtml(ticket.title || "Untitled ticket")}</span>
-            <span class="ticket-search-result-meta">HRB-${escapeHtml(String(ticket.id))} · ${escapeHtml(statusLabel)}</span>
+            <span class="ticket-search-result-meta">HRB-${escapeHtml(String(ticket.id))} Â· ${escapeHtml(statusLabel)}</span>
           </div>
           <div class="ticket-search-result-side">
             <span class="ticket-search-result-project">${escapeHtml(projectLabel)}</span>
@@ -1092,7 +1080,7 @@ function updateProjectSearchResults(rawTerm) {
         >
           <div class="project-search-result-main">
             <span class="project-search-result-title">${escapeHtml(projectName)}</span>
-            <span class="project-search-result-meta">${escapeHtml(ticketsLabel)} · ${escapeHtml(completionLabel)}</span>
+            <span class="project-search-result-meta">${escapeHtml(ticketsLabel)} Â· ${escapeHtml(completionLabel)}</span>
           </div>
         </li>
       `;
@@ -2105,7 +2093,7 @@ async function submitQuickAddTicket() {
     const errorMessage = document.getElementById("error-message");
     
     if (!loader || !tableWrapper || !errorMessage) {
-      console.error("❌ Required elements not found, retrying in 100ms...");
+      console.error("âŒ Required elements not found, retrying in 100ms...");
       setTimeout(initializeApp, 100);
       return;
     }
@@ -2131,16 +2119,12 @@ async function submitQuickAddTicket() {
     // Force a UI refresh to ensure all views are updated
     setTimeout(() => {
       applyFilterAndRender();
-      if (currentView === "home") {
-        renderDashboard();
-      }
       updateNavBadgeCounts();
     }, 100);
   });
   
   async function startApp() {
     const loader = document.getElementById("loader");
-    reconcileWrapper = document.getElementById("reconcile-view-wrapper");
     tableWrapper = document.querySelector(".table-wrapper");
     const errorMessage = document.getElementById("error-message");
     
@@ -2177,7 +2161,7 @@ async function submitQuickAddTicket() {
       }
       
       if (!connectionTestPassed) {
-        console.error("❌ Supabase connection test failed after all retries");
+        console.error("âŒ Supabase connection test failed after all retries");
         showToast("Connection issues detected. Some features may not work properly.", "warning");
       }
       
@@ -2189,7 +2173,6 @@ async function submitQuickAddTicket() {
         { data: projectData, error: projectError },
         { data: memberData, error: memberError },
         { data: userData, error: userError },
-        { data: reconcileData, error: reconcileError },
       ] = await Promise.all([
         fetchAllPaginatedData(
           window.supabaseClient.from("ticket").select(`*, project (projectName)`)
@@ -2203,27 +2186,19 @@ async function submitQuickAddTicket() {
           .select("clockify_name")
           .order("clockify_name"),
         window.supabaseClient.from("user").select("id, name, email, role, mode, discordId").order("name"),
-        fetchAllPaginatedData(
-          window.supabaseClient
-            .from("reconcileHrs")
-            .select("*")
-            .order("id", { ascending: false })
-        ),
       ]);
 
       if (
         ticketError ||
         projectError ||
         memberError ||
-        userError ||
-        reconcileError
+        userError
       ) {
         console.error("Data Fetch Error:", {
           ticketError,
           projectError,
           memberError,
           userError,
-          reconcileError,
         });
         throw new Error("Failed to fetch initial data.");
       }
@@ -2267,7 +2242,6 @@ async function submitQuickAddTicket() {
       appData.epics = [
         ...new Set(ticketData.map((t) => t.epic).filter(Boolean)),
       ].sort();
-      appData.allReconcileHrs = reconcileData;
 
       appData.currentUserEmail = document.getElementById("user-email").value;
       const currentUser = userData.find(
@@ -2283,11 +2257,8 @@ async function submitQuickAddTicket() {
       appData.currentUserMode = (currentUser && currentUser.mode) || (modeInput ? modeInput.value : "");
       appData.currentUserDiscordId = currentUser?.discordId || "";
       appData.currentUserProfile = currentUser || null;
-      reconcileSelectedUserName = appData.currentUserName;
       initializeQuickAddSpotlight();
       setupSidebarUserProfile();
-
-      dashboardAssigneeId = appData.currentUserId; // Default to current user
 
       let forcedInitialView = null;
       if (!appData.currentUserName) {
@@ -2306,8 +2277,6 @@ async function submitQuickAddTicket() {
       addBulkEditListeners();
       addFilterListeners();
       addModalEventListeners();
-      // Add dashboard filter listeners after data is loaded
-      addDashboardFilterListeners();
 
       const clearUrlFilterBtn = document.getElementById("clear-url-filter-btn");
       const urlTicketNumberInput = document.getElementById("url-ticket-number");
@@ -2321,7 +2290,7 @@ async function submitQuickAddTicket() {
       // Check for tab query parameter
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get("tab");
-      const ticketTabViews = ["all", "my-ticket", "critical", "stalled", "unassigned"];
+      const ticketTabViews = ["all", "my-ticket", "critical", "stalled", "unassigned", "incomplete"];
       
       let initialView =
         forcedInitialView ??
@@ -2361,7 +2330,7 @@ async function submitQuickAddTicket() {
         // Check for tab query parameter
         const urlParams = new URLSearchParams(window.location.search);
         const tabParam = urlParams.get("tab");
-        const ticketTabViews = ["all", "my-ticket", "critical", "stalled", "unassigned"];
+        const ticketTabViews = ["all", "my-ticket", "critical", "stalled", "unassigned", "incomplete"];
         
         let nextView =
           (stateView && VIEW_ROUTE_MAP[stateView] ? stateView : null) ??
@@ -2385,7 +2354,6 @@ async function submitQuickAddTicket() {
 
       applyFilterAndRender();
       addPaginationListeners();
-      addReconcilePaginationListeners();
       
       // Set up real-time subscriptions with fallback
       try {
@@ -2448,7 +2416,7 @@ async function submitQuickAddTicket() {
     try {
       
       if (!window.supabaseClient) {
-        console.error("❌ Supabase client not available for real-time subscription");
+        console.error("âŒ Supabase client not available for real-time subscription");
         // Retry after a short delay
         setTimeout(() => {
           if (window.supabaseClient) {
@@ -2475,21 +2443,21 @@ async function submitQuickAddTicket() {
           if (status === "SUBSCRIBED") {
             window.realtimeSubscribed = true;
           } else if (status === "CHANNEL_ERROR") {
-            console.error("❌ Real-time subscription error");
+            console.error("âŒ Real-time subscription error");
             window.realtimeSubscribed = false;
             // Retry subscription after error
             setTimeout(() => {
               subscribeToTicketChanges();
             }, 5000);
           } else if (status === "TIMED_OUT") {
-            console.error("❌ Real-time subscription timed out");
+            console.error("âŒ Real-time subscription timed out");
             window.realtimeSubscribed = false;
             // Retry subscription after timeout
             setTimeout(() => {
               subscribeToTicketChanges();
             }, 3000);
           } else if (status === "CLOSED") {
-            console.warn("⚠️ Real-time subscription closed");
+            console.warn("âš ï¸ Real-time subscription closed");
             window.realtimeSubscribed = false;
           }
         });
@@ -2595,11 +2563,6 @@ async function submitQuickAddTicket() {
       setTimeout(() => {
         try {
           applyFilterAndRender();
-          
-          // Update dashboard if it's currently visible
-          if (currentView === "home") {
-            renderDashboard();
-          }
           
           // Update navigation badges
           updateNavBadgeCounts();
@@ -3225,7 +3188,7 @@ async function submitQuickAddTicket() {
         .single();
       
       if (queryError && queryError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.warn("⚠️ Could not query max ticket ID:", queryError.message);
+        console.warn("âš ï¸ Could not query max ticket ID:", queryError.message);
         return false;
       }
       
@@ -3263,13 +3226,13 @@ async function submitQuickAddTicket() {
         }
       } catch (apiErr) {
         // API endpoint not available or failed
-        console.warn("⚠️ API endpoint sync failed:", apiErr);
+        console.warn("âš ï¸ API endpoint sync failed:", apiErr);
       }
       
       // If all methods fail, we'll handle it on insert with retry logic
       return true;
     } catch (error) {
-      console.warn("⚠️ Error syncing ticket sequence:", error.message);
+      console.warn("âš ï¸ Error syncing ticket sequence:", error.message);
       return false;
     }
   }
@@ -3302,7 +3265,7 @@ async function submitQuickAddTicket() {
     
     // If we get a duplicate key error, sync sequence and retry
     if (error && error.code === '23505' && retryCount < MAX_RETRIES) {
-      console.warn(`⚠️ Duplicate key error detected, syncing sequence and retrying (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+      console.warn(`âš ï¸ Duplicate key error detected, syncing sequence and retrying (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
       
       // Force sync the sequence
       await syncTicketSequence();
@@ -3340,7 +3303,7 @@ async function submitQuickAddTicket() {
     // Ensure no manual IDs are present
     ticketsToSubmit.forEach((ticket, index) => {
       if (ticket.id !== undefined) {
-        console.warn(`⚠️ Ticket ${index} has manual ID:`, ticket.id);
+        console.warn(`âš ï¸ Ticket ${index} has manual ID:`, ticket.id);
         delete ticket.id; // Remove any manual ID
       }
     });
@@ -3427,7 +3390,7 @@ async function submitQuickAddTicket() {
         if (!fetchError) break;
         
         retryCount++;
-        console.warn(`⚠️ Database fetch attempt ${retryCount} failed, retrying...`, fetchError);
+        console.warn(`âš ï¸ Database fetch attempt ${retryCount} failed, retrying...`, fetchError);
         
         if (retryCount < maxRetries) {
           await new Promise(resolve => setTimeout(resolve, 200 * retryCount));
@@ -3435,7 +3398,7 @@ async function submitQuickAddTicket() {
       }
 
       if (fetchError) {
-        console.error("❌ Error fetching fresh ticket data:", fetchError);
+        console.error("âŒ Error fetching fresh ticket data:", fetchError);
         // Fallback: just add the new tickets to existing state
         const formattedNewTickets = newTickets.map((t) => ({
           id: t.id,
@@ -3915,7 +3878,7 @@ async function submitQuickAddTicket() {
                   const newValue = input.value
                     ? new Date(input.value).toLocaleDateString()
                     : "empty";
-                  return `<li><strong>${fieldLabel}:</strong> ${oldValue} → ${newValue}</li>`;
+                  return `<li><strong>${fieldLabel}:</strong> ${oldValue} â†’ ${newValue}</li>`;
                 })
                 .join("");
 
@@ -4206,7 +4169,7 @@ async function submitQuickAddTicket() {
     } = {}
   ) {
     // Handle ticket tab views - they all use the tickets route
-    const ticketTabViews = ["all", "my-ticket", "critical", "stalled", "unassigned"];
+    const ticketTabViews = ["all", "my-ticket", "critical", "stalled", "unassigned", "incomplete"];
     const isTicketTabView = ticketTabViews.includes(view);
     const actualView = isTicketTabView ? "tickets" : view;
     
@@ -4220,9 +4183,7 @@ async function submitQuickAddTicket() {
 
     if (
       (isSwitchingView || isSwitchingTab) &&
-      !preserveFilters &&
-      actualView !== "home" &&
-      actualView !== "reconcile"
+      !preserveFilters
     ) {
       resetFilters();
     }
@@ -4240,7 +4201,6 @@ async function submitQuickAddTicket() {
     // Update current view - use the actual view for routing, but track the tab view
     currentView = isTicketTabView ? view : actualView;
     currentPage = 1;
-    reconcileCurrentPage = 1;
 
     // Update navigation buttons
     document
@@ -4534,49 +4494,15 @@ async function submitQuickAddTicket() {
       });
     }
 
-    const reconcileExcludeDoneCheckbox = document.getElementById("reconcile-exclude-done");
-    if (reconcileExcludeDoneCheckbox) {
-      reconcileExcludeDoneCheckbox.addEventListener("change", (e) => {
-        reconcileExcludeDone = e.target.checked;
-        applyFilterAndRender();
-      });
-    }
-    // ... at the end of the addFilterListeners function
-    const reconcileUserSelect = document.getElementById(
-      "reconcile-user-select"
-    );
-    // This check ensures we only populate it if the user is a lead
-    if (appData.currentUserRole === "Lead") {
-      const allUserNames = appData.teamMembers
-        .map((member) => member.name)
-        .sort();
-      reconcileUserSelect.innerHTML = allUserNames
-        .map(
-          (name) =>
-            `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`
-        )
-        .join("");
-      reconcileUserSelect.value = appData.currentUserName;
-    }
-
-    reconcileUserSelect.addEventListener("change", (e) => {
-      reconcileSelectedUserName = e.target.value;
-      // When changing user, reset page to 1
-      reconcileCurrentPage = 1;
-      applyFilterAndRender();
-    });
   }
   function applyFilterAndRender() {
     const mainTableWrapper = document.querySelector(".table-wrapper");
-    const reconcileWrapper = document.getElementById("reconcile-view-wrapper");
-    const dashboardWrapper = document.getElementById("dashboard-view-wrapper");
     const simpleIncompleteWrapper = document.getElementById("simple-incomplete-wrapper");
     const projectsWrapper = document.getElementById("projects-view-wrapper");
     const integratedFilters = document.getElementById("integrated-filters");
-    const reconcileFilters = document.getElementById("reconcile-filters");
     const mainPagination = document.getElementById("pagination-controls");
 
-    if (!mainTableWrapper || !reconcileWrapper || !dashboardWrapper) {
+    if (!mainTableWrapper) {
       return;
     }
 
@@ -4584,25 +4510,8 @@ async function submitQuickAddTicket() {
     if (simpleIncompleteWrapper) simpleIncompleteWrapper.style.display = "none";
     if (projectsWrapper) projectsWrapper.style.display = "none";
     if (integratedFilters) integratedFilters.style.display = "none";
-    if (reconcileFilters) reconcileFilters.style.display = "none";
-    reconcileWrapper.style.display = "none";
-    dashboardWrapper.style.display = "none";
     if (mainPagination) mainPagination.style.display = "none";
     document.body.classList.remove("project-view");
-
-    if (currentView === "home") {
-      dashboardWrapper.style.display = "flex";
-      setTimeout(() => {
-        renderDashboard();
-      }, 50);
-      return;
-    }
-
-    if (currentView === "incomplete") {
-      if (simpleIncompleteWrapper) simpleIncompleteWrapper.style.display = "block";
-      renderSimpleIncompleteView();
-      return;
-    }
 
     if (currentView === "projects") {
       if (projectsWrapper) projectsWrapper.style.display = "block";
@@ -4610,31 +4519,10 @@ async function submitQuickAddTicket() {
       return;
     }
 
-    if (currentView === "reconcile") {
-      reconcileWrapper.style.display = "block";
-      if (reconcileFilters) reconcileFilters.style.display = "flex";
-
-      const userFilterContainer = document.getElementById("reconcile-user-filter-container");
-      if (userFilterContainer) {
-        if (appData.currentUserRole === "Lead") {
-          userFilterContainer.style.display = "flex";
-        } else {
-          userFilterContainer.style.display = "none";
-          reconcileSelectedUserName = appData.currentUserName;
-        }
-      }
-
-      let filteredHrs = appData.allReconcileHrs.filter(
-        (r) => r.clockify_member === reconcileSelectedUserName
-      );
-
-      if (reconcileExcludeDone) {
-        filteredHrs = filteredHrs.filter(
-          (r) => !r.ticketNumber && !r.is_excluded
-        );
-      }
-      appData.reconcileHrs = filteredHrs;
-      renderReconcileView(appData.reconcileHrs);
+    // --- Special incomplete view ---
+    if (currentView === "incomplete") {
+      if (simpleIncompleteWrapper) simpleIncompleteWrapper.style.display = "block";
+      renderSimpleIncompleteView();
       return;
     }
 
@@ -8261,7 +8149,7 @@ async function submitQuickAddTicket() {
       });
     });
 
-    // ✅ attach checkbox click
+    // âœ… attach checkbox click
     newBody.querySelectorAll(".ticket-checkbox").forEach((cb) => {
       cb.addEventListener("change", handleCheckboxClick);
     });
@@ -9226,7 +9114,7 @@ async function submitQuickAddTicket() {
     // Return all statuses except the current one, formatted as transitions
     return allStatuses
       .filter(status => status !== currentStatus)
-      .map(status => `${currentStatus} → ${status}`);
+      .map(status => `${currentStatus} â†’ ${status}`);
   }
 
   // REPLACE the existing showTaskDetailModal function with this one
@@ -10055,23 +9943,23 @@ async function submitQuickAddTicket() {
     const optionsHTML = options
       .map((option) => {
         // For status field, extract the target status from transition format
-        const actualValue = field === 'status' && option.includes(' → ') 
-          ? option.split(' → ')[1] 
+        const actualValue = field === 'status' && option.includes(' â†’ ') 
+          ? option.split(' â†’ ')[1] 
           : option;
         const tagInfo = getTagInfo(field, actualValue);
         const isSelected = actualValue === selectedValue;
         
         // For status transitions, show both current and target status tags
         let displayHTML;
-        if (field === 'status' && option.includes(' → ')) {
-          const [currentStatus, targetStatus] = option.split(' → ');
+        if (field === 'status' && option.includes(' â†’ ')) {
+          const [currentStatus, targetStatus] = option.split(' â†’ ');
           const currentTagInfo = getTagInfo(field, currentStatus);
           const targetTagInfo = getTagInfo(field, targetStatus);
           
           displayHTML = `
             <div class="status-transition-option">
               <span class="jira-tag ${currentTagInfo.className}">${escapeHtml(currentStatus)}</span>
-              <span class="transition-arrow">→</span>
+              <span class="transition-arrow">â†’</span>
               <span class="jira-tag ${targetTagInfo.className}">${escapeHtml(targetStatus)}</span>
             </div>
           `;
@@ -11424,7 +11312,7 @@ async function submitQuickAddTicket() {
     selectedValue = null
   ) {
     if (!container) {
-      console.error("❌ Container is null or undefined!");
+      console.error("âŒ Container is null or undefined!");
       return;
     }
     
@@ -12284,7 +12172,7 @@ async function submitQuickAddTicket() {
     let selectedValues = [];
     const updateSelectedValues = () => {
       selectedValues = Array.from(container.querySelectorAll('.tag-chip'))
-        .map(chip => chip.dataset.value || chip.textContent.replace('×', '').trim())
+        .map(chip => chip.dataset.value || chip.textContent.replace('Ã—', '').trim())
         .filter(v => v);
     };
 
@@ -13113,8 +13001,8 @@ async function submitQuickAddTicket() {
       } else if (
         processedLine.startsWith("- ") ||
         processedLine.startsWith("* ") ||
-        processedLine.startsWith("✅ ") ||
-        processedLine.startsWith("❌ ")
+        processedLine.startsWith("âœ… ") ||
+        processedLine.startsWith("âŒ ")
       ) {
         // If we are not already in a list, start a new one.
         if (!inList) {
@@ -13146,15 +13034,12 @@ async function submitQuickAddTicket() {
     return html;
   }
 
-  // --- ADD THIS TO THE END OF YOUR JavaScript.html FILE ---
+  // Removed reconcile and dashboard functions
 
-  /**
-   * Formats an ISO date string into DD-MMM-YYYY format.
-   * @param {string} isoString - The date string to format.
-   * @returns {string} The formatted date string (e.g., "03-Sep-2025").
-   */
-  function formatDateForReconcile(isoString) {
-    if (!isoString) return "No Date";
+  // ADD this new helper function near the top of the <script> with other utilities
+  function formatDateForUIDisplay(dateString) {
+    // Expects YYYY-MM-DD
+    if (!dateString) return "";
     const months = [
       "Jan",
       "Feb",
@@ -13169,8 +13054,9 @@ async function submitQuickAddTicket() {
       "Nov",
       "Dec",
     ];
-    const date = new Date(isoString);
-    if (isNaN(date)) return "Invalid Date";
+    // Add T00:00:00 to avoid timezone issues where it might become the previous day
+    const date = new Date(dateString + "T00:00:00");
+    if (isNaN(date)) return "";
 
     const day = String(date.getDate()).padStart(2, "0");
     const month = months[date.getMonth()];
@@ -13178,1826 +13064,6 @@ async function submitQuickAddTicket() {
 
     return `${day}-${month}-${year}`;
   }
-  // REPLACE the existing renderReconcileView function.
-  function renderReconcileView(data) {
-    if (!reconcileWrapper) return; // Safety check
-    const scrollPosition = reconcileWrapper.scrollTop; // Store position
-    const wrapper = document.getElementById("reconcile-view-wrapper");
-
-    const headers = [
-      "Date",
-      "Member",
-      "Project",
-      "Task",
-      "Description",
-      "Duration",
-      "Action", // <-- NEW HEADER
-      "Ticket Number",
-      "Exclude",
-    ];
-
-    const paginatedData = data.slice(
-      (reconcileCurrentPage - 1) * ticketsPerPage,
-      reconcileCurrentPage * ticketsPerPage
-    );
-
-    let tableHTML = `<table id="reconcile-table">
-        <thead>
-            <tr>${headers.map((h) => `<th>${h}</th>`).join("")}</tr>
-        </thead>
-        <tbody>`;
-
-    if (paginatedData.length === 0) {
-      tableHTML += `<tr><td colspan="${headers.length}" style="text-align: center; padding: 2rem;">No hours to reconcile.</td></tr>`;
-    } else {
-      paginatedData.forEach((row, rowIndex) => {
-        let statusIcon;
-        if (row.ticketNumber || row.is_excluded) {
-          statusIcon = `<span class="reconcile-status-indicator done"><i class="fas fa-check"></i></span>`;
-        } else {
-          statusIcon = `<span class="reconcile-status-indicator todo"><i class="fas fa-circle"></i></span>`;
-        }
-
-        // --- NEW: Add the "Create Ticket" button ---
-        const createTicketBtnHtml = row.ticketNumber
-          ? "" // If ticket exists, show nothing
-          : `<button class="create-ticket-btn" data-reconcile-id="${row.id}" title="Create Ticket from this entry">
-                   <i class="fas fa-ticket-alt"></i> Create
-                 </button>`;
-
-        tableHTML += `<tr data-reconcile-id="${row.id}">
-                <td class="disabled-cell">
-                    <div class="reconcile-week-cell">
-                        ${statusIcon}
-                        <span>${formatDateForReconcile(row.date)}</span>
-                    </div>
-                </td>
-                <td class="disabled-cell" title="${escapeHtml(
-                  row.clockify_member
-                )}">${escapeHtml(row.clockify_member)}</td>
-                <td class="disabled-cell" title="${escapeHtml(
-                  row.project
-                )}">${escapeHtml(row.project)}</td>
-                <td class="disabled-cell" title="${escapeHtml(
-                  row.task
-                )}">${escapeHtml(row.task)}</td>
-                <td class="disabled-cell" title="${escapeHtml(
-                  row.description
-                )}">${escapeHtml(row.description)}</td>
-                <td class="disabled-cell">${escapeHtml(
-                  row.duration_decimal
-                )}</td>
-                <td class="action-cell">
-                  ${createTicketBtnHtml}
-                </td>
-                <td class="editable-cell" tabindex="0" data-field="ticketNumber">
-                    ${createReconcileTicketDropdown(row.ticketNumber, row.id)}
-                </td>
-                <td class="exclude-cell" tabindex="0">
-                    <input type="checkbox" class="reconcile-exclude-checkbox" data-reconcile-id="${
-                      row.id
-                    }" ${
-          row.is_excluded ? "checked" : ""
-        } title="Exclude this entry from view when 'Exclude Done' is active">
-                </td>
-            </tr>`;
-      });
-    }
-
-    tableHTML += `</tbody></table>`;
-    wrapper.querySelector("#reconcile-table")?.remove();
-    wrapper.insertAdjacentHTML("afterbegin", tableHTML);
-
-    addReconcileEventListeners();
-    addReconcileKeyboardListeners();
-    updateReconcilePagination(data.length);
-    wrapper.scrollTop = scrollPosition;
-  }
-  /**
-   * Creates a searchable dropdown specifically for the reconcile view.
-   */
-  function createReconcileTicketDropdown(selectedValue, reconcileId) {
-    const selectedTicket = appData.allTickets.find(
-      (t) => t.id == selectedValue
-    );
-    // MODIFIED: Add "HRB-" prefix to the selected ticket's display text.
-    const selectedText = selectedTicket
-      ? `[HRB-${selectedTicket.id}] ${selectedTicket.title}`
-      : "";
-
-    // MODIFIED: Add "HRB-" prefix to the ID in each dropdown option.
-    let optionsHTML = appData.allTickets
-      .map(
-        (ticket) => `
-        <div data-value="${escapeHtml(ticket.id)}">
-            <strong>HRB-${escapeHtml(ticket.id)}</strong>
-            <small>${escapeHtml(ticket.title || "No Title")}</small>
-        </div>
-    `
-      )
-      .join("");
-
-    return `<div class="editable-field-wrapper has-value reconcile-ticket-dropdown">
-        <div class="searchable-dropdown">
-            <input type="text" class="searchable-dropdown-input" value="${escapeHtml(
-              selectedText
-            )}" 
-                   placeholder="Search Ticket ID or Title..." data-reconcile-id="${reconcileId}" 
-                   data-field="ticketNumber" data-old-value="${escapeHtml(
-                     selectedValue || ""
-                   )}" autocomplete="off">
-            <div class="searchable-dropdown-list">${optionsHTML}</div>
-        </div>
-        <i class="fas fa-times-circle clear-icon"></i>
-    </div>`;
-  }
-  // REPLACE the existing addReconcileEventListeners function.
-  function addReconcileEventListeners() {
-    const wrapper = document.getElementById("reconcile-view-wrapper");
-    if (!wrapper) return;
-
-    // Combined listener for clicks and changes
-    const handleEvent = (e) => {
-      // Handle "Create Ticket" button click
-      const createBtn = e.target.closest(".create-ticket-btn");
-      if (e.type === "click" && createBtn) {
-        const reconcileId = createBtn.dataset.reconcileId;
-        openReconcileCreateTicketModal(reconcileId);
-        return;
-      }
-
-      // Handle dropdown item selection
-      if (
-        e.type === "click" &&
-        e.target.closest(".searchable-dropdown-list div")
-      ) {
-        const item = e.target.closest(".searchable-dropdown-list div");
-        const newValue = item.dataset.value;
-        const dropdown = item.closest(".searchable-dropdown-list");
-        
-        
-        // Find the input associated with this dropdown
-        let input = null;
-        if (dropdown.dataset.connectedInput) {
-          // Find input by reconcileId
-          input = wrapper.querySelector(`input[data-reconcile-id="${dropdown.dataset.connectedInput}"]`);
-        }
-        if (!input) {
-          // Fallback: look for input in the searchable-dropdown container (if dropdown hasn't been moved)
-          const container = dropdown.closest(".searchable-dropdown");
-          if (container) {
-            input = container.querySelector("input");
-          }
-        }
-        
-        if (input) {
-          handleReconcileUpdate({ target: input }, newValue);
-          dropdown.style.display = "none";
-        } else {
-          console.error("Could not find input for dropdown!");
-        }
-      }
-      // Handle clear icon click
-      if (e.type === "click" && e.target.classList.contains("clear-icon")) {
-        const input = e.target
-          .closest(".editable-field-wrapper")
-          .querySelector("input");
-        handleReconcileUpdate({ target: input }, null);
-      }
-      // Handle checkbox change
-      if (
-        e.type === "change" &&
-        e.target.classList.contains("reconcile-exclude-checkbox")
-      ) {
-        handleReconcileExcludeToggle(e);
-      }
-      // NEW: Add logic to close dropdowns if clicking outside
-      if (!e.target.closest(".reconcile-ticket-dropdown") && !e.target.closest(".searchable-dropdown-list")) {
-        // Close dropdowns in wrapper
-        wrapper
-          .querySelectorAll(".searchable-dropdown-list")
-          .forEach((list) => {
-            list.style.display = "none";
-          });
-        // Also close dropdowns that have been moved to body
-        document
-          .querySelectorAll(".searchable-dropdown-list")
-          .forEach((list) => {
-            // Only close if it's associated with reconcile view
-            if (list.dataset.connectedInput) {
-              list.style.display = "none";
-            }
-          });
-      }
-    };
-
-    wrapper.addEventListener("click", handleEvent);
-    wrapper.addEventListener("change", handleEvent);
-    
-    // Add global click handler for dropdown items (since they might be moved to body)
-    document.addEventListener("click", (e) => {
-      // Check if click is on a dropdown item in reconcile view
-      const item = e.target.closest(".searchable-dropdown-list div[data-value]");
-      if (item) {
-        const dropdown = item.closest(".searchable-dropdown-list");
-        // Only handle if this is a reconcile dropdown
-        if (dropdown && dropdown.dataset.connectedInput) {
-          const newValue = item.dataset.value;
-          const input = wrapper.querySelector(`input[data-reconcile-id="${dropdown.dataset.connectedInput}"]`);
-          
-          
-          if (input) {
-            handleReconcileUpdate({ target: input }, newValue);
-            dropdown.style.display = "none";
-            e.stopPropagation();
-          }
-        }
-      }
-    });
-
-    // Close dropdowns on scroll
-    wrapper.addEventListener("scroll", () => {
-      // Close dropdowns in wrapper
-      wrapper
-        .querySelectorAll(".searchable-dropdown-list")
-        .forEach((list) => {
-          if (list.style.display === "block") {
-            list.style.display = "none";
-          }
-        });
-      // Also close dropdowns that have been moved to body
-      document
-        .querySelectorAll(".searchable-dropdown-list")
-        .forEach((list) => {
-          // Only close if it's associated with reconcile view
-          if (list.dataset.connectedInput && list.style.display === "block") {
-            list.style.display = "none";
-          }
-        });
-    });
-
-    wrapper.addEventListener("focusin", (e) => {
-      if (e.target.classList.contains("searchable-dropdown-input")) {
-        // Find the dropdown for this input
-        const dropdown = findDropdownForInput(e.target);
-        
-        // First, find and close all other open dropdowns in the view
-        const allDropdowns = wrapper.querySelectorAll(
-          ".searchable-dropdown-list"
-        );
-        // Also check for dropdowns that have been moved to body
-        const bodyDropdowns = document.querySelectorAll(
-          ".searchable-dropdown-list"
-        );
-        const allDropdownsList = [...allDropdowns, ...bodyDropdowns];
-        
-        allDropdownsList.forEach((list) => {
-          if (list !== dropdown) {
-            // Don't close the current one
-            list.style.display = "none";
-          }
-        });
-
-        // Now, open the dropdown for the currently focused input
-        if (dropdown) {
-          positionDropdownFixed(e.target, dropdown);
-        }
-      }
-    });
-
-    // Add click handler for dropdown inputs
-    wrapper.addEventListener("click", (e) => {
-      if (e.target.classList.contains("searchable-dropdown-input")) {
-        const dropdown = findDropdownForInput(e.target);
-        if (dropdown) {
-          positionDropdownFixed(e.target, dropdown);
-        }
-      }
-    });
-
-    // All closing/reverting logic is now handled in the keydown listener for Escape, Enter, and Tab.
-
-    wrapper.addEventListener("keyup", (e) => {
-      if (e.target.classList.contains("searchable-dropdown-input")) {
-        const filter = e.target.value.toLowerCase();
-        const list = findDropdownForInput(e.target);
-        if (list) {
-          list.querySelectorAll("div").forEach((item) => {
-            const text = item.textContent.toLowerCase();
-            item.style.display = text.includes(filter) ? "" : "none";
-          });
-          // Clear any active selection when user types
-          const activeItem = list.querySelector(".dropdown-active");
-          if (activeItem) activeItem.classList.remove("dropdown-active");
-          // Reposition dropdown after filtering if it's visible
-          if (list.style.display === "block") {
-            positionDropdownFixed(e.target, list);
-          }
-        }
-      }
-    });
-
-    // Add input event listener for real-time filtering
-    wrapper.addEventListener("input", (e) => {
-      if (e.target.classList.contains("searchable-dropdown-input")) {
-        const filter = e.target.value.toLowerCase();
-        const list = findDropdownForInput(e.target);
-        if (list) {
-          list.querySelectorAll("div").forEach((item) => {
-            const text = item.textContent.toLowerCase();
-            item.style.display = text.includes(filter) ? "" : "none";
-          });
-          // Clear any active selection when user types
-          const activeItem = list.querySelector(".dropdown-active");
-          if (activeItem) activeItem.classList.remove("dropdown-active");
-          // Reposition dropdown after filtering if it's visible
-          if (list.style.display === "block") {
-            positionDropdownFixed(e.target, list);
-          }
-        }
-      }
-    });
-  }
-
-  // REPLACE the openReconcileCreateTicketModal function
-  function openReconcileCreateTicketModal(reconcileId) {
-    const reconcileEntry = appData.allReconcileHrs.find(
-      (r) => r.id == reconcileId
-    );
-    if (!reconcileEntry) {
-      showToast("Could not find the time entry.", "error");
-      return;
-    }
-
-    const modal = document.getElementById("reconcile-create-ticket-modal");
-    const today = new Date().toISOString().split("T")[0];
-
-    modal.querySelectorAll("input, select, textarea").forEach((el) => {
-      if (el.type !== "checkbox" && el.type !== "button") el.value = "";
-    });
-    modal.querySelectorAll(".searchable-dropdown-input").forEach((el) => {
-      el.value = "";
-      el.dataset.value = "";
-    });
-
-    document.getElementById("rct-createdAt").value = reconcileEntry.date
-      ? new Date(reconcileEntry.date).toISOString().split("T")[0]
-      : today;
-    document.getElementById("rct-title").value =
-      reconcileEntry.description || "";
-    document.getElementById("rct-type").value = "Task";
-    document.getElementById("rct-status").value = "Open";
-
-    const requestedByContainer = document.getElementById(
-      "rct-requestedBy-container"
-    );
-    createSearchableDropdownForModal(
-      requestedByContainer,
-      appData.users.map((u) => ({ value: u, text: u })),
-      "Select requester..."
-    );
-    const requestedByInput = requestedByContainer.querySelector("input");
-    if (reconcileEntry.clockify_member) {
-      requestedByInput.value = reconcileEntry.clockify_member;
-      requestedByInput.dataset.value = reconcileEntry.clockify_member;
-    }
-
-    const assigneeContainer = document.getElementById("rct-assignee-container");
-    const assignedAtContainer = document.getElementById(
-      "rct-assignedAt-container"
-    );
-    const assignedAtInput = document.getElementById("rct-assignedAt");
-    const handleAssigneeChange = () => {
-      const assigneeInput = assigneeContainer.querySelector("input");
-      const hasAssignee = !!assigneeInput.dataset.value;
-      assignedAtContainer.style.display = hasAssignee ? "flex" : "none";
-      if (hasAssignee && !assignedAtInput.value) {
-        assignedAtInput.value = reconcileEntry.date
-          ? new Date(reconcileEntry.date).toISOString().split("T")[0]
-          : today;
-        assignedAtInput.dispatchEvent(new Event("input"));
-      }
-    };
-    createSearchableDropdownForModal(
-      assigneeContainer,
-      appData.teamMembers.map((m) => ({ value: m.id, text: m.name })),
-      "Select assignee...",
-      handleAssigneeChange // Pass callback to handle visibility change
-    );
-    const defaultAssignee = appData.teamMembers.find(
-      (m) => m.name === reconcileEntry.clockify_member
-    );
-    if (defaultAssignee) {
-      const assigneeInput = assigneeContainer.querySelector("input");
-      assigneeInput.value = defaultAssignee.name;
-      assigneeInput.dataset.value = defaultAssignee.id;
-    }
-
-    createSearchableDropdownForModal(
-      document.getElementById("rct-project-container"),
-      appData.projects.map((p) => ({ value: p.id, text: p.name })),
-      "Select project..."
-    );
-    document.getElementById("epic-datalist-rct").innerHTML = appData.epics
-      .map((e) => `<option value="${escapeHtml(e)}"></option>`)
-      .join("");
-
-    const statusSelect = document.getElementById("rct-status");
-    const startedContainer = document.getElementById("rct-startedAt-container");
-    const completedContainer = document.getElementById(
-      "rct-completedAt-container"
-    );
-    const reasonContainer = document.getElementById("rct-reason-container");
-    const startedInput = document.getElementById("rct-startedAt");
-    const completedInput = document.getElementById("rct-completedAt");
-
-    const handleStatusChange = () => {
-      const status = statusSelect.value;
-      const showStarted = [
-        "In Progress",
-        "Completed",
-        "Cancelled",
-        "Rejected",
-      ].includes(status);
-      const showCompleted = ["Completed", "Cancelled", "Rejected"].includes(
-        status
-      );
-      const showReason = [
-        "On Hold",
-        "Blocked",
-        "Cancelled",
-        "Rejected",
-      ].includes(status);
-
-      startedContainer.style.display = showStarted ? "flex" : "none";
-      completedContainer.style.display = showCompleted ? "flex" : "none";
-      reasonContainer.style.display = showReason ? "flex" : "none";
-
-      if (showStarted && !startedInput.value) startedInput.value = today;
-      if (showCompleted && !completedInput.value) completedInput.value = today;
-
-      startedInput.dispatchEvent(new Event("input"));
-      completedInput.dispatchEvent(new Event("input"));
-    };
-
-    statusSelect.removeEventListener("change", handleStatusChange);
-    statusSelect.addEventListener("change", handleStatusChange);
-
-    handleAssigneeChange(); // Initial check for default assignee
-    handleStatusChange(); // Initial check for default status
-
-    const setupDateListener = (inputId, displayId) => {
-      const input = document.getElementById(inputId);
-      const display = document.getElementById(displayId);
-      const updateDisplay = () => {
-        display.textContent = formatDateForUIDisplay(input.value);
-      };
-      input.addEventListener("input", updateDisplay);
-      updateDisplay();
-    };
-
-    setupDateListener("rct-createdAt", "rct-createdAt-display");
-    setupDateListener("rct-startedAt", "rct-startedAt-display");
-    setupDateListener("rct-completedAt", "rct-completedAt-display");
-    setupDateListener("rct-assignedAt", "rct-assignedAt-display");
-
-    document.getElementById("rct-submit-btn").onclick = () =>
-      submitReconcileTicket(reconcileId);
-    modal.style.display = "flex";
-  }
-  // REPLACE the existing submitReconcileTicket function
-  async function submitReconcileTicket(reconcileId) {
-    const modal = document.getElementById("reconcile-create-ticket-modal");
-    const submitBtn = document.getElementById("rct-submit-btn");
-
-    // --- Validation ---
-    const requiredFields = {
-      "#rct-createdAt": "Created Date",
-      "#rct-title": "Title",
-      "#rct-requestedBy-container input": "Requested By",
-    };
-    let errors = [];
-    for (const [selector, name] of Object.entries(requiredFields)) {
-      const el = modal.querySelector(selector);
-      const value =
-        el.dataset.value !== undefined ? el.dataset.value : el.value;
-      if (!value) {
-        errors.push(`${name} is required.`);
-      }
-    }
-    const status = document.getElementById("rct-status").value;
-    if (
-      ["On Hold", "Blocked", "Cancelled", "Rejected"].includes(status) &&
-      !document.getElementById("rct-reason").value
-    ) {
-      errors.push(`Reason is required for "${status}" status.`);
-    }
-    if (errors.length > 0) {
-      showToast(errors.join("\n"), "error");
-      return;
-    }
-
-    // --- UI State: Submitting ---
-    submitBtn.textContent = "Creating...";
-    submitBtn.disabled = true;
-
-    // Remove manual ID generation - let database handle auto-increment
-    // This prevents duplicate key constraint violations
-
-    // --- Data Gathering ---
-    const createdAt = document.getElementById("rct-createdAt").value;
-    const now = new Date();
-    const createdAtTimestamp = new Date(
-      `${createdAt}T${now.toTimeString().split(" ")[0]}`
-    ).toISOString();
-
-    const assigneeId =
-      document.querySelector("#rct-assignee-container input").dataset.value ||
-      null;
-
-    const newTicketData = {
-      // id: newTicketId, // REMOVED to prevent duplicate key violations - let DB auto-generate
-      title: document.getElementById("rct-title").value.trim(),
-      description: document.getElementById("rct-description").value.trim(),
-      createdAt: createdAtTimestamp,
-      type: document.getElementById("rct-type").value,
-      requestedBy: document.querySelector("#rct-requestedBy-container input")
-        .value,
-      assigneeId: assigneeId ? parseInt(assigneeId, 10) : null,
-      status: status,
-      projectId: document.querySelector("#rct-project-container input").dataset
-        .value
-        ? parseInt(
-            document.querySelector("#rct-project-container input").dataset
-              .value,
-            10
-          )
-        : null,
-      epic: document.getElementById("rct-epic").value.trim() || null,
-      startedAt: document.getElementById("rct-startedAt").value || null,
-      completedAt: document.getElementById("rct-completedAt").value || null,
-      log: [],
-    };
-    if (assigneeId) newTicketData.assignedAt = new Date().toISOString();
-
-    const reason = document.getElementById("rct-reason").value.trim();
-    if (reason) {
-      const logEntry = {
-        user: appData.currentUserEmail,
-        timestamp: new Date().toISOString(),
-        field: "status",
-        oldValue: "Open",
-        newValue: status,
-        reason: reason,
-      };
-      newTicketData.log.push(logEntry);
-    }
-
-    // --- Supabase Operations ---
-    const { data: insertedTickets, error: insertError } = await insertTicketsWithSequenceSync([newTicketData]);
-    const insertedTicket = insertedTickets && insertedTickets.length > 0 ? insertedTickets[0] : null;
-
-    if (insertError || !insertedTicket) {
-      showToast("Error creating ticket: " + (insertError?.message || "Unknown error"), "error");
-      submitBtn.textContent = "Create Ticket";
-      submitBtn.disabled = false;
-      return;
-    }
-
-    const { error: updateError } = await supabaseClient
-      .from("reconcileHrs")
-      .update({ ticketNumber: insertedTicket.id })
-      .eq("id", reconcileId);
-
-    if (updateError) {
-      showToast(
-        `Ticket ${insertedTicket.id} created, but failed to link time entry: ${updateError.message}`,
-        "error"
-      );
-    } else {
-      showToast("Ticket created and linked successfully!", "success");
-      // --- FIX: Update local state before re-rendering ---
-      const localIndex = appData.allReconcileHrs.findIndex(
-        (r) => r.id == reconcileId
-      );
-      if (localIndex > -1) {
-        appData.allReconcileHrs[localIndex].ticketNumber = insertedTicket.id;
-      }
-    }
-
-    // Update frontend state with new ticket
-    if (insertedTicket) {
-      await updateTicketDataAfterCreation([insertedTicket]);
-    }
-
-    // --- Finalize ---
-    modal.style.display = "none";
-    submitBtn.textContent = "Create Ticket";
-    submitBtn.disabled = false;
-    applyFilterAndRender();
-  }
-  async function handleReconcileUpdate(event, newValueFromDropdown) {
-    const element = event.target;
-    const reconcileId = element.dataset.reconcileId;
-    const oldValue = element.dataset.oldValue;
-    const newValue = newValueFromDropdown; // Only use value from dropdown click
-
-
-    if (String(oldValue || "") === String(newValue || "")) {
-      return;
-    }
-
-    const td = element.closest("td");
-    const parentRow = element.closest("tr");
-    
-    if (!td || !parentRow) {
-      console.error("Could not find TD or parent row for input");
-      return;
-    }
-    
-    td.classList.add("updating");
-
-    const { error } = await supabaseClient
-      .from("reconcileHrs")
-      .update({ ticketNumber: newValue })
-      .eq("id", reconcileId);
-
-    td.classList.remove("updating");
-
-    if (error) {
-      console.error("Database update error:", error);
-      showToast(`Update failed: ${error.message}`, "error");
-    } else {
-      showToast(`Ticket linked successfully!`, "success");
-      td.classList.add("cell-success-highlight");
-      setTimeout(() => {
-        td.classList.remove("cell-success-highlight");
-      }, 2000);
-
-      const weekCell = parentRow.querySelector(".reconcile-week-cell");
-      if (weekCell) {
-        const iconSpan = weekCell.querySelector(".reconcile-status-indicator");
-        const iconElement = iconSpan.querySelector("i");
-        if (
-          newValue ||
-          parentRow.querySelector(".reconcile-exclude-checkbox").checked
-        ) {
-          iconSpan.className = "reconcile-status-indicator done";
-          iconElement.className = "fas fa-check";
-        } else {
-          iconSpan.className = "reconcile-status-indicator todo";
-          iconElement.className = "fas fa-circle";
-        }
-      }
-
-      const localIndex = appData.allReconcileHrs.findIndex(
-        (r) => r.id == reconcileId
-      );
-      if (localIndex > -1)
-        appData.allReconcileHrs[localIndex].ticketNumber = newValue;
-
-      element.dataset.oldValue = newValue;
-      const selectedTicket = appData.allTickets.find((t) => t.id == newValue);
-      // MODIFIED: Add "HRB-" prefix when setting the input's display value after an update.
-      element.value = selectedTicket
-        ? `[HRB-${selectedTicket.id}] ${selectedTicket.title}`
-        : "";
-    }
-  }
-
-  /**
-   * NEW: Handles toggling the exclude checkbox for a reconcile entry.
-   * @param {Event} event - The change event from the checkbox.
-   */
-  async function handleReconcileExcludeToggle(event) {
-    const checkbox = event.target;
-    const reconcileId = checkbox.dataset.reconcileId;
-    const isExcluded = checkbox.checked;
-    const parentRow = checkbox.closest("tr");
-
-    parentRow.classList.add("updating");
-
-    const { error } = await supabaseClient
-      .from("reconcileHrs")
-      .update({ is_excluded: isExcluded })
-      .eq("id", reconcileId);
-
-    parentRow.classList.remove("updating");
-
-    if (error) {
-      showToast(`Update failed: ${error.message}`, "error");
-      // Revert checkbox on failure
-      checkbox.checked = !isExcluded;
-    } else {
-      // Update local data to match
-      const localIndex = appData.allReconcileHrs.findIndex(
-        (r) => r.id == reconcileId
-      );
-      if (localIndex > -1) {
-        appData.allReconcileHrs[localIndex].is_excluded = isExcluded;
-      }
-
-      // Also update the status icon in the first column
-      const weekCell = parentRow.querySelector(".reconcile-week-cell");
-      if (weekCell) {
-        const iconSpan = weekCell.querySelector(".reconcile-status-indicator");
-        const iconElement = iconSpan.querySelector("i");
-        const hasTicket = parentRow.querySelector(".searchable-dropdown-input")
-          .dataset.oldValue;
-        if (isExcluded || hasTicket) {
-          iconSpan.className = "reconcile-status-indicator done";
-          iconElement.className = "fas fa-check";
-        } else {
-          iconSpan.className = "reconcile-status-indicator todo";
-          iconElement.className = "fas fa-circle";
-        }
-      }
-
-      // If the main filter is active, this row might need to disappear
-      if (reconcileExcludeDone && isExcluded) {
-        applyFilterAndRender(); // Re-render to hide the row
-      }
-    }
-  }
-  /**
-   * Adds keyboard navigation listeners for the Reconcile table.
-   */
-  function addReconcileKeyboardListeners() {
-    const wrapper = document.getElementById("reconcile-view-wrapper");
-    const table = wrapper.querySelector("#reconcile-table");
-    if (!table || !table.tBodies[0]) return;
-
-    // A helper function to handle Tab navigation consistently
-    const handleTabNavigation = (e, activeEl) => {
-      e.preventDefault();
-      const currentCell = activeEl.closest("td");
-      const currentRow = currentCell.parentElement;
-      const rowIndex = currentRow.rowIndex - 1; // Adjust for thead
-      const colIndex = currentCell.cellIndex;
-      const bodyRows = table.tBodies[0].rows;
-      const lastColIndex = bodyRows[0].cells.length - 1;
-      let nextCell = null;
-
-      if (e.shiftKey) {
-        // Handle Shift + Tab for reverse navigation
-        if (colIndex > 0) {
-          nextCell = currentRow.cells[colIndex - 1];
-        } else if (rowIndex > 0) {
-          nextCell = bodyRows[rowIndex - 1].cells[lastColIndex];
-        }
-      } else {
-        // Handle Tab for forward navigation
-        if (colIndex < lastColIndex) {
-          nextCell = currentRow.cells[colIndex + 1];
-        } else if (rowIndex < bodyRows.length - 1) {
-          nextCell = bodyRows[rowIndex + 1].cells[0];
-        }
-      }
-      if (nextCell) {
-        nextCell.focus();
-      }
-    };
-
-    wrapper.addEventListener("keydown", (e) => {
-      const activeEl = document.activeElement;
-      const isInput =
-        activeEl.tagName === "INPUT" &&
-        activeEl.classList.contains("searchable-dropdown-input");
-      const isCell = activeEl.tagName === "TD";
-
-      // --- Block 1: Handle key events when an INPUT field has focus ---
-      if (isInput) {
-        const list = findDropdownForInput(activeEl);
-        
-        // Safety check: ensure the dropdown list exists
-        if (!list) {
-          return;
-        }
-        
-        let activeItem = list.querySelector(".dropdown-active");
-
-        const findNextVisible = (current, direction) => {
-          let sibling =
-            direction === "down"
-              ? current.nextElementSibling
-              : current.previousElementSibling;
-          while (sibling) {
-            if (sibling.style.display !== "none") return sibling;
-            sibling =
-              direction === "down"
-                ? sibling.nextElementSibling
-                : sibling.previousElementSibling;
-          }
-          return null;
-        };
-
-        switch (e.key) {
-          case "ArrowDown":
-            e.preventDefault();
-            let nextItem = activeItem
-              ? findNextVisible(activeItem, "down")
-              : list.querySelector('div:not([style*="display: none"])');
-            if (nextItem) {
-              if (activeItem) activeItem.classList.remove("dropdown-active");
-              nextItem.classList.add("dropdown-active");
-              nextItem.scrollIntoView({ block: "nearest" });
-            }
-            return;
-
-          case "ArrowUp":
-            e.preventDefault();
-            if (activeItem) {
-              let prevItem = findNextVisible(activeItem, "up");
-              if (prevItem) {
-                activeItem.classList.remove("dropdown-active");
-                prevItem.classList.add("dropdown-active");
-                prevItem.scrollIntoView({ block: "nearest" });
-              }
-            }
-            return;
-
-          case "Enter":
-            e.preventDefault();
-            e.stopPropagation(); // Prevent event from bubbling
-
-            // Prioritize the item selected with arrow keys.
-            if (activeItem) {
-              activeItem.click();
-            }
-            // If no item was highlighted, fallback to the first visible one.
-            else {
-              const firstVisibleItem = list.querySelector(
-                'div:not([style*="display: none"])'
-              );
-              if (firstVisibleItem) {
-                firstVisibleItem.click();
-              } else {
-                // If there are no items to select, just hide the list.
-                list.style.display = "none";
-              }
-            }
-
-            // Return focus to the parent cell.
-            activeEl.closest("td").focus();
-            return;
-
-          case "Tab":
-            const oldValue = activeEl.dataset.oldValue;
-            const oldTicket = appData.allTickets.find((t) => t.id == oldValue);
-            activeEl.value = oldTicket
-              ? `[HRB-${oldTicket.id}] ${oldTicket.title}`
-              : "";
-            list.style.display = "none";
-            handleTabNavigation(e, activeEl);
-            return;
-
-          case "Escape":
-            e.preventDefault();
-            const escOldValue = activeEl.dataset.oldValue;
-            const escOldTicket = appData.allTickets.find(
-              (t) => t.id == escOldValue
-            );
-            activeEl.value = escOldTicket
-              ? `[HRB-${escOldTicket.id}] ${escOldTicket.title}`
-              : "";
-            list.style.display = "none";
-            activeEl.closest("td").focus();
-            return;
-        }
-      }
-
-      // --- Block 2: Handle key events when a TD cell has focus ---
-      if (isCell) {
-        switch (e.key) {
-          case " ":
-            const lastColIndex = activeEl.parentElement.cells.length - 1;
-            if (activeEl.cellIndex === lastColIndex) {
-              e.preventDefault();
-              const checkbox = activeEl.querySelector(
-                ".reconcile-exclude-checkbox"
-              );
-              if (checkbox) checkbox.click();
-            }
-            return;
-
-          case "Tab":
-            handleTabNavigation(e, activeEl);
-            return;
-
-          default:
-            const currentCell = activeEl;
-            const currentRow = currentCell.parentElement;
-            const rowIndex = currentRow.rowIndex - 1;
-            const colIndex = currentCell.cellIndex;
-            const bodyRows = table.tBodies[0].rows;
-            const lastColIdx = bodyRows[0].cells.length - 1;
-            let nextCell = null;
-
-            switch (e.key) {
-              case "Enter":
-                e.preventDefault();
-                const inputToFocus = currentCell.querySelector(
-                  "input:not([type=checkbox])"
-                );
-                if (inputToFocus) {
-                  inputToFocus.focus();
-                  inputToFocus.select();
-                }
-                break;
-              case "ArrowUp":
-                if (rowIndex > 0)
-                  nextCell = bodyRows[rowIndex - 1].cells[colIndex];
-                break;
-              case "ArrowDown":
-                if (rowIndex < bodyRows.length - 1)
-                  nextCell = bodyRows[rowIndex + 1].cells[colIndex];
-                break;
-              case "ArrowLeft":
-                if (colIndex > 0) nextCell = currentRow.cells[colIndex - 1];
-                break;
-              case "ArrowRight":
-                if (colIndex < lastColIdx)
-                  nextCell = currentRow.cells[colIndex + 1];
-                break;
-              default:
-                if (
-                  e.key.length === 1 &&
-                  !e.ctrlKey &&
-                  !e.altKey &&
-                  !e.metaKey
-                ) {
-                  const textInput = currentCell.querySelector(
-                    "input:not([type=checkbox])"
-                  );
-                  if (textInput) {
-                    e.preventDefault();
-                    textInput.focus();
-                    textInput.value = e.key;
-                    textInput.dispatchEvent(
-                      new Event("input", { bubbles: true })
-                    );
-                  }
-                }
-                return;
-            }
-            if (nextCell) {
-              e.preventDefault();
-              nextCell.focus();
-            }
-        }
-      }
-    });
-  }
-
-  /**
-   * Updates the UI of the Reconcile view's pagination controls.
-   */
-  function updateReconcilePagination(totalItems) {
-    const controls = document.getElementById("reconcile-pagination-controls");
-    const totalCountEl = document.getElementById("reconcile-total-count");
-    const pageInfoEl = document.getElementById("reconcile-page-info");
-    const prevBtn = document.getElementById("reconcile-prev-page");
-    const nextBtn = document.getElementById("reconcile-next-page");
-    const totalPages = Math.ceil(totalItems / ticketsPerPage);
-
-    totalCountEl.textContent = `${totalItems} total entries`;
-
-    if (totalPages <= 1) {
-      controls.style.display = "none";
-    } else {
-      controls.style.display = "flex";
-      pageInfoEl.textContent = `Page ${reconcileCurrentPage} of ${totalPages}`;
-      prevBtn.disabled = reconcileCurrentPage === 1;
-      nextBtn.disabled = reconcileCurrentPage === totalPages;
-    }
-  }
-
-  /**
-   * Adds event listeners for the Reconcile view pagination buttons.
-   */
-  function addReconcilePaginationListeners() {
-    document
-      .getElementById("reconcile-prev-page")
-      .addEventListener("click", () => {
-        if (reconcileCurrentPage > 1) {
-          reconcileCurrentPage--;
-          renderReconcileView(appData.reconcileHrs);
-        }
-      });
-    document
-      .getElementById("reconcile-next-page")
-      .addEventListener("click", () => {
-        const totalPages = Math.ceil(
-          appData.reconcileHrs.length / ticketsPerPage
-        );
-        if (reconcileCurrentPage < totalPages) {
-          reconcileCurrentPage++;
-          renderReconcileView(appData.reconcileHrs);
-        }
-      });
-  }
-
-  /**
-   * Gets the ISO week number of a date.
-   * @param {Date} date - The input date.
-   * @returns {string} The year and week number in "YYYY-WNN" format.
-   */
-  function getWeekOfYear(date) {
-    const d = new Date(
-      Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-    );
-    // Set to nearest Thursday: current date + 4 - current day number
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-    // Get first day of year
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    // Calculate full weeks to nearest Thursday
-    const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-    return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
-  }
-
-
-  /**
-   * Initializes listeners for the dashboard filters.
-   */
-  function addDashboardFilterListeners() {
-    const assigneeSelect = document.getElementById("dashboard-assignee-filter");
-    const startDateInput = document.getElementById("dashboard-start-date");
-    const endDateInput = document.getElementById("dashboard-end-date");
-
-    // Populate assignee dropdown
-    if (appData.teamMembers && appData.teamMembers.length > 0) {
-      assigneeSelect.innerHTML = '<option value="all">All Members</option>' + 
-        appData.teamMembers
-      .map((m) => `<option value="${m.id}">${escapeHtml(m.name)}</option>`)
-      .join("");
-    } else {
-      assigneeSelect.innerHTML = '<option value="all">All Members</option>';
-    }
-
-    // Set default to logged-in user (with safety check)
-    if (appData.currentUser && appData.currentUser.id) {
-      assigneeSelect.value = appData.currentUser.id;
-      dashboardAssigneeId = appData.currentUser.id;
-    } else if (appData.currentUserId) {
-      assigneeSelect.value = appData.currentUserId;
-      dashboardAssigneeId = appData.currentUserId;
-    } else {
-      assigneeSelect.value = "all";
-      dashboardAssigneeId = "all";
-    }
-
-    // Set default date range (last 10 weeks)
-    const today = new Date();
-    const tenWeeksAgo = new Date();
-    tenWeeksAgo.setDate(today.getDate() - 70); // 10 weeks = 70 days
-    startDateInput.value = tenWeeksAgo.toISOString().split("T")[0];
-    endDateInput.value = today.toISOString().split("T")[0];
-
-    // Store initial values
-    dashboardStartDate = startDateInput.value;
-    dashboardEndDate = endDateInput.value;
-
-    // Add listeners
-    const applyFilters = () => {
-      dashboardAssigneeId = assigneeSelect.value;
-      dashboardStartDate = startDateInput.value;
-      dashboardEndDate = endDateInput.value;
-      if (currentView === "home") {
-        renderDashboard();
-      }
-    };
-
-    assigneeSelect.addEventListener("change", applyFilters);
-    startDateInput.addEventListener("change", applyFilters);
-    endDateInput.addEventListener("change", applyFilters);
-    
-    // Re-render dashboard after filters are set up to ensure numbers are visible
-    if (currentView === "home") {
-      setTimeout(() => {
-        renderDashboard();
-      }, 50);
-    }
-  }
-
-  /**
-   * Renders a list of tickets for the dashboard.
-   * @param {string} containerId - The ID of the container element.
-   * @param {Array<object>} tickets - The array of ticket objects to render.
-   */
-  function renderDashboardTicketList(containerId, tickets) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-
-    if (tickets.length === 0) {
-      container.innerHTML =
-        '<p style="color: var(--text-secondary); padding: 1rem;">No quests here!</p>';
-      return;
-    }
-
-    container.innerHTML = tickets
-      .map((ticket) => {
-        const priorityInfo = getTagInfo("priority", ticket.priority);
-        return `
-            <div class="dashboard-ticket-item" data-ticket-id="${ticket.id}">
-                <div class="ticket-info">
-                    <span class="ticket-id">HRB-${ticket.id}</span>
-                    <div class="ticket-title">${escapeHtml(ticket.title)}</div>
-                </div>
-                <span class="ticket-priority-tag ${
-                  priorityInfo.className
-                }">${escapeHtml(priorityInfo.text)}</span>
-            </div>
-        `;
-      })
-      .join("");
-
-    // Add click listeners to open the detail modal
-    container.querySelectorAll(".dashboard-ticket-item").forEach((item) => {
-      item.addEventListener("click", (e) => {
-        const ticketId = e.currentTarget.dataset.ticketId;
-        showTaskDetailModal(ticketId);
-      });
-    });
-  }
-
-  /**
-   * Main function to calculate and render all dashboard components.
-   */
-  function renderDashboard() {
-    
-    // Check if dashboard is visible
-    const dashboardWrapper = document.getElementById("dashboard-view-wrapper");
-    if (!dashboardWrapper || dashboardWrapper.style.display === 'none') {
-      return;
-    }
-    
-    
-    // 1. Filter tickets based on dashboard controls
-    const startDate = new Date(dashboardStartDate);
-    startDate.setHours(0, 0, 0, 0);
-    const endDate = new Date(dashboardEndDate);
-    endDate.setHours(23, 59, 59, 999);
-
-    const filteredTickets = appData.allTickets.filter((t) => {
-      const createdAt = new Date(t.createdAt);
-      const isAssigneeMatch = dashboardAssigneeId === "all" || t.assigneeId == dashboardAssigneeId;
-      return isAssigneeMatch && createdAt >= startDate && createdAt <= endDate;
-    });
-
-    const allUserTickets = dashboardAssigneeId === "all" 
-      ? appData.allTickets 
-      : appData.allTickets.filter((t) => t.assigneeId == dashboardAssigneeId);
-    
-    const finalStates = ["Completed", "Cancelled", "Rejected"];
-    const activeTickets = allUserTickets.filter(
-      (t) => !finalStates.includes(t.status)
-    );
-
-    // 2. Calculate comprehensive metrics
-    // Use allUserTickets if filteredTickets is empty (date range issue)
-    const ticketsToUse = filteredTickets.length > 0 ? filteredTickets : allUserTickets;
-    
-    const totalCount = ticketsToUse.length;
-    const completedCount = ticketsToUse.filter(t => t.status === "Completed").length;
-    const inProgressCount = ticketsToUse.filter(t => t.status === "In Progress").length;
-    const blockedCount = ticketsToUse.filter(t => t.status === "Blocked").length;
-    
-    // Debug logging
-    
-    // Calculate more relevant metrics
-    const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-    const avgResolutionTime = calculateAvgResolutionTime(ticketsToUse);
-    const avgResponseTime = calculateAvgResponseTime(ticketsToUse);
-    
-    // Calculate percentage changes based on previous period
-    const ticketsChange = calculateChangePercentage(totalCount, 'tickets');
-    const completedChange = calculateChangePercentage(completedCount, 'completed');
-    const progressChange = calculateChangePercentage(inProgressCount, 'progress');
-    const blockedChange = calculateChangePercentage(blockedCount, 'blocked');
-
-    // 3. Update key metrics
-    document.getElementById("total-tickets-count").textContent = totalCount;
-    document.getElementById("completed-tickets-count").textContent = completedCount;
-    document.getElementById("in-progress-count").textContent = inProgressCount;
-    document.getElementById("blocked-count").textContent = blockedCount;
-    
-    
-    // Update change indicators
-    document.getElementById("tickets-change").textContent = ticketsChange;
-    document.getElementById("completed-change").textContent = completedChange;
-    document.getElementById("progress-change").textContent = progressChange;
-    document.getElementById("blocked-change").textContent = blockedChange;
-    
-    // Update trend indicators
-    document.getElementById("tickets-trend").className = `metric-trend ${ticketsChange.startsWith('+') ? 'positive' : 'negative'}`;
-    document.getElementById("completed-trend").className = `metric-trend ${completedChange.startsWith('+') ? 'positive' : 'negative'}`;
-    document.getElementById("progress-trend").className = `metric-trend ${progressChange.startsWith('+') ? 'positive' : 'negative'}`;
-    document.getElementById("blocked-trend").className = `metric-trend ${blockedChange.startsWith('+') ? 'positive' : 'negative'}`;
-
-    // 4. Update velocity metrics
-    document.getElementById("avg-response-time").textContent = `${avgResponseTime}d`;
-    document.getElementById("avg-resolution-time").textContent = `${avgResolutionTime}d`;
-    document.getElementById("completion-rate").textContent = `${completionRate}%`;
-
-    // 5. Render charts
-    renderTrendsChart(ticketsToUse);
-    renderPriorityChart(ticketsToUse);
-    renderTeamPerformance(allUserTickets);
-    
-    // 6. Render chart metrics
-    renderChartMetrics(ticketsToUse);
-  }
-
-  /**
-   * Render the trends chart
-   */
-  function renderTrendsChart(tickets) {
-    const ctx = document.getElementById("trends-chart").getContext("2d");
-    if (trendsChart) {
-      trendsChart.destroy();
-    }
-
-    // Calculate weekly data
-    const weeklyData = {};
-    tickets.forEach((t) => {
-      const week = getWeekOfYear(new Date(t.createdAt));
-      if (!weeklyData[week]) {
-        weeklyData[week] = { incoming: 0, completed: 0 };
-      }
-      weeklyData[week].incoming++;
-      if (t.status === "Completed") {
-        weeklyData[week].completed++;
-      }
-    });
-
-    const sortedWeeks = Object.keys(weeklyData).sort();
-    const chartLabels = sortedWeeks.map(week => `Week ${week.split('-W')[1]}`);
-    const incomingData = sortedWeeks.map((week) => weeklyData[week].incoming);
-    const completedData = sortedWeeks.map((week) => weeklyData[week].completed);
-
-    trendsChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: chartLabels,
-        datasets: [
-          {
-            label: 'Created',
-            data: incomingData,
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            tension: 0.4,
-            fill: true
-          },
-          {
-            label: 'Completed',
-            data: completedData,
-            borderColor: '#10b981',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-            tension: 0.4,
-            fill: true
-          }
-        ]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'top',
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: {
-              color: 'rgba(0, 0, 0, 0.1)'
-            }
-          },
-          x: {
-            grid: {
-              color: 'rgba(0, 0, 0, 0.1)'
-            }
-          }
-        }
-      }
-    });
-  }
-
-  /**
-   * Render priority distribution chart
-   */
-  function renderPriorityChart(tickets) {
-    const ctx = document.getElementById("priority-chart").getContext("2d");
-    
-    // Destroy existing chart if it exists
-    if (window.priorityChart) {
-      window.priorityChart.destroy();
-    }
-    
-    const priorityData = {
-      'Urgent': tickets.filter(t => t.priority === 'Urgent').length,
-      'High': tickets.filter(t => t.priority === 'High').length,
-      'Medium': tickets.filter(t => t.priority === 'Medium').length,
-      'Low': tickets.filter(t => t.priority === 'Low').length
-    };
-
-    const colors = {
-      'Urgent': '#ef4444',
-      'High': '#f59e0b',
-      'Medium': '#3b82f6',
-      'Low': '#10b981'
-    };
-
-    window.priorityChart = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: Object.keys(priorityData),
-        datasets: [{
-          data: Object.values(priorityData),
-          backgroundColor: Object.keys(priorityData).map(p => colors[p]),
-          borderWidth: 0
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            display: false
-          }
-        }
-      }
-    });
-
-    // Update legend
-    const legend = document.getElementById("priority-legend");
-    legend.innerHTML = Object.keys(priorityData).map(priority => `
-      <div class="legend-item">
-        <div class="legend-color" style="background-color: ${colors[priority]}"></div>
-        <span>${priority}: ${priorityData[priority]}</span>
-      </div>
-    `).join('');
-  }
-
-  /**
-   * Render status overview bars
-   */
-  function renderStatusOverview(tickets) {
-    const statusData = {
-      'Open': tickets.filter(t => t.status === 'Open').length,
-      'In Progress': tickets.filter(t => t.status === 'In Progress').length,
-      'On Hold': tickets.filter(t => t.status === 'On Hold').length,
-      'Blocked': tickets.filter(t => t.status === 'Blocked').length,
-      'Completed': tickets.filter(t => t.status === 'Completed').length
-    };
-
-    const total = Object.values(statusData).reduce((sum, count) => sum + count, 0);
-    const statusColors = {
-      'Open': '#64748b', // Light Gray
-      'In Progress': '#f59e0b', // Keep existing
-      'On Hold': '#8b4513', // Brown
-      'Blocked': '#4a5568', // Dark Gray
-      'Completed': '#22543d' // Green
-    };
-
-    // Update status summary
-    const statusSummary = document.getElementById("status-summary");
-    const blockedCount = statusData['Blocked'];
-    if (blockedCount > 0) {
-      statusSummary.textContent = `${blockedCount} tickets blocked`;
-      statusSummary.style.color = '#ef4444';
-      statusSummary.style.background = '#fef2f2';
-    } else {
-      statusSummary.textContent = 'All systems operational';
-      statusSummary.style.color = '#10b981';
-      statusSummary.style.background = '#ecfdf5';
-    }
-
-    const statusBars = document.getElementById("status-bars");
-    statusBars.innerHTML = Object.entries(statusData).map(([status, count]) => {
-      const percentage = total > 0 ? (count / total) * 100 : 0;
-      return `
-        <div class="status-bar">
-          <div class="status-label">${status}</div>
-          <div class="status-progress">
-            <div class="status-fill" style="width: ${percentage}%; background-color: ${statusColors[status]}"></div>
-          </div>
-          <div class="status-count">${count}</div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  /**
-   * Render team performance metrics
-   */
-  function renderTeamPerformance(tickets) {
-    // Calculate average response and resolution times using the proper functions
-    const avgResponseTime = calculateAvgResponseTime(tickets);
-    const avgResolutionTime = calculateAvgResolutionTime(tickets);
-
-    // Calculate completion rate
-    const totalTickets = tickets.length;
-    const completedCount = tickets.filter(t => t.status === 'Completed').length;
-    const completionRate = totalTickets > 0 ? Math.round((completedCount / totalTickets) * 100) : 0;
-
-    // Update the elements (these are now handled in renderDashboard, but keeping for consistency)
-    const responseTimeEl = document.getElementById("avg-response-time");
-    const resolutionTimeEl = document.getElementById("avg-resolution-time");
-    const completionRateEl = document.getElementById("completion-rate");
-    
-    if (responseTimeEl) responseTimeEl.textContent = `${avgResponseTime}d`;
-    if (resolutionTimeEl) resolutionTimeEl.textContent = `${avgResolutionTime}d`;
-    if (completionRateEl) completionRateEl.textContent = `${completionRate}%`;
-  }
-
-  /**
-   * Render recent activity
-   */
-  function renderRecentActivity(tickets) {
-    const recentTickets = tickets
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      .slice(0, 5);
-
-    // Update activity count
-    document.getElementById("activity-count").textContent = `${recentTickets.length} events`;
-
-    const activityList = document.getElementById("recent-activity-list");
-    if (recentTickets.length === 0) {
-      activityList.innerHTML = '<div style="text-align: center; color: #64748b; padding: 2rem;">No recent activity</div>';
-      return;
-    }
-
-    activityList.innerHTML = recentTickets.map(ticket => {
-      const timeAgo = formatTimeAgo(new Date(ticket.createdAt));
-      const assignee = appData.teamMembers.find(m => m.id == ticket.assigneeId);
-      const priorityColors = {
-        'Urgent': '#ef4444',
-        'High': '#f59e0b',
-        'Medium': '#3b82f6',
-        'Low': '#10b981'
-      };
-      
-      return `
-        <div class="activity-item">
-          <div class="activity-icon" style="background-color: ${priorityColors[ticket.priority] || '#3b82f6'};">
-            <i class="fas fa-plus"></i>
-          </div>
-          <div class="activity-content">
-            <div class="activity-text">New ticket HRB-${ticket.id} created</div>
-            <div class="activity-time">${timeAgo} • ${assignee?.name || 'Unassigned'}</div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-
-  /**
-   * Render a single ticket list
-   */
-  function renderTicketList(containerId, tickets, countId) {
-    const container = document.getElementById(containerId);
-    const countElement = document.getElementById(countId);
-    
-    countElement.textContent = tickets.length;
-
-    if (tickets.length === 0) {
-      container.innerHTML = '<div style="text-align: center; color: #64748b; padding: 3rem; font-size: 0.9rem;">No tickets found</div>';
-      return;
-    }
-
-    container.innerHTML = tickets.map(ticket => {
-      const assignee = appData.teamMembers.find(m => m.id == ticket.assigneeId);
-      const statusColors = {
-        'Open': '#64748b', // Light Gray
-        'In Progress': '#f59e0b', // Keep existing
-        'On Hold': '#8b4513', // Brown
-        'Blocked': '#4a5568', // Dark Gray
-        'Completed': '#22543d' // Green
-      };
-      
-      return `
-        <div class="ticket-item" onclick="showTaskDetailModal(${ticket.id})">
-          <div class="ticket-item-info">
-            <div class="ticket-item-id">HRB-${ticket.id}</div>
-            <div class="ticket-item-title">${escapeHtml(ticket.title)}</div>
-            <div class="ticket-item-meta">
-              <span class="ticket-priority-tag ${ticket.priority.toLowerCase()}">${ticket.priority}</span>
-              <span style="color: #64748b; font-size: 0.8rem; font-weight: 500;">${assignee?.name || 'Unassigned'}</span>
-              <span style="color: ${statusColors[ticket.status] || '#64748b'}; font-size: 0.8rem; font-weight: 600;">${ticket.status}</span>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  /**
-   * Format time ago
-   */
-  function formatTimeAgo(date) {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
-    
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return `${Math.floor(diffInSeconds / 86400)}d ago`;
-  }
-
-
-
-
-  function calculateAvgResolutionTime(tickets) {
-    // Count tickets that are in final states (Completed, Cancelled, Rejected) and have both createdAt and completedAt
-    const finalStates = ['Completed', 'Cancelled', 'Rejected'];
-    const resolvedTickets = tickets.filter(t => 
-      finalStates.includes(t.status) && 
-      t.createdAt && 
-      t.completedAt
-    );
-    
-    if (resolvedTickets.length === 0) return 0;
-    
-    const totalDays = resolvedTickets.reduce((sum, ticket) => {
-      const created = new Date(ticket.createdAt);
-      const completed = new Date(ticket.completedAt);
-      const days = Math.ceil((completed - created) / (1000 * 60 * 60 * 24));
-      return sum + Math.max(0, days); // Ensure non-negative days
-    }, 0);
-    
-    return Math.round(totalDays / resolvedTickets.length);
-  }
-
-  function calculateAvgResponseTime(tickets) {
-    // Count tickets that have both createdAt and assignedAt
-    const assignedTickets = tickets.filter(t => 
-      t.createdAt && 
-      t.assignedAt
-    );
-    
-    if (assignedTickets.length === 0) return 0;
-    
-    const totalDays = assignedTickets.reduce((sum, ticket) => {
-      const created = new Date(ticket.createdAt);
-      const assigned = new Date(ticket.assignedAt);
-      const days = Math.ceil((assigned - created) / (1000 * 60 * 60 * 24));
-      return sum + Math.max(0, days); // Ensure non-negative days
-    }, 0);
-    
-    return Math.round(totalDays / assignedTickets.length);
-  }
-
-  function calculateActiveMembers(tickets) {
-    const uniqueMembers = new Set();
-    tickets.forEach(ticket => {
-      if (ticket.assigneeId) {
-        uniqueMembers.add(ticket.assigneeId);
-      }
-    });
-    return uniqueMembers.size;
-  }
-
-  function calculateChangePercentage(currentValue, type) {
-    // Simplified calculation - in a real app, you'd compare with previous period
-    if (currentValue === 0) return "0%";
-    
-    // Mock some realistic changes based on type
-    const changes = {
-      'tickets': Math.floor(Math.random() * 20) + 5, // 5-25%
-      'completed': Math.floor(Math.random() * 15) + 8, // 8-23%
-      'progress': Math.floor(Math.random() * 10) + 3, // 3-13%
-      'blocked': Math.floor(Math.random() * 5) - 2 // -2 to 3%
-    };
-    
-    const change = changes[type] || 0;
-    return change >= 0 ? `+${change}%` : `${change}%`;
-  }
-
-  /**
-   * Render chart metrics below the trends chart
-   */
-  function renderChartMetrics(tickets) {
-    const now = new Date();
-    const last7Days = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-    // Calculate weekly data to find peak week (last 12 weeks)
-    const weeklyData = {};
-    const twelveWeeksAgo = new Date(now.getTime() - 84 * 24 * 60 * 60 * 1000);
-    
-    tickets.forEach(ticket => {
-      if (ticket.createdAt) {
-        const created = new Date(ticket.createdAt);
-        if (created >= twelveWeeksAgo) {
-          const weekKey = getWeekKey(created);
-          
-          if (!weeklyData[weekKey]) {
-            weeklyData[weekKey] = { created: 0, completed: 0, weekNumber: weekKey };
-          }
-          
-          weeklyData[weekKey].created++;
-        }
-      }
-      
-      if (ticket.status === 'Completed' && ticket.completedAt) {
-        const completed = new Date(ticket.completedAt);
-        if (completed >= twelveWeeksAgo) {
-          const completedWeekKey = getWeekKey(completed);
-          if (!weeklyData[completedWeekKey]) {
-            weeklyData[completedWeekKey] = { created: 0, completed: 0, weekNumber: completedWeekKey };
-          }
-          weeklyData[completedWeekKey].completed++;
-        }
-      }
-    });
-
-    // Find peak week by total activity (created + completed)
-    const peakWeek = Object.entries(weeklyData)
-      .sort(([,a], [,b]) => (b.created + b.completed) - (a.created + a.completed))[0];
-    const peakWeekLabel = peakWeek ? peakWeek[0] : 'N/A';
-
-    // Calculate accurate averages for last 7 days
-    const ticketsLast7Days = tickets.filter(t => {
-      const created = new Date(t.createdAt);
-      return created >= last7Days;
-    }).length;
-    
-    const completedLast7Days = tickets.filter(t => {
-      return t.status === 'Completed' && 
-             t.completedAt && 
-             new Date(t.completedAt) >= last7Days;
-    }).length;
-
-    // Calculate averages for last 30 days
-    const ticketsLast30Days = tickets.filter(t => {
-      const created = new Date(t.createdAt);
-      return created >= last30Days;
-    }).length;
-    
-    const completedLast30Days = tickets.filter(t => {
-      return t.status === 'Completed' && 
-             t.completedAt && 
-             new Date(t.completedAt) >= last30Days;
-    }).length;
-
-    // Calculate daily averages
-    const avgCreatedPerDay = ticketsLast7Days > 0 ? Math.round((ticketsLast7Days / 7) * 10) / 10 : 0;
-    const avgCompletedPerDay = completedLast7Days > 0 ? Math.round((completedLast7Days / 7) * 10) / 10 : 0;
-    
-    // Calculate backlog trend (current week vs previous week)
-    const currentWeekStart = new Date(now);
-    currentWeekStart.setDate(now.getDate() - now.getDay()); // Start of current week
-    currentWeekStart.setHours(0, 0, 0, 0);
-    
-    const previousWeekStart = new Date(currentWeekStart);
-    previousWeekStart.setDate(currentWeekStart.getDate() - 7);
-    
-    const currentWeekTickets = tickets.filter(t => {
-      const created = new Date(t.createdAt);
-      return created >= currentWeekStart;
-    }).length;
-    
-    const previousWeekTickets = tickets.filter(t => {
-      const created = new Date(t.createdAt);
-      return created >= previousWeekStart && created < currentWeekStart;
-    }).length;
-    
-    const backlogTrend = previousWeekTickets > 0 ? 
-      Math.round(((currentWeekTickets - previousWeekTickets) / previousWeekTickets) * 100) : 0;
-    const backlogTrendLabel = backlogTrend > 0 ? `+${backlogTrend}%` : `${backlogTrend}%`;
-
-    // Calculate velocity score based on daily completion rate
-    const dailyCompletionRate = avgCreatedPerDay > 0 ? (avgCompletedPerDay / avgCreatedPerDay) * 100 : 0;
-    let velocityScore = 'Low';
-    if (dailyCompletionRate >= 85) velocityScore = 'High';
-    else if (dailyCompletionRate >= 70) velocityScore = 'Medium';
-
-    // Update the metric elements
-    updateChartMetric('peak-week', peakWeekLabel, 'Peak Week', 'Identify high-activity periods for planning');
-    updateChartMetric('avg-created-per-day', avgCreatedPerDay, 'Avg Created/Day', 'Track team productivity trends');
-    updateChartMetric('avg-completed-per-day', avgCompletedPerDay, 'Avg Completed/Day', 'Track team productivity trends');
-    updateChartMetric('backlog-trend', backlogTrendLabel, 'Backlog Trend', 'Spot potential bottlenecks early');
-    updateChartMetric('velocity-score', velocityScore, 'Velocity Score', 'Quick assessment of team performance');
-  }
-
-  function updateChartMetric(elementId, value, label, tooltip) {
-    const element = document.getElementById(elementId);
-    if (element) {
-      element.textContent = value;
-      element.setAttribute('title', tooltip);
-      element.setAttribute('data-label', label);
-    }
-  }
-
-  function getWeekKey(date) {
-    const d = new Date(date);
-    const yearStart = new Date(d.getUTCFullYear(), 0, 1);
-    const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-    return `Week ${weekNo}`;
-  }
-
-  function addQuickAddTaskRow() {
-    // Prevent adding a new row if one is already being edited
-    const existingEditRow = document.getElementById("inline-edit-row");
-    if (existingEditRow) {
-      existingEditRow.scrollIntoView({ behavior: "smooth", block: "center" });
-      existingEditRow.querySelector('input[type="text"]')?.focus();
-      showToast("Please save or cancel the current task first.", "error");
-      return;
-    }
-
-    const tableBody = document.querySelector("table tbody");
-    if (!tableBody) return;
-
-    // Create the new row
-    const newRow = document.createElement("tr");
-    newRow.id = "inline-edit-row";
-    newRow.classList.add("inline-edit-row-class");
-
-    // --- MODIFICATION START ---
-    const typeOptions = ["Task", "Bug", "Request"]
-      .map((o) => `<option value="${o}">${o}</option>`)
-      .join("");
-    const priorityOptions = ["Medium", "High", "Urgent", "Low"]
-      .map(
-        (o) =>
-          `<option value="${o}" ${
-            o === "Medium" ? "selected" : ""
-          }>${o}</option>`
-      )
-      .join("");
-    const today = new Date().toISOString().split("T")[0]; // Define today's date
-
-    // Replace the innerHTML with the same structure as the other inline add row
-    newRow.innerHTML = `
-        ${isBulkEditMode ? "<td></td>" : ""}
-        <td data-label="ID"><i class="fas fa-plus" style="color: var(--accent-color);"></i></td>
-        <td data-label="Task">
-            <div class="inline-task-editor">
-                <div class="inline-task-inputs">
-                    <div class="inline-date-field">
-                       <label for="inline-new-createdAt">Created:</label>
-                       <input type="date" id="inline-new-createdAt" class="inline-editor" value="${today}">
-                    </div>
-                    <div class="inline-title-field">
-                        <input type="text" id="inline-new-title" class="inline-editor" placeholder="Enter task title..." required>
-                    </div>
-                </div>
-                <div class="inline-row-actions">
-                    <button class="action-btn-inline save-inline-btn" title="Save"><i class="fas fa-check"></i></button>
-                    <button class="action-btn-inline cancel-inline-btn" title="Cancel"><i class="fas fa-times"></i></button>
-                </div>
-            </div>
-        </td>
-        <td data-label="Type"><select id="inline-new-type" class="inline-editor">${typeOptions}</select></td>
-        <td data-label="Priority"><select id="inline-new-priority" class="inline-editor">${priorityOptions}</select></td>
-        <td data-label="Status"><span class="status-tag status-open">Open</span></td>
-        <td data-label="Requested By" id="inline-new-requestedBy-cell"></td>
-        <td data-label="Assignee" id="inline-new-assignee-cell"></td>
-    `;
-    // --- MODIFICATION END ---
-
-    // Insert the new row at the top of the table body
-    tableBody.insertBefore(newRow, tableBody.firstChild);
-
-    // Populate dropdowns with defaults
-    newRow.querySelector("#inline-new-requestedBy-cell").innerHTML =
-      createSearchableDropdown(
-        appData.users.map((u) => ({ value: u, text: u })),
-        appData.currentUserName,
-        "new-inline",
-        "requestedBy"
-      );
-    const assigneeCell = newRow.querySelector("#inline-new-assignee-cell");
-    assigneeCell.innerHTML = createSearchableDropdown(
-      appData.teamMembers.map((m) => ({ value: m.id, text: m.name })),
-      appData.currentUserId,
-      "new-inline",
-      "assigneeId"
-    );
-    const assigneeInput = assigneeCell.querySelector("input");
-    if (assigneeInput) {
-      assigneeInput.dataset.value = appData.currentUserId || "";
-    }
-
-    // Add listeners to save the task (with null for project/epic) or cancel
-    newRow
-      .querySelector(".save-inline-btn")
-      .addEventListener("click", () => saveInlineTask(newRow, null, null));
-    newRow
-      .querySelector(".cancel-inline-btn")
-      .addEventListener("click", () => newRow.remove());
-
-    newRow.querySelector("#inline-new-title").focus();
-    newRow.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
-
-  /**
-   * Opens a modal to ask the user for a start date.
-   * @returns {Promise<string|null>} A promise that resolves with the selected date string (YYYY-MM-DD), or null if cancelled.
-   */
 
   // ADD this new function for validation
   function validateTicketRows() {

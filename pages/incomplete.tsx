@@ -1,12 +1,14 @@
-import type { AppPageProps } from "../lib/appPageTypes";
-import BaseAppPage from "../lib/appPageFactory";
-import { createAppPageGetServerSideProps } from "../lib/server/appPageData";
+import type { GetServerSideProps } from "next";
 
-export default function IncompletePage(props: AppPageProps) {
-  return <BaseAppPage {...props} />;
+export default function IncompletePage() {
+  return null;
 }
 
-export const getServerSideProps = createAppPageGetServerSideProps({
-  defaultView: "incomplete",
-  routePath: "/incomplete",
-});
+export const getServerSideProps: GetServerSideProps = async () => {
+  return {
+    redirect: {
+      destination: "/tickets?tab=incomplete",
+      permanent: false,
+    },
+  };
+};
