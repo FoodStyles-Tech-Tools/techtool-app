@@ -29,6 +29,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
+const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
+
 interface TicketDetailDialogProps {
   ticketId: string | null
   open: boolean
@@ -47,7 +49,6 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const UNASSIGNED_VALUE = "unassigned"
   const NO_DEPARTMENT_VALUE = "no_department"
   const NO_PROJECT_VALUE = "no_project"
-  const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
   const { departments } = useDepartments()
   const { data: projectsData } = useProjects()
   const { hasPermission } = usePermissions()
@@ -68,7 +69,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     }
   }
 
-  const users = usersData || []
+  const users = useMemo(() => usersData || [], [usersData])
   const loading = !ticketData && isLoading
 
   useEffect(() => {
@@ -89,7 +90,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     () => users.filter((user) =>
       user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false
     ),
-    [users, ASSIGNEE_ALLOWED_ROLES]
+    [users]
   )
 
   const getUserById = (id?: string | null) => {

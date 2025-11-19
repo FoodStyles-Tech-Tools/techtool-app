@@ -30,6 +30,25 @@ import { TicketDetailDialog } from "@/components/ticket-detail-dialog"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 
+type ProjectTicket = {
+  id: string
+  title: string
+  description: string | null
+  status: string
+  priority: string
+  type: string
+  created_at: string
+  started_at?: string | null
+  completed_at?: string | null
+  assigned_at?: string | null
+  department?: { id: string; name: string } | null
+  project?: { id: string; name: string } | null
+  assignee?: { id: string; name: string | null; email: string; image: string | null } | null
+  requested_by?: { id: string; name: string | null; email: string } | null
+  display_id?: string | null
+  links?: string[]
+} & Record<string, any>
+
 const KANBAN_COLUMNS = [
   { id: "open", label: "Open", color: "fill-gray-500 text-gray-500" },
   { id: "in_progress", label: "In Progress", color: "fill-yellow-500 text-yellow-500" },
@@ -150,7 +169,7 @@ export default function ProjectDetailPage() {
 
   // Derive data values (must be before any hooks that use them)
   const project = projectData?.project || null
-  const allTickets = useMemo(() => ticketsData || [], [ticketsData])
+  const allTickets = useMemo(() => (ticketsData || []) as ProjectTicket[], [ticketsData])
   const users = usersData || []
   const loading = (!projectData && projectLoading) || (!ticketsData && ticketsLoading)
 
