@@ -50,6 +50,7 @@ export async function GET(
     if (ticket.assignee?.email) emails.add(ticket.assignee.email)
     if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
     
+    let enrichedTicket = ticket
     if (emails.size > 0) {
       const { data: authUsers } = await supabase
         .from("auth_user")
@@ -63,8 +64,8 @@ export async function GET(
       })
       
       // Enrich ticket with images
-      ticket = {
-        ...ticket,
+      enrichedTicket = {
+        ...enrichedTicket,
         assignee: ticket.assignee ? {
           ...ticket.assignee,
           image: imageMap.get(ticket.assignee.email) || null,
@@ -72,7 +73,7 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({ ticket })
+    return NextResponse.json({ ticket: enrichedTicket })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -350,6 +351,7 @@ export async function PATCH(
     if (ticket.assignee?.email) emails.add(ticket.assignee.email)
     if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
     
+    let enrichedTicket = ticket
     if (emails.size > 0) {
       const { data: authUsers } = await supabase
         .from("auth_user")
@@ -363,8 +365,8 @@ export async function PATCH(
       })
       
       // Enrich ticket with images
-      ticket = {
-        ...ticket,
+      enrichedTicket = {
+        ...enrichedTicket,
         assignee: ticket.assignee ? {
           ...ticket.assignee,
           image: imageMap.get(ticket.assignee.email) || null,
@@ -372,7 +374,7 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json({ ticket })
+    return NextResponse.json({ ticket: enrichedTicket })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

@@ -392,15 +392,6 @@ export default function TicketsPage() {
 
   const hasSearchQuery = deferredSearchQuery.trim().length > 0
 
-  // Don't render content if user doesn't have permission (will redirect)
-  if (permissionLoading || !canView) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      </div>
-    )
-  }
-
   // Pagination - server-side pagination is handled by useTickets
   // For client-side search, we need to handle pagination here
   const totalPages = hasSearchQuery 
@@ -412,6 +403,15 @@ export default function TicketsPage() {
     () => (hasSearchQuery ? filteredTickets.slice(startIndex, endIndex) : filteredTickets),
     [filteredTickets, hasSearchQuery, startIndex, endIndex]
   )
+
+  // Don't render content if user doesn't have permission (will redirect)
+  if (permissionLoading || !canView) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">
