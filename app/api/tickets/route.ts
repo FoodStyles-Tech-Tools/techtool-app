@@ -246,6 +246,7 @@ export async function POST(request: NextRequest) {
       if (ticket.assignee?.email) emails.add(ticket.assignee.email)
       if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
       
+      let enrichedTicket = ticket
       if (emails.size > 0) {
         const { data: authUsers } = await supabase
           .from("auth_user")
@@ -259,7 +260,7 @@ export async function POST(request: NextRequest) {
         })
         
         // Enrich ticket with images
-        ticket = {
+        enrichedTicket = {
           ...ticket,
           assignee: ticket.assignee ? {
             ...ticket.assignee,
@@ -268,7 +269,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return NextResponse.json({ ticket }, { status: 201 })
+      return NextResponse.json({ ticket: enrichedTicket }, { status: 201 })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
