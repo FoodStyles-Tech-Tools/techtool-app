@@ -89,7 +89,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     () => users.filter((user) =>
       user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false
     ),
-    [users]
+    [users, ASSIGNEE_ALLOWED_ROLES]
   )
 
   const getUserById = (id?: string | null) => {
@@ -972,4 +972,3 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     </Dialog>
   )
 }
-

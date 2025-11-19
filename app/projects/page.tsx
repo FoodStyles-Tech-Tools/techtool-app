@@ -104,9 +104,9 @@ export default function ProjectsPage() {
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
   const deferredSearchQuery = useDeferredValue(searchQuery)
 
-  const projects = data || []
-  const tickets = ticketsData || []
-  const users = usersData || []
+  const projects = useMemo(() => data || [], [data])
+  const tickets = useMemo(() => ticketsData || [], [ticketsData])
+  const users = useMemo(() => usersData || [], [usersData])
   // Only show loading if we have no data at all
   const loading = !data && isLoading
   const canCreateProjects = hasPermission("projects", "create")
@@ -201,15 +201,6 @@ export default function ProjectsPage() {
   }, [projects, deferredSearchQuery, departmentFilter, excludeDone])
   const hasProjectSearch = deferredSearchQuery.trim().length > 0
 
-  // Don't render content if user doesn't have permission (will redirect)
-  if (permissionLoading || !canView) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      </div>
-    )
-  }
-
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm("Are you sure you want to delete this project?")) {
       return
@@ -285,6 +276,15 @@ export default function ProjectsPage() {
       })
     }
   }, [updateProject])
+
+  // Don't render content if user doesn't have permission (will redirect)
+  if (permissionLoading || !canView) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-4">

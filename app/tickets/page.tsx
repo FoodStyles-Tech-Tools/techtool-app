@@ -35,6 +35,14 @@ const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 const ROWS_PER_PAGE = 20
 const UNASSIGNED_VALUE = "unassigned"
 const NO_DEPARTMENT_VALUE = "no_department"
+const FIELD_LABELS: Record<string, string> = {
+  status: "Status",
+  priority: "Priority",
+  type: "Type",
+  requested_by_id: "Requested By",
+  assignee_id: "Assignee",
+  department_id: "Department",
+}
 
 interface Ticket {
   id: string
@@ -222,21 +230,12 @@ export default function TicketsPage() {
     setCurrentPage(1)
   }, [statusFilter, projectFilter, departmentFilter, requestedByFilter, assigneeFilter, excludeDone])
 
-  const allTickets = ticketsData || []
-  const projects = projectsData || []
-  const users = usersData || []
+  const allTickets = useMemo(() => ticketsData || [], [ticketsData])
+  const projects = useMemo(() => projectsData || [], [projectsData])
+  const users = useMemo(() => usersData || [], [usersData])
   // Only show loading if we have no data at all
   const loading = !ticketsData && ticketsLoading
   const canCreateTickets = hasPermission("tickets", "create")
-
-  const FIELD_LABELS: Record<string, string> = {
-    status: "Status",
-    priority: "Priority",
-    type: "Type",
-    requested_by_id: "Requested By",
-    assignee_id: "Assignee",
-    department_id: "Department",
-  }
 
   const assigneeEligibleUsers = useMemo(
     () => users.filter((user) =>

@@ -98,7 +98,7 @@ export default function ProjectDetailPage() {
     if (user?.id && !newTicketData.requested_by_id) {
       setNewTicketData(prev => ({ ...prev, requested_by_id: user.id }))
     }
-  }, [user?.id])
+  }, [user?.id, newTicketData.requested_by_id])
 
   // Keyboard shortcut: Press "a" to quick-add, ESC to close
   useEffect(() => {
@@ -150,7 +150,7 @@ export default function ProjectDetailPage() {
 
   // Derive data values (must be before any hooks that use them)
   const project = projectData?.project || null
-  const allTickets = ticketsData || []
+  const allTickets = useMemo(() => ticketsData || [], [ticketsData])
   const users = usersData || []
   const loading = (!projectData && projectLoading) || (!ticketsData && ticketsLoading)
 
@@ -1259,4 +1259,3 @@ export default function ProjectDetailPage() {
     </div>
   )
 }
-

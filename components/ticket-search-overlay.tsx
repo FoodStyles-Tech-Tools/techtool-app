@@ -25,7 +25,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
   const { data: ticketsData, isLoading } = useTickets()
   const deferredQuery = useDeferredValue(searchQuery)
 
-  const tickets = ticketsData || []
+  const tickets = useMemo(() => ticketsData || [], [ticketsData])
 
   // Filter tickets based on search query with a deferred value to keep typing responsive
   const filteredTickets = useMemo(() => {
@@ -209,7 +209,6 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
     </>
   )
 }
-
 
 
 

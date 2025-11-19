@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -61,7 +61,7 @@ export default function RolesPage() {
   const { hasPermission: canView, loading: permissionLoading } = useRequirePermission("roles", "view")
   const queryClient = useQueryClient()
   const { data: rolesData, loading, refetch: refetchRoles } = useRoles()
-  const roles = rolesData || []
+  const roles = useMemo(() => rolesData || [], [rolesData])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [editingPermissions, setEditingPermissions] = useState<Record<string, string[]>>({})
@@ -434,4 +434,3 @@ export default function RolesPage() {
     </div>
   )
 }
-
