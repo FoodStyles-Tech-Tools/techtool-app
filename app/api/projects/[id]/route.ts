@@ -29,6 +29,7 @@ export async function GET(
     }
 
     // Get image from auth_user for owner
+    let enrichedProject = project
     if (project.owner?.email) {
       const { data: authUser } = await supabase
         .from("auth_user")
@@ -36,8 +37,8 @@ export async function GET(
         .eq("email", project.owner.email)
         .single()
       
-      project = {
-        ...project,
+      enrichedProject = {
+        ...enrichedProject,
         owner: {
           ...project.owner,
           image: authUser?.image || null,
@@ -45,7 +46,7 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({ project })
+    return NextResponse.json({ project: enrichedProject })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -105,6 +106,7 @@ export async function PATCH(
     }
 
     // Get image from auth_user for owner
+    let enrichedProject = project
     if (project.owner?.email) {
       const { data: authUser } = await supabase
         .from("auth_user")
@@ -112,8 +114,8 @@ export async function PATCH(
         .eq("email", project.owner.email)
         .single()
       
-      project = {
-        ...project,
+      enrichedProject = {
+        ...enrichedProject,
         owner: {
           ...project.owner,
           image: authUser?.image || null,
@@ -121,7 +123,7 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json({ project })
+    return NextResponse.json({ project: enrichedProject })
   } catch (error: any) {
     if (error.message === "Unauthorized" || error.message.includes("Forbidden")) {
       return NextResponse.json(
@@ -192,4 +194,3 @@ export async function DELETE(
     )
   }
 }
-

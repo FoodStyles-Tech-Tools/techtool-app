@@ -153,6 +153,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get image from auth_user for owner
+    let enrichedProject = project
     if (project.owner?.email) {
       const { data: authUser } = await supabase
         .from("auth_user")
@@ -160,8 +161,8 @@ export async function POST(request: NextRequest) {
         .eq("email", project.owner.email)
         .single()
       
-      project = {
-        ...project,
+      enrichedProject = {
+        ...enrichedProject,
         owner: {
           ...project.owner,
           image: authUser?.image || null,
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ project }, { status: 201 })
+    return NextResponse.json({ project: enrichedProject }, { status: 201 })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -184,4 +185,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
