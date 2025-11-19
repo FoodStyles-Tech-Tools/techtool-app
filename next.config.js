@@ -1,29 +1,36 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true, // Enable React strict mode for better development experience
-  // Disable aggressive caching for JavaScript files to ensure real-time updates work
-  async headers() {
-    return [
-      {
-        source: '/js/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate',
-          },
-        ],
-      },
-    ];
+  reactStrictMode: true,
+  // Enable prefetching for better navigation performance
+  experimental: {
+    optimizePackageImports: [
+      'lucide-react', 
+      '@radix-ui/react-select', 
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-popover',
+      '@tanstack/react-query',
+    ],
   },
-  // Performance optimizations
-  compress: true,
-  poweredByHeader: false,
-  // Optimize images
+  // Optimize images and static assets
   images: {
     formats: ['image/avif', 'image/webp'],
   },
-  // Enable SWC minification for better performance
+  // Compiler optimizations
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+  // SWC minification (faster than Terser)
   swcMinify: true,
-};
+  // Optimize production builds
+  productionBrowserSourceMaps: false,
+  // Enable compression
+  compress: true,
+  // Optimize font loading
+  optimizeFonts: true,
+}
 
-module.exports = nextConfig;
+module.exports = nextConfig
+

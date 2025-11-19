@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 30 14% 97%; /* #f9f8f7 */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 30 14% 97%; /* #f9f8f7 - for sidebar and table headers */
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 30 14% 97%; /* #f9f8f7 */
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 10%; /* #191919 */
+    --foreground: 0 0% 95%;
+    --card: 0 0% 10%; /* #191919 */
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 10%; /* #191919 */
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 0% 95%;
+    --primary-foreground: 0 0% 10%;
+    --secondary: 0 0% 12.5%; /* #202020 */
+    --secondary-foreground: 0 0% 95%;
+    --muted: 0 0% 12.5%; /* #202020 - for sidebar */
+    --muted-foreground: 0 0% 65%;
+    --accent: 0 0% 12.5%; /* #202020 */
+    --accent-foreground: 0 0% 95%;
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 95%;
+    --border: 0 0% 18%;
+    --input: 0 0% 12.5%; /* #202020 */
+    --ring: 0 0% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-weight: 400;
+  }
+  
+  /* Remove focus outline on mouse click, but keep it for keyboard navigation */
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+  
+  /* Hide scrollbars but maintain scroll functionality */
+  * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  
+  *::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+}
+
+@layer utilities {
+  @keyframes highlight-update {
+    0% {
+      background-color: hsl(var(--primary) / 0.15);
+    }
+    50% {
+      background-color: hsl(var(--primary) / 0.25);
+    }
+    100% {
+      background-color: transparent;
+    }
+  }
+  
+  .animate-highlight-update {
+    animation: highlight-update 1s ease-out;
+  }
+}
+
