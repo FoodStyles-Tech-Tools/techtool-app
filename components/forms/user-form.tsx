@@ -104,11 +104,7 @@ export function UserForm({ onSuccess, initialData }: UserFormProps) {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="user@example.com"
-                  {...field}
-                  disabled={!!initialData?.id}
-                />
+                <Input placeholder="user@example.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -158,4 +154,3 @@ export function UserForm({ onSuccess, initialData }: UserFormProps) {
     </Form>
   )
 }
-
