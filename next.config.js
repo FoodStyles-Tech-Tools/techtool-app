@@ -34,9 +34,11 @@ const nextConfig = {
   optimizeFonts: true,
   // Ensure proper output for Vercel (serverless functions)
   output: undefined, // Let Vercel handle this automatically
-  // Environment variable validation happens at runtime now (lazy initialization)
-  // No need to validate here as it would break builds
+  // Expose build/version information to the client
+  env: {
+    NEXT_PUBLIC_APP_VERSION:
+      process.env.NEXT_PUBLIC_APP_VERSION || process.env.VERCEL_GIT_COMMIT_SHA || "0.0.0",
+  },
 }
 
 module.exports = nextConfig
-

@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toast"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ReactQueryProvider } from "@/lib/react-query"
 import { KeyboardShortcuts } from "@/components/keyboard-shortcuts"
+import { SignOutOverlayProvider } from "@/components/signout-overlay"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -23,13 +24,14 @@ export default function RootLayout({
       <body className={inter.className}>
         <ReactQueryProvider>
           <ThemeProvider defaultTheme="system" storageKey="techtool-theme">
-            {children}
-            <Toaster />
-            <KeyboardShortcuts />
+            <SignOutOverlayProvider>
+              {children}
+              <Toaster />
+              <KeyboardShortcuts />
+            </SignOutOverlayProvider>
           </ThemeProvider>
         </ReactQueryProvider>
       </body>
     </html>
   )
 }
-

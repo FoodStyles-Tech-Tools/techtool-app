@@ -85,14 +85,11 @@ export function SignInContent() {
                       callbackURL: "/dashboard"
                     },
                     {
-                      onRequest: (ctx) => {
+                      onRequest: () => {
                         setLoading(true)
                         setError(null)
                       },
-                      onResponse: (ctx) => {
-                        setLoading(false)
-                      },
-                      onError: (ctx) => {
+                      onError: () => {
                         setLoading(false)
                         setError("Failed to sign in. Please try again.")
                       },

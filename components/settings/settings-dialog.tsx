@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,8 @@ import { Label } from "@/components/ui/label"
 import { signOut, useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { useTheme } from "@/components/theme-provider"
+import { usePermissions } from "@/hooks/use-permissions"
+import { useSignOutOverlay } from "@/components/signout-overlay"
 
 interface SettingsDialogProps {
   open: boolean
@@ -32,32 +34,22 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { data: session } = useSession()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const [user, setUser] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (open) {
-      async function fetchUser() {
-        try {
-          const res = await fetch("/api/auth/me")
-          if (res.ok) {
-            const data = await res.json()
-            setUser(data.user)
-          }
-        } catch (error) {
-          console.error("Error fetching user:", error)
-        } finally {
-          setLoading(false)
-        }
-      }
-      fetchUser()
-    }
-  }, [open])
+  const { user: permissionsUser } = usePermissions()
+  const user = useMemo(() => permissionsUser || session?.user || null, [permissionsUser, session?.user])
+  const [signingOut, setSigningOut] = useState(false)
+  const { show, hide } = useSignOutOverlay()
 
   const handleSignOut = async () => {
-    await signOut()
-    router.push("/signin")
-    onOpenChange(false)
+    try {
+      setSigningOut(true)
+      show()
+      await signOut()
+      router.push("/signin")
+      onOpenChange(false)
+    } catch (error) {
+      hide()
+      setSigningOut(false)
+    }
   }
 
   return (
@@ -146,8 +138,15 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               {/* Actions */}
               <div className="space-y-3">
                 <h3 className="text-sm font-medium">Actions</h3>
-                <Button variant="destructive" onClick={handleSignOut}>
-                  Sign Out
+                <Button variant="destructive" onClick={handleSignOut} disabled={signingOut}>
+                  {signingOut ? (
+                    <>
+                      <span className="mr-2 inline-flex h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      Signing Out...
+                    </>
+                  ) : (
+                    "Sign Out"
+                  )}
                 </Button>
               </div>
             </div>
@@ -157,4 +156,3 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     </Dialog>
   )
 }
-

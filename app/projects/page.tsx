@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
 import { useDepartments } from "@/hooks/use-departments"
+import { truncateText } from "@/lib/utils"
 
 const ROWS_PER_PAGE = 20
 const DEFAULT_PROJECT_STATS = { total: 0, done: 0, percentage: 0 }
@@ -637,10 +638,15 @@ const ProjectRow = memo(function ProjectRow({
             onValueChange={(value) => updateProjectField(project.id, "owner_id", value)}
             disabled={isUpdatingOwner}
           >
-            <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-[#1f1f1f]">
+            <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden pr-6 dark:bg-[#1f1f1f]">
               {project.owner?.id ? (
-                <div className="absolute left-2">
-                  <UserSelectValue users={users} value={project.owner.id} placeholder="Select owner" />
+                <div className="absolute inset-y-0 left-2 right-6 flex items-center pointer-events-none">
+                  <UserSelectValue
+                    users={users}
+                    value={project.owner.id}
+                    placeholder="Select owner"
+                    maxLength={16}
+                  />
                 </div>
               ) : (
                 <SelectValue placeholder="Select owner" />
@@ -648,7 +654,7 @@ const ProjectRow = memo(function ProjectRow({
             </SelectTrigger>
             <SelectContent className="dark:bg-[#1f1f1f]">
               {users.map((user) => (
-                <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
+                <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" maxLength={24} />
               ))}
             </SelectContent>
           </Select>
@@ -660,8 +666,8 @@ const ProjectRow = memo(function ProjectRow({
                 {project.owner?.name?.[0]?.toUpperCase() || project.owner?.email?.[0]?.toUpperCase() || "?"}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs text-muted-foreground">
-              {project.owner?.name || project.owner?.email || "Unassigned"}
+            <span className="text-xs text-muted-foreground max-w-[150px] truncate" title={project.owner?.name || project.owner?.email || "Unassigned"}>
+              {truncateText(project.owner?.name || project.owner?.email || "Unassigned", 18)}
             </span>
           </div>
         )}

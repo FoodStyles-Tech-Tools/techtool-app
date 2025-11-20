@@ -19,6 +19,7 @@ import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { usePermissions } from "@/hooks/use-permissions"
 import { KeyboardShortcutDialog } from "@/components/keyboard-shortcut-dialog"
 import { VersionIndicator } from "@/components/version-indicator"
+import { useSignOutOverlay } from "@/components/signout-overlay"
 
 const navItems = [
   {
@@ -60,10 +61,16 @@ export function Sidebar() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const { hasPermission } = usePermissions()
+  const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()
 
   const handleSignOut = async () => {
-    await signOut()
-    router.push("/signin")
+    try {
+      showOverlay()
+      await signOut()
+      router.push("/signin")
+    } finally {
+      hideOverlay()
+    }
   }
 
   const user = session?.user
