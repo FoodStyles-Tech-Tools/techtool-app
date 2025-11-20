@@ -144,7 +144,8 @@ export function useTickets(options?: {
             department:departments(id, name),
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
-            requested_by:users!tickets_requested_by_id_fkey(id, name, email)
+            requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+            epic:epics(id, name, color)
           `)
           .eq("id", newTicketData.id)
           .single()
@@ -303,7 +304,8 @@ export function useTickets(options?: {
           department:departments(id, name),
           project:projects(id, name),
           assignee:users!tickets_assignee_id_fkey(id, name, email),
-          requested_by:users!tickets_requested_by_id_fkey(id, name, email)
+          requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+          epic:epics(id, name, color)
         `)
         .order("created_at", { ascending: false })
 

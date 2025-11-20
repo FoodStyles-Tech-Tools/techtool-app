@@ -33,6 +33,7 @@ import { useCreateTicket, useUpdateTicket } from "@/hooks/use-tickets"
 import { toast } from "@/components/ui/toast"
 import { useEpics } from "@/hooks/use-epics"
 import { EpicSelect } from "@/components/epic-select"
+import { usePermissions } from "@/hooks/use-permissions"
 
 const ticketSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -79,6 +80,7 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
   const [users, setUsers] = useState<User[]>([])
   const { departments, refresh } = useDepartments()
   const { epics } = useEpics(projectId || "")
+  const { user } = usePermissions()
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
   const createTicket = useCreateTicket()
   const updateTicket = useUpdateTicket()
@@ -105,12 +107,19 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
       description: initialData?.description || "",
       priority: initialData?.priority || "medium",
       type: initialData?.type || "task",
-      assignee_id: initialData?.assignee_id || "",
+      assignee_id: initialData?.assignee_id || (isEditing ? "" : (user?.id || "")),
       department_id: initialData?.department_id || "",
       epic_id: initialData?.epic_id || "",
       links: initialData?.links || [],
     },
   })
+
+  // Set default assignee to current user when creating a new ticket
+  useEffect(() => {
+    if (!isEditing && user?.id && !form.getValues("assignee_id")) {
+      form.setValue("assignee_id", user.id)
+    }
+  }, [user?.id, isEditing])
 
   const { fields: linkFields, append: appendLink, remove: removeLink } = useFieldArray<TicketFormValues, FieldArrayPath<TicketFormValues>>({
     control: form.control,
