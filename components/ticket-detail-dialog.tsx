@@ -13,6 +13,7 @@ import { format } from "date-fns"
 import { toast } from "@/components/ui/toast"
 import { useDepartments } from "@/hooks/use-departments"
 import { useProjects } from "@/hooks/use-projects"
+import { useEpics } from "@/hooks/use-epics"
 import { Subtasks } from "@/components/subtasks"
 import { useTicket, useUpdateTicket } from "@/hooks/use-tickets"
 import { useUsers } from "@/hooks/use-users"
@@ -20,6 +21,7 @@ import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
+import { EpicSelect } from "@/components/epic-select"
 import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -54,6 +56,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const UNASSIGNED_VALUE = "unassigned"
   const NO_DEPARTMENT_VALUE = "no_department"
   const NO_PROJECT_VALUE = "no_project"
+  const NO_EPIC_VALUE = "no_epic"
   const { departments } = useDepartments()
   const { data: projectsData } = useProjects()
   const { hasPermission } = usePermissions()
@@ -290,6 +293,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       { department_id: newDepartmentId === NO_DEPARTMENT_VALUE ? null : newDepartmentId },
       "Department updated",
       "department_id"
+    )
+  }
+
+  const handleEpicChange = (newEpicId: string | null) => {
+    updateTicketWithToast(
+      { epic_id: newEpicId },
+      "Epic updated",
+      "epic_id"
     )
   }
 
@@ -911,6 +922,19 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Epic</label>
+                      <div className="flex-1">
+                        <EpicSelect
+                          value={ticket.epic?.id || null}
+                          onValueChange={handleEpicChange}
+                          epics={epics}
+                          disabled={!hasPermission("tickets", "edit") || updatingFields["epic_id"] || !projectId}
+                          triggerClassName="h-9 w-full"
+                        />
                       </div>
                     </div>
 

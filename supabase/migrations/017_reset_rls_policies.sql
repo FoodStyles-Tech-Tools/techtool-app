@@ -34,3 +34,9 @@ DROP POLICY IF EXISTS "Admins can manage permissions" ON permissions;
 DROP POLICY IF EXISTS "Users can view subtasks" ON subtasks;
 DROP POLICY IF EXISTS "Users can manage subtasks" ON subtasks;
 
+-- Epics table policies
+DROP POLICY IF EXISTS "Users can view epics with permission" ON epics;
+DROP POLICY IF EXISTS "Users can create epics with permission" ON epics;
+DROP POLICY IF EXISTS "Users can update epics with permission" ON epics;
+DROP POLICY IF EXISTS "Users can delete epics with permission" ON epics;
+

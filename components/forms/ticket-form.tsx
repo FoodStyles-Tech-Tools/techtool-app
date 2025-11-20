@@ -31,6 +31,8 @@ import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import { useCreateTicket, useUpdateTicket } from "@/hooks/use-tickets"
 import { toast } from "@/components/ui/toast"
+import { useEpics } from "@/hooks/use-epics"
+import { EpicSelect } from "@/components/epic-select"
 
 const ticketSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -39,6 +41,13 @@ const ticketSchema = z.object({
   type: z.enum(["bug", "request", "task"]).default("task"),
   assignee_id: z.string().optional(),
   department_id: z
+    .union([
+      z.string().uuid(),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional(),
+  epic_id: z
     .union([
       z.string().uuid(),
       z.literal(""),
@@ -69,6 +78,7 @@ const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProps) {
   const [users, setUsers] = useState<User[]>([])
   const { departments, refresh } = useDepartments()
+  const { epics } = useEpics(projectId || "")
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
   const createTicket = useCreateTicket()
   const updateTicket = useUpdateTicket()
@@ -97,6 +107,7 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
       type: initialData?.type || "task",
       assignee_id: initialData?.assignee_id || "",
       department_id: initialData?.department_id || "",
+      epic_id: initialData?.epic_id || "",
       links: initialData?.links || [],
     },
   })
@@ -117,6 +128,7 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
         project_id: projectId || null,
         assignee_id: values.assignee_id || undefined,
         department_id: values.department_id || undefined,
+        epic_id: values.epic_id || undefined,
         links: sanitizedLinks,
       }
 
@@ -316,6 +328,25 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
             </FormItem>
           )}
         />
+        {projectId && epics.length > 0 && (
+          <FormField
+            control={form.control}
+            name="epic_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Epic</FormLabel>
+                <FormControl>
+                  <EpicSelect
+                    value={field.value || null}
+                    onValueChange={(value) => field.onChange(value || "")}
+                    epics={epics}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <FormField
           control={form.control}
           name="links"

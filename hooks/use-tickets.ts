@@ -46,6 +46,11 @@ interface Ticket {
     id: string
     name: string
   } | null
+  epic: {
+    id: string
+    name: string
+    color: string
+  } | null
   project: {
     id: string
     name: string
@@ -192,7 +197,8 @@ export function useTickets(options?: {
             department:departments(id, name),
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
-            requested_by:users!tickets_requested_by_id_fkey(id, name, email)
+            requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+            epic:epics(id, name, color)
           `)
           .eq("id", updatedTicketData.id)
           .single()
@@ -378,7 +384,8 @@ export function useTicket(ticketId: string, options?: { enabled?: boolean }) {
             department:departments(id, name),
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
-            requested_by:users!tickets_requested_by_id_fkey(id, name, email)
+            requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+            epic:epics(id, name, color)
           `)
           .eq("id", ticketId)
           .single()
@@ -589,6 +596,7 @@ export function useUpdateTicket() {
       assignee_id?: string | null
       requested_by_id?: string
       department_id?: string | null
+      epic_id?: string | null
       assigned_at?: string | null
       started_at?: string | null
       completed_at?: string | null
@@ -614,13 +622,17 @@ export function useUpdateTicket() {
           department:departments(id, name),
           project:projects(id, name),
           assignee:users!tickets_assignee_id_fkey(id, name, email),
-          requested_by:users!tickets_requested_by_id_fkey(id, name, email)
+          requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+          epic:epics(id, name, color)
         `)
         .single()
 
       if (error) throw error
       if (!ticket) throw new Error("Ticket not found")
-      return { ticket }
+      
+      // Enrich ticket with images
+      const enrichedTickets = await enrichTicketsWithImages(supabase, [ticket])
+      return { ticket: enrichedTickets[0] }
     },
     onMutate: async (variables) => {
       // Cancel any outgoing refetches to avoid overwriting optimistic update
@@ -631,9 +643,10 @@ export function useUpdateTicket() {
       const previousTicket = queryClient.getQueryData<{ ticket: Ticket }>(["ticket", variables.id])
       const previousTickets = queryClient.getQueriesData<Ticket[]>({ queryKey: ["tickets"] })
 
-      // Get users and departments from cache for optimistic updates
+      // Get users, departments, and epics from cache for optimistic updates
       const usersData = queryClient.getQueryData<Array<{ id: string; name: string | null; email: string; image: string | null }>>(["users"])
       const departmentsData = queryClient.getQueryData<Array<{ id: string; name: string }>>(["departments"])
+      const epicsData = queryClient.getQueryData<Array<{ id: string; name: string; color: string }>>(["epics", variables.project_id || ""])
 
       // Optimistically update single ticket
       if (previousTicket) {
@@ -681,6 +694,20 @@ export function useUpdateTicket() {
           } else {
             updatedTicket.department = null
           }
+        }
+        
+        if (variables.epic_id !== undefined) {
+          if (variables.epic_id && epicsData) {
+            const epic = epicsData.find(e => e.id === variables.epic_id)
+            updatedTicket.epic = epic ? {
+              id: epic.id,
+              name: epic.name,
+              color: epic.color
+            } : null
+          } else {
+            updatedTicket.epic = null
+          }
+          updatedTicket.epic_id = variables.epic_id || null
         }
 
         queryClient.setQueryData<{ ticket: Ticket }>(["ticket", variables.id], { ticket: updatedTicket })
@@ -735,6 +762,20 @@ export function useUpdateTicket() {
                 } else {
                   updatedTicket.department = null
                 }
+              }
+              
+              if (variables.epic_id !== undefined) {
+                if (variables.epic_id && epicsData) {
+                  const epic = epicsData.find(e => e.id === variables.epic_id)
+                  updatedTicket.epic = epic ? {
+                    id: epic.id,
+                    name: epic.name,
+                    color: epic.color
+                  } : null
+                } else {
+                  updatedTicket.epic = null
+                }
+                updatedTicket.epic_id = variables.epic_id || null
               }
               
               return updatedTicket

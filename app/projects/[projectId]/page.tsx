@@ -35,6 +35,9 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { useEpics, useCreateEpic } from "@/hooks/use-epics"
+import { EpicForm } from "@/components/forms/epic-form"
+import { EpicSelect } from "@/components/epic-select"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 
@@ -56,6 +59,7 @@ type ProjectTicket = {
     }
   } | null
   department?: { id: string; name: string } | null
+  epic?: { id: string; name: string; color: string } | null
   project?: { id: string; name: string } | null
   assignee?: { id: string; name: string | null; email: string; image: string | null } | null
   requested_by?: { id: string; name: string | null; email: string } | null
@@ -84,6 +88,8 @@ export default function ProjectDetailPage() {
   })
   const { departments } = useDepartments()
   const { data: usersData } = useUsers()
+  const { epics } = useEpics(projectId)
+  const createEpic = useCreateEpic()
   const updateTicket = useUpdateTicket()
   const updateProject = useUpdateProject()
   const { user, hasPermission } = usePermissions()
@@ -94,12 +100,20 @@ export default function ProjectDetailPage() {
   const [requestedByFilter, setRequestedByFilter] = useState<string>("all")
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [excludeDone, setExcludeDone] = useState(true)
+  const [groupByEpic, setGroupByEpic] = useState(false)
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
+  const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false)
   const [isAddingNew, setIsAddingNew] = useState(false)
   const [addingToStatus, setAddingToStatus] = useState<string | null>(null)
   const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
-  const [dropIndicator, setDropIndicator] = useState<{ columnId: string; ticketId: string | null; top: number } | null>(null)
+  const [dropIndicator, setDropIndicator] = useState<{ 
+    columnId?: string; 
+    epicId?: string; 
+    statusId?: string; 
+    ticketId: string | null; 
+    top: number 
+  } | null>(null)
   const [droppingTicketId, setDroppingTicketId] = useState<string | null>(null)
   const [optimisticStatusUpdates, setOptimisticStatusUpdates] = useState<Record<string, string>>({})
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
@@ -128,6 +142,7 @@ export default function ProjectDetailPage() {
     department_id: undefined,
     assignee_id: assigneeFilter !== "all" && assigneeFilter !== "unassigned" ? assigneeFilter : undefined,
     requested_by_id: undefined as string | undefined,
+    epic_id: undefined as string | undefined,
   })
 
   // Update requested_by_id when user is available
@@ -267,6 +282,53 @@ export default function ProjectDetailPage() {
     return grouped
   }, [filteredTickets])
 
+  // Group tickets by epic, then by status
+  const ticketsByEpic = useMemo(() => {
+    const epicGroups: Record<string, Record<string, typeof filteredTickets>> = {}
+    
+    // Initialize "No Epic" group
+    epicGroups["no_epic"] = {
+      open: [],
+      in_progress: [],
+      blocked: [],
+      cancelled: [],
+      completed: [],
+    }
+    
+    // Initialize epic groups
+    epics.forEach(epic => {
+      epicGroups[epic.id] = {
+        open: [],
+        in_progress: [],
+        blocked: [],
+        cancelled: [],
+        completed: [],
+      }
+    })
+    
+    // Group tickets
+    filteredTickets.forEach(ticket => {
+      const epicKey = ticket.epic?.id || "no_epic"
+      const status = ticket.status
+      
+      if (!epicGroups[epicKey]) {
+        epicGroups[epicKey] = {
+          open: [],
+          in_progress: [],
+          blocked: [],
+          cancelled: [],
+          completed: [],
+        }
+      }
+      
+      if (epicGroups[epicKey][status]) {
+        epicGroups[epicKey][status].push(ticket)
+      }
+    })
+    
+    return epicGroups
+  }, [filteredTickets, epics])
+
   const handleDragStart = (e: React.DragEvent, ticketId: string) => {
     if (!hasPermission("tickets", "edit")) {
       e.preventDefault()
@@ -368,7 +430,7 @@ export default function ProjectDetailPage() {
       }
     }
     
-    setDropIndicator({ columnId, ticketId: dropTicketId, top: indicatorTop })
+    setDropIndicator({ columnId, ticketId: dropTicketId, top: indicatorTop, epicId: undefined, statusId: undefined })
   }
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -379,6 +441,168 @@ export default function ProjectDetailPage() {
       setDragOverColumn(null)
       setDropIndicator(null)
     }
+  }
+
+  const handleEpicDragOver = (e: React.DragEvent, epicId: string, statusId: string) => {
+    if (!draggedTicket) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = "move"
+    
+    // Calculate drop position based on mouse Y position within the status section
+    const statusSection = e.currentTarget as HTMLElement
+    const containerRect = statusSection.getBoundingClientRect()
+    const mouseY = e.clientY - containerRect.top + statusSection.scrollTop
+    
+    // Find the ticket card that the mouse is over
+    const ticketCards = statusSection.querySelectorAll('[data-ticket-id]')
+    let dropTicketId: string | null = null
+    let indicatorTop = 0
+    
+    if (ticketCards.length === 0) {
+      // Empty section, show line at top
+      indicatorTop = 0
+      dropTicketId = null
+    } else {
+      for (let i = 0; i < ticketCards.length; i++) {
+        const card = ticketCards[i] as HTMLElement
+        const cardTop = card.offsetTop
+        const cardHeight = card.offsetHeight
+        const cardBottom = cardTop + cardHeight
+        
+        // If mouse is in the upper half of a card, drop before it
+        if (mouseY >= cardTop && mouseY < cardTop + (cardHeight / 2)) {
+          dropTicketId = card.getAttribute('data-ticket-id')
+          indicatorTop = cardTop - 4 // 4px is half spacing (space-y-2 = 8px)
+          break
+        }
+        // If mouse is in the lower half, drop after it
+        if (mouseY >= cardTop + (cardHeight / 2) && mouseY < cardBottom) {
+          // Check if there's a next card, otherwise drop at the end
+          if (i < ticketCards.length - 1) {
+            const nextCard = ticketCards[i + 1] as HTMLElement
+            dropTicketId = nextCard.getAttribute('data-ticket-id')
+            indicatorTop = nextCard.offsetTop - 4
+          } else {
+            // Drop at the end
+            dropTicketId = null
+            indicatorTop = cardBottom + 4
+          }
+          break
+        }
+      }
+      
+      // If mouse is above all cards, drop at the top
+      if (dropTicketId === null && ticketCards.length > 0 && mouseY < (ticketCards[0] as HTMLElement).offsetTop) {
+        const firstCard = ticketCards[0] as HTMLElement
+        dropTicketId = firstCard.getAttribute('data-ticket-id')
+        indicatorTop = firstCard.offsetTop - 4
+      }
+    }
+    
+    setDropIndicator({ epicId, statusId, ticketId: dropTicketId, top: indicatorTop })
+  }
+
+  const handleEpicDrop = async (ticketId: string, epicId: string | null, targetStatus: string) => {
+    // Prevent drop if already updating or dropping
+    const isUpdating = Object.keys(updatingFields).some(key => key.startsWith(`${ticketId}-`))
+    if (isUpdating || droppingTicketId === ticketId) {
+      setDraggedTicket(null)
+      setDragOverColumn(null)
+      setDropIndicator(null)
+      return
+    }
+
+    // Get current ticket
+    const currentTicket = allTickets.find(t => t.id === ticketId)
+    const previousStatus = currentTicket?.status
+    const previousEpicId = currentTicket?.epic?.id || null
+
+    // Cancel move if dropping in the same epic and status
+    if (previousEpicId === epicId && previousStatus === targetStatus) {
+      setDraggedTicket(null)
+      setDragOverColumn(null)
+      setDropIndicator(null)
+      return
+    }
+
+    // Apply optimistic update
+    setOptimisticStatusUpdates(prev => ({ ...prev, [ticketId]: targetStatus }))
+    setDroppingTicketId(ticketId)
+    setUpdatingFields(prev => ({ ...prev, [`${ticketId}-status`]: "status", [`${ticketId}-epic_id`]: "epic_id" }))
+
+    // Build update body
+    const updates: any = { 
+      status: targetStatus,
+      epic_id: epicId
+    }
+    
+    // Handle timestamp logic
+    if ((previousStatus === "open" || previousStatus === "blocked") && targetStatus !== "open" && targetStatus !== "blocked") {
+      updates.started_at = new Date().toISOString()
+    }
+    
+    if (targetStatus === "completed" || targetStatus === "cancelled") {
+      updates.completed_at = new Date().toISOString()
+      if (!currentTicket?.started_at) {
+        updates.started_at = new Date().toISOString()
+      }
+    }
+    
+    if ((previousStatus === "completed" || previousStatus === "cancelled") && targetStatus !== "completed" && targetStatus !== "cancelled") {
+      updates.completed_at = null
+      updates.reason = null
+    }
+    
+    if (previousStatus === "in_progress" && (targetStatus === "blocked" || targetStatus === "open")) {
+      updates.started_at = null
+    }
+    
+    if (targetStatus === "open") {
+      updates.started_at = null
+      updates.completed_at = null
+    }
+
+    try {
+      await updateTicket.mutateAsync({
+        id: ticketId,
+        ...updates,
+      })
+      toast("Ticket updated")
+      
+      setTimeout(() => {
+        setOptimisticStatusUpdates(prev => {
+          const newState = { ...prev }
+          delete newState[ticketId]
+          return newState
+        })
+      }, 500)
+      
+      setDroppingTicketId(null)
+      setUpdatingFields(prev => {
+        const newState = { ...prev }
+        delete newState[`${ticketId}-status`]
+        delete newState[`${ticketId}-epic_id`]
+        return newState
+      })
+    } catch (error: any) {
+      toast(error.message || "Failed to update ticket", "error")
+      setOptimisticStatusUpdates(prev => {
+        const newState = { ...prev }
+        delete newState[ticketId]
+        return newState
+      })
+      setDroppingTicketId(null)
+      setUpdatingFields(prev => {
+        const newState = { ...prev }
+        delete newState[`${ticketId}-status`]
+        delete newState[`${ticketId}-epic_id`]
+        return newState
+      })
+    }
+    
+    setDraggedTicket(null)
+    setDragOverColumn(null)
+    setDropIndicator(null)
   }
 
   const handleDrop = async (e: React.DragEvent, targetStatus: string) => {
@@ -539,6 +763,7 @@ export default function ProjectDetailPage() {
         assignee_id: newTicketData.assignee_id || undefined,
         requested_by_id: newTicketData.requested_by_id || user?.id,
         status: addingToStatus || newTicketData.status,
+        epic_id: newTicketData.epic_id || undefined,
       })
       toast("Ticket created successfully")
       setIsAddingNew(false)
@@ -551,6 +776,7 @@ export default function ProjectDetailPage() {
         department_id: undefined,
         assignee_id: assigneeFilter !== "all" && assigneeFilter !== "unassigned" ? assigneeFilter : undefined,
         requested_by_id: undefined,
+        epic_id: undefined,
       })
       setAddingToStatus(null)
     } catch (error: any) {
@@ -800,6 +1026,30 @@ export default function ProjectDetailPage() {
             Exclude Done
           </Label>
         </div>
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="group-by-epic"
+            checked={groupByEpic}
+            onCheckedChange={(checked) => setGroupByEpic(checked === true)}
+          />
+          <Label
+            htmlFor="group-by-epic"
+            className="text-sm font-normal cursor-pointer whitespace-nowrap"
+          >
+            Group by Epic
+          </Label>
+          {hasPermission("projects", "edit") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEpicDialogOpen(true)}
+              className="ml-2 h-8"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              Create Epic
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card className="p-4 flex-shrink-0">
@@ -970,9 +1220,201 @@ export default function ProjectDetailPage() {
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Kanban Board */}
           <div className="flex gap-4 overflow-x-auto overflow-y-hidden flex-1">
-            {KANBAN_COLUMNS.map((column) => {
-              const columnTickets = ticketsByStatus[column.id] || []
-              const isAddingToThisColumn = isAddingNew && addingToStatus === column.id
+            {groupByEpic ? (
+              // Epic-based grouping
+              (() => {
+                const epicList = [
+                  { id: "no_epic", name: "No Epic", color: "#6b7280" },
+                  ...epics.map(e => ({ id: e.id, name: e.name, color: e.color }))
+                ]
+                return epicList.map((epic) => {
+                  const epicTickets = ticketsByEpic[epic.id] || {}
+                  const totalTickets = Object.values(epicTickets).flat().length
+                  
+                  return (
+                    <div
+                      key={epic.id}
+                      className="flex-shrink-0 w-80 flex flex-col"
+                      onDragOver={(e) => {
+                        if (!draggedTicket) return
+                        e.preventDefault()
+                        e.stopPropagation()
+                      }}
+                      onDragLeave={(e) => {
+                        const relatedTarget = e.relatedTarget as HTMLElement
+                        const currentTarget = e.currentTarget as HTMLElement
+                        if (!currentTarget.contains(relatedTarget)) {
+                          if (dropIndicator?.epicId === epic.id) {
+                            setDropIndicator(null)
+                          }
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        if (!draggedTicket) return
+                        // If dropped on epic column area, keep current status but change epic
+                        const currentTicket = allTickets.find(t => t.id === draggedTicket)
+                        if (currentTicket) {
+                          handleEpicDrop(draggedTicket, epic.id === "no_epic" ? null : epic.id, currentTicket.status)
+                        }
+                        setDropIndicator(null)
+                      }}
+                    >
+                      <div className="bg-muted/30 rounded-lg p-3 flex flex-col h-full">
+                        <div 
+                          className="flex items-center justify-between mb-3 flex-shrink-0"
+                          onDragOver={(e) => {
+                            if (!draggedTicket) return
+                            e.preventDefault()
+                            e.stopPropagation()
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            if (!draggedTicket) return
+                            // Dropped on epic header - keep current status, change epic
+                            const currentTicket = allTickets.find(t => t.id === draggedTicket)
+                            if (currentTicket) {
+                              handleEpicDrop(draggedTicket, epic.id === "no_epic" ? null : epic.id, currentTicket.status)
+                            }
+                            setDropIndicator(null)
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Circle className="h-3 w-3" style={{ fill: epic.color, color: epic.color }} />
+                            <h3 className="text-sm font-medium">{epic.name}</h3>
+                            <Badge variant="secondary" className="text-xs">
+                              {totalTickets}
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
+                          {KANBAN_COLUMNS.map((statusColumn) => {
+                            const statusTickets = epicTickets[statusColumn.id] || []
+                            
+                            return (
+                              <div key={statusColumn.id} className="space-y-2">
+                                <div 
+                                  className="flex items-center gap-2 px-2"
+                                  onDragOver={(e) => {
+                                    if (!draggedTicket) return
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    // Show drop indicator at the top of the status section
+                                    setDropIndicator({ epicId: epic.id, statusId: statusColumn.id, ticketId: null, top: 0 })
+                                  }}
+                                  onDrop={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    if (!draggedTicket) return
+                                    // Dropped on status header - change both epic and status
+                                    handleEpicDrop(draggedTicket, epic.id === "no_epic" ? null : epic.id, statusColumn.id)
+                                    setDropIndicator(null)
+                                  }}
+                                >
+                                  <Circle className={`h-2.5 w-2.5 ${statusColumn.color}`} />
+                                  <span className="text-xs font-medium text-muted-foreground">
+                                    {statusColumn.label} ({statusTickets.length})
+                                  </span>
+                                </div>
+                                <div 
+                                  className="space-y-2 relative"
+                                  onDragOver={(e) => {
+                                    if (!draggedTicket) return
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    handleEpicDragOver(e, epic.id, statusColumn.id)
+                                  }}
+                                  onDragLeave={(e) => {
+                                    const relatedTarget = e.relatedTarget as HTMLElement
+                                    const currentTarget = e.currentTarget as HTMLElement
+                                    if (!currentTarget.contains(relatedTarget)) {
+                                      if (dropIndicator?.epicId === epic.id && dropIndicator?.statusId === statusColumn.id) {
+                                        setDropIndicator(null)
+                                      }
+                                    }
+                                  }}
+                                  onDrop={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    if (!draggedTicket) return
+                                    handleEpicDrop(draggedTicket, epic.id === "no_epic" ? null : epic.id, statusColumn.id)
+                                    setDropIndicator(null)
+                                  }}
+                                >
+                                  {/* Drop indicator line for epic-grouped view */}
+                                  {dropIndicator?.epicId === epic.id && dropIndicator?.statusId === statusColumn.id && (
+                                    <div 
+                                      className="absolute left-0 right-0 h-1 bg-primary z-10 pointer-events-none rounded-full shadow-sm"
+                                      style={{
+                                        top: `${dropIndicator.top}px`
+                                      }}
+                                    />
+                                  )}
+                                  {statusTickets.map((ticket) => (
+                                    <Card
+                                      key={ticket.id}
+                                      data-ticket-id={ticket.id}
+                                      className="p-3 bg-background hover:bg-muted/50 cursor-pointer transition-colors border shadow-sm"
+                                      draggable={hasPermission("tickets", "edit")}
+                                      onDragStart={(e) => handleDragStart(e, ticket.id)}
+                                      onClick={() => setSelectedTicketId(ticket.id)}
+                                    >
+                                      <div className="space-y-2">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                              {ticket.display_id && (
+                                                <span className="text-xs font-mono text-muted-foreground">
+                                                  {ticket.display_id}
+                                                </span>
+                                              )}
+                                              <TicketTypeIcon type={ticket.type || "task"} />
+                                              <TicketPriorityIcon priority={ticket.priority} />
+                                            </div>
+                                            <h4 className="text-sm font-medium line-clamp-2 leading-tight">
+                                              {ticket.title}
+                                            </h4>
+                                          </div>
+                                        </div>
+                                        {ticket.assignee && (
+                                          <div className="flex items-center gap-1.5">
+                                            <Avatar className="h-5 w-5">
+                                              <AvatarImage src={ticket.assignee.image || undefined} />
+                                              <AvatarFallback className="text-[10px]">
+                                                {ticket.assignee.name?.[0]?.toUpperCase() || ticket.assignee.email[0].toUpperCase()}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <span className="text-xs text-muted-foreground truncate">
+                                              {ticket.assignee.name || ticket.assignee.email}
+                                            </span>
+                                          </div>
+                                        )}
+                                        {ticket.department && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {ticket.department.name}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </Card>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })
+              })()
+            ) : (
+              // Status-based grouping (original)
+              KANBAN_COLUMNS.map((column) => {
+                const columnTickets = ticketsByStatus[column.id] || []
+                const isAddingToThisColumn = isAddingNew && addingToStatus === column.id
               
               return (
                 <div
@@ -1009,7 +1451,7 @@ export default function ProjectDetailPage() {
                     
                     <div className="space-y-2 overflow-y-auto flex-1 min-h-0 relative">
                       {/* Drop indicator line */}
-                      {dropIndicator?.columnId === column.id && (
+                      {dropIndicator?.columnId === column.id && !dropIndicator.epicId && (
                         <div 
                           className="absolute left-0 right-0 h-1 bg-primary z-10 pointer-events-none rounded-full shadow-sm"
                           style={{
@@ -1115,6 +1557,19 @@ export default function ProjectDetailPage() {
                                   ))}
                                 </SelectContent>
                               </Select>
+                              {epics.length > 0 && (
+                                <EpicSelect
+                                  value={newTicketData.epic_id}
+                                  onValueChange={(value) =>
+                                    setNewTicketData({
+                                      ...newTicketData,
+                                      epic_id: value || undefined,
+                                    })
+                                  }
+                                  epics={epics}
+                                  triggerClassName="h-8 text-xs flex-1"
+                                />
+                              )}
                             </div>
                             
                             <div className="flex gap-2 pt-1">
@@ -1296,7 +1751,8 @@ export default function ProjectDetailPage() {
                   </div>
                 </div>
               )
-            })}
+            })
+            )}
           </div>
           
           {filteredTickets.length === 0 && !isAddingNew && (
@@ -1316,6 +1772,19 @@ export default function ProjectDetailPage() {
           }
         }}
       />
+      <Dialog open={isEpicDialogOpen} onOpenChange={setIsEpicDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Epic</DialogTitle>
+          </DialogHeader>
+          <EpicForm
+            projectId={projectId}
+            onSuccess={() => {
+              setIsEpicDialogOpen(false)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       <Dialog open={showCancelReasonDialog} onOpenChange={setShowCancelReasonDialog}>
         <DialogContent>
           <DialogHeader>

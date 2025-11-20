@@ -73,6 +73,11 @@ interface Ticket {
     id: string
     name: string
   } | null
+  epic: {
+    id: string
+    name: string
+    color: string
+  } | null
   project: {
     id: string
     name: string

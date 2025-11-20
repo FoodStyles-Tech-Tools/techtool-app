@@ -10,6 +10,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE subtasks;
 -- ALTER PUBLICATION supabase_realtime ADD TABLE users;
 -- ALTER PUBLICATION supabase_realtime ADD TABLE projects;
 -- ALTER PUBLICATION supabase_realtime ADD TABLE departments;
+ALTER PUBLICATION supabase_realtime ADD TABLE epics;
 -- ALTER PUBLICATION supabase_realtime ADD TABLE roles;
 -- ALTER PUBLICATION supabase_realtime ADD TABLE permissions;
 

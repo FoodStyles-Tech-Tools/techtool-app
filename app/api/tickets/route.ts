@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
         project:projects(id, name),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
-        department:departments(id, name)
+        department:departments(id, name),
+        epic:epics(id, name, color)
       `, { count: "exact" })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1)
@@ -150,6 +151,7 @@ export async function POST(request: NextRequest) {
       type = "task",
       status = "open",
       department_id,
+      epic_id,
     } = body
 
     if (!title) {
@@ -217,13 +219,15 @@ export async function POST(request: NextRequest) {
         type,
         status,
         department_id: department_id || null,
+        epic_id: epic_id || null,
       })
       .select(`
         *,
         project:projects(id, name),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
-        department:departments(id, name)
+        department:departments(id, name),
+        epic:epics(id, name, color)
       `)
       .single()
 
