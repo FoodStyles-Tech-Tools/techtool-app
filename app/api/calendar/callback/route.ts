@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${returnTo}?calendar_error=missing_refresh_token`)
     }
 
-    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString()
+    const expiresAt = new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000).toISOString()
 
     const { error } = await supabase
       .from("user_calendar_tokens")

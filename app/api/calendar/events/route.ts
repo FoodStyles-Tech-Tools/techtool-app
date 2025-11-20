@@ -35,7 +35,7 @@ export async function GET() {
       try {
         const refreshed = await refreshAccessToken(tokenRow.refresh_token)
         accessToken = refreshed.access_token
-        const newExpiresAt = new Date(Date.now() + refreshed.expires_in * 1000).toISOString()
+        const newExpiresAt = new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000).toISOString()
 
         await supabase
           .from("user_calendar_tokens")
