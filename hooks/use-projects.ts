@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
-import { useSupabaseClient } from "@/lib/supabase"
+import { useSupabaseClient } from "@/lib/supabase-client"
 import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
 
 const sanitizeLinkArray = (value: unknown): string[] => {
@@ -187,7 +187,7 @@ export function useProjects(options?: { status?: string; limit?: number; page?: 
       }
     },
     onDelete: (payload) => {
-      const deletedId = payload.old.id as string
+      const deletedId = (payload.old as { id: string }).id
       // Remove project from all query caches
       queryClient.setQueriesData<Project[]>(
         { queryKey: ["projects"] },

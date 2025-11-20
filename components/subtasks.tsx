@@ -9,7 +9,7 @@ import { toast } from "@/components/ui/toast"
 import { format } from "date-fns"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useRealtimeSubscription } from "@/hooks/use-realtime"
-import { useSupabaseClient } from "@/lib/supabase"
+import { useSupabaseClient } from "@/lib/supabase-client"
 import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
 
 interface Subtask {
@@ -96,7 +96,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
       )
     },
     onDelete: (payload) => {
-      const deletedId = payload.old.id as string
+      const deletedId = (payload.old as Subtask).id
       setSubtasks((prev) => prev.filter((s) => s.id !== deletedId))
     },
   })
@@ -386,8 +386,8 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
 
   const handleCopySubtask = (subtask: Subtask) => {
     const project = projectName || "No Project"
-    const ticketId = displayId || ticketId.slice(0, 8)
-    const label = `[${project}] ${ticketId} Sub: ${subtask.title}`
+    const ticketDisplayId = displayId || ticketId.slice(0, 8)
+    const label = `[${project}] ${ticketDisplayId} Sub: ${subtask.title}`
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard
         .writeText(label)

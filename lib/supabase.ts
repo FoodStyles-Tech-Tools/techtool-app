@@ -1,73 +1,59 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { useMemo } from 'react'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+// Lazy getter for Supabase URL with fallback
+function getSupabaseUrl(): string {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!url) {
+    throw new Error(
+      'Missing Supabase URL. Please set SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL environment variable.'
+    )
+  }
+  return url
 }
 
-// Singleton client instance for client-side use
-// Using a consistent storage key to avoid multiple instances
-let clientInstance: SupabaseClient | null = null
-
-function getClientInstance(): SupabaseClient {
-  if (typeof window === 'undefined') {
-    // Server-side: create a new instance (won't cause the warning)
-    return createClient(supabaseUrl, supabaseAnonKey)
+// Lazy getter for Supabase anon key with fallback
+function getSupabaseAnonKey(): string {
+  const key = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!key) {
+    throw new Error(
+      'Missing Supabase anon key. Please set SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable.'
+    )
   }
-
-  // Client-side: use singleton pattern
-  if (!clientInstance) {
-    clientInstance = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        storageKey: 'sb-auth-token',
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-      },
-      db: {
-        schema: 'public',
-      },
-      realtime: {
-        params: {
-          eventsPerSecond: 10,
-        },
-      },
-    })
-  }
-  return clientInstance
+  return key
 }
 
-// Export singleton instance
-export const supabase = getClientInstance()
+// Lazy getter for singleton instance - only creates when accessed
+// This will be initialized on first access, not at module load time
+let _supabaseInstance: SupabaseClient | null = null
+function getSupabaseInstance(): SupabaseClient {
+  if (!_supabaseInstance) {
+    const url = getSupabaseUrl()
+    const key = getSupabaseAnonKey()
+    _supabaseInstance = createClient(url, key)
+  }
+  return _supabaseInstance
+}
+
+// Export as a Proxy to ensure lazy initialization
+// This prevents module-level execution during build
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const instance = getSupabaseInstance()
+    return (instance as any)[prop]
+  },
+  set(_target, prop, value) {
+    const instance = getSupabaseInstance()
+    ;(instance as any)[prop] = value
+    return true
+  },
+})
 
 // Server-side Supabase client for API routes
+// Falls back to NEXT_PUBLIC_* vars if server vars aren't set (for Vercel compatibility)
 export function createServerClient() {
-  return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_ANON_KEY!
-  )
-}
-
-// Client-side authenticated Supabase client hook
-// Returns the singleton instance - all components share the same client
-// Queries should call set_user_context before executing for RLS
-export function useSupabaseClient(): SupabaseClient {
-  return useMemo(() => {
-    return getClientInstance()
-  }, [])
-}
-
-// Helper to get authenticated client with user email
-// Uses the singleton instance and sets headers dynamically
-export function getAuthenticatedClient(userEmail: string | null | undefined): SupabaseClient {
-  const client = getClientInstance()
-  
-  // If we need to set user email, we can do it via RPC calls instead of creating new clients
-  // The singleton client will be used, and set_user_context RPC will handle authentication
-  return client
+  const url = getSupabaseUrl()
+  const key = getSupabaseAnonKey()
+  return createClient(url, key)
 }
 
 

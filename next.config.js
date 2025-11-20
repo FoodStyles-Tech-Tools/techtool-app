@@ -15,6 +15,8 @@ const nextConfig = {
   // Optimize images and static assets
   images: {
     formats: ['image/avif', 'image/webp'],
+    // Vercel handles image optimization automatically
+    unoptimized: false,
   },
   // Compiler optimizations
   compiler: {
@@ -26,10 +28,14 @@ const nextConfig = {
   swcMinify: true,
   // Optimize production builds
   productionBrowserSourceMaps: false,
-  // Enable compression
+  // Enable compression (Vercel handles this automatically, but setting it doesn't hurt)
   compress: true,
   // Optimize font loading
   optimizeFonts: true,
+  // Ensure proper output for Vercel (serverless functions)
+  output: undefined, // Let Vercel handle this automatically
+  // Environment variable validation happens at runtime now (lazy initialization)
+  // No need to validate here as it would break builds
 }
 
 module.exports = nextConfig

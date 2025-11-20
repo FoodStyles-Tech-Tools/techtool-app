@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useId, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { useSupabaseClient } from "@/lib/supabase"
+import { useSupabaseClient } from "@/lib/supabase-client"
 import type { RealtimePostgresChangesPayload, RealtimeChannel } from "@supabase/supabase-js"
 
-interface UseRealtimeSubscriptionOptions<T = any> {
+interface UseRealtimeSubscriptionOptions<T extends Record<string, any> = any> {
   table: string
   filter?: string
   onInsert?: (payload: RealtimePostgresChangesPayload<T>) => void
@@ -14,7 +14,7 @@ interface UseRealtimeSubscriptionOptions<T = any> {
   enabled?: boolean
 }
 
-export function useRealtimeSubscription<T = any>({
+export function useRealtimeSubscription<T extends Record<string, any> = any>({
   table,
   filter,
   onInsert,

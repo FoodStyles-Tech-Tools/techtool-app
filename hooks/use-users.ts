@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
-import { useSupabaseClient } from "@/lib/supabase"
+import { useSupabaseClient } from "@/lib/supabase-client"
 import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
 
 interface User {
@@ -57,7 +57,7 @@ export function useUsers() {
       queryClient.setQueryData<{ user: User }>(["user", updatedUser.id], { user: updatedUser })
     },
     onDelete: (payload) => {
-      const deletedId = payload.old.id as string
+      const deletedId = (payload.old as { id: string }).id
       // Remove user from query cache
       queryClient.setQueryData<User[]>(
         ["users"],

@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
-import { useSupabaseClient } from "@/lib/supabase"
+import { useSupabaseClient } from "@/lib/supabase-client"
 import { useSession } from "@/lib/auth-client"
 import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
@@ -145,11 +145,11 @@ export function useTickets(options?: {
           
           // Check if ticket matches current filters
           const matchesFilter = 
-            (!options?.project_id || enrichedTicket.project_id === options.project_id) &&
-            (!options?.assignee_id || (options.assignee_id === "unassigned" ? !enrichedTicket.assignee_id : enrichedTicket.assignee_id === options.assignee_id)) &&
+            (!options?.project_id || (enrichedTicket as any).project_id === options.project_id) &&
+            (!options?.assignee_id || (options.assignee_id === "unassigned" ? !(enrichedTicket as any).assignee_id : (enrichedTicket as any).assignee_id === options.assignee_id)) &&
             (!options?.status || enrichedTicket.status === options.status) &&
-            (!options?.department_id || (options.department_id === "no_department" ? !enrichedTicket.department_id : enrichedTicket.department_id === options.department_id)) &&
-            (!options?.requested_by_id || enrichedTicket.requested_by_id === options.requested_by_id) &&
+            (!options?.department_id || (options.department_id === "no_department" ? !(enrichedTicket as any).department_id : (enrichedTicket as any).department_id === options.department_id)) &&
+            (!options?.requested_by_id || (enrichedTicket as any).requested_by_id === options.requested_by_id) &&
             (!options?.exclude_done || (enrichedTicket.status !== "completed" && enrichedTicket.status !== "cancelled"))
           
           if (matchesFilter) {
@@ -208,13 +208,13 @@ export function useTickets(options?: {
             if (!filterOptions) return true
             
             return (
-              (!filterOptions.project_id || enrichedTicket.project_id === filterOptions.project_id) &&
+              (!filterOptions.project_id || (enrichedTicket as any).project_id === filterOptions.project_id) &&
               (!filterOptions.assignee_id || 
-                (filterOptions.assignee_id === "unassigned" ? !enrichedTicket.assignee_id : enrichedTicket.assignee_id === filterOptions.assignee_id)) &&
+                (filterOptions.assignee_id === "unassigned" ? !(enrichedTicket as any).assignee_id : (enrichedTicket as any).assignee_id === filterOptions.assignee_id)) &&
               (!filterOptions.status || enrichedTicket.status === filterOptions.status) &&
               (!filterOptions.department_id || 
-                (filterOptions.department_id === "no_department" ? !enrichedTicket.department_id : enrichedTicket.department_id === filterOptions.department_id)) &&
-              (!filterOptions.requested_by_id || enrichedTicket.requested_by_id === filterOptions.requested_by_id) &&
+                (filterOptions.department_id === "no_department" ? !(enrichedTicket as any).department_id : (enrichedTicket as any).department_id === filterOptions.department_id)) &&
+              (!filterOptions.requested_by_id || (enrichedTicket as any).requested_by_id === filterOptions.requested_by_id) &&
               (!filterOptions.exclude_done || (enrichedTicket.status !== "completed" && enrichedTicket.status !== "cancelled"))
             )
           }
@@ -264,7 +264,7 @@ export function useTickets(options?: {
       }
     },
     onDelete: (payload) => {
-      const deletedId = payload.old.id as string
+      const deletedId = (payload.old as { id: string }).id
       // Remove ticket from all query caches
       queryClient.setQueriesData<Ticket[]>(
         { queryKey: ["tickets"] },

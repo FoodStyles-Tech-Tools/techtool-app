@@ -16,7 +16,7 @@ export function ReactQueryProvider({ children }: { children: React.ReactNode }) 
             refetchOnReconnect: false, // Don't refetch on reconnect
             retry: 1, // Only retry once on failure
             // Use cached data immediately if available (optimistic UI)
-            placeholderData: (previousData) => previousData,
+            placeholderData: (previousData: any) => previousData,
             // Better query key hashing for deduplication
             structuralSharing: true, // Enable structural sharing to prevent unnecessary re-renders
           },

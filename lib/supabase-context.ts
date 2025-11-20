@@ -27,7 +27,7 @@ export async function ensureUserContext(
   }
 
   // Create new promise for setting context
-  const promise = supabase.rpc('set_user_context', { user_email: userEmail }).then(() => {
+  const promise = Promise.resolve(supabase.rpc('set_user_context', { user_email: userEmail })).then(() => {
     // Update cache after successful call
     const current = contextCache.get(supabase)
     if (current) {

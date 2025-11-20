@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useForm, useFieldArray } from "react-hook-form"
+import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -45,7 +45,7 @@ const ticketSchema = z.object({
       z.null(),
     ])
     .optional(),
-  links: z.array(z.string().trim().url("Enter a valid URL")).default([]),
+  links: z.array(z.string().url("Enter a valid URL")).default([]),
 })
 
 type TicketFormValues = z.infer<typeof ticketSchema>
@@ -101,9 +101,9 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
     },
   })
 
-  const { fields: linkFields, append: appendLink, remove: removeLink } = useFieldArray({
+  const { fields: linkFields, append: appendLink, remove: removeLink } = useFieldArray<TicketFormValues, FieldArrayPath<TicketFormValues>>({
     control: form.control,
-    name: "links",
+    name: "links" as FieldArrayPath<TicketFormValues>,
   })
 
   const onSubmit = async (values: TicketFormValues) => {
@@ -115,8 +115,8 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
         priority: values.priority,
         type: values.type,
         project_id: projectId || null,
-        assignee_id: values.assignee_id || null,
-        department_id: values.department_id || null,
+        assignee_id: values.assignee_id || undefined,
+        department_id: values.department_id || undefined,
         links: sanitizedLinks,
       }
 

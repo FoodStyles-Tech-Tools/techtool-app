@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useForm, useFieldArray } from "react-hook-form"
+import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -32,12 +32,13 @@ const projectSchema = z.object({
   description: z.string().optional(),
   status: z.enum(["open", "in_progress", "closed"]).default("open"),
   department_id: z
-    .string()
-    .uuid()
-    .optional()
-    .or(z.literal(""))
+    .union([
+      z.string().uuid(),
+      z.literal(""),
+      z.literal("no_department"),
+    ])
     .optional(),
-  links: z.array(z.string().trim().url("Enter a valid URL")).default([]),
+  links: z.array(z.string().url("Enter a valid URL")).default([]),
 })
 
 type ProjectFormValues = z.infer<typeof projectSchema>
@@ -67,9 +68,9 @@ export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
     },
   })
 
-  const { fields: linkFields, append: appendLink, remove: removeLink } = useFieldArray({
+  const { fields: linkFields, append: appendLink, remove: removeLink } = useFieldArray<ProjectFormValues, FieldArrayPath<ProjectFormValues>>({
     control: form.control,
-    name: "links",
+    name: "links" as FieldArrayPath<ProjectFormValues>,
   })
 
   const onSubmit = async (values: ProjectFormValues) => {
@@ -80,7 +81,7 @@ export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
         description: values.description,
         status: values.status,
         department_id:
-          values.department_id && values.department_id !== NO_DEPARTMENT_VALUE ? values.department_id : null,
+          values.department_id && values.department_id !== NO_DEPARTMENT_VALUE ? values.department_id : undefined,
         links: sanitizedLinks,
       }
 

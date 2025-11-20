@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
-import { useSupabaseClient } from "@/lib/supabase"
+import { useSupabaseClient } from "@/lib/supabase-client"
 import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
 
 export interface Permission {
@@ -96,7 +96,7 @@ export function useRoles() {
       }
     },
     onDelete: (payload) => {
-      const deletedId = payload.old.id as string
+      const deletedId = (payload.old as { id: string }).id
       queryClient.setQueriesData<Role[]>(
         { queryKey: ["roles"] },
         (old) => old ? old.filter(r => r.id !== deletedId) : old

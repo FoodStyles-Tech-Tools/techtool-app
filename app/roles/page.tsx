@@ -38,7 +38,7 @@ interface Permission {
 interface Role {
   id: string
   name: string
-  description: string | null
+  description: string | null | undefined
   is_system: boolean
   permissions: Permission[]
   created_at: string
@@ -60,7 +60,7 @@ export default function RolesPage() {
   // Require view permission for roles - redirects if not authorized
   const { hasPermission: canView, loading: permissionLoading } = useRequirePermission("roles", "view")
   const queryClient = useQueryClient()
-  const { data: rolesData, loading, refetch: refetchRoles } = useRoles()
+  const { data: rolesData, isLoading: rolesLoading, refetch: refetchRoles } = useRoles()
   const roles = useMemo(() => rolesData || [], [rolesData])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
@@ -285,7 +285,15 @@ export default function RolesPage() {
               </DialogDescription>
             </DialogHeader>
             <RoleForm
-              initialData={editingRole || undefined}
+              initialData={
+                editingRole
+                  ? {
+                      id: editingRole.id,
+                      name: editingRole.name,
+                      description: editingRole.description ?? undefined,
+                    }
+                  : undefined
+              }
               onSuccess={() => {
                 setIsDialogOpen(false)
                 setEditingRole(null)
@@ -299,7 +307,7 @@ export default function RolesPage() {
         )}
       </div>
 
-      {loading ? (
+      {rolesLoading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
       ) : (
         <div className="grid gap-3">

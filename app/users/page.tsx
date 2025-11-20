@@ -30,18 +30,20 @@ interface User {
   id: string
   email: string
   name: string | null
-  role: string
+  role?: string | null
   image: string | null
-  created_at: string
+  created_at?: string
 }
+
+type UserFromHook = NonNullable<ReturnType<typeof useUsers>['data']>[number]
 
 export default function UsersPage() {
   // Require view permission for users - redirects if not authorized
   const { hasPermission: canView, loading: permissionLoading } = useRequirePermission("users", "view")
-  const { data: usersData, loading } = useUsers()
+  const { data: usersData, isLoading: usersLoading, refetch: fetchUsers } = useUsers()
   const users = usersData || []
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [editingUser, setEditingUser] = useState<UserFromHook | null>(null)
   const { hasPermission } = usePermissions()
 
   // Don't render content if user doesn't have permission (will redirect)
@@ -75,7 +77,7 @@ export default function UsersPage() {
     }
   }
 
-  const handleEdit = (user: User) => {
+  const handleEdit = (user: UserFromHook) => {
     setEditingUser(user)
     setIsDialogOpen(true)
   }
@@ -132,7 +134,16 @@ export default function UsersPage() {
               </DialogDescription>
             </DialogHeader>
             <UserForm
-              initialData={editingUser || undefined}
+              initialData={
+                editingUser
+                  ? {
+                      id: editingUser.id,
+                      email: editingUser.email,
+                      role: editingUser.role ?? "member",
+                      name: editingUser.name ?? undefined,
+                    }
+                  : undefined
+              }
               onSuccess={() => {
                 setIsDialogOpen(false)
                 setEditingUser(null)
@@ -144,7 +155,7 @@ export default function UsersPage() {
         )}
       </div>
 
-      {loading ? (
+      {usersLoading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
       ) : users.length === 0 ? (
         <div className="rounded-lg border p-8 text-center">
@@ -185,12 +196,12 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell className="py-2 text-sm">{user.email}</TableCell>
                   <TableCell className="py-2">
-                    <Badge variant={getRoleColor(user.role) as any} className="text-xs">
-                      {user.role}
+                    <Badge variant={getRoleColor(user.role || "member") as any} className="text-xs">
+                      {user.role || "member"}
                     </Badge>
                   </TableCell>
                   <TableCell className="py-2 text-xs text-muted-foreground">
-                    {new Date(user.created_at).toLocaleDateString()}
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString() : "-"}
                   </TableCell>
                   <TableCell className="py-2 text-right">
                     {(hasPermission("users", "edit") || hasPermission("users", "delete")) && (
@@ -225,4 +236,3 @@ export default function UsersPage() {
     </div>
   )
 }
-

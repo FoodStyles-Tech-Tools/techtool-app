@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
 
+export const runtime = 'nodejs'
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string; subtaskId: string } }

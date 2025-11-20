@@ -196,7 +196,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     if (newStatus === "completed" || newStatus === "cancelled") {
       updates.completed_at = new Date().toISOString()
       // Also ensure started_at is set if not already
-      if (!ticket.started_at) {
+      if (!(ticket as any).started_at) {
         updates.started_at = new Date().toISOString()
       }
     }
@@ -247,7 +247,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const handleAssigneeChange = async (newAssigneeId: string | null) => {
     if (!ticket) return
     
-    const previousAssigneeId = ticket.assignee_id
+    const previousAssigneeId = (ticket as any).assignee_id
     const updates: any = { assignee_id: newAssigneeId }
     
     // If assignee is null, clear assigned_at
@@ -318,13 +318,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     // Build timestamp map for validation - exclude completed_at if status is not completed/cancelled
     const status = ticket.status
     const effectiveCompletedAt = (status === "completed" || status === "cancelled") 
-      ? (field === "completed_at" ? dateValue : (ticket.completed_at || null))
+      ? (field === "completed_at" ? dateValue : ((ticket as any).completed_at || null))
       : null
     
     const timestampMap: Record<string, string | null> = {
       created_at: field === "created_at" ? dateValue : (ticket.created_at || null),
-      assigned_at: field === "assigned_at" ? dateValue : (ticket.assigned_at || null),
-      started_at: field === "started_at" ? dateValue : (ticket.started_at || null),
+      assigned_at: field === "assigned_at" ? dateValue : ((ticket as any).assigned_at || null),
+      started_at: field === "started_at" ? dateValue : ((ticket as any).started_at || null),
       completed_at: effectiveCompletedAt,
     }
     
@@ -337,7 +337,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     
     // If setting started_at and status is in_progress/blocked, ensure completed_at is cleared
     const updates: any = { [field]: dateValue }
-    if (field === "started_at" && (status === "in_progress" || status === "blocked") && ticket.completed_at) {
+    if (field === "started_at" && (status === "in_progress" || status === "blocked") && (ticket as any).completed_at) {
       updates.completed_at = null
     }
     
@@ -392,9 +392,9 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     if (!ticket) return { assigned_at: false, started_at: false, completed_at: false }
     
     const status = ticket.status
-    const hasStarted = !!ticket.started_at
-    const hasCompleted = !!ticket.completed_at
-    const hasAssigned = !!ticket.assigned_at
+    const hasStarted = !!(ticket as any).started_at
+    const hasCompleted = !!(ticket as any).completed_at
+    const hasAssigned = !!(ticket as any).assigned_at
     const hasAssignee = !!ticket.assignee
     
     return {
@@ -901,7 +901,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         <div className="flex items-start gap-3">
                           <div className="flex items-center gap-2 flex-shrink-0 w-24">
                             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Assigned</label>
-                            {!ticket.assigned_at && timestampValidation.assigned_at && (
+                            {!(ticket as any).assigned_at && timestampValidation.assigned_at && (
                               <span title={getTimestampWarningMessage("assigned_at") || ""} className="cursor-help pt-2">
                                 <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
                               </span>
@@ -909,7 +909,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           </div>
                           <div className="flex-1">
                             <DateTimePicker
-                              value={parseTimestamp(ticket.assigned_at)}
+                              value={parseTimestamp((ticket as any).assigned_at)}
                               onChange={(date) => handleTimestampChange("assigned_at", date)}
                               disabled={!hasPermission("tickets", "edit") || !ticket.assignee || updatingFields["assigned_at"]}
                               placeholder="Not set"
@@ -922,7 +922,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         <div className="flex items-start gap-3">
                           <div className="flex items-center gap-2 flex-shrink-0 w-24">
                             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Started</label>
-                            {!ticket.started_at && timestampValidation.started_at && (
+                            {!(ticket as any).started_at && timestampValidation.started_at && (
                               <span title={getTimestampWarningMessage("started_at") || ""} className="cursor-help pt-2">
                                 <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
                               </span>
@@ -930,7 +930,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           </div>
                           <div className="flex-1">
                             <DateTimePicker
-                              value={parseTimestamp(ticket.started_at)}
+                              value={parseTimestamp((ticket as any).started_at)}
                               onChange={(date) => handleTimestampChange("started_at", date)}
                               disabled={!hasPermission("tickets", "edit") || ticket.status === "open" || updatingFields["started_at"]}
                               placeholder="Not set"
@@ -943,7 +943,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         <div className="flex items-start gap-3">
                           <div className="flex items-center gap-2 flex-shrink-0 w-24">
                             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Completed</label>
-                            {!ticket.completed_at && timestampValidation.completed_at && (
+                            {!(ticket as any).completed_at && timestampValidation.completed_at && (
                               <span title={getTimestampWarningMessage("completed_at") || ""} className="cursor-help pt-2">
                                 <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
                               </span>
@@ -951,7 +951,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           </div>
                           <div className="flex-1">
                             <DateTimePicker
-                              value={parseTimestamp(ticket.completed_at)}
+                              value={parseTimestamp((ticket as any).completed_at)}
                               onChange={(date) => handleTimestampChange("completed_at", date)}
                               disabled={!hasPermission("tickets", "edit") || (ticket.status !== "completed" && ticket.status !== "cancelled") || updatingFields["completed_at"]}
                               placeholder="Not set"

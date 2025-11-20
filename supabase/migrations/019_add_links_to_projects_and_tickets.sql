@@ -18,3 +18,4 @@ ADD CONSTRAINT tickets_links_is_array CHECK (jsonb_typeof(links) = 'array');
 UPDATE tickets
 SET links = COALESCE(links, '[]'::jsonb);
 
+
