@@ -280,7 +280,7 @@ export default function DashboardPage() {
               {status === "connected" ? "No upcoming events found." : "Connect to see your calendar."}
             </p>
           ) : (
-            <div className="space-y-6 rounded-3xl border border-[#2b2b2b] bg-[#1f1f1f] px-4 py-4 max-h-[320px] overflow-y-auto">
+            <div className="space-y-6 rounded-3xl border border-[#e0dedc] bg-[#f8f7f6] px-4 py-4 max-h-[320px] overflow-y-auto dark:border-[#2b2b2b] dark:bg-[#1f1f1f]">
               {groupedEvents.map(([dateKey, dayEvents]) => {
                 const firstStart = dayEvents[0]?.start?.dateTime || dayEvents[0]?.start?.date
                 const dateObj = firstStart ? parseISO(firstStart) : new Date()
@@ -297,7 +297,10 @@ export default function DashboardPage() {
                         const meetingLink = getMeetingLink(event)
                         const summaryHtml = sanitizeRichContent(event.summary)
                         return (
-                          <div key={event.id} className="rounded-2xl bg-[#1f1f1f] px-5 py-3">
+                          <div
+                            key={event.id}
+                            className="rounded-2xl border border-transparent bg-white px-5 py-3 shadow-sm dark:border-0 dark:bg-[#1f1f1f]"
+                          >
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex flex-1">
                                 <div className="mr-3 w-[2px] rounded-full border-l-2 border-dashed border-blue-400" />
