@@ -75,8 +75,10 @@ export function KeyboardShortcuts() {
         return
       }
 
-      // ALT+A / OPTION+A: Open ticket creation dialog
-      if (altKey && (e.key === "a" || e.key === "A")) {
+      const isMacTicketShortcut = isMac && e.metaKey && !e.altKey && !e.ctrlKey
+      const isNonMacTicketShortcut = !isMac && altKey && !e.metaKey && !e.ctrlKey
+
+      if ((isMacTicketShortcut || isNonMacTicketShortcut) && (e.key === "a" || e.key === "A")) {
         // Don't prevent default if in input (browser shortcuts like select all)
         if (!isInputElement) {
           e.preventDefault()
