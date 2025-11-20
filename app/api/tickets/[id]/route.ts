@@ -113,6 +113,7 @@ export async function PATCH(
       assigned_at,
       started_at,
       completed_at,
+      reason,
     } = body
 
     // Fetch current ticket state if we need it for conditional logic or timestamp validation
@@ -188,6 +189,8 @@ export async function PATCH(
       // Condition 4: If status changed from Completed/Cancelled to other status then remove timestamp completed_at
       if ((previousStatus === "completed" || previousStatus === "cancelled") && status !== "completed" && status !== "cancelled") {
         updates.completed_at = null
+        // Clear reason when moving away from cancelled
+        updates.reason = null
       }
       
       // Condition 5: If status changed from In Progress to Blocked or Open then remove timestamp started_at
@@ -212,6 +215,7 @@ export async function PATCH(
     if (priority !== undefined) updates.priority = priority
     if (type !== undefined) updates.type = type
     if (department_id !== undefined) updates.department_id = department_id || null
+    if (reason !== undefined) updates.reason = reason
     
     // Timestamp validation: Check ordering constraints before applying updates
     // Rules:

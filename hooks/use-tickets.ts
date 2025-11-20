@@ -36,6 +36,12 @@ interface Ticket {
   priority: string
   type: string
   links: string[]
+  reason?: {
+    cancelled?: {
+      reason: string
+      cancelledAt: string
+    }
+  } | null
   department: {
     id: string
     name: string

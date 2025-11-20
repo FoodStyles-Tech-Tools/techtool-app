@@ -28,6 +28,7 @@ export async function GET() {
     const expiresAt = tokenRow.access_token_expires_at
     const shouldRefresh =
       !accessToken ||
+      (typeof accessToken === "string" && accessToken.trim() === "") ||
       !expiresAt ||
       new Date(expiresAt).getTime() <= Date.now() + 60 * 1000
 
@@ -35,7 +36,9 @@ export async function GET() {
       try {
         const refreshed = await refreshAccessToken(tokenRow.refresh_token)
         accessToken = refreshed.access_token
-        const newExpiresAt = new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000).toISOString()
+        // Calculate expiration time based on expires_in (typically 3600 seconds = 1 hour)
+        const expiresInSeconds = refreshed.expires_in || 3600
+        const newExpiresAt = new Date(Date.now() + expiresInSeconds * 1000).toISOString()
 
         await supabase
           .from("user_calendar_tokens")
@@ -58,7 +61,7 @@ export async function GET() {
       }
     }
 
-    if (!accessToken) {
+    if (!accessToken || (typeof accessToken === "string" && accessToken.trim() === "")) {
       return NextResponse.json({ error: "Calendar token missing" }, { status: 500 })
     }
 

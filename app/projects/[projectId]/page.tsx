@@ -27,6 +27,14 @@ import { TicketTypeSelect, TicketTypeIcon } from "@/components/ticket-type-selec
 import { TicketPrioritySelect, TicketPriorityIcon } from "@/components/ticket-priority-select"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
 import { TicketDetailDialog } from "@/components/ticket-detail-dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 
@@ -41,6 +49,12 @@ type ProjectTicket = {
   started_at?: string | null
   completed_at?: string | null
   assigned_at?: string | null
+  reason?: {
+    cancelled?: {
+      reason: string
+      cancelledAt: string
+    }
+  } | null
   department?: { id: string; name: string } | null
   project?: { id: string; name: string } | null
   assignee?: { id: string; name: string | null; email: string; image: string | null } | null
@@ -92,6 +106,10 @@ export default function ProjectDetailPage() {
   const [editingProjectLinkIndex, setEditingProjectLinkIndex] = useState<number | null>(null)
   const [newProjectLinkUrl, setNewProjectLinkUrl] = useState("")
   const [isAddingProjectLink, setIsAddingProjectLink] = useState(false)
+  const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
+  const [pendingDropTicketId, setPendingDropTicketId] = useState<string | null>(null)
+  const [pendingDropUpdates, setPendingDropUpdates] = useState<any>(null)
   
   // Set default assignee filter to "My Tickets" when user is available (only once on initial load)
   useEffect(() => {
@@ -420,6 +438,8 @@ export default function ProjectDetailPage() {
     // Condition 4: If status changed from Completed/Cancelled to other status then remove timestamp completed_at
     if ((previousStatus === "completed" || previousStatus === "cancelled") && targetStatus !== "completed" && targetStatus !== "cancelled") {
       updates.completed_at = null
+      // Clear reason when moving away from cancelled
+      updates.reason = null
     }
     
     // Condition 5: If status changed from In Progress to Blocked or Open then remove timestamp started_at
@@ -431,6 +451,27 @@ export default function ProjectDetailPage() {
     if (targetStatus === "open") {
       updates.started_at = null
       updates.completed_at = null
+    }
+
+    // If dropping to cancelled, prompt for reason first
+    if (targetStatus === "cancelled" && previousStatus !== "cancelled") {
+      setPendingDropTicketId(ticketId)
+      setPendingDropUpdates(updates)
+      setCancelReason("")
+      setShowCancelReasonDialog(true)
+      // Revert optimistic update
+      setOptimisticStatusUpdates(prev => {
+        const newState = { ...prev }
+        delete newState[ticketId]
+        return newState
+      })
+      setDroppingTicketId(null)
+      setUpdatingFields(prev => {
+        const newState = { ...prev }
+        delete newState[`${ticketId}-status`]
+        return newState
+      })
+      return
     }
 
     try {
@@ -1275,6 +1316,103 @@ export default function ProjectDetailPage() {
           }
         }}
       />
+      <Dialog open={showCancelReasonDialog} onOpenChange={setShowCancelReasonDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Ticket</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for cancelling this ticket.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <Textarea
+              placeholder="Enter cancellation reason..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={4}
+              className="resize-none"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCancelReasonDialog(false)
+                setPendingDropTicketId(null)
+                setPendingDropUpdates(null)
+                setCancelReason("")
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!cancelReason.trim()) {
+                  toast("Please provide a reason for cancellation", "error")
+                  return
+                }
+                
+                if (!pendingDropTicketId || !pendingDropUpdates) return
+                
+                const ticketId = pendingDropTicketId
+                const updates = {
+                  ...pendingDropUpdates,
+                  reason: { cancelled: { reason: cancelReason.trim(), cancelledAt: new Date().toISOString() } }
+                }
+                
+                setShowCancelReasonDialog(false)
+                setPendingDropTicketId(null)
+                setPendingDropUpdates(null)
+                
+                // Re-apply optimistic update
+                setOptimisticStatusUpdates(prev => ({ ...prev, [ticketId]: "cancelled" }))
+                setDroppingTicketId(ticketId)
+                setUpdatingFields(prev => ({ ...prev, [`${ticketId}-status`]: "status" }))
+                
+                try {
+                  await updateTicket.mutateAsync({
+                    id: ticketId,
+                    ...updates,
+                  })
+                  toast("Ticket status updated")
+                  
+                  setTimeout(() => {
+                    setOptimisticStatusUpdates(prev => {
+                      const newState = { ...prev }
+                      delete newState[ticketId]
+                      return newState
+                    })
+                  }, 500)
+                  
+                  setDroppingTicketId(null)
+                  setUpdatingFields(prev => {
+                    const newState = { ...prev }
+                    delete newState[`${ticketId}-status`]
+                    return newState
+                  })
+                } catch (error: any) {
+                  toast(error.message || "Failed to update ticket", "error")
+                  setOptimisticStatusUpdates(prev => {
+                    const newState = { ...prev }
+                    delete newState[ticketId]
+                    return newState
+                  })
+                  setDroppingTicketId(null)
+                  setUpdatingFields(prev => {
+                    const newState = { ...prev }
+                    delete newState[`${ticketId}-status`]
+                    return newState
+                  })
+                }
+                
+                setCancelReason("")
+              }}
+            >
+              Confirm Cancellation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

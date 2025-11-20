@@ -27,6 +27,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
@@ -46,6 +48,9 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const [editingLinkIndex, setEditingLinkIndex] = useState<number | null>(null)
   const [newLinkUrl, setNewLinkUrl] = useState("")
   const [isAddingLink, setIsAddingLink] = useState(false)
+  const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
+  const [cancelReason, setCancelReason] = useState("")
+  const [pendingStatusChange, setPendingStatusChange] = useState<string | null>(null)
   const UNASSIGNED_VALUE = "unassigned"
   const NO_DEPARTMENT_VALUE = "no_department"
   const NO_PROJECT_VALUE = "no_project"
@@ -184,6 +189,20 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const handleStatusChange = async (newStatus: string) => {
     if (!ticket) return
     
+    // If changing to cancelled, prompt for reason
+    if (newStatus === "cancelled" && ticket.status !== "cancelled") {
+      setPendingStatusChange(newStatus)
+      setCancelReason("")
+      setShowCancelReasonDialog(true)
+      return
+    }
+    
+    await performStatusChange(newStatus)
+  }
+
+  const performStatusChange = async (newStatus: string) => {
+    if (!ticket) return
+    
     const previousStatus = ticket.status
     const updates: any = { status: newStatus }
     
@@ -204,6 +223,8 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     // Condition 4: If status changed from Completed/Cancelled to other status then remove timestamp completed_at
     if ((previousStatus === "completed" || previousStatus === "cancelled") && newStatus !== "completed" && newStatus !== "cancelled") {
       updates.completed_at = null
+      // Clear reason when moving away from cancelled
+      updates.reason = null
     }
     
     // Condition 5: If status changed from In Progress to Blocked or Open then remove timestamp started_at
@@ -218,6 +239,42 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     }
     
     await updateTicketWithToast(updates, "Status updated", "status")
+  }
+
+  const handleCancelReasonSubmit = async () => {
+    if (!cancelReason.trim()) {
+      toast("Please provide a reason for cancellation", "error")
+      return
+    }
+    
+    setShowCancelReasonDialog(false)
+    const newStatus = pendingStatusChange || "cancelled"
+    setPendingStatusChange(null)
+    
+    if (!ticket) return
+    
+    const previousStatus = ticket.status
+    const updates: any = { 
+      status: newStatus,
+      reason: { cancelled: { reason: cancelReason.trim(), cancelledAt: new Date().toISOString() } }
+    }
+    
+    // Condition 2: When status from Open/Blocked to any other status then update started_at timestamp
+    if ((previousStatus === "open" || previousStatus === "blocked") && newStatus !== "open" && newStatus !== "blocked") {
+      updates.started_at = new Date().toISOString()
+    }
+    
+    // Condition 3: When any status changed to Cancelled or Completed then update completed_at timestamp
+    if (newStatus === "completed" || newStatus === "cancelled") {
+      updates.completed_at = new Date().toISOString()
+      // Also ensure started_at is set if not already
+      if (!(ticket as any).started_at) {
+        updates.started_at = new Date().toISOString()
+      }
+    }
+    
+    await updateTicketWithToast(updates, "Status updated", "status")
+    setCancelReason("")
   }
 
   const handleTypeChange = (newType: string) => {
@@ -464,6 +521,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   if (!ticketId) return null
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 border-0">
         <DialogHeader className="px-6 pt-6 pb-4 bg-muted/30">
@@ -879,6 +937,29 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     </div>
 
+                    {ticket.status === "cancelled" && ticket.reason?.cancelled && (
+                      <div className="flex items-start gap-3">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Reason</label>
+                        <div className="flex-1">
+                          <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-foreground whitespace-pre-wrap break-words">
+                                  {ticket.reason.cancelled.reason}
+                                </p>
+                                {ticket.reason.cancelled.cancelledAt && (
+                                  <p className="text-xs text-muted-foreground mt-2">
+                                    Cancelled on {format(new Date(ticket.reason.cancelled.cancelledAt), "MMM d, yyyy 'at' h:mm a")}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <Separator className="my-4" />
 
                     <div>
@@ -971,5 +1052,40 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
         </div>
       </DialogContent>
     </Dialog>
+    <Dialog open={showCancelReasonDialog} onOpenChange={setShowCancelReasonDialog}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Cancel Ticket</DialogTitle>
+          <DialogDescription>
+            Please provide a reason for cancelling this ticket.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <Textarea
+            placeholder="Enter cancellation reason..."
+            value={cancelReason}
+            onChange={(e) => setCancelReason(e.target.value)}
+            rows={4}
+            className="resize-none"
+          />
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowCancelReasonDialog(false)
+              setPendingStatusChange(null)
+              setCancelReason("")
+            }}
+          >
+            Cancel
+          </Button>
+          <Button onClick={handleCancelReasonSubmit}>
+            Confirm Cancellation
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }
