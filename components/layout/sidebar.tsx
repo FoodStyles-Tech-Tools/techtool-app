@@ -1,9 +1,10 @@
 "use client"
 
 import Link from "next/link"
+import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, FolderKanban, Ticket, Users, Shield } from "lucide-react"
+import { LayoutDashboard, FolderKanban, Ticket, Users, Shield, Keyboard } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -15,8 +16,9 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { signOut, useSession } from "@/lib/auth-client"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { useState } from "react"
 import { usePermissions } from "@/hooks/use-permissions"
+import { KeyboardShortcutDialog } from "@/components/keyboard-shortcut-dialog"
+import { VersionIndicator } from "@/components/version-indicator"
 
 const navItems = [
   {
@@ -56,6 +58,7 @@ export function Sidebar() {
   const router = useRouter()
   const { data: session } = useSession()
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const { hasPermission } = usePermissions()
 
   const handleSignOut = async () => {
@@ -64,6 +67,32 @@ export function Sidebar() {
   }
 
   const user = session?.user
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      const isModifierPressed = event.metaKey || event.altKey
+      if (!isModifierPressed || event.key !== "ArrowDown") {
+        return
+      }
+
+      const target = event.target as HTMLElement | null
+      const isInputElement =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.tagName === "SELECT" ||
+        target?.isContentEditable
+
+      if (isInputElement) {
+        return
+      }
+
+      event.preventDefault()
+      setShortcutsOpen(true)
+    }
+
+    window.addEventListener("keydown", handleShortcut)
+    return () => window.removeEventListener("keydown", handleShortcut)
+  }, [])
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r bg-muted">
@@ -158,11 +187,27 @@ export function Sidebar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <div className="pt-3 px-0.5">
+          <div className="grid grid-cols-4 gap-2">
+            <div className="col-span-3">
+              <VersionIndicator className="h-full" />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShortcutsOpen(true)}
+              className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-border/70 px-2 py-1 transition-colors hover:border-primary hover:bg-primary/5"
+            >
+              <Keyboard className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </div>
+        </div>
       </div>
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <KeyboardShortcutDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </aside>
   )
 }
+
 
 
 

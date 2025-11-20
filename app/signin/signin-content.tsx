@@ -13,6 +13,24 @@ export function SignInContent() {
   const [error, setError] = useState<string | null>(null)
   const searchParams = useSearchParams()
 
+  // Force light theme on the sign-in page regardless of user preference
+  useEffect(() => {
+    const root = document.documentElement
+    const hadDark = root.classList.contains("dark")
+    const hadLight = root.classList.contains("light")
+
+    root.classList.remove("dark")
+    root.classList.add("light")
+    root.style.colorScheme = "light"
+
+    return () => {
+      root.style.colorScheme = ""
+      root.classList.remove("light")
+      if (hadDark) root.classList.add("dark")
+      else if (hadLight) root.classList.add("light")
+    }
+  }, [])
+
   // Check for error in URL params (from OAuth callback)
   useEffect(() => {
     const errorParam = searchParams.get("error")
@@ -34,11 +52,11 @@ export function SignInContent() {
   }, [searchParams])
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-      <Card className="max-w-md w-full">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4 text-slate-900">
+      <Card className="max-w-md w-full border border-slate-200 shadow-md bg-white">
         <CardHeader>
           <CardTitle className="text-lg md:text-xl">Sign in to TechTool App</CardTitle>
-          <CardDescription className="text-xs md:text-sm">
+          <CardDescription className="text-xs md:text-sm text-slate-500">
             Enter your email below to login to your account
           </CardDescription>
         </CardHeader>
@@ -57,7 +75,7 @@ export function SignInContent() {
               <Button
                 variant="outline"
                 className={cn(
-                  "w-full gap-2"
+                  "w-full gap-2 h-11 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                 )}
                 disabled={loading}
                 onClick={async () => {
@@ -106,4 +124,3 @@ export function SignInContent() {
     </div>
   )
 }
-

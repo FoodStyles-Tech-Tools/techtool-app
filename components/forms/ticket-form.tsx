@@ -226,18 +226,17 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
                 value={field.value || "unassigned"}
               >
                 <FormControl>
-                  <SelectTrigger className="relative overflow-hidden">
-                    <SelectValue placeholder="Select an assignee" className={field.value && field.value !== "unassigned" ? "opacity-0" : ""} />
-                    {field.value && field.value !== "unassigned" && (
-                      <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
-                        <UserSelectValue
-                          users={users.filter((user) => (user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false))}
-                          value={field.value || null}
-                          placeholder="Select an assignee"
-                          unassignedValue="unassigned"
-                          unassignedLabel="Unassigned"
-                        />
-                      </div>
+                  <SelectTrigger className="relative">
+                    {field.value && field.value !== "unassigned" ? (
+                      <UserSelectValue
+                        users={users.filter((user) => (user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false))}
+                        value={field.value || null}
+                        placeholder="Select an assignee"
+                        unassignedValue="unassigned"
+                        unassignedLabel="Unassigned"
+                      />
+                    ) : (
+                      <SelectValue placeholder="Select an assignee" />
                     )}
                   </SelectTrigger>
                 </FormControl>
@@ -367,4 +366,3 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
     </Form>
   )
 }
-

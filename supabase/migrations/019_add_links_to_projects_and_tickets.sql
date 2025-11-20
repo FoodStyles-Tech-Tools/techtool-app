@@ -19,3 +19,4 @@ UPDATE tickets
 SET links = COALESCE(links, '[]'::jsonb);
 
 
+
