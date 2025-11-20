@@ -25,6 +25,63 @@ const prepareLinkPayload = (links?: string[]): string[] => {
     .filter((url) => url.length > 0)
 }
 
+async function attachCollaboratorsToProjects(
+  supabase: ReturnType<typeof useSupabaseClient>,
+  projects: any[]
+): Promise<any[]> {
+  if (!projects?.length) {
+    return projects
+  }
+
+  const collaboratorIds = new Set<string>()
+  projects.forEach((project) => {
+    const ids: string[] = project.collaborator_ids || []
+    ids.forEach((id) => {
+      if (id) collaboratorIds.add(id)
+    })
+  })
+
+  if (collaboratorIds.size === 0) {
+    return projects.map((project) => ({
+      ...project,
+      collaborator_ids: project.collaborator_ids || [],
+      collaborators: [],
+    }))
+  }
+
+  const { data: collaboratorUsers, error } = await supabase
+    .from("users")
+    .select("id, name, email")
+    .in("id", Array.from(collaboratorIds))
+
+  if (error) {
+    console.error("Error fetching collaborators:", error)
+  }
+
+  const collaboratorMap = new Map<string, any>()
+  collaboratorUsers?.forEach((user) => collaboratorMap.set(user.id, user))
+
+  return projects.map((project) => {
+    const ids: string[] = project.collaborator_ids || []
+    const collaborators = ids
+      .map((id) => collaboratorMap.get(id))
+      .filter(Boolean)
+
+    return {
+      ...project,
+      collaborator_ids: ids,
+      collaborators,
+    }
+  })
+}
+
+interface ProjectCollaborator {
+  id: string
+  name: string | null
+  email: string
+  image: string | null
+}
+
 interface Project {
   id: string
   name: string
@@ -40,7 +97,9 @@ interface Project {
     name: string | null
     email: string
     image: string | null
-  }
+  } | null
+  collaborator_ids: string[]
+  collaborators: ProjectCollaborator[]
   created_at: string
 }
 
@@ -65,6 +124,9 @@ async function enrichProjectsWithImages(
   const emails = new Set<string>()
   projects.forEach(project => {
     if (project.owner?.email) emails.add(project.owner.email)
+    project.collaborators?.forEach((collab: any) => {
+      if (collab?.email) emails.add(collab.email)
+    })
   })
   
   if (emails.size === 0) return projects as Project[]
@@ -85,10 +147,15 @@ async function enrichProjectsWithImages(
   return projects.map(project => ({
     ...project,
     links: sanitizeLinkArray(project.links),
+     collaborator_ids: Array.isArray(project.collaborator_ids) ? project.collaborator_ids : [],
     owner: project.owner ? {
       ...project.owner,
       image: imageMap.get(project.owner.email) || null,
     } : project.owner,
+    collaborators: (project.collaborators || []).map((collab: any) => ({
+      ...collab,
+      image: collab?.email ? imageMap.get(collab.email) || null : null,
+    })),
   })) as Project[]
 }
 
@@ -118,8 +185,9 @@ export function useProjects(options?: { status?: string; limit?: number; page?: 
           .single()
 
         if (!error && project) {
+          const [projectWithCollaborators] = await attachCollaboratorsToProjects(supabase, [project])
           // Enrich with images
-          const enrichedProjects = await enrichProjectsWithImages(supabase, [project])
+          const enrichedProjects = await enrichProjectsWithImages(supabase, [projectWithCollaborators])
           const enrichedProject = enrichedProjects[0]
           
           // Update all projects queries
@@ -159,8 +227,9 @@ export function useProjects(options?: { status?: string; limit?: number; page?: 
           .single()
 
         if (!error && project) {
+          const [projectWithCollaborators] = await attachCollaboratorsToProjects(supabase, [project])
           // Enrich with images
-          const enrichedProjects = await enrichProjectsWithImages(supabase, [project])
+          const enrichedProjects = await enrichProjectsWithImages(supabase, [projectWithCollaborators])
           const enrichedProject = enrichedProjects[0]
           
           // Update project in all query caches
@@ -235,8 +304,8 @@ export function useProjects(options?: { status?: string; limit?: number; page?: 
       if (error) throw error
       if (!projects || projects.length === 0) return []
       
-      // Enrich projects with images from auth_user
-      return await enrichProjectsWithImages(supabase, projects)
+      const projectsWithCollaborators = await attachCollaboratorsToProjects(supabase, projects)
+      return await enrichProjectsWithImages(supabase, projectsWithCollaborators)
     },
     staleTime: 30 * 1000, // 30 seconds for list views
   })
@@ -267,8 +336,9 @@ export function useProject(projectId: string) {
           .single()
 
         if (!error && project) {
+          const [projectWithCollaborators] = await attachCollaboratorsToProjects(supabase, [project])
           // Enrich with images
-          const enrichedProjects = await enrichProjectsWithImages(supabase, [project])
+          const enrichedProjects = await enrichProjectsWithImages(supabase, [projectWithCollaborators])
           const enrichedProject = enrichedProjects[0]
           
           queryClient.setQueryData<{ project: Project }>(["project", projectId], { project: enrichedProject })
@@ -321,8 +391,8 @@ export function useProject(projectId: string) {
       if (error) throw error
       if (!project) throw new Error("Project not found")
       
-      // Enrich with images
-      const enrichedProjects = await enrichProjectsWithImages(supabase, [project])
+      const [projectWithCollaborators] = await attachCollaboratorsToProjects(supabase, [project])
+      const enrichedProjects = await enrichProjectsWithImages(supabase, [projectWithCollaborators])
       return { project: enrichedProjects[0] }
     },
     enabled: !!projectId,
@@ -342,6 +412,7 @@ export function useCreateProject() {
       status?: string
       department_id?: string
       links?: string[]
+      collaborator_ids?: string[]
     }) => {
       if (!userEmail) throw new Error("Not authenticated")
       
@@ -360,6 +431,7 @@ export function useCreateProject() {
         owner_id: user.id,
         status: data.status || "open",
         links: prepareLinkPayload(data.links),
+        collaborator_ids: Array.isArray(data.collaborator_ids) ? data.collaborator_ids : [],
       }
 
       // Create project
@@ -376,8 +448,8 @@ export function useCreateProject() {
       if (error) throw error
       if (!project) throw new Error("Failed to create project")
       
-      // Enrich with images
-      const enrichedProjects = await enrichProjectsWithImages(supabase, [project])
+      const [projectWithCollaborators] = await attachCollaboratorsToProjects(supabase, [project])
+      const enrichedProjects = await enrichProjectsWithImages(supabase, [projectWithCollaborators])
       return { project: enrichedProjects[0] }
     },
     onSuccess: (data) => {
@@ -407,15 +479,19 @@ export function useUpdateProject() {
       department_id?: string
       owner_id?: string | null
       links?: string[]
+      collaborator_ids?: string[]
     }) => {
       if (!userEmail) throw new Error("Not authenticated")
       
       await ensureUserContext(supabase, userEmail)
 
-      const { links, ...rest } = data
+      const { links, collaborator_ids, ...rest } = data
       const updatePayload: Record<string, any> = { ...rest }
       if (links !== undefined) {
         updatePayload.links = prepareLinkPayload(links)
+      }
+      if (collaborator_ids !== undefined) {
+        updatePayload.collaborator_ids = Array.isArray(collaborator_ids) ? collaborator_ids : []
       }
 
       const { data: project, error } = await supabase
@@ -432,8 +508,8 @@ export function useUpdateProject() {
       if (error) throw error
       if (!project) throw new Error("Project not found")
       
-      // Enrich with images
-      const enrichedProjects = await enrichProjectsWithImages(supabase, [project])
+      const [projectWithCollaborators] = await attachCollaboratorsToProjects(supabase, [project])
+      const enrichedProjects = await enrichProjectsWithImages(supabase, [projectWithCollaborators])
       return { project: enrichedProjects[0] }
     },
     onMutate: async (variables) => {
@@ -550,4 +626,3 @@ export function useDeleteProject() {
     },
   })
 }
-

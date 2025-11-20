@@ -26,6 +26,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DepartmentForm } from "@/components/forms/department-form"
 import { useDepartments } from "@/hooks/use-departments"
 import { useCreateProject, useUpdateProject } from "@/hooks/use-projects"
+import { useUsers } from "@/hooks/use-users"
+import { CollaboratorSelector } from "@/components/collaborator-selector"
 
 const projectSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -38,6 +40,7 @@ const projectSchema = z.object({
       z.literal("no_department"),
     ])
     .optional(),
+  collaborator_ids: z.array(z.string().uuid()).default([]),
   links: z.array(z.string().url("Enter a valid URL")).default([]),
 })
 
@@ -52,6 +55,7 @@ const NO_DEPARTMENT_VALUE = "no_department"
 
 export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
   const { departments, refresh } = useDepartments()
+  const { data: users } = useUsers()
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()
@@ -64,6 +68,7 @@ export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
       description: initialData?.description || "",
       status: initialData?.status || "open",
       department_id: initialData?.department_id || NO_DEPARTMENT_VALUE,
+      collaborator_ids: initialData?.collaborator_ids || [],
       links: initialData?.links || [],
     },
   })
@@ -82,6 +87,7 @@ export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
         status: values.status,
         department_id:
           values.department_id && values.department_id !== NO_DEPARTMENT_VALUE ? values.department_id : undefined,
+        collaborator_ids: values.collaborator_ids || [],
         links: sanitizedLinks,
       }
 
@@ -152,6 +158,22 @@ export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="collaborator_ids"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Collaborators</FormLabel>
+              <CollaboratorSelector
+                users={users || []}
+                value={field.value || []}
+                onChange={field.onChange}
+                placeholder="Add collaborators"
+              />
               <FormMessage />
             </FormItem>
           )}
@@ -254,4 +276,3 @@ export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
     </Form>
   )
 }
-

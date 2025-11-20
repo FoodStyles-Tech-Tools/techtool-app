@@ -29,6 +29,7 @@ import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
 import { TicketDetailDialog } from "@/components/ticket-detail-dialog"
+import { GlobalTicketDialog } from "@/components/global-ticket-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
@@ -144,6 +145,7 @@ export default function TicketsPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isAddingNew, setIsAddingNew] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const [isTicketDialogOpen, setTicketDialogOpen] = useState(false)
   const queryClient = useQueryClient()
   
   const { user, hasPermission } = usePermissions()
@@ -163,51 +165,6 @@ export default function TicketsPage() {
       setStatusFilter("all")
     }
   }, [excludeDone, statusFilter])
-
-  // Keyboard shortcut: Press "a" to quick-add
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC: Close quick-add form
-      if (e.key === "Escape" && isAddingNew) {
-        // Don't close if a select dropdown is open
-        const target = e.target as HTMLElement | null
-        const isSelectOpen = target?.closest('[role="listbox"]') || target?.closest('[data-state="open"]')
-        if (!isSelectOpen) {
-          e.preventDefault()
-          e.stopPropagation()
-          setIsAddingNew(false)
-          return
-        }
-      }
-
-      // Only trigger if "a" key is pressed (not Alt+A or Ctrl+A)
-      if (e.key !== "a" && e.key !== "A") return
-      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
-
-      // Don't trigger if user is typing in an input, textarea, or select
-      const target = e.target as HTMLElement | null
-      const isInputElement = target && (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.tagName === "SELECT" ||
-        target.isContentEditable
-      )
-      if (isInputElement) return
-
-      // Don't trigger if a dialog is open
-      const hasOpenDialog = document.querySelector('[role="dialog"][data-state="open"]')
-      if (hasOpenDialog) return
-
-      // Don't trigger if already adding or no permission
-      if (isAddingNew || !hasPermission("tickets", "create")) return
-
-      e.preventDefault()
-      setIsAddingNew(true)
-    }
-
-    window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
-    return () => window.removeEventListener("keydown", handleKeyDown, true)
-  }, [isAddingNew, hasPermission])
 
   // Fetch tickets with server-side filtering (except search which is client-side for now)
   const { data: ticketsData, isLoading: ticketsLoading } = useTickets({
@@ -261,6 +218,57 @@ export default function TicketsPage() {
       )
     })
   }, [allTickets, deferredSearchQuery])
+
+  useEffect(() => {
+    if (filteredTickets.length === 0 && isAddingNew) {
+      setIsAddingNew(false)
+    }
+  }, [filteredTickets.length, isAddingNew])
+
+  // Keyboard shortcut: Press "a" to quick-add
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // ESC: Close quick-add form
+      if (e.key === "Escape" && isAddingNew) {
+        // Don't close if a select dropdown is open
+        const target = e.target as HTMLElement | null
+        const isSelectOpen = target?.closest('[role="listbox"]') || target?.closest('[data-state="open"]')
+        if (!isSelectOpen) {
+          e.preventDefault()
+          e.stopPropagation()
+          setIsAddingNew(false)
+          return
+        }
+      }
+
+      // Only trigger if "a" key is pressed (not Alt+A or Ctrl+A)
+      if (e.key !== "a" && e.key !== "A") return
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
+
+      // Don't trigger if user is typing in an input, textarea, or select
+      const target = e.target as HTMLElement | null
+      const isInputElement = target && (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
+        target.isContentEditable
+      )
+      if (isInputElement) return
+
+      // Don't trigger if a dialog is open
+      const hasOpenDialog = document.querySelector('[role="dialog"][data-state="open"]')
+      if (hasOpenDialog) return
+
+      // Don't trigger if already adding or no permission
+      if (isAddingNew || !hasPermission("tickets", "create") || filteredTickets.length === 0) return
+
+      e.preventDefault()
+      setIsAddingNew(true)
+    }
+
+    window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
+    return () => window.removeEventListener("keydown", handleKeyDown, true)
+  }, [isAddingNew, hasPermission, filteredTickets.length])
 
   // Memoize callbacks before early return to maintain hook order
   const handleCopyTicketLabel = useCallback((ticket: Ticket) => {
@@ -414,13 +422,19 @@ export default function TicketsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl">Tickets</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             View and manage all tickets across projects
           </p>
         </div>
+        {canCreateTickets && (
+          <Button variant="outline" size="sm" onClick={() => setTicketDialogOpen(true)} className="h-9">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Ticket
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center space-x-2 flex-wrap gap-y-2">
@@ -551,17 +565,6 @@ export default function TicketsPage() {
           <p className="text-sm text-muted-foreground">
             {hasSearchQuery ? "No tickets found" : "No tickets yet."}
           </p>
-          {hasPermission("tickets", "create") && !isAddingNew && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsAddingNew(true)}
-              className="mt-4"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Quick Add Ticket
-            </Button>
-          )}
         </div>
       ) : (
         <div className="rounded-md border">
@@ -580,7 +583,7 @@ export default function TicketsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isAddingNew && canCreateTickets && (
+              {isAddingNew && canCreateTickets && filteredTickets.length > 0 && (
                 <QuickAddRow
                   departments={departments}
                   users={users}
@@ -613,7 +616,7 @@ export default function TicketsPage() {
               Showing {startIndex + 1} to {Math.min(endIndex, filteredTickets.length)} of {filteredTickets.length} tickets
             </div>
             <div className="flex items-center space-x-2">
-              {hasPermission("tickets", "create") && !isAddingNew && (
+              {hasPermission("tickets", "create") && !isAddingNew && filteredTickets.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -652,6 +655,7 @@ export default function TicketsPage() {
         </div>
       )}
       
+      <GlobalTicketDialog open={isTicketDialogOpen && canCreateTickets} onOpenChange={setTicketDialogOpen} />
       <TicketDetailDialog
         ticketId={selectedTicketId}
         open={!!selectedTicketId}

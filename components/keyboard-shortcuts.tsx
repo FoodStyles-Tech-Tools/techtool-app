@@ -5,12 +5,19 @@ import { useSession } from "@/lib/auth-client"
 import { GlobalTicketDialog } from "./global-ticket-dialog"
 import { TicketSearchOverlay } from "./ticket-search-overlay"
 import { TicketDetailDialog } from "./ticket-detail-dialog"
+import { usePermissions } from "@/hooks/use-permissions"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ProjectForm } from "@/components/forms/project-form"
+import { toast } from "@/components/ui/toast"
 
 export function KeyboardShortcuts() {
   const { data: session, isPending } = useSession()
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false)
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
+  const { hasPermission } = usePermissions()
+  const canCreateProjects = hasPermission("projects", "create")
 
   useEffect(() => {
     // Don't set up shortcuts if not authenticated
@@ -64,7 +71,7 @@ export function KeyboardShortcuts() {
       // Don't trigger if a dialog/modal is already open (except our own)
       // Check if there are any open dialogs by looking for data-state="open" on dialog elements
       const hasOpenDialog = document.querySelector('[role="dialog"][data-state="open"]')
-      if (hasOpenDialog && !isTicketDialogOpen && !isSearchOverlayOpen) {
+      if (hasOpenDialog && !isTicketDialogOpen && !isSearchOverlayOpen && !isProjectDialogOpen) {
         return
       }
 
@@ -77,13 +84,35 @@ export function KeyboardShortcuts() {
         }
       }
 
-      // ESC: Close dialogs/overlays
-      // Note: Search overlay handles its own ESC key, so we only handle ticket dialog here
-      if (e.key === "Escape" && isTicketDialogOpen && !isSearchOverlayOpen) {
-        // Only handle ESC for ticket dialog if search overlay is not open
-        // (search overlay handles its own ESC)
+      const isAltCombo = e.altKey && !e.metaKey && !e.ctrlKey
+      const isMetaCombo = e.metaKey && !e.altKey && !e.ctrlKey
+
+      if (
+        (e.key === "p" || e.key === "P") &&
+        (isAltCombo || isMetaCombo) &&
+        canCreateProjects &&
+        !isInputElement
+      ) {
         e.preventDefault()
-        setIsTicketDialogOpen(false)
+        if (!isProjectDialogOpen) {
+          setIsProjectDialogOpen(true)
+        }
+        return
+      }
+
+      // ESC: Close dialogs/overlays
+      // Note: Search overlay handles its own ESC key, so we only handle ticket/project dialogs here
+      if (e.key === "Escape" && !isSearchOverlayOpen) {
+        if (isTicketDialogOpen) {
+          e.preventDefault()
+          setIsTicketDialogOpen(false)
+          return
+        }
+        if (isProjectDialogOpen) {
+          e.preventDefault()
+          setIsProjectDialogOpen(false)
+          return
+        }
       }
     }
 
@@ -96,7 +125,15 @@ export function KeyboardShortcuts() {
       document.removeEventListener("keydown", handleKeyDown, true)
       window.removeEventListener("keydown", handleKeyDown, true)
     }
-  }, [session, isPending, isTicketDialogOpen, isSearchOverlayOpen, selectedTicketId])
+  }, [
+    session,
+    isPending,
+    isTicketDialogOpen,
+    isSearchOverlayOpen,
+    selectedTicketId,
+    isProjectDialogOpen,
+    canCreateProjects,
+  ])
 
   // Don't render dialogs if not authenticated
   if (isPending || !session) {
@@ -123,7 +160,21 @@ export function KeyboardShortcuts() {
           }
         }}
       />
+      {canCreateProjects && (
+        <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Add Project</DialogTitle>
+            </DialogHeader>
+            <ProjectForm
+              onSuccess={() => {
+                setIsProjectDialogOpen(false)
+                toast("Project created successfully")
+              }}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   )
 }
-

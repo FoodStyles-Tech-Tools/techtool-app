@@ -3,11 +3,12 @@
 import { useState, useMemo, useEffect, useCallback, memo, useDeferredValue } from "react"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
-import { useProjects, useDeleteProject, useCreateProject, useUpdateProject } from "@/hooks/use-projects"
+import { useProjects, useCreateProject, useUpdateProject } from "@/hooks/use-projects"
 import { useRequirePermission } from "@/hooks/use-require-permission"
 import { useTickets } from "@/hooks/use-tickets"
 import { useUsers } from "@/hooks/use-users"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
+import { CollaboratorSelector } from "@/components/collaborator-selector"
 import {
   Table,
   TableBody,
@@ -16,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Trash2, X, Check, Link2, Circle } from "lucide-react"
+import { Plus, X, Check, Link2, Circle } from "lucide-react"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
@@ -27,6 +28,8 @@ import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
 import { useDepartments } from "@/hooks/use-departments"
 import { truncateText } from "@/lib/utils"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ProjectForm } from "@/components/forms/project-form"
 
 const ROWS_PER_PAGE = 20
 const DEFAULT_PROJECT_STATS = { total: 0, done: 0, percentage: 0 }
@@ -52,6 +55,8 @@ interface ProjectRowData {
   created_at: string
   department: Department | null
   owner?: BasicUser | null
+  collaborators: BasicUser[]
+  collaborator_ids?: string[]
 }
 
 interface ProjectQuickAddData {
@@ -59,6 +64,7 @@ interface ProjectQuickAddData {
   description: string
   status: "open" | "in_progress" | "closed"
   department_id?: string
+  collaborator_ids?: string[]
 }
 
 const getStatusIcon = (status: string) => {
@@ -88,9 +94,8 @@ export default function ProjectsPage() {
   const { hasPermission: canView, loading: permissionLoading } = useRequirePermission("projects", "view")
   
   // All hooks must be called before any conditional returns
-  const { hasPermission } = usePermissions()
+  const { hasPermission, user: currentUser } = usePermissions()
   const { data, isLoading } = useProjects()
-  const deleteProject = useDeleteProject()
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()
   const { departments } = useDepartments()
@@ -100,6 +105,8 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [excludeDone, setExcludeDone] = useState(true)
+  const [assignedToMeOnly, setAssignedToMeOnly] = useState(true)
+  const [isProjectFormOpen, setProjectFormOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isAddingNew, setIsAddingNew] = useState(false)
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
@@ -107,12 +114,11 @@ export default function ProjectsPage() {
 
   const projects = useMemo(() => data || [], [data])
   const tickets = useMemo(() => ticketsData || [], [ticketsData])
-  const users = useMemo(() => usersData || [], [usersData])
+  const users = useMemo(() => (usersData || []).filter((user) => user.role ? ["admin", "member"].includes(user.role.toLowerCase()) : false), [usersData])
   // Only show loading if we have no data at all
   const loading = !data && isLoading
   const canCreateProjects = hasPermission("projects", "create")
   const canEditProjects = hasPermission("projects", "edit")
-  const canDeleteProjects = hasPermission("projects", "delete")
 
   // Calculate ticket stats per project
   const projectTicketStats = useMemo(() => {
@@ -130,7 +136,46 @@ export default function ProjectsPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [deferredSearchQuery, departmentFilter, excludeDone])
+  }, [deferredSearchQuery, departmentFilter, excludeDone, assignedToMeOnly])
+
+  const currentUserId = currentUser?.id
+
+  const filteredProjects = useMemo(() => {
+    const normalizedQuery = deferredSearchQuery.trim().toLowerCase()
+    return projects.filter((project) => {
+      // Search filter
+      const matchesSearch = 
+        !normalizedQuery ||
+        project.name.toLowerCase().includes(normalizedQuery) ||
+        project.description?.toLowerCase().includes(normalizedQuery)
+      
+      if (!matchesSearch) return false
+
+      // Department filter
+      if (departmentFilter !== "all") {
+        if (departmentFilter === "no_department" && project.department?.id) return false
+        if (departmentFilter !== "no_department" && project.department?.id !== departmentFilter) return false
+      }
+
+      // Exclude done filter (exclude "closed" projects)
+      if (excludeDone && project.status === "closed") return false
+
+      if (assignedToMeOnly && currentUserId) {
+        const isOwner = project.owner?.id === currentUserId
+        const isCollaborator = project.collaborators?.some((collab) => collab.id === currentUserId)
+        if (!isOwner && !isCollaborator) return false
+      }
+
+      return true
+    })
+  }, [projects, deferredSearchQuery, departmentFilter, excludeDone, assignedToMeOnly, currentUserId])
+  const hasProjectSearch = deferredSearchQuery.trim().length > 0
+
+  useEffect(() => {
+    if (filteredProjects.length === 0 && isAddingNew) {
+      setIsAddingNew(false)
+    }
+  }, [filteredProjects.length, isAddingNew])
 
   // Keyboard shortcut: Press "a" to quick-add, ESC to close
   useEffect(() => {
@@ -167,7 +212,7 @@ export default function ProjectsPage() {
       if (hasOpenDialog) return
 
       // Don't trigger if already adding or no permission
-      if (isAddingNew || !canCreateProjects) return
+      if (isAddingNew || !canCreateProjects || filteredProjects.length === 0) return
 
       e.preventDefault()
       setIsAddingNew(true)
@@ -175,45 +220,7 @@ export default function ProjectsPage() {
 
     window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
     return () => window.removeEventListener("keydown", handleKeyDown, true)
-  }, [isAddingNew, canCreateProjects])
-
-  const filteredProjects = useMemo(() => {
-    const normalizedQuery = deferredSearchQuery.trim().toLowerCase()
-    return projects.filter((project) => {
-      // Search filter
-      const matchesSearch = 
-        !normalizedQuery ||
-        project.name.toLowerCase().includes(normalizedQuery) ||
-        project.description?.toLowerCase().includes(normalizedQuery)
-      
-      if (!matchesSearch) return false
-
-      // Department filter
-      if (departmentFilter !== "all") {
-        if (departmentFilter === "no_department" && project.department?.id) return false
-        if (departmentFilter !== "no_department" && project.department?.id !== departmentFilter) return false
-      }
-
-      // Exclude done filter (exclude "closed" projects)
-      if (excludeDone && project.status === "closed") return false
-
-      return true
-    })
-  }, [projects, deferredSearchQuery, departmentFilter, excludeDone])
-  const hasProjectSearch = deferredSearchQuery.trim().length > 0
-
-  const handleDelete = useCallback(async (id: string) => {
-    if (!confirm("Are you sure you want to delete this project?")) {
-      return
-    }
-
-    try {
-      await deleteProject.mutateAsync(id)
-      toast("Project deleted successfully")
-    } catch (error: any) {
-      toast(error.message || "Failed to delete project", "error")
-    }
-  }, [deleteProject])
+  }, [isAddingNew, canCreateProjects, filteredProjects.length])
 
   // Pagination
   const totalPages = Math.ceil(filteredProjects.length / ROWS_PER_PAGE)
@@ -236,6 +243,7 @@ export default function ProjectsPage() {
         description: formData.description || undefined,
         status: formData.status,
         department_id: formData.department_id || undefined,
+        collaborator_ids: formData.collaborator_ids || [],
       })
       toast("Project created successfully")
       setIsAddingNew(false)
@@ -260,13 +268,19 @@ export default function ProjectsPage() {
         updates.department_id = value || null
       } else if (field === "status") {
         updates.status = value
+      } else if (field === "collaborator_ids") {
+        updates.collaborator_ids = Array.isArray(value) ? value : []
       }
 
       await updateProject.mutateAsync({
         id: projectId,
         ...updates,
       })
-      toast(`${field === "owner_id" ? "Owner" : field === "department_id" ? "Department" : "Status"} updated`)
+      let label = "Status"
+      if (field === "owner_id") label = "Owner"
+      else if (field === "department_id") label = "Department"
+      else if (field === "collaborator_ids") label = "Collaborators"
+      toast(`${label} updated`)
     } catch (error: any) {
       toast(error.message || "Failed to update project", "error")
     } finally {
@@ -289,13 +303,24 @@ export default function ProjectsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center gap-4">
         <div>
           <h1 className="text-2xl">Projects</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Manage your projects and track progress
           </p>
         </div>
+        {canCreateProjects && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setProjectFormOpen(true)}
+            className="ml-auto h-9"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Project
+          </Button>
+        )}
       </div>
 
       <div className="flex items-center space-x-2 flex-wrap gap-y-2">
@@ -321,6 +346,20 @@ export default function ProjectsPage() {
         </Select>
         <div className="flex items-center space-x-2">
           <Checkbox
+            id="assigned-to-me"
+            checked={assignedToMeOnly}
+            onCheckedChange={(checked) => setAssignedToMeOnly(checked !== false)}
+            className="dark:bg-[#1f1f1f]"
+          />
+          <Label
+            htmlFor="assigned-to-me"
+            className="text-sm font-normal cursor-pointer whitespace-nowrap"
+          >
+            Assigned to me
+          </Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
             id="exclude-done"
             checked={excludeDone}
             onCheckedChange={(checked) => setExcludeDone(checked === true)}
@@ -342,17 +381,6 @@ export default function ProjectsPage() {
           <p className="text-sm text-muted-foreground">
             {hasProjectSearch ? "No projects found" : "No projects yet. Create one to get started."}
           </p>
-          {canCreateProjects && !isAddingNew && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsAddingNew(true)}
-              className="mt-4"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Quick Add Project
-            </Button>
-          )}
         </div>
       ) : (
         <div className="rounded-md border">
@@ -362,17 +390,18 @@ export default function ProjectsPage() {
                 <TableHead className="h-9 py-2 text-xs w-[600px] min-w-[500px]">Project Name</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Progress</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Owner</TableHead>
+                <TableHead className="h-9 py-2 text-xs">Collaborators</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Department</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Status</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Links</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Created</TableHead>
-                <TableHead className="h-9 py-2 text-xs text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isAddingNew && canCreateProjects && (
+              {isAddingNew && canCreateProjects && filteredProjects.length > 0 && (
                 <QuickAddProjectRow
                   departments={departments}
+                  users={users}
                   onCancel={() => setIsAddingNew(false)}
                   onSubmit={handleQuickAdd}
                 />
@@ -387,10 +416,8 @@ export default function ProjectsPage() {
                     users={users}
                     departments={departments}
                     canEditProjects={canEditProjects}
-                    canDeleteProjects={canDeleteProjects}
                     updateProjectField={updateProjectField}
                     updatingFields={updatingFields}
-                    onDelete={handleDelete}
                   />
                 )
               })}
@@ -401,18 +428,7 @@ export default function ProjectsPage() {
               Showing {startIndex + 1} to {Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} projects
             </div>
             <div className="flex items-center space-x-2">
-              {canCreateProjects && !isAddingNew && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsAddingNew(true)}
-                  className="h-8"
-                >
-                  <Plus className="mr-2 h-3.5 w-3.5" />
-                  Quick Add
-                </Button>
-              )}
-              <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-1">
                 <Button
                   variant="outline"
                   size="sm"
@@ -439,18 +455,33 @@ export default function ProjectsPage() {
           </div>
         </div>
       )}
+      <Dialog open={isProjectFormOpen} onOpenChange={setProjectFormOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Add Project</DialogTitle>
+          </DialogHeader>
+          <ProjectForm
+            onSuccess={() => {
+              setProjectFormOpen(false)
+              toast("Project created successfully")
+            }}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
 
 interface QuickAddProjectRowProps {
   departments: Department[]
+  users: BasicUser[]
   onCancel: () => void
   onSubmit: (data: ProjectQuickAddData) => Promise<void>
 }
 
 const QuickAddProjectRow = memo(function QuickAddProjectRow({
   departments,
+  users,
   onCancel,
   onSubmit,
 }: QuickAddProjectRowProps) {
@@ -459,6 +490,7 @@ const QuickAddProjectRow = memo(function QuickAddProjectRow({
     description: "",
     status: "open",
     department_id: undefined,
+    collaborator_ids: [],
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -497,9 +529,32 @@ const QuickAddProjectRow = memo(function QuickAddProjectRow({
           onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
           className="h-7 text-xs mt-1 dark:bg-[#1f1f1f]"
         />
+        <div className="flex justify-end space-x-1 mt-2">
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCancel}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={handleSubmit}
+            disabled={!formData.name.trim() || isSubmitting}
+          >
+            <Check className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </TableCell>
       <TableCell className="py-2 text-xs text-muted-foreground">-</TableCell>
       <TableCell className="py-2 text-xs text-muted-foreground">You</TableCell>
+      <TableCell className="py-2">
+        <CollaboratorSelector
+          users={users}
+          value={formData.collaborator_ids || []}
+          onChange={(ids) => setFormData((prev) => ({ ...prev, collaborator_ids: ids }))}
+          placeholder="Add collaborators"
+          buttonClassName="h-7 w-[170px] text-xs dark:bg-[#1f1f1f]"
+        />
+      </TableCell>
       <TableCell className="py-2">
         <Select
           value={formData.department_id || "no_department"}
@@ -564,22 +619,6 @@ const QuickAddProjectRow = memo(function QuickAddProjectRow({
       </TableCell>
       <TableCell className="py-2 text-xs text-muted-foreground">-</TableCell>
       <TableCell className="py-2 text-xs text-muted-foreground">-</TableCell>
-      <TableCell className="py-2 text-right">
-        <div className="flex justify-end space-x-1">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCancel}>
-            <X className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={handleSubmit}
-            disabled={!formData.name.trim() || isSubmitting}
-          >
-            <Check className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </TableCell>
     </TableRow>
   )
 })
@@ -590,10 +629,8 @@ interface ProjectRowProps {
   users: BasicUser[]
   departments: Department[]
   canEditProjects: boolean
-  canDeleteProjects: boolean
   updateProjectField: (projectId: string, field: string, value: string | null | undefined | string[]) => Promise<void> | void
   updatingFields: Record<string, string>
-  onDelete: (id: string) => Promise<void> | void
 }
 
 const ProjectRow = memo(function ProjectRow({
@@ -602,14 +639,14 @@ const ProjectRow = memo(function ProjectRow({
   users,
   departments,
   canEditProjects,
-  canDeleteProjects,
   updateProjectField,
   updatingFields,
-  onDelete,
 }: ProjectRowProps) {
   const isUpdatingOwner = !!updatingFields[`${project.id}-owner_id`]
   const isUpdatingDept = !!updatingFields[`${project.id}-department_id`]
   const isUpdatingStatus = !!updatingFields[`${project.id}-status`]
+  const isUpdatingCollaborators = !!updatingFields[`${project.id}-collaborator_ids`]
+  const collaboratorIds = project.collaborators?.map((collab) => collab.id) || []
 
   return (
     <TableRow className="hover:bg-muted/50">
@@ -670,6 +707,36 @@ const ProjectRow = memo(function ProjectRow({
               {truncateText(project.owner?.name || project.owner?.email || "Unassigned", 18)}
             </span>
           </div>
+        )}
+      </TableCell>
+      <TableCell className="py-2">
+        {canEditProjects ? (
+          <CollaboratorSelector
+            users={users}
+            value={collaboratorIds}
+            onChange={(ids) => updateProjectField(project.id, "collaborator_ids", ids)}
+            placeholder="Select collaborators"
+            buttonClassName="w-[180px] text-xs dark:bg-[#1f1f1f]"
+            disabled={isUpdatingCollaborators}
+          />
+        ) : collaboratorIds.length ? (
+          <div className="flex items-center gap-1.5">
+            <div className="flex -space-x-2">
+              {project.collaborators.slice(0, 3).map((collaborator) => (
+                <Avatar key={collaborator.id} className="h-5 w-5 border border-background">
+                  <AvatarImage src={collaborator.image || undefined} alt={collaborator.name || collaborator.email} />
+                  <AvatarFallback className="text-[10px]">
+                    {collaborator.name?.[0]?.toUpperCase() || collaborator.email[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+            {project.collaborators.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">+{project.collaborators.length - 3}</span>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">No collaborators</span>
         )}
       </TableCell>
       <TableCell className="py-2">
@@ -771,15 +838,6 @@ const ProjectRow = memo(function ProjectRow({
       </TableCell>
       <TableCell className="py-2 text-xs text-muted-foreground">
         {new Date(project.created_at).toLocaleDateString()}
-      </TableCell>
-      <TableCell className="py-2 text-right">
-        {canDeleteProjects && (
-          <div className="flex justify-end space-x-2">
-            <Button variant="ghost" size="icon" onClick={() => onDelete(project.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
       </TableCell>
     </TableRow>
   )

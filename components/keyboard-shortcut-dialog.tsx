@@ -18,6 +18,14 @@ const shortcuts = [
     combos: [["Alt", "A"]],
   },
   {
+    action: "Create a new project",
+    description: "Opens the Add Project dialog from anywhere.",
+    combos: [
+      ["Alt", "P"],
+      ["Cmd", "P"],
+    ],
+  },
+  {
     action: "Show keyboard shortcuts",
     description: "Displays this list of available shortcuts.",
     combos: [
