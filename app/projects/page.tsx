@@ -328,7 +328,7 @@ export default function ProjectsPage() {
           placeholder="Search projects..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-sm h-9 dark:bg-[#1f1f1f]"
+          className="max-w-[256px] h-9 dark:bg-[#1f1f1f]"
         />
         <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
           <SelectTrigger className="w-[140px] h-9 dark:bg-[#1f1f1f]">
@@ -384,20 +384,21 @@ export default function ProjectsPage() {
         </div>
       ) : (
         <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-9 py-2 text-xs w-[600px] min-w-[500px]">Project Name</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Progress</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Owner</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Collaborators</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Department</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Status</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Links</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <div className="max-h-[calc(100vh-220px)] overflow-y-auto relative">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="sticky top-0 z-20 bg-muted shadow-sm border-b [&_tr]:border-b">
+                <tr className="hover:bg-transparent border-b">
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground w-[600px] min-w-[500px]">Project Name</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Progress</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Owner</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Collaborators</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Department</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Status</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Links</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Created</th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
               {isAddingNew && canCreateProjects && filteredProjects.length > 0 && (
                 <QuickAddProjectRow
                   departments={departments}
@@ -421,8 +422,9 @@ export default function ProjectsPage() {
                   />
                 )
               })}
-            </TableBody>
-          </Table>
+              </tbody>
+            </table>
+          </div>
           <div className="flex items-center justify-between border-t px-4 py-3">
             <div className="text-sm text-muted-foreground">
               Showing {startIndex + 1} to {Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} projects

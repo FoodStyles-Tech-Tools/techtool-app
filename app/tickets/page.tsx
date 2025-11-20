@@ -442,7 +442,7 @@ export default function TicketsPage() {
           placeholder="Search tickets..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-sm h-9 dark:bg-[#1f1f1f]"
+          className="max-w-[256px] h-9 dark:bg-[#1f1f1f]"
         />
         <Button
           variant={assigneeFilter === "all" ? "default" : "outline"}
@@ -568,21 +568,22 @@ export default function TicketsPage() {
         </div>
       ) : (
         <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="h-9 py-2 text-xs">ID</TableHead>
-                <TableHead className="h-9 py-2 text-xs w-[400px] min-w-[300px]">Title</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Type</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Department</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Status</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Priority</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Links</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Requested By</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Assignee</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <div className="max-h-[calc(100vh-220px)] overflow-y-auto relative">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="sticky top-0 z-20 bg-muted shadow-sm border-b [&_tr]:border-b">
+                <tr className="hover:bg-transparent border-b">
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">ID</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground w-[400px] min-w-[300px]">Title</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Type</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Department</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Status</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Priority</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Links</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Requested By</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Assignee</th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr:last-child]:border-0">
               {isAddingNew && canCreateTickets && filteredTickets.length > 0 && (
                 <QuickAddRow
                   departments={departments}
@@ -609,8 +610,9 @@ export default function TicketsPage() {
                   excludeDone={excludeDone}
                 />
               ))}
-            </TableBody>
-          </Table>
+              </tbody>
+            </table>
+          </div>
           <div className="flex items-center justify-between border-t px-4 py-3">
             <div className="text-sm text-muted-foreground">
               Showing {startIndex + 1} to {Math.min(endIndex, filteredTickets.length)} of {filteredTickets.length} tickets

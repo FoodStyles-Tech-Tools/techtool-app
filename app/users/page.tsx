@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useUsers } from "@/hooks/use-users"
@@ -45,6 +45,27 @@ export default function UsersPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<UserFromHook | null>(null)
   const { hasPermission } = usePermissions()
+
+  // Listen for scrollToUser event from keyboard shortcuts
+  useEffect(() => {
+    const handleScrollToUser = (event: CustomEvent<{ userId: string }>) => {
+      const { userId } = event.detail
+      const userRow = document.querySelector(`[data-user-id="${userId}"]`)
+      if (userRow) {
+        userRow.scrollIntoView({ behavior: "smooth", block: "center" })
+        // Add a temporary highlight effect
+        userRow.classList.add("bg-accent")
+        setTimeout(() => {
+          userRow.classList.remove("bg-accent")
+        }, 2000)
+      }
+    }
+
+    window.addEventListener("scrollToUser", handleScrollToUser as EventListener)
+    return () => {
+      window.removeEventListener("scrollToUser", handleScrollToUser as EventListener)
+    }
+  }, [])
 
   // Don't render content if user doesn't have permission (will redirect)
   if (permissionLoading || !canView) {
@@ -177,7 +198,11 @@ export default function UsersPage() {
             </TableHeader>
             <TableBody>
               {users.map((user) => (
-                <TableRow key={user.id} className="hover:bg-muted/50">
+                <TableRow 
+                  key={user.id} 
+                  data-user-id={user.id}
+                  className="hover:bg-muted/50 transition-colors"
+                >
                   <TableCell className="py-2">
                     <div className="flex items-center space-x-2">
                       <Avatar className="h-6 w-6">

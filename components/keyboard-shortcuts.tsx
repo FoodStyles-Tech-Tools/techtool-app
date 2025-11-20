@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "@/lib/auth-client"
+import { usePathname } from "next/navigation"
 import { GlobalTicketDialog } from "./global-ticket-dialog"
 import { TicketSearchOverlay } from "./ticket-search-overlay"
+import { UserSearchOverlay } from "./user-search-overlay"
 import { TicketDetailDialog } from "./ticket-detail-dialog"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -12,12 +14,15 @@ import { toast } from "@/components/ui/toast"
 
 export function KeyboardShortcuts() {
   const { data: session, isPending } = useSession()
+  const pathname = usePathname()
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false)
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false)
+  const [isUserSearchOverlayOpen, setIsUserSearchOverlayOpen] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const { hasPermission } = usePermissions()
   const canCreateProjects = hasPermission("projects", "create")
+  const isUsersPage = pathname === "/users"
 
   useEffect(() => {
     // Don't set up shortcuts if not authenticated
@@ -53,8 +58,15 @@ export function KeyboardShortcuts() {
           if (selectedTicketId) {
             setSelectedTicketId(null)
           }
-          if (!isSearchOverlayOpen) {
-            setIsSearchOverlayOpen(true)
+          // If on Users page, open user search overlay, otherwise open ticket search overlay
+          if (isUsersPage) {
+            if (!isUserSearchOverlayOpen) {
+              setIsUserSearchOverlayOpen(true)
+            }
+          } else {
+            if (!isSearchOverlayOpen) {
+              setIsSearchOverlayOpen(true)
+            }
           }
         }
         return
@@ -71,7 +83,7 @@ export function KeyboardShortcuts() {
       // Don't trigger if a dialog/modal is already open (except our own)
       // Check if there are any open dialogs by looking for data-state="open" on dialog elements
       const hasOpenDialog = document.querySelector('[role="dialog"][data-state="open"]')
-      if (hasOpenDialog && !isTicketDialogOpen && !isSearchOverlayOpen && !isProjectDialogOpen) {
+      if (hasOpenDialog && !isTicketDialogOpen && !isSearchOverlayOpen && !isUserSearchOverlayOpen && !isProjectDialogOpen) {
         return
       }
 
@@ -103,8 +115,8 @@ export function KeyboardShortcuts() {
       }
 
       // ESC: Close dialogs/overlays
-      // Note: Search overlay handles its own ESC key, so we only handle ticket/project dialogs here
-      if (e.key === "Escape" && !isSearchOverlayOpen) {
+      // Note: Search overlays handle their own ESC key, so we only handle ticket/project dialogs here
+      if (e.key === "Escape" && !isSearchOverlayOpen && !isUserSearchOverlayOpen) {
         if (isTicketDialogOpen) {
           e.preventDefault()
           setIsTicketDialogOpen(false)
@@ -132,14 +144,22 @@ export function KeyboardShortcuts() {
     isPending,
     isTicketDialogOpen,
     isSearchOverlayOpen,
+    isUserSearchOverlayOpen,
     selectedTicketId,
     isProjectDialogOpen,
     canCreateProjects,
+    isUsersPage,
   ])
 
   // Don't render dialogs if not authenticated
   if (isPending || !session) {
     return null
+  }
+
+  const handleSelectUser = (userId: string) => {
+    // Dispatch custom event to scroll to user in Users page
+    const event = new CustomEvent("scrollToUser", { detail: { userId } })
+    window.dispatchEvent(event)
   }
 
   return (
@@ -152,6 +172,11 @@ export function KeyboardShortcuts() {
           setSelectedTicketId(ticketId)
           setIsSearchOverlayOpen(false)
         }}
+      />
+      <UserSearchOverlay
+        open={isUserSearchOverlayOpen}
+        onOpenChange={setIsUserSearchOverlayOpen}
+        onSelectUser={handleSelectUser}
       />
       <TicketDetailDialog
         ticketId={selectedTicketId}
