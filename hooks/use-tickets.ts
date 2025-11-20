@@ -478,6 +478,7 @@ export function useCreateTicket() {
       status?: string
       department_id?: string
       links?: string[]
+      epic_id?: string
     }) => {
       if (!userEmail) throw new Error("Not authenticated")
       
@@ -535,7 +536,8 @@ export function useCreateTicket() {
             department:departments(id, name),
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
-            requested_by:users!tickets_requested_by_id_fkey(id, name, email)
+            requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+            epic:epics(id, name, color)
           `)
           .single()
 
@@ -648,7 +650,8 @@ export function useUpdateTicket() {
       // Get users, departments, and epics from cache for optimistic updates
       const usersData = queryClient.getQueryData<Array<{ id: string; name: string | null; email: string; image: string | null }>>(["users"])
       const departmentsData = queryClient.getQueryData<Array<{ id: string; name: string }>>(["departments"])
-      const epicsData = queryClient.getQueryData<Array<{ id: string; name: string; color: string }>>(["epics", variables.project_id || ""])
+      const projectId = previousTicket?.ticket?.project?.id || ""
+      const epicsData = queryClient.getQueryData<Array<{ id: string; name: string; color: string }>>(["epics", projectId])
 
       // Optimistically update single ticket
       if (previousTicket) {
@@ -709,7 +712,6 @@ export function useUpdateTicket() {
           } else {
             updatedTicket.epic = null
           }
-          updatedTicket.epic_id = variables.epic_id || null
         }
 
         queryClient.setQueryData<{ ticket: Ticket }>(["ticket", variables.id], { ticket: updatedTicket })
@@ -777,7 +779,6 @@ export function useUpdateTicket() {
                 } else {
                   updatedTicket.epic = null
                 }
-                updatedTicket.epic_id = variables.epic_id || null
               }
               
               return updatedTicket

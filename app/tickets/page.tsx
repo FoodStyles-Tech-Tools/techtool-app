@@ -344,18 +344,16 @@ export default function TicketsPage() {
         body[field] = newStatus
         
         // Condition 2: When status from Open/Blocked to any other status then update started_at timestamp
-        if ((previousStatus === "open" || previousStatus === "blocked") && newStatus !== "open" && newStatus !== "blocked") {
+        if (previousStatus === "open" || previousStatus === "blocked") {
           body.started_at = new Date().toISOString()
         }
         
         // Condition 3: When any status changed to Cancelled or Completed then update completed_at timestamp
-        if (newStatus === "completed" || newStatus === "cancelled") {
-          body.completed_at = new Date().toISOString()
-          // Also ensure started_at is set if not already
-          const ticketStartedAt = (currentTicket as any)?.started_at
-          if (!ticketStartedAt) {
-            body.started_at = new Date().toISOString()
-          }
+        body.completed_at = new Date().toISOString()
+        // Also ensure started_at is set if not already
+        const ticketStartedAt = (currentTicket as any)?.started_at
+        if (!ticketStartedAt) {
+          body.started_at = new Date().toISOString()
         }
         
         // Store pending change and show dialog

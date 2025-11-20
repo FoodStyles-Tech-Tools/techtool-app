@@ -68,7 +68,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const updateTicket = useUpdateTicket()
 
   const ticket = ticketData?.ticket || null
-  const projectId = ticket?.project?.id || ticket?.project_id || null
+  const projectId = ticket?.project?.id || null
   const { epics } = useEpics(projectId || "")
   const formatLinkLabel = (url: string) => {
     try {
