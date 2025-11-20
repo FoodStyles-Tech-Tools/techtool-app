@@ -30,12 +30,23 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+type CombinedUser = {
+  id?: string
+  name?: string | null
+  email?: string | null
+  image?: string | null
+  role?: string | null
+}
+
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { data: session } = useSession()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const { user: permissionsUser } = usePermissions()
-  const user = useMemo(() => permissionsUser || session?.user || null, [permissionsUser, session?.user])
+  const user = useMemo<CombinedUser | null>(
+    () => permissionsUser || (session?.user as CombinedUser) || null,
+    [permissionsUser, session?.user]
+  )
   const [signingOut, setSigningOut] = useState(false)
   const { show, hide } = useSignOutOverlay()
 
