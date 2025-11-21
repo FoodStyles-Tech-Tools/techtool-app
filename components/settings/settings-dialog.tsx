@@ -209,7 +209,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                             htmlFor="group-by-epic-default"
                             className="text-sm font-normal cursor-pointer"
                           >
-                            Default "Group by Epic" for Projects
+                            Default &quot;Group by Epic&quot; for Projects
                           </Label>
                         </div>
                         <p className="text-xs text-muted-foreground">

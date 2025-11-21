@@ -119,7 +119,7 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
     if (!isEditing && user?.id && !form.getValues("assignee_id")) {
       form.setValue("assignee_id", user.id)
     }
-  }, [user?.id, isEditing])
+  }, [user?.id, isEditing, form])
 
   const { fields: linkFields, append: appendLink, remove: removeLink } = useFieldArray<TicketFormValues, FieldArrayPath<TicketFormValues>>({
     control: form.control,

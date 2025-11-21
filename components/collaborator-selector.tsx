@@ -36,7 +36,7 @@ export function CollaboratorSelector({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
 
-  const selectedIds = value || []
+  const selectedIds = useMemo(() => value || [], [value])
 
   const selectedUsers = useMemo(() => {
     if (!selectedIds.length) return []
