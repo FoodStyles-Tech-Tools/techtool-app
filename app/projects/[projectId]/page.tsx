@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -38,6 +38,7 @@ import {
 import { useEpics, useCreateEpic } from "@/hooks/use-epics"
 import { EpicForm } from "@/components/forms/epic-form"
 import { EpicSelect } from "@/components/epic-select"
+import { useUserPreferences } from "@/hooks/use-user-preferences"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 
@@ -95,6 +96,8 @@ export default function ProjectDetailPage() {
   const { user, hasPermission } = usePermissions()
   const createTicket = useCreateTicket()
   const queryClient = useQueryClient()
+  const { preferences } = useUserPreferences()
+  const groupByEpicInitialized = useRef(false)
   
   const [searchQuery, setSearchQuery] = useState("")
   const [requestedByFilter, setRequestedByFilter] = useState<string>("all")
@@ -132,6 +135,15 @@ export default function ProjectDetailPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id])
+
+  // Set default groupByEpic from user preferences (only once on initial load)
+  useEffect(() => {
+    if (!groupByEpicInitialized.current && preferences.group_by_epic !== undefined) {
+      setGroupByEpic(preferences.group_by_epic)
+      groupByEpicInitialized.current = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preferences.group_by_epic])
 
   const [newTicketData, setNewTicketData] = useState({
     title: "",

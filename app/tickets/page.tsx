@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
-import { Copy, Plus, X, Check, Link2 } from "lucide-react"
+import { Copy, Plus, X, Check, Circle, LayoutGrid, Table2 } from "lucide-react"
 import Link from "next/link"
 import { useDepartments } from "@/hooks/use-departments"
 import { useTickets, useUpdateTicket, useCreateTicket } from "@/hooks/use-tickets"
@@ -32,6 +32,12 @@ import { TicketDetailDialog } from "@/components/ticket-detail-dialog"
 import { GlobalTicketDialog } from "@/components/global-ticket-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useUserPreferences } from "@/hooks/use-user-preferences"
+import { TicketTypeIcon } from "@/components/ticket-type-select"
+import { TicketPriorityIcon } from "@/components/ticket-priority-select"
 import {
   Dialog,
   DialogContent,
@@ -45,6 +51,14 @@ const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 const ROWS_PER_PAGE = 20
 const UNASSIGNED_VALUE = "unassigned"
 const NO_DEPARTMENT_VALUE = "no_department"
+
+const KANBAN_COLUMNS = [
+  { id: "open", label: "Open", color: "fill-gray-500 text-gray-500" },
+  { id: "in_progress", label: "In Progress", color: "fill-yellow-500 text-yellow-500" },
+  { id: "blocked", label: "Blocked", color: "fill-purple-500 text-purple-500" },
+  { id: "cancelled", label: "Cancelled", color: "fill-red-500 text-red-500" },
+  { id: "completed", label: "Completed", color: "fill-green-500 text-green-500" },
+]
 const FIELD_LABELS: Record<string, string> = {
   status: "Status",
   priority: "Priority",
@@ -141,15 +155,6 @@ const formatRelativeDate = (dateString: string): string => {
   return "long time ago"
 }
 
-const formatLinkLabel = (url: string) => {
-  try {
-    const hostname = new URL(url).hostname
-    return hostname.replace(/^www\./, "")
-  } catch {
-    return url
-  }
-}
-
 export default function TicketsPage() {
   // Require view permission for tickets - redirects if not authorized
   const { hasPermission: canView, loading: permissionLoading } = useRequirePermission("tickets", "view")
@@ -164,6 +169,7 @@ export default function TicketsPage() {
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
   const [currentPage, setCurrentPage] = useState(1)
   const [isAddingNew, setIsAddingNew] = useState(false)
+  const [addingToStatus, setAddingToStatus] = useState<string | null>(null)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isTicketDialogOpen, setTicketDialogOpen] = useState(false)
   const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
@@ -173,6 +179,18 @@ export default function TicketsPage() {
   
   const { user, hasPermission } = usePermissions()
   const createTicket = useCreateTicket()
+  const { preferences, updatePreferences, isUpdating: isUpdatingPreferences } = useUserPreferences()
+  const [view, setView] = useState<"table" | "kanban">(preferences.tickets_view || "table")
+  const [applyingView, setApplyingView] = useState<"table" | "kanban" | null>(null)
+  const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
+  const [dropIndicator, setDropIndicator] = useState<{ columnId: string; ticketId: string | null; top: number } | null>(null)
+  
+  // Set default view from preferences
+  useEffect(() => {
+    if (preferences.tickets_view) {
+      setView(preferences.tickets_view)
+    }
+  }, [preferences.tickets_view])
   
   // Set default assignee filter to "My Tickets" when user is available (only once on initial load)
   useEffect(() => {
@@ -242,9 +260,27 @@ export default function TicketsPage() {
     })
   }, [allTickets, deferredSearchQuery])
 
+  // Group tickets by status for kanban
+  const ticketsByStatus = useMemo(() => {
+    const grouped: Record<string, typeof filteredTickets> = {
+      open: [],
+      in_progress: [],
+      blocked: [],
+      cancelled: [],
+      completed: [],
+    }
+    filteredTickets.forEach(ticket => {
+      if (grouped[ticket.status]) {
+        grouped[ticket.status].push(ticket)
+      }
+    })
+    return grouped
+  }, [filteredTickets])
+
   useEffect(() => {
     if (filteredTickets.length === 0 && isAddingNew) {
       setIsAddingNew(false)
+      setAddingToStatus(null)
     }
   }, [filteredTickets.length, isAddingNew])
 
@@ -260,6 +296,7 @@ export default function TicketsPage() {
           e.preventDefault()
           e.stopPropagation()
           setIsAddingNew(false)
+          setAddingToStatus(null)
           return
         }
       }
@@ -287,11 +324,14 @@ export default function TicketsPage() {
 
       e.preventDefault()
       setIsAddingNew(true)
+      if (view === "kanban") {
+        setAddingToStatus("open") // Default to "open" status in kanban
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
     return () => window.removeEventListener("keydown", handleKeyDown, true)
-  }, [isAddingNew, hasPermission, filteredTickets.length])
+  }, [isAddingNew, hasPermission, filteredTickets.length, view])
 
   // Memoize callbacks before early return to maintain hook order
   const handleCopyTicketLabel = useCallback((ticket: Ticket) => {
@@ -448,6 +488,108 @@ export default function TicketsPage() {
     }
   }, [createTicket])
 
+  // Drag and drop handlers for kanban
+  const handleDragStart = useCallback((e: React.DragEvent, ticketId: string) => {
+    if (!hasPermission("tickets", "edit")) return
+    setDraggedTicket(ticketId)
+    e.dataTransfer.effectAllowed = "move"
+  }, [hasPermission])
+
+  const handleDragOver = useCallback((e: React.DragEvent, columnId: string) => {
+    if (!draggedTicket) return
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    const y = e.clientY - rect.top
+    setDropIndicator({ columnId, ticketId: null, top: y })
+  }, [draggedTicket])
+
+  const handleDragLeave = useCallback(() => {
+    setDropIndicator(null)
+  }, [])
+
+  const handleDrop = useCallback(async (e: React.DragEvent, columnId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!draggedTicket) return
+
+    const ticket = allTickets.find(t => t.id === draggedTicket)
+    if (!ticket || ticket.status === columnId) {
+      setDraggedTicket(null)
+      setDropIndicator(null)
+      return
+    }
+
+    const previousStatus = ticket.status
+    const newStatus = columnId
+    const body: any = { status: newStatus }
+
+    // Condition 1: If moving to cancelled, show cancel reason dialog
+    if (newStatus === "cancelled") {
+      body.completed_at = new Date().toISOString()
+      // Also ensure started_at is set if not already
+      const ticketStartedAt = (ticket as any)?.started_at
+      if (!ticketStartedAt) {
+        body.started_at = new Date().toISOString()
+      }
+      
+      // Store pending change and show dialog
+      setPendingStatusChange({ ticketId: draggedTicket, newStatus, body })
+      setCancelReason("")
+      setShowCancelReasonDialog(true)
+      setDraggedTicket(null)
+      setDropIndicator(null)
+      return
+    }
+
+    // Condition 2: When status from Open/Blocked to any other status then update started_at timestamp
+    if ((previousStatus === "open" || previousStatus === "blocked") && newStatus !== "open" && newStatus !== "blocked") {
+      body.started_at = new Date().toISOString()
+    }
+
+    // Condition 3: When any status changed to Completed then update completed_at timestamp
+    if (newStatus === "completed") {
+      body.completed_at = new Date().toISOString()
+      // Also ensure started_at is set if not already
+      const ticketStartedAt = (ticket as any)?.started_at
+      if (!ticketStartedAt) {
+        body.started_at = new Date().toISOString()
+      }
+    }
+
+    // Condition 4: If status changed from Completed/Cancelled to other status then remove timestamp completed_at
+    if ((previousStatus === "completed" || previousStatus === "cancelled") && newStatus !== "completed" && newStatus !== "cancelled") {
+      body.completed_at = null
+      // Clear reason when moving away from cancelled
+      body.reason = null
+    }
+
+    // Condition 5: If status changed from In Progress to Blocked or Open then remove timestamp started_at
+    if (previousStatus === "in_progress" && (newStatus === "blocked" || newStatus === "open")) {
+      body.started_at = null
+    }
+
+    // Additional: If status is open, clear started_at and completed_at
+    if (newStatus === "open") {
+      body.started_at = null
+      body.completed_at = null
+    }
+
+    try {
+      await updateTicket.mutateAsync({
+        id: draggedTicket,
+        ...body,
+      })
+      toast("Ticket status updated")
+    } catch (error: any) {
+      toast(error.message || "Failed to update ticket", "error")
+    } finally {
+      setDraggedTicket(null)
+      setDropIndicator(null)
+    }
+  }, [draggedTicket, allTickets, updateTicket])
+
   const hasSearchQuery = deferredSearchQuery.trim().length > 0
 
   // Pagination - server-side pagination is handled by useTickets
@@ -480,12 +622,82 @@ export default function TicketsPage() {
             View and manage all tickets across projects
           </p>
         </div>
-        {canCreateTickets && (
-          <Button variant="outline" size="sm" onClick={() => setTicketDialogOpen(true)} className="h-9">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Ticket
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center border rounded-md">
+            <Button
+              variant={view === "table" ? "default" : "ghost"}
+              size="sm"
+              onClick={async () => {
+                if (view === "table" || applyingView !== null) return
+                const previousView = view
+                setApplyingView("table")
+                setView("table")
+                try {
+                  await updatePreferences({ tickets_view: "table" })
+                  toast("View changed to Table")
+                } catch (error) {
+                  setView(previousView) // Revert on error
+                  toast("Failed to change view", "error")
+                } finally {
+                  setApplyingView(null)
+                }
+              }}
+              disabled={applyingView !== null}
+              className="h-9 rounded-r-none"
+            >
+              {applyingView === "table" ? (
+                <>
+                  <span className="mr-2 inline-flex h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Applying...
+                </>
+              ) : (
+                <>
+                  <Table2 className="h-4 w-4 mr-2" />
+                  Table
+                </>
+              )}
+            </Button>
+            <Button
+              variant={view === "kanban" ? "default" : "ghost"}
+              size="sm"
+              onClick={async () => {
+                if (view === "kanban" || applyingView !== null) return
+                const previousView = view
+                setApplyingView("kanban")
+                setView("kanban")
+                try {
+                  await updatePreferences({ tickets_view: "kanban" })
+                  toast("View changed to Kanban")
+                } catch (error) {
+                  setView(previousView) // Revert on error
+                  toast("Failed to change view", "error")
+                } finally {
+                  setApplyingView(null)
+                }
+              }}
+              disabled={applyingView !== null}
+              className="h-9 rounded-l-none"
+            >
+              {applyingView === "kanban" ? (
+                <>
+                  <span className="mr-2 inline-flex h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Applying...
+                </>
+              ) : (
+                <>
+                  <LayoutGrid className="h-4 w-4 mr-2" />
+                  Kanban
+                </>
+              )}
+            </Button>
+          </div>
+          {canCreateTickets && (
+            <Button variant="outline" size="sm" onClick={() => setTicketDialogOpen(true)} className="h-9">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Ticket
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center space-x-2 flex-wrap gap-y-2">
@@ -617,6 +829,133 @@ export default function TicketsPage() {
             {hasSearchQuery ? "No tickets found" : "No tickets yet."}
           </p>
         </div>
+      ) : view === "kanban" ? (
+        <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-4">
+          {KANBAN_COLUMNS.map((column) => {
+            const columnTickets = ticketsByStatus[column.id] || []
+            
+            return (
+              <div
+                key={column.id}
+                className="flex-shrink-0 w-80 flex flex-col"
+                onDragOver={(e) => handleDragOver(e, column.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, column.id)}
+              >
+                <div className="bg-muted/30 rounded-lg p-3 flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-3 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Circle className={`h-3 w-3 ${column.color}`} />
+                      <h3 className="text-sm font-medium">{column.label}</h3>
+                      <Badge variant="secondary" className="text-xs">
+                        {columnTickets.length}
+                      </Badge>
+                    </div>
+                    {hasPermission("tickets", "create") && !isAddingNew && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => {
+                          setIsAddingNew(true)
+                          setAddingToStatus(column.id)
+                        }}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2 overflow-y-auto flex-1 min-h-0 relative">
+                    {/* Drop indicator line */}
+                    {dropIndicator?.columnId === column.id && (
+                      <div 
+                        className="absolute left-0 right-0 h-1 bg-primary z-10 pointer-events-none rounded-full shadow-sm"
+                        style={{
+                          top: `${dropIndicator.top}px`
+                        }}
+                      />
+                    )}
+                    {/* Quick add form for kanban */}
+                    {isAddingNew && addingToStatus === column.id && canCreateTickets && (
+                      <QuickAddKanbanCard
+                        departments={departments}
+                        users={users}
+                        assigneeEligibleUsers={assigneeEligibleUsers}
+                        onCancel={() => {
+                          setIsAddingNew(false)
+                          setAddingToStatus(null)
+                        }}
+                        onSubmit={async (formData) => {
+                          await handleQuickAdd({ ...formData, status: column.id })
+                          setIsAddingNew(false)
+                          setAddingToStatus(null)
+                        }}
+                        defaultDepartmentId={departmentFilter !== "all" && departmentFilter !== "no_department" ? departmentFilter : undefined}
+                        defaultAssigneeId={assigneeFilter !== "all" && assigneeFilter !== "unassigned" ? assigneeFilter : undefined}
+                        defaultRequesterId={user?.id}
+                      />
+                    )}
+                    {columnTickets.map((ticket) => (
+                      <Card
+                        key={ticket.id}
+                        data-ticket-id={ticket.id}
+                        className="p-3 bg-background hover:bg-muted/50 cursor-pointer transition-colors border shadow-sm"
+                        draggable={hasPermission("tickets", "edit")}
+                        onDragStart={(e) => handleDragStart(e, ticket.id)}
+                        onClick={() => {
+                          setSelectedTicketId(ticket.id)
+                        }}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 mb-1">
+                                {ticket.display_id && (
+                                  <span className="text-xs font-mono text-muted-foreground">
+                                    {ticket.display_id}
+                                  </span>
+                                )}
+                                <TicketTypeIcon type={ticket.type || "task"} />
+                                <TicketPriorityIcon priority={ticket.priority} />
+                              </div>
+                              <h4 className="text-sm font-medium line-clamp-2 leading-tight">
+                                {ticket.title}
+                              </h4>
+                            </div>
+                          </div>
+                          {ticket.assignee && (
+                            <div className="flex items-center gap-1.5">
+                              <Avatar className="h-5 w-5">
+                                <AvatarImage src={ticket.assignee.image || undefined} />
+                                <AvatarFallback className="text-[10px]">
+                                  {ticket.assignee.name?.[0]?.toUpperCase() || ticket.assignee.email[0].toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-xs text-muted-foreground truncate">
+                                {ticket.assignee.name || ticket.assignee.email}
+                              </span>
+                            </div>
+                          )}
+                          {ticket.department && (
+                            <Badge variant="outline" className="text-xs">
+                              {ticket.department.name}
+                            </Badge>
+                          )}
+                          {ticket.project && (
+                            <Badge variant="outline" className="text-xs">
+                              {ticket.project.name}
+                            </Badge>
+                          )}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
       ) : (
         <div className="rounded-md border">
           <div className="max-h-[calc(100vh-220px)] overflow-y-auto relative">
@@ -629,7 +968,6 @@ export default function TicketsPage() {
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Department</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Status</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Priority</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Links</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Requested By</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Assignee</th>
                 </tr>
@@ -918,7 +1256,6 @@ const QuickAddRow = memo(function QuickAddRow({
             onValueChange={(value) => setFormData((prev) => ({ ...prev, priority: value as "low" | "medium" | "high" | "urgent" }))}
           />
         </TableCell>
-        <TableCell className="py-2 text-xs text-muted-foreground">-</TableCell>
         <TableCell className="py-2">
           <Select
             value={formData.requested_by_id || ""}
@@ -980,7 +1317,7 @@ const QuickAddRow = memo(function QuickAddRow({
         </TableCell>
       </TableRow>
       <TableRow>
-        <TableCell colSpan={9} className="py-2">
+        <TableCell colSpan={8} className="py-2">
           <div className="flex items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={onCancel}>
               Cancel
@@ -997,6 +1334,150 @@ const QuickAddRow = memo(function QuickAddRow({
         </TableCell>
       </TableRow>
     </>
+  )
+})
+
+interface QuickAddKanbanCardProps {
+  departments: Department[]
+  users: BasicUser[]
+  assigneeEligibleUsers: BasicUser[]
+  onCancel: () => void
+  onSubmit: (data: QuickAddTicketData) => Promise<void>
+  defaultDepartmentId?: string
+  defaultAssigneeId?: string
+  defaultRequesterId?: string
+}
+
+const QuickAddKanbanCard = memo(function QuickAddKanbanCard({
+  departments,
+  users,
+  assigneeEligibleUsers,
+  onCancel,
+  onSubmit,
+  defaultDepartmentId,
+  defaultAssigneeId,
+  defaultRequesterId,
+}: QuickAddKanbanCardProps) {
+  const [formData, setFormData] = useState<QuickAddTicketData>(() => ({
+    title: "",
+    description: "",
+    type: "task",
+    priority: "medium",
+    status: "open",
+    department_id: defaultDepartmentId,
+    assignee_id: defaultAssigneeId,
+    requested_by_id: defaultRequesterId,
+  }))
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!defaultRequesterId) return
+    setFormData((prev) => {
+      if (prev.requested_by_id) return prev
+      return { ...prev, requested_by_id: defaultRequesterId }
+    })
+  }, [defaultRequesterId])
+
+  const handleSubmit = async () => {
+    if (!formData.title.trim() || isSubmitting) return
+    setIsSubmitting(true)
+    try {
+      await onSubmit(formData)
+      setFormData({
+        title: "",
+        description: "",
+        type: "task",
+        priority: "medium",
+        status: "open",
+        department_id: defaultDepartmentId,
+        assignee_id: defaultAssigneeId,
+        requested_by_id: defaultRequesterId,
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <Card className="p-3 bg-muted/50 border-dashed border-2">
+      <div className="space-y-2">
+        <Input
+          placeholder="Title..."
+          value={formData.title}
+          onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+          className="h-7 text-sm dark:bg-[#1f1f1f]"
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault()
+              handleSubmit()
+            } else if (e.key === "Escape") {
+              e.preventDefault()
+              onCancel()
+            }
+          }}
+        />
+        <Textarea
+          placeholder="Description (optional)..."
+          value={formData.description}
+          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+          className="min-h-[60px] text-xs dark:bg-[#1f1f1f]"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault()
+              onCancel()
+            }
+          }}
+        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <TicketTypeSelect
+            value={formData.type}
+            onValueChange={(value) => setFormData((prev) => ({ ...prev, type: value as "bug" | "request" | "task" }))}
+          />
+          <TicketPrioritySelect
+            value={formData.priority}
+            onValueChange={(value) => setFormData((prev) => ({ ...prev, priority: value as "low" | "medium" | "high" | "urgent" }))}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Select
+            value={formData.department_id || NO_DEPARTMENT_VALUE}
+            onValueChange={(value) =>
+              setFormData((prev) => ({
+                ...prev,
+                department_id: value === NO_DEPARTMENT_VALUE ? undefined : value,
+              }))
+            }
+          >
+            <SelectTrigger className="h-7 flex-1 text-xs dark:bg-[#1f1f1f]">
+              <SelectValue placeholder="Department" />
+            </SelectTrigger>
+            <SelectContent className="dark:bg-[#1f1f1f]">
+              <SelectItem value={NO_DEPARTMENT_VALUE}>No Department</SelectItem>
+              {departments.map((department) => (
+                <SelectItem key={department.id} value={department.id}>
+                  {department.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="ghost" size="sm" onClick={onCancel} className="h-7 text-xs">
+            Cancel
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={handleSubmit}
+            disabled={!formData.title.trim() || isSubmitting}
+            className="h-7 text-xs"
+          >
+            {isSubmitting ? "Adding..." : "Add"}
+          </Button>
+        </div>
+      </div>
+    </Card>
   )
 })
 
@@ -1109,32 +1590,6 @@ const TicketRow = memo(function TicketRow({
           onValueChange={(value) => updateTicketField(ticket.id, "priority", value)}
           disabled={!!updatingFields[`${ticket.id}-priority`]}
         />
-      </TableCell>
-      <TableCell className="py-2">
-        {ticket.links && ticket.links.length > 0 ? (
-          <div className="flex flex-col gap-1">
-            {ticket.links.slice(0, 2).map((url, idx) => (
-              <a
-                key={idx}
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Link2 className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate">{formatLinkLabel(url)}</span>
-              </a>
-            ))}
-            {ticket.links.length > 2 && (
-              <span className="text-xs text-muted-foreground">
-                +{ticket.links.length - 2} more
-              </span>
-            )}
-          </div>
-        ) : (
-          <span className="text-xs text-muted-foreground">-</span>
-        )}
       </TableCell>
       <TableCell className="py-2">
         <Select
