@@ -16,6 +16,7 @@ interface DateTimePickerProps {
   placeholder?: string
   className?: string
   hideIcon?: boolean
+  renderTriggerContent?: (value: Date | null) => React.ReactNode
 }
 
 export function DateTimePicker({
@@ -26,6 +27,7 @@ export function DateTimePicker({
   placeholder = "Pick a date and time",
   className,
   hideIcon = false,
+  renderTriggerContent,
 }: DateTimePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [date, setDate] = React.useState<Date | null>(value)
@@ -149,13 +151,17 @@ export function DateTimePicker({
           variant="outline"
           className={cn(
             "w-[180px] justify-start text-left font-normal h-7 text-xs",
-            !value && "text-muted-foreground",
+            !value && !renderTriggerContent && "text-muted-foreground",
             className
           )}
           disabled={disabled}
         >
-          {!hideIcon && <CalendarIcon className="mr-2 h-3 w-3" />}
-          {value ? format(value, "MMM d, yyyy HH:mm") : <span>{placeholder}</span>}
+          {!hideIcon && <CalendarIcon className="mr-2 h-3 w-3 text-muted-foreground dark:text-white" />}
+          {renderTriggerContent
+            ? renderTriggerContent(value)
+            : value
+            ? format(value, "MMM d, yyyy HH:mm")
+            : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-3" align="start">
@@ -166,19 +172,19 @@ export function DateTimePicker({
               type="date"
               value={date ? format(date, "yyyy-MM-dd") : ""}
               onChange={handleDateChange}
-              className="h-8 text-xs"
+              className="h-8 text-xs dark:[color-scheme:dark]"
             />
           </div>
           <div className="space-y-2">
             <label className="text-xs font-medium flex items-center gap-2">
-              <Clock className="h-3 w-3" />
+              <Clock className="h-3 w-3 text-muted-foreground dark:text-white" />
               Time
             </label>
             <Input
               type="time"
               value={time}
               onChange={handleTimeChange}
-              className="h-8 text-xs"
+              className="h-8 text-xs dark:[color-scheme:dark]"
             />
           </div>
           <div className="flex items-center justify-end gap-2 pt-2 border-t">

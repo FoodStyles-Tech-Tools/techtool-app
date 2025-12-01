@@ -41,6 +41,10 @@ interface TicketDetailDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+const toUTCISOStringPreserveLocal = (date: Date) => {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString()
+}
+
 export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetailDialogProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [isEditingDescription, setIsEditingDescription] = useState(false)
@@ -288,6 +292,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
 
   const handlePriorityChange = (newPriority: string) => {
     updateTicketWithToast({ priority: newPriority }, "Priority updated", "priority")
+  }
+
+  const handleDueDateChange = (value: Date | null) => {
+    updateTicketWithToast(
+      { due_date: value ? toUTCISOStringPreserveLocal(value) : null },
+      value ? "Due date updated" : "Due date cleared",
+      "due_date"
+    )
   }
 
   const handleDepartmentChange = (newDepartmentId: string) => {
@@ -900,6 +912,20 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onValueChange={handlePriorityChange}
                           disabled={!hasPermission("tickets", "edit") || updatingFields["priority"]}
                           triggerClassName="h-9 w-full"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Due Date</label>
+                      <div className="flex-1">
+                        <DateTimePicker
+                          value={parseTimestamp(ticket.due_date)}
+                          onChange={handleDueDateChange}
+                          disabled={!hasPermission("tickets", "edit") || updatingFields["due_date"]}
+                          placeholder="No due date"
+                          className="w-full h-9"
+                          hideIcon
                         />
                       </div>
                     </div>

@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
-import { Copy, Plus, X, Check, Circle, LayoutGrid, Table2 } from "lucide-react"
+import { Copy, Plus, X, Check, Circle, LayoutGrid, Table2, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { useDepartments } from "@/hooks/use-departments"
 import { useTickets, useUpdateTicket, useCreateTicket } from "@/hooks/use-tickets"
@@ -46,6 +46,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { DateTimePicker } from "@/components/ui/datetime-picker"
+import { cn } from "@/lib/utils"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 const ROWS_PER_PAGE = 20
@@ -66,6 +68,25 @@ const FIELD_LABELS: Record<string, string> = {
   requested_by_id: "Requested By",
   assignee_id: "Assignee",
   department_id: "Department",
+  due_date: "Due Date",
+}
+
+type SortColumn =
+  | "id"
+  | "title"
+  | "due_date"
+  | "type"
+  | "department"
+  | "status"
+  | "priority"
+  | "requested_by"
+  | "assignee"
+
+const PRIORITY_ORDER: Record<string, number> = {
+  urgent: 1,
+  high: 2,
+  medium: 3,
+  low: 4,
 }
 
 interface Ticket {
@@ -76,6 +97,7 @@ interface Ticket {
   status: string
   priority: string
   type: string
+  due_date: string | null
   links: string[]
   reason?: {
     cancelled?: {
@@ -155,6 +177,95 @@ const formatRelativeDate = (dateString: string): string => {
   return "long time ago"
 }
 
+type DueDateDisplay = {
+  label: string
+  className: string
+  title?: string
+  highlightClassName?: string
+}
+
+const normalizeToStartOfDay = (date: Date) => {
+  const normalized = new Date(date)
+  normalized.setHours(0, 0, 0, 0)
+  return normalized
+}
+
+const dueDateFormatter = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+})
+
+const toUTCISOStringPreserveLocal = (date: Date) => {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString()
+}
+
+const getDueDateDisplay = (dueDateString?: string | null): DueDateDisplay => {
+  if (!dueDateString) {
+    return {
+      label: "No due date",
+      className: "border border-muted-foreground/40 bg-muted/50 text-muted-foreground",
+    }
+  }
+
+  const dueDate = new Date(dueDateString)
+  if (Number.isNaN(dueDate.getTime())) {
+    return {
+      label: "Invalid date",
+      className: "border border-muted-foreground/40 bg-muted/50 text-muted-foreground",
+    }
+  }
+
+  const normalizedDueDate = normalizeToStartOfDay(dueDate)
+  const today = normalizeToStartOfDay(new Date())
+  const formattedDate = dueDateFormatter.format(dueDate)
+  const title = dueDate.toLocaleString()
+  const overdue = normalizedDueDate.getTime() < today.getTime()
+  const dueToday = normalizedDueDate.getTime() === today.getTime()
+  const diffDays = Math.round((normalizedDueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  if (overdue) {
+    return {
+      label: `Overdue: ${formattedDate}`,
+      className: "border border-red-200 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-50",
+      highlightClassName: "bg-red-50/70 hover:bg-red-100/70 dark:bg-red-500/10 dark:hover:bg-red-500/20",
+      title,
+    }
+  }
+
+  if (dueToday) {
+    return {
+      label: "Due today",
+      className: "border border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/20 dark:text-orange-50",
+      highlightClassName: "bg-orange-50/70 hover:bg-orange-100/70 dark:bg-orange-500/10 dark:hover:bg-orange-500/20",
+      title,
+    }
+  }
+
+  if (diffDays === 1) {
+    return {
+      label: "Due tomorrow",
+      className: "border border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-500/40 dark:bg-yellow-500/20 dark:text-yellow-50",
+      highlightClassName: "bg-yellow-50/70 hover:bg-yellow-100/70 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20",
+      title,
+    }
+  }
+
+  if (diffDays >= 2 && diffDays <= 7) {
+    return {
+      label: `Due in ${diffDays} day${diffDays > 1 ? "s" : ""}`,
+      className: "border border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/20 dark:text-orange-50",
+      highlightClassName: "bg-orange-50/70 hover:bg-orange-100/70 dark:bg-orange-500/10 dark:hover:bg-orange-500/20",
+      title,
+    }
+  }
+
+  return {
+    label: `Due ${formattedDate}`,
+    className: "border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-50",
+    title,
+  }
+}
+
 export default function TicketsPage() {
   // Require view permission for tickets - redirects if not authorized
   const { hasPermission: canView, loading: permissionLoading } = useRequirePermission("tickets", "view")
@@ -184,6 +295,9 @@ export default function TicketsPage() {
   const [applyingView, setApplyingView] = useState<"table" | "kanban" | null>(null)
   const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
   const [dropIndicator, setDropIndicator] = useState<{ columnId: string; ticketId: string | null; top: number } | null>(null)
+  const [sortConfig, setSortConfig] = useState<{ column: SortColumn; direction: "asc" | "desc" }>(
+    { column: "due_date", direction: "asc" }
+  )
   
   // Set default view from preferences
   useEffect(() => {
@@ -259,6 +373,112 @@ export default function TicketsPage() {
       )
     })
   }, [allTickets, deferredSearchQuery])
+
+  const comparePriority = useCallback((a: Ticket, b: Ticket) => {
+    const weightA = PRIORITY_ORDER[(a.priority || "").toLowerCase()] || 5
+    const weightB = PRIORITY_ORDER[(b.priority || "").toLowerCase()] || 5
+    return weightA - weightB
+  }, [])
+
+  const compareDueDate = useCallback((a: Ticket, b: Ticket) => {
+    const getTime = (value?: string | null) => {
+      if (!value) return null
+      const date = new Date(value)
+      const time = date.getTime()
+      return Number.isNaN(time) ? null : time
+    }
+    const timeA = getTime(a.due_date)
+    const timeB = getTime(b.due_date)
+    if (timeA === null && timeB === null) return 0
+    if (timeA === null) return 1
+    if (timeB === null) return -1
+    return timeA - timeB
+  }, [])
+
+  const sortedTickets = useMemo(() => {
+    const tickets = [...filteredTickets]
+    tickets.sort((a, b) => {
+      let result = 0
+
+      switch (sortConfig.column) {
+        case "id":
+          result = (a.display_id || a.id).localeCompare(b.display_id || b.id, undefined, { numeric: true, sensitivity: "base" })
+          break
+        case "title":
+          result = a.title.localeCompare(b.title)
+          break
+        case "due_date":
+          result = compareDueDate(a, b)
+          if (result === 0) {
+            result = comparePriority(a, b)
+          }
+          break
+        case "type":
+          result = (a.type || "").localeCompare(b.type || "")
+          break
+        case "department":
+          result = (a.department?.name || "").localeCompare(b.department?.name || "")
+          break
+        case "status":
+          result = (a.status || "").localeCompare(b.status || "")
+          break
+        case "priority":
+          result = comparePriority(a, b)
+          break
+        case "requested_by":
+          result = (a.requested_by?.name || a.requested_by?.email || "").localeCompare(
+            b.requested_by?.name || b.requested_by?.email || ""
+          )
+          break
+        case "assignee":
+          result = (a.assignee?.name || a.assignee?.email || "").localeCompare(
+            b.assignee?.name || b.assignee?.email || ""
+          )
+          break
+        default:
+          result = 0
+      }
+
+      if (result === 0) {
+        const dueComparison = compareDueDate(a, b)
+        if (dueComparison !== 0) {
+          result = dueComparison
+        } else {
+          result = comparePriority(a, b)
+        }
+      }
+
+      return sortConfig.direction === "asc" ? result : -result
+    })
+
+    return tickets
+  }, [filteredTickets, sortConfig, compareDueDate, comparePriority])
+
+  const handleSort = useCallback((column: SortColumn) => {
+    setSortConfig((prev) => {
+      if (prev.column === column) {
+        return { column, direction: prev.direction === "asc" ? "desc" : "asc" }
+      }
+      return { column, direction: "asc" }
+    })
+  }, [])
+
+  const renderSortableHeader = (column: SortColumn, label: string) => {
+    const isActive = sortConfig.column === column
+    const direction = sortConfig.direction
+    const Icon = !isActive ? ArrowUpDown : direction === "asc" ? ChevronUp : ChevronDown
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleSort(column)}
+        className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
+      >
+        <span>{label}</span>
+        <Icon className="h-3.5 w-3.5" />
+      </button>
+    )
+  }
 
   // Group tickets by status for kanban
   const ticketsByStatus = useMemo(() => {
@@ -595,13 +815,13 @@ export default function TicketsPage() {
   // Pagination - server-side pagination is handled by useTickets
   // For client-side search, we need to handle pagination here
   const totalPages = hasSearchQuery 
-    ? Math.ceil(filteredTickets.length / ROWS_PER_PAGE)
+    ? Math.ceil(sortedTickets.length / ROWS_PER_PAGE)
     : Math.ceil((ticketsData?.length || 0) / ROWS_PER_PAGE) // Server provides pagination info
   const startIndex = (currentPage - 1) * ROWS_PER_PAGE
   const endIndex = startIndex + ROWS_PER_PAGE
   const paginatedTickets = useMemo(
-    () => (hasSearchQuery ? filteredTickets.slice(startIndex, endIndex) : filteredTickets),
-    [filteredTickets, hasSearchQuery, startIndex, endIndex]
+    () => (hasSearchQuery ? sortedTickets.slice(startIndex, endIndex) : sortedTickets),
+    [sortedTickets, hasSearchQuery, startIndex, endIndex]
   )
 
   // Don't render content if user doesn't have permission (will redirect)
@@ -896,60 +1116,74 @@ export default function TicketsPage() {
                         defaultRequesterId={user?.id}
                       />
                     )}
-                    {columnTickets.map((ticket) => (
-                      <Card
-                        key={ticket.id}
-                        data-ticket-id={ticket.id}
-                        className="p-3 bg-background hover:bg-muted/50 cursor-pointer transition-colors border shadow-sm"
-                        draggable={hasPermission("tickets", "edit")}
-                        onDragStart={(e) => handleDragStart(e, ticket.id)}
-                        onClick={() => {
-                          setSelectedTicketId(ticket.id)
-                        }}
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 mb-1">
-                                {ticket.display_id && (
-                                  <span className="text-xs font-mono text-muted-foreground">
-                                    {ticket.display_id}
-                                  </span>
-                                )}
-                                <TicketTypeIcon type={ticket.type || "task"} />
-                                <TicketPriorityIcon priority={ticket.priority} />
+                    {columnTickets.map((ticket) => {
+                      const dueDateDisplay = getDueDateDisplay(ticket.due_date)
+                      return (
+                        <Card
+                          key={ticket.id}
+                          data-ticket-id={ticket.id}
+                          className={cn(
+                            "p-3 cursor-pointer transition-colors border shadow-sm",
+                            dueDateDisplay.highlightClassName ?? "bg-background hover:bg-muted/50"
+                          )}
+                          draggable={hasPermission("tickets", "edit")}
+                          onDragStart={(e) => handleDragStart(e, ticket.id)}
+                          onClick={() => {
+                            setSelectedTicketId(ticket.id)
+                          }}
+                        >
+                          <div className="space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  {ticket.display_id && (
+                                    <span className="text-xs font-mono text-muted-foreground">
+                                      {ticket.display_id}
+                                    </span>
+                                  )}
+                                  <TicketTypeIcon type={ticket.type || "task"} />
+                                  <TicketPriorityIcon priority={ticket.priority} />
+                                </div>
+                                <h4 className="text-sm font-medium line-clamp-2 leading-tight">
+                                  {ticket.title}
+                                </h4>
                               </div>
-                              <h4 className="text-sm font-medium line-clamp-2 leading-tight">
-                                {ticket.title}
-                              </h4>
                             </div>
+                            <div>
+                              <Badge
+                                title={dueDateDisplay.title}
+                                className={`text-[11px] font-medium ${dueDateDisplay.className}`}
+                              >
+                                {dueDateDisplay.label}
+                              </Badge>
+                            </div>
+                            {ticket.assignee && (
+                              <div className="flex items-center gap-1.5">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={ticket.assignee.image || undefined} />
+                                  <AvatarFallback className="text-[10px]">
+                                    {ticket.assignee.name?.[0]?.toUpperCase() || ticket.assignee.email[0].toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-xs text-muted-foreground truncate">
+                                  {ticket.assignee.name || ticket.assignee.email}
+                                </span>
+                              </div>
+                            )}
+                            {ticket.department && (
+                              <Badge variant="outline" className="text-xs">
+                                {ticket.department.name}
+                              </Badge>
+                            )}
+                            {ticket.project && (
+                              <Badge variant="outline" className="text-xs">
+                                {ticket.project.name}
+                              </Badge>
+                            )}
                           </div>
-                          {ticket.assignee && (
-                            <div className="flex items-center gap-1.5">
-                              <Avatar className="h-5 w-5">
-                                <AvatarImage src={ticket.assignee.image || undefined} />
-                                <AvatarFallback className="text-[10px]">
-                                  {ticket.assignee.name?.[0]?.toUpperCase() || ticket.assignee.email[0].toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-xs text-muted-foreground truncate">
-                                {ticket.assignee.name || ticket.assignee.email}
-                              </span>
-                            </div>
-                          )}
-                          {ticket.department && (
-                            <Badge variant="outline" className="text-xs">
-                              {ticket.department.name}
-                            </Badge>
-                          )}
-                          {ticket.project && (
-                            <Badge variant="outline" className="text-xs">
-                              {ticket.project.name}
-                            </Badge>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
+                        </Card>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -962,14 +1196,33 @@ export default function TicketsPage() {
             <table className="w-full caption-bottom text-sm">
               <thead className="sticky top-0 z-20 bg-muted shadow-sm border-b [&_tr]:border-b">
                 <tr className="hover:bg-transparent border-b">
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">ID</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground w-[400px] min-w-[300px]">Title</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Type</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Department</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Status</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Priority</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Requested By</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Assignee</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle">
+                    {renderSortableHeader("id", "ID")}
+                  </th>
+                  <th className="h-9 py-2 px-4 text-left align-middle w-[400px] min-w-[300px]">
+                    {renderSortableHeader("title", "Title")}
+                  </th>
+                  <th className="h-9 py-2 px-4 text-left align-middle">
+                    {renderSortableHeader("due_date", "Due Date")}
+                  </th>
+                  <th className="h-9 py-2 px-4 text-left align-middle">
+                    {renderSortableHeader("type", "Type")}
+                  </th>
+                  <th className="h-9 py-2 px-4 text-left align-middle">
+                    {renderSortableHeader("department", "Department")}
+                  </th>
+                  <th className="h-9 py-2 px-4 text-left align-middle">
+                    {renderSortableHeader("status", "Status")}
+                  </th>
+                  <th className="h-9 py-2 px-4 text-left align-middle">
+                    {renderSortableHeader("priority", "Priority")}
+                  </th>
+                  <th className="h-9 py-2 px-4 text-left align-middle">
+                    {renderSortableHeader("requested_by", "Requested By")}
+                  </th>
+                  <th className="h-9 py-2 px-4 text-left align-middle">
+                    {renderSortableHeader("assignee", "Assignee")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
@@ -1004,7 +1257,7 @@ export default function TicketsPage() {
           </div>
           <div className="flex items-center justify-between border-t px-4 py-3">
             <div className="text-sm text-muted-foreground">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredTickets.length)} of {filteredTickets.length} tickets
+              Showing {startIndex + 1} to {Math.min(endIndex, sortedTickets.length)} of {sortedTickets.length} tickets
             </div>
             <div className="flex items-center space-x-2">
               {hasPermission("tickets", "create") && !isAddingNew && filteredTickets.length > 0 && (
@@ -1505,9 +1758,12 @@ const TicketRow = memo(function TicketRow({
   excludeDone,
 }: TicketRowProps) {
   const requestedById = ticket.requested_by?.id || (ticket as any).requested_by_id
+  const dueDateDisplay = getDueDateDisplay(ticket.due_date)
+  const dueDateValue = ticket.due_date ? new Date(ticket.due_date) : null
+  const safeDueDateValue = dueDateValue && !Number.isNaN(dueDateValue.getTime()) ? dueDateValue : null
 
   return (
-    <TableRow className="hover:bg-muted/50">
+    <TableRow className={cn(dueDateDisplay.highlightClassName)}>
       <TableCell className="py-2 text-xs font-mono text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <Button
@@ -1546,6 +1802,22 @@ const TicketRow = memo(function TicketRow({
               </Link>
             )}
           </div>
+        </div>
+      </TableCell>
+      <TableCell className="py-2">
+        <div title={dueDateDisplay.title}>
+          <DateTimePicker
+            value={safeDueDateValue}
+            onChange={(date) => updateTicketField(ticket.id, "due_date", date ? toUTCISOStringPreserveLocal(date) : null)}
+            disabled={!!updatingFields[`${ticket.id}-due_date`]}
+            placeholder="No due date"
+            hideIcon
+            className={cn(
+              "h-auto w-auto px-2 py-1 text-xs font-medium rounded-full",
+              dueDateDisplay.className
+            )}
+            renderTriggerContent={() => <span>{dueDateDisplay.label}</span>}
+          />
         </div>
       </TableCell>
       <TableCell className="py-2">

@@ -35,6 +35,7 @@ interface Ticket {
   status: string
   priority: string
   type: string
+  due_date: string | null
   links: string[]
   reason?: {
     cancelled?: {
