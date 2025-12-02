@@ -19,21 +19,21 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { data: epics, error } = await supabase
-      .from("epics")
+    const { data: sprints, error } = await supabase
+      .from("sprints")
       .select("*")
       .eq("project_id", projectId)
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("Error fetching epics:", error)
+      console.error("Error fetching sprints:", error)
       return NextResponse.json(
-        { error: "Failed to fetch epics" },
+        { error: "Failed to fetch sprints" },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ epics: epics || [] })
+    return NextResponse.json({ sprints: sprints || [] })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     if (error.message?.includes("Forbidden") || error.message?.includes("permission")) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
-    console.error("Error in GET /api/epics:", error)
+    console.error("Error in GET /api/sprints:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient()
 
     const body = await request.json()
-    const { name, description, project_id, color, sprint_id } = body
+    const { name, description, project_id, status, start_date, end_date } = body
 
     if (!name || typeof name !== "string") {
       return NextResponse.json(
@@ -79,33 +79,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: epic, error } = await supabase
-      .from("epics")
+    const { data: sprint, error } = await supabase
+      .from("sprints")
       .insert({
         name: trimmedName,
         description: description || null,
         project_id,
-        color: color || "#3b82f6",
-        sprint_id: sprint_id || null,
+        status: status || "planned",
+        start_date: start_date || null,
+        end_date: end_date || null,
       })
       .select("*")
       .single()
 
     if (error) {
-      console.error("Error creating epic:", JSON.stringify(error, null, 2))
-      // Return more detailed error message
-      const errorMessage = error.message || "Failed to create epic"
+      console.error("Error creating sprint:", JSON.stringify(error, null, 2))
+      const errorMessage = error.message || "Failed to create sprint"
       const errorCode = error.code || error.hint || "UNKNOWN"
       
-      // Check if table doesn't exist (migration not run)
       if (errorMessage.includes("relation") && errorMessage.includes("does not exist")) {
         return NextResponse.json(
-          { error: "Epics table not found. Please run database migrations (024_create_epics.sql and 025_add_epic_id_to_tickets.sql).", details: errorMessage },
+          { error: "Sprints table not found. Please run database migrations (027_add_sprints.sql).", details: errorMessage },
           { status: 500 }
         )
       }
       
-      // Check for RLS policy violations
       if (errorMessage.includes("new row violates row-level security") || errorCode === "42501") {
         return NextResponse.json(
           { error: "Permission denied. Please check RLS policies.", details: errorMessage },
@@ -119,7 +117,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ epic }, { status: 201 })
+    return NextResponse.json({ sprint }, { status: 201 })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -127,7 +125,7 @@ export async function POST(request: NextRequest) {
     if (error.message?.includes("Forbidden") || error.message?.includes("permission")) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
-    console.error("Error in POST /api/epics:", error)
+    console.error("Error in POST /api/sprints:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

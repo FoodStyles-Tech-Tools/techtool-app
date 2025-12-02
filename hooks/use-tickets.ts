@@ -52,6 +52,11 @@ interface Ticket {
     name: string
     color: string
   } | null
+  sprint: {
+    id: string
+    name: string
+    status: string
+  } | null
   project: {
     id: string
     name: string
@@ -146,7 +151,8 @@ export function useTickets(options?: {
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
-            epic:epics(id, name, color)
+            epic:epics(id, name, color),
+            sprint:sprints(id, name, status)
           `)
           .eq("id", newTicketData.id)
           .single()
@@ -200,7 +206,8 @@ export function useTickets(options?: {
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
-            epic:epics(id, name, color)
+            epic:epics(id, name, color),
+            sprint:sprints(id, name, status)
           `)
           .eq("id", updatedTicketData.id)
           .single()
@@ -306,7 +313,8 @@ export function useTickets(options?: {
           project:projects(id, name),
           assignee:users!tickets_assignee_id_fkey(id, name, email),
           requested_by:users!tickets_requested_by_id_fkey(id, name, email),
-          epic:epics(id, name, color)
+          epic:epics(id, name, color),
+          sprint:sprints(id, name, status)
         `)
         .order("created_at", { ascending: false })
 
@@ -438,17 +446,19 @@ export function useTicket(ticketId: string, options?: { enabled?: boolean }) {
       // Set user context for RLS (cached, only called once per session)
       await ensureUserContext(supabase, userEmail)
 
-      const { data: ticket, error } = await supabase
-        .from("tickets")
-        .select(`
-          *,
-          department:departments(id, name),
-          project:projects(id, name),
-          assignee:users!tickets_assignee_id_fkey(id, name, email),
-          requested_by:users!tickets_requested_by_id_fkey(id, name, email)
-        `)
-        .eq("id", ticketId)
-        .single()
+        const { data: ticket, error } = await supabase
+          .from("tickets")
+          .select(`
+            *,
+            department:departments(id, name),
+            project:projects(id, name),
+            assignee:users!tickets_assignee_id_fkey(id, name, email),
+            requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+            epic:epics(id, name, color),
+            sprint:sprints(id, name, status)
+          `)
+          .eq("id", ticketId)
+          .single()
 
       if (error) throw error
       if (!ticket) throw new Error("Ticket not found")
@@ -480,6 +490,7 @@ export function useCreateTicket() {
       department_id?: string
       links?: string[]
       epic_id?: string
+      sprint_id?: string
     }) => {
       if (!userEmail) throw new Error("Not authenticated")
       
@@ -538,7 +549,8 @@ export function useCreateTicket() {
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
-            epic:epics(id, name, color)
+            epic:epics(id, name, color),
+            sprint:sprints(id, name, status)
           `)
           .single()
 
@@ -602,6 +614,7 @@ export function useUpdateTicket() {
       requested_by_id?: string
       department_id?: string | null
       epic_id?: string | null
+      sprint_id?: string | null
       assigned_at?: string | null
       started_at?: string | null
       completed_at?: string | null
@@ -628,7 +641,8 @@ export function useUpdateTicket() {
           project:projects(id, name),
           assignee:users!tickets_assignee_id_fkey(id, name, email),
           requested_by:users!tickets_requested_by_id_fkey(id, name, email),
-          epic:epics(id, name, color)
+          epic:epics(id, name, color),
+          sprint:sprints(id, name, status)
         `)
         .single()
 
@@ -648,11 +662,12 @@ export function useUpdateTicket() {
       const previousTicket = queryClient.getQueryData<{ ticket: Ticket }>(["ticket", variables.id])
       const previousTickets = queryClient.getQueriesData<Ticket[]>({ queryKey: ["tickets"] })
 
-      // Get users, departments, and epics from cache for optimistic updates
+      // Get users, departments, epics, and sprints from cache for optimistic updates
       const usersData = queryClient.getQueryData<Array<{ id: string; name: string | null; email: string; image: string | null }>>(["users"])
       const departmentsData = queryClient.getQueryData<Array<{ id: string; name: string }>>(["departments"])
       const projectId = previousTicket?.ticket?.project?.id || ""
       const epicsData = queryClient.getQueryData<Array<{ id: string; name: string; color: string }>>(["epics", projectId])
+      const sprintsData = queryClient.getQueryData<Array<{ id: string; name: string; status: string }>>(["sprints", projectId])
 
       // Optimistically update single ticket
       if (previousTicket) {
@@ -712,6 +727,19 @@ export function useUpdateTicket() {
             } : null
           } else {
             updatedTicket.epic = null
+          }
+        }
+        
+        if (variables.sprint_id !== undefined) {
+          if (variables.sprint_id && sprintsData) {
+            const sprint = sprintsData.find(s => s.id === variables.sprint_id)
+            updatedTicket.sprint = sprint ? {
+              id: sprint.id,
+              name: sprint.name,
+              status: sprint.status
+            } : null
+          } else {
+            updatedTicket.sprint = null
           }
         }
 
@@ -779,6 +807,19 @@ export function useUpdateTicket() {
                   } : null
                 } else {
                   updatedTicket.epic = null
+                }
+              }
+              
+              if (variables.sprint_id !== undefined) {
+                if (variables.sprint_id && sprintsData) {
+                  const sprint = sprintsData.find(s => s.id === variables.sprint_id)
+                  updatedTicket.sprint = sprint ? {
+                    id: sprint.id,
+                    name: sprint.name,
+                    status: sprint.status
+                  } : null
+                } else {
+                  updatedTicket.sprint = null
                 }
               }
               

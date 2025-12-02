@@ -16,11 +16,20 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useCreateEpic, useUpdateEpic } from "@/hooks/use-epics"
+import { useSprints } from "@/hooks/use-sprints"
+import { SprintSelect } from "@/components/sprint-select"
 
 const epicSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a valid hex color"),
+  sprint_id: z
+    .union([
+      z.string().uuid(),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional(),
 })
 
 type EpicFormValues = z.infer<typeof epicSchema>
@@ -45,6 +54,7 @@ const DEFAULT_COLORS = [
 export function EpicForm({ projectId, onSuccess, initialData }: EpicFormProps) {
   const createEpic = useCreateEpic()
   const updateEpic = useUpdateEpic()
+  const { sprints } = useSprints(projectId)
   const isEditing = Boolean(initialData?.id)
 
   const form = useForm<EpicFormValues>({
@@ -53,16 +63,23 @@ export function EpicForm({ projectId, onSuccess, initialData }: EpicFormProps) {
       name: initialData?.name || "",
       description: initialData?.description || "",
       color: initialData?.color || "#3b82f6",
+      sprint_id: initialData?.sprint_id || "",
     },
   })
 
   const onSubmit = async (values: EpicFormValues) => {
     try {
+      const payload = {
+        name: values.name,
+        description: values.description,
+        color: values.color,
+        sprint_id: values.sprint_id || undefined,
+      }
       if (initialData?.id) {
-        await updateEpic.mutateAsync({ id: initialData.id, ...values })
+        await updateEpic.mutateAsync({ id: initialData.id, ...payload })
       } else {
         await createEpic.mutateAsync({
-          ...values,
+          ...payload,
           project_id: projectId,
         })
       }
@@ -143,6 +160,25 @@ export function EpicForm({ projectId, onSuccess, initialData }: EpicFormProps) {
             </FormItem>
           )}
         />
+        {sprints.length > 0 && (
+          <FormField
+            control={form.control}
+            name="sprint_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Sprint</FormLabel>
+                <FormControl>
+                  <SprintSelect
+                    value={field.value || null}
+                    onValueChange={(value) => field.onChange(value || "")}
+                    sprints={sprints}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <Button
           type="submit"
           className="w-full"

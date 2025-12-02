@@ -12,28 +12,28 @@ export async function GET(
     await requirePermission("projects", "view")
     const supabase = createServerClient()
 
-    const { data: epic, error } = await supabase
-      .from("epics")
+    const { data: sprint, error } = await supabase
+      .from("sprints")
       .select("*")
       .eq("id", params.id)
       .maybeSingle()
 
     if (error) {
-      console.error("Error fetching epic:", error)
+      console.error("Error fetching sprint:", error)
       return NextResponse.json(
-        { error: "Failed to fetch epic" },
+        { error: "Failed to fetch sprint" },
         { status: 500 }
       )
     }
 
-    if (!epic) {
+    if (!sprint) {
       return NextResponse.json(
-        { error: "Epic not found" },
+        { error: "Sprint not found" },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ epic })
+    return NextResponse.json({ sprint })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -41,7 +41,7 @@ export async function GET(
     if (error.message?.includes("Forbidden") || error.message?.includes("permission")) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
-    console.error("Error in GET /api/epics/[id]:", error)
+    console.error("Error in GET /api/sprints/[id]:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -58,7 +58,7 @@ export async function PATCH(
     const supabase = createServerClient()
 
     const body = await request.json()
-    const { name, description, color, sprint_id } = body
+    const { name, description, status, start_date, end_date } = body
 
     const updates: any = {}
     if (name !== undefined) {
@@ -72,32 +72,33 @@ export async function PATCH(
       updates.name = trimmedName
     }
     if (description !== undefined) updates.description = description || null
-    if (color !== undefined) updates.color = color || "#3b82f6"
-    if (sprint_id !== undefined) updates.sprint_id = sprint_id || null
+    if (status !== undefined) updates.status = status
+    if (start_date !== undefined) updates.start_date = start_date || null
+    if (end_date !== undefined) updates.end_date = end_date || null
 
-    const { data: epic, error } = await supabase
-      .from("epics")
+    const { data: sprint, error } = await supabase
+      .from("sprints")
       .update(updates)
       .eq("id", params.id)
       .select("*")
       .single()
 
     if (error) {
-      console.error("Error updating epic:", error)
+      console.error("Error updating sprint:", error)
       return NextResponse.json(
-        { error: "Failed to update epic" },
+        { error: "Failed to update sprint" },
         { status: 500 }
       )
     }
 
-    if (!epic) {
+    if (!sprint) {
       return NextResponse.json(
-        { error: "Epic not found" },
+        { error: "Sprint not found" },
         { status: 404 }
       )
     }
 
-    return NextResponse.json({ epic })
+    return NextResponse.json({ sprint })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -105,7 +106,7 @@ export async function PATCH(
     if (error.message?.includes("Forbidden") || error.message?.includes("permission")) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
-    console.error("Error in PATCH /api/epics/[id]:", error)
+    console.error("Error in PATCH /api/sprints/[id]:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
@@ -121,38 +122,38 @@ export async function DELETE(
     await requirePermission("projects", "edit")
     const supabase = createServerClient()
 
-    // Check if epic exists
-    const { data: epic, error: fetchError } = await supabase
-      .from("epics")
+    // Check if sprint exists
+    const { data: sprint, error: fetchError } = await supabase
+      .from("sprints")
       .select("id")
       .eq("id", params.id)
       .maybeSingle()
 
     if (fetchError) {
-      console.error("Error fetching epic:", fetchError)
+      console.error("Error fetching sprint:", fetchError)
       return NextResponse.json(
-        { error: "Failed to fetch epic" },
+        { error: "Failed to fetch sprint" },
         { status: 500 }
       )
     }
 
-    if (!epic) {
+    if (!sprint) {
       return NextResponse.json(
-        { error: "Epic not found" },
+        { error: "Sprint not found" },
         { status: 404 }
       )
     }
 
-    // Delete epic (tickets with this epic_id will have it set to null due to ON DELETE SET NULL)
+    // Delete sprint (epics and tickets with this sprint_id will have it set to null due to ON DELETE SET NULL)
     const { error: deleteError } = await supabase
-      .from("epics")
+      .from("sprints")
       .delete()
       .eq("id", params.id)
 
     if (deleteError) {
-      console.error("Error deleting epic:", deleteError)
+      console.error("Error deleting sprint:", deleteError)
       return NextResponse.json(
-        { error: "Failed to delete epic" },
+        { error: "Failed to delete sprint" },
         { status: 500 }
       )
     }
@@ -165,7 +166,7 @@ export async function DELETE(
     if (error.message?.includes("Forbidden") || error.message?.includes("permission")) {
       return NextResponse.json({ error: error.message }, { status: 403 })
     }
-    console.error("Error in DELETE /api/epics/[id]:", error)
+    console.error("Error in DELETE /api/sprints/[id]:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

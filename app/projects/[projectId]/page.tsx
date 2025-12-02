@@ -38,7 +38,12 @@ import {
 import { useEpics, useCreateEpic } from "@/hooks/use-epics"
 import { EpicForm } from "@/components/forms/epic-form"
 import { EpicSelect } from "@/components/epic-select"
+import { useSprints } from "@/hooks/use-sprints"
+import { SprintSelect } from "@/components/sprint-select"
+import { SprintForm } from "@/components/forms/sprint-form"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
+import { GanttChart } from "@/components/gantt-chart"
+import { LayoutGrid } from "lucide-react"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 
@@ -61,6 +66,7 @@ type ProjectTicket = {
   } | null
   department?: { id: string; name: string } | null
   epic?: { id: string; name: string; color: string } | null
+  sprint?: { id: string; name: string; status: string } | null
   project?: { id: string; name: string } | null
   assignee?: { id: string; name: string | null; email: string; image: string | null } | null
   requested_by?: { id: string; name: string | null; email: string } | null
@@ -90,6 +96,7 @@ export default function ProjectDetailPage() {
   const { departments } = useDepartments()
   const { data: usersData } = useUsers()
   const { epics } = useEpics(projectId)
+  const { sprints } = useSprints(projectId)
   const createEpic = useCreateEpic()
   const updateTicket = useUpdateTicket()
   const updateProject = useUpdateProject()
@@ -104,8 +111,11 @@ export default function ProjectDetailPage() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [excludeDone, setExcludeDone] = useState(true)
   const [groupByEpic, setGroupByEpic] = useState(false)
+  const [viewMode, setViewMode] = useState<"kanban" | "gantt">("kanban")
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
   const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false)
+  const [isSprintDialogOpen, setIsSprintDialogOpen] = useState(false)
+  const [editingSprint, setEditingSprint] = useState<{ id: string; name: string; description?: string; status: string; start_date?: string | null; end_date?: string | null } | null>(null)
   const [isAddingNew, setIsAddingNew] = useState(false)
   const [addingToStatus, setAddingToStatus] = useState<string | null>(null)
   const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
@@ -155,6 +165,7 @@ export default function ProjectDetailPage() {
     assignee_id: assigneeFilter !== "all" && assigneeFilter !== "unassigned" ? assigneeFilter : undefined,
     requested_by_id: undefined as string | undefined,
     epic_id: undefined as string | undefined,
+    sprint_id: undefined as string | undefined,
   })
 
   // Update requested_by_id when user is available
@@ -789,6 +800,7 @@ export default function ProjectDetailPage() {
         assignee_id: assigneeFilter !== "all" && assigneeFilter !== "unassigned" ? assigneeFilter : undefined,
         requested_by_id: undefined,
         epic_id: undefined,
+        sprint_id: undefined,
       })
       setAddingToStatus(null)
     } catch (error: any) {
@@ -1039,27 +1051,62 @@ export default function ProjectDetailPage() {
           </Label>
         </div>
         <div className="flex items-center gap-2">
-          <Checkbox
-            id="group-by-epic"
-            checked={groupByEpic}
-            onCheckedChange={(checked) => setGroupByEpic(checked === true)}
-          />
-          <Label
-            htmlFor="group-by-epic"
-            className="text-sm font-normal cursor-pointer whitespace-nowrap"
-          >
-            Group by Epic
-          </Label>
-          {hasPermission("projects", "edit") && (
+          <div className="flex items-center border rounded-md">
             <Button
-              variant="outline"
+              variant={viewMode === "kanban" ? "default" : "ghost"}
               size="sm"
-              onClick={() => setIsEpicDialogOpen(true)}
-              className="ml-2 h-8"
+              onClick={() => setViewMode("kanban")}
+              className="h-8 rounded-r-none"
             >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Create Epic
+              <LayoutGrid className="h-4 w-4 mr-1.5" />
+              Kanban
             </Button>
+            <Button
+              variant={viewMode === "gantt" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setViewMode("gantt")}
+              className="h-8 rounded-l-none"
+            >
+              <LayoutGrid className="h-4 w-4 mr-1.5" />
+              Gantt
+            </Button>
+          </div>
+          {viewMode === "kanban" && (
+            <>
+              <Checkbox
+                id="group-by-epic"
+                checked={groupByEpic}
+                onCheckedChange={(checked) => setGroupByEpic(checked === true)}
+              />
+              <Label
+                htmlFor="group-by-epic"
+                className="text-sm font-normal cursor-pointer whitespace-nowrap"
+              >
+                Group by Epic
+              </Label>
+            </>
+          )}
+          {hasPermission("projects", "edit") && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEpicDialogOpen(true)}
+                className="ml-2 h-8"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Create Epic
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSprintDialogOpen(true)}
+                className="ml-2 h-8"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Create Sprint
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -1228,6 +1275,31 @@ export default function ProjectDetailPage() {
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
+      ) : viewMode === "gantt" ? (
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <GanttChart
+            tickets={filteredTickets.filter(ticket => 
+              ticket.project?.id === projectId || (!ticket.project && ticket.project_id === projectId)
+            )}
+            sprints={sprints.filter(sprint => sprint.project_id === projectId)}
+            epics={epics.filter(epic => epic.project_id === projectId)}
+            onTicketClick={(ticketId) => setSelectedTicketId(ticketId)}
+            onSprintClick={(sprintId) => {
+              const sprint = sprints.find(s => s.id === sprintId)
+              if (sprint) {
+                setEditingSprint({
+                  id: sprint.id,
+                  name: sprint.name,
+                  description: sprint.description || undefined,
+                  status: sprint.status,
+                  start_date: sprint.start_date || null,
+                  end_date: sprint.end_date || null,
+                })
+                setIsSprintDialogOpen(true)
+              }
+            }}
+          />
+        </div>
       ) : (
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {/* Kanban Board */}
@@ -1409,6 +1481,11 @@ export default function ProjectDetailPage() {
                                             {ticket.department.name}
                                           </Badge>
                                         )}
+                                        {ticket.sprint && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {ticket.sprint.name}
+                                          </Badge>
+                                        )}
                                       </div>
                                     </Card>
                                   ))}
@@ -1582,6 +1659,19 @@ export default function ProjectDetailPage() {
                                   triggerClassName="h-8 text-xs flex-1"
                                 />
                               )}
+                              {sprints.length > 0 && (
+                                <SprintSelect
+                                  value={newTicketData.sprint_id}
+                                  onValueChange={(value) =>
+                                    setNewTicketData({
+                                      ...newTicketData,
+                                      sprint_id: value || undefined,
+                                    })
+                                  }
+                                  sprints={sprints}
+                                  triggerClassName="h-8 text-xs flex-1"
+                                />
+                              )}
                             </div>
                             
                             <div className="flex gap-2 pt-1">
@@ -1748,6 +1838,11 @@ export default function ProjectDetailPage() {
                                     {ticket.department.name}
                                   </Badge>
                                 )}
+                                {ticket.sprint && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {ticket.sprint.name}
+                                  </Badge>
+                                )}
                               </div>
                             </div>
                           </Card>
@@ -1793,6 +1888,26 @@ export default function ProjectDetailPage() {
             projectId={projectId}
             onSuccess={() => {
               setIsEpicDialogOpen(false)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isSprintDialogOpen} onOpenChange={(open) => {
+        setIsSprintDialogOpen(open)
+        if (!open) {
+          setEditingSprint(null)
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingSprint ? "Edit Sprint" : "Create Sprint"}</DialogTitle>
+          </DialogHeader>
+          <SprintForm
+            projectId={projectId}
+            initialData={editingSprint || undefined}
+            onSuccess={() => {
+              setIsSprintDialogOpen(false)
+              setEditingSprint(null)
             }}
           />
         </DialogContent>

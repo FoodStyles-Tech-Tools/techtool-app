@@ -34,6 +34,8 @@ import { toast } from "@/components/ui/toast"
 import { useEpics } from "@/hooks/use-epics"
 import { EpicSelect } from "@/components/epic-select"
 import { usePermissions } from "@/hooks/use-permissions"
+import { useSprints } from "@/hooks/use-sprints"
+import { SprintSelect } from "@/components/sprint-select"
 
 const ticketSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -49,6 +51,13 @@ const ticketSchema = z.object({
     ])
     .optional(),
   epic_id: z
+    .union([
+      z.string().uuid(),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional(),
+  sprint_id: z
     .union([
       z.string().uuid(),
       z.literal(""),
@@ -80,6 +89,7 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
   const [users, setUsers] = useState<User[]>([])
   const { departments, refresh } = useDepartments()
   const { epics } = useEpics(projectId || "")
+  const { sprints } = useSprints(projectId || "")
   const { user } = usePermissions()
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
   const createTicket = useCreateTicket()
@@ -110,6 +120,7 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
       assignee_id: initialData?.assignee_id || (isEditing ? "" : (user?.id || "")),
       department_id: initialData?.department_id || "",
       epic_id: initialData?.epic_id || "",
+      sprint_id: initialData?.sprint_id || "",
       links: initialData?.links || [],
     },
   })
@@ -138,6 +149,7 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
         assignee_id: values.assignee_id || undefined,
         department_id: values.department_id || undefined,
         epic_id: values.epic_id || undefined,
+        sprint_id: values.sprint_id || undefined,
         links: sanitizedLinks,
       }
 
@@ -349,6 +361,25 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
                     value={field.value || null}
                     onValueChange={(value) => field.onChange(value || "")}
                     epics={epics}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        {projectId && sprints.length > 0 && (
+          <FormField
+            control={form.control}
+            name="sprint_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Sprint</FormLabel>
+                <FormControl>
+                  <SprintSelect
+                    value={field.value || null}
+                    onValueChange={(value) => field.onChange(value || "")}
+                    sprints={sprints}
                   />
                 </FormControl>
                 <FormMessage />

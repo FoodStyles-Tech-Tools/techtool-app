@@ -100,7 +100,7 @@ export function useCreateEpic() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async (epic: { name: string; description?: string; project_id: string; color?: string }) => {
+    mutationFn: async (epic: { name: string; description?: string; project_id: string; color?: string; sprint_id?: string | null }) => {
       const response = await fetch("/api/epics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -138,7 +138,7 @@ export function useUpdateEpic() {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string; color?: string }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; description?: string; color?: string; sprint_id?: string | null }) => {
       const response = await fetch(`/api/epics/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

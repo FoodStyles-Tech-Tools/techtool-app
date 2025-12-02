@@ -14,6 +14,7 @@ import { toast } from "@/components/ui/toast"
 import { useDepartments } from "@/hooks/use-departments"
 import { useProjects } from "@/hooks/use-projects"
 import { useEpics } from "@/hooks/use-epics"
+import { useSprints } from "@/hooks/use-sprints"
 import { Subtasks } from "@/components/subtasks"
 import { useTicket, useUpdateTicket } from "@/hooks/use-tickets"
 import { useUsers } from "@/hooks/use-users"
@@ -22,6 +23,7 @@ import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
 import { EpicSelect } from "@/components/epic-select"
+import { SprintSelect } from "@/components/sprint-select"
 import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -74,6 +76,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const ticket = ticketData?.ticket || null
   const projectId = ticket?.project?.id || null
   const { epics } = useEpics(projectId || "")
+  const { sprints } = useSprints(projectId || "")
   const formatLinkLabel = (url: string) => {
     try {
       const hostname = new URL(url).hostname
@@ -315,6 +318,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       { epic_id: newEpicId },
       "Epic updated",
       "epic_id"
+    )
+  }
+
+  const handleSprintChange = (newSprintId: string | null) => {
+    updateTicketWithToast(
+      { sprint_id: newSprintId },
+      "Sprint updated",
+      "sprint_id"
     )
   }
 
@@ -961,6 +972,19 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onValueChange={handleEpicChange}
                           epics={epics}
                           disabled={!hasPermission("tickets", "edit") || updatingFields["epic_id"] || !projectId}
+                          triggerClassName="h-9 w-full"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Sprint</label>
+                      <div className="flex-1">
+                        <SprintSelect
+                          value={ticket.sprint?.id || null}
+                          onValueChange={handleSprintChange}
+                          sprints={sprints}
+                          disabled={!hasPermission("tickets", "edit") || updatingFields["sprint_id"] || !projectId}
                           triggerClassName="h-9 w-full"
                         />
                       </div>

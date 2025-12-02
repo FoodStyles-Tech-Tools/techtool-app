@@ -20,7 +20,8 @@ export async function GET(
         assignee:users!tickets_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
         department:departments(id, name),
-        epic:epics(id, name, color)
+        epic:epics(id, name, color),
+        sprint:sprints(id, name, status, start_date, end_date)
       `)
       .eq("id", params.id)
       .maybeSingle()
@@ -111,6 +112,7 @@ export async function PATCH(
       type,
       department_id,
       epic_id,
+      sprint_id,
       created_at,
       assigned_at,
       started_at,
@@ -218,6 +220,7 @@ export async function PATCH(
     if (type !== undefined) updates.type = type
     if (department_id !== undefined) updates.department_id = department_id || null
     if (epic_id !== undefined) updates.epic_id = epic_id || null
+    if (sprint_id !== undefined) updates.sprint_id = sprint_id || null
     if (reason !== undefined) updates.reason = reason
     
     // Timestamp validation: Check ordering constraints before applying updates
@@ -328,7 +331,9 @@ export async function PATCH(
         project:projects(id, name),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
-        department:departments(id, name)
+        department:departments(id, name),
+        epic:epics(id, name, color),
+        sprint:sprints(id, name, status)
       `)
       .single()
 

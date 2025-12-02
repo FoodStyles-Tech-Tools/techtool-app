@@ -1175,6 +1175,11 @@ export default function TicketsPage() {
                                 {ticket.department.name}
                               </Badge>
                             )}
+                            {ticket.sprint && (
+                              <Badge variant="outline" className="text-xs">
+                                {ticket.sprint.name}
+                              </Badge>
+                            )}
                             {ticket.project && (
                               <Badge variant="outline" className="text-xs">
                                 {ticket.project.name}
