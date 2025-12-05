@@ -157,6 +157,7 @@ interface QuickAddTicketData {
   department_id?: string
   assignee_id?: string
   requested_by_id?: string
+  due_date?: string | null
 }
 
 const formatRelativeDate = (dateString: string): string => {
@@ -306,13 +307,29 @@ export default function TicketsPage() {
     }
   }, [preferences.tickets_view])
   
-  // Set default assignee filter to "My Tickets" when user is available (only once on initial load)
+  // Set default filters based on user role
   useEffect(() => {
-    if (user?.id && assigneeFilter === "all") {
-      setAssigneeFilter(user.id)
+    if (user?.id && user?.role) {
+      const userRole = user.role.toLowerCase()
+      const isAdminOrMember = userRole === "admin" || userRole === "member"
+      
+      // If user is not Admin or Member, set defaults
+      if (!isAdminOrMember) {
+        if (assigneeFilter === "all") {
+          setAssigneeFilter("all")
+        }
+        if (requestedByFilter === "all") {
+          setRequestedByFilter(user.id)
+        }
+      } else {
+        // Admin/Member: default to "My Tickets"
+        if (assigneeFilter === "all") {
+          setAssigneeFilter(user.id)
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id])
+  }, [user?.id, user?.role])
   
   // Reset status filter if it's cancelled or completed when excludeDone is enabled
   useEffect(() => {
@@ -700,6 +717,7 @@ export default function TicketsPage() {
         assignee_id: formData.assignee_id || undefined,
         requested_by_id: formData.requested_by_id,
         status: formData.status,
+        due_date: formData.due_date || undefined,
       })
       toast("Ticket created successfully")
       setIsAddingNew(false)
@@ -1255,6 +1273,7 @@ export default function TicketsPage() {
                   updateTicketField={updateTicketField}
                   updatingFields={updatingFields}
                   excludeDone={excludeDone}
+                  canEdit={hasPermission("tickets", "edit")}
                 />
               ))}
               </tbody>
@@ -1421,6 +1440,7 @@ const QuickAddRow = memo(function QuickAddRow({
     department_id: defaultDepartmentId,
     assignee_id: defaultAssigneeId,
     requested_by_id: defaultRequesterId,
+    due_date: null,
   }))
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -1470,6 +1490,18 @@ const QuickAddRow = memo(function QuickAddRow({
             value={formData.description}
             onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
             className="h-7 text-xs mt-1 dark:bg-[#1f1f1f]"
+          />
+        </TableCell>
+        <TableCell className="py-2">
+          <DateTimePicker
+            value={formData.due_date ? new Date(formData.due_date) : null}
+            onChange={(date) => setFormData((prev) => ({ 
+              ...prev, 
+              due_date: date ? toUTCISOStringPreserveLocal(date) : null 
+            }))}
+            placeholder="No due date"
+            hideIcon
+            className="h-7 text-xs"
           />
         </TableCell>
         <TableCell className="py-2">
@@ -1625,6 +1657,7 @@ const QuickAddKanbanCard = memo(function QuickAddKanbanCard({
     department_id: defaultDepartmentId,
     assignee_id: defaultAssigneeId,
     requested_by_id: defaultRequesterId,
+    due_date: null,
   }))
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -1749,6 +1782,7 @@ interface TicketRowProps {
   updateTicketField: (ticketId: string, field: string, value: string | null | undefined) => Promise<void> | void
   updatingFields: Record<string, string>
   excludeDone: boolean
+  canEdit: boolean
 }
 
 const TicketRow = memo(function TicketRow({
@@ -1761,6 +1795,7 @@ const TicketRow = memo(function TicketRow({
   updateTicketField,
   updatingFields,
   excludeDone,
+  canEdit,
 }: TicketRowProps) {
   const requestedById = ticket.requested_by?.id || (ticket as any).requested_by_id
   const dueDateDisplay = getDueDateDisplay(ticket.due_date)
@@ -1814,7 +1849,7 @@ const TicketRow = memo(function TicketRow({
           <DateTimePicker
             value={safeDueDateValue}
             onChange={(date) => updateTicketField(ticket.id, "due_date", date ? toUTCISOStringPreserveLocal(date) : null)}
-            disabled={!!updatingFields[`${ticket.id}-due_date`]}
+            disabled={!canEdit || !!updatingFields[`${ticket.id}-due_date`]}
             placeholder="No due date"
             hideIcon
             className={cn(
@@ -1829,7 +1864,7 @@ const TicketRow = memo(function TicketRow({
         <TicketTypeSelect
           value={ticket.type || "task"}
           onValueChange={(value) => updateTicketField(ticket.id, "type", value)}
-          disabled={!!updatingFields[`${ticket.id}-type`]}
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-type`]}
         />
       </TableCell>
       <TableCell className="py-2">
@@ -1838,7 +1873,7 @@ const TicketRow = memo(function TicketRow({
           onValueChange={(value) =>
             updateTicketField(ticket.id, "department_id", value === NO_DEPARTMENT_VALUE ? null : value)
           }
-          disabled={!!updatingFields[`${ticket.id}-department_id`]}
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-department_id`]}
         >
           <SelectTrigger className="h-7 w-[140px] text-xs dark:bg-[#1f1f1f]">
             <SelectValue />
@@ -1857,7 +1892,7 @@ const TicketRow = memo(function TicketRow({
         <TicketStatusSelect
           value={ticket.status}
           onValueChange={(value) => updateTicketField(ticket.id, "status", value)}
-          disabled={!!updatingFields[`${ticket.id}-status`]}
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-status`]}
           excludeDone={excludeDone}
         />
       </TableCell>
@@ -1865,14 +1900,14 @@ const TicketRow = memo(function TicketRow({
         <TicketPrioritySelect
           value={ticket.priority}
           onValueChange={(value) => updateTicketField(ticket.id, "priority", value)}
-          disabled={!!updatingFields[`${ticket.id}-priority`]}
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-priority`]}
         />
       </TableCell>
       <TableCell className="py-2">
         <Select
           value={requestedById ?? undefined}
           onValueChange={(value) => updateTicketField(ticket.id, "requested_by_id", value)}
-          disabled={!!updatingFields[`${ticket.id}-requested_by_id`]}
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-requested_by_id`]}
         >
           <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-[#1f1f1f] overflow-hidden">
             {requestedById ? (
@@ -1896,7 +1931,7 @@ const TicketRow = memo(function TicketRow({
           onValueChange={(value) =>
             updateTicketField(ticket.id, "assignee_id", value === UNASSIGNED_VALUE ? null : value)
           }
-          disabled={!!updatingFields[`${ticket.id}-assignee_id`]}
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-assignee_id`]}
         >
           <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-[#1f1f1f] overflow-hidden">
             {ticket.assignee?.id ? (

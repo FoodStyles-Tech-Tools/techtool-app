@@ -138,13 +138,29 @@ export default function ProjectDetailPage() {
   const [pendingDropTicketId, setPendingDropTicketId] = useState<string | null>(null)
   const [pendingDropUpdates, setPendingDropUpdates] = useState<any>(null)
   
-  // Set default assignee filter to "My Tickets" when user is available (only once on initial load)
+  // Set default filters based on user role
   useEffect(() => {
-    if (user?.id && assigneeFilter === "all") {
-      setAssigneeFilter(user.id)
+    if (user?.id && user?.role) {
+      const userRole = user.role.toLowerCase()
+      const isAdminOrMember = userRole === "admin" || userRole === "member"
+      
+      // If user is not Admin or Member, set defaults
+      if (!isAdminOrMember) {
+        if (assigneeFilter === "all") {
+          setAssigneeFilter("all")
+        }
+        if (requestedByFilter === "all") {
+          setRequestedByFilter(user.id)
+        }
+      } else {
+        // Admin/Member: default to "My Tickets"
+        if (assigneeFilter === "all") {
+          setAssigneeFilter(user.id)
+        }
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id])
+  }, [user?.id, user?.role])
 
   // Set default groupByEpic from user preferences (only once on initial load)
   useEffect(() => {
@@ -1448,16 +1464,17 @@ export default function ProjectDetailPage() {
                                     >
                                       <div className="space-y-2">
                                         <div className="flex items-start justify-between gap-2">
-                                          <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                              {ticket.display_id && (
-                                                <span className="text-xs font-mono text-muted-foreground">
-                                                  {ticket.display_id}
-                                                </span>
-                                              )}
-                                              <TicketTypeIcon type={ticket.type || "task"} />
-                                              <TicketPriorityIcon priority={ticket.priority} />
-                                            </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 mb-1">
+                                    {ticket.display_id && (
+                                      <span className="text-xs font-mono text-muted-foreground">
+                                        {ticket.display_id}
+                                        {ticket.sprint && ` / Sprint: ${ticket.sprint.name}`}
+                                      </span>
+                                    )}
+                                    <TicketTypeIcon type={ticket.type || "task"} />
+                                    <TicketPriorityIcon priority={ticket.priority} />
+                                  </div>
                                             <h4 className="text-sm font-medium line-clamp-2 leading-tight">
                                               {ticket.title}
                                             </h4>
@@ -1479,11 +1496,6 @@ export default function ProjectDetailPage() {
                                         {ticket.department && (
                                           <Badge variant="outline" className="text-xs">
                                             {ticket.department.name}
-                                          </Badge>
-                                        )}
-                                        {ticket.sprint && (
-                                          <Badge variant="outline" className="text-xs">
-                                            {ticket.sprint.name}
                                           </Badge>
                                         )}
                                       </div>
@@ -1608,69 +1620,75 @@ export default function ProjectDetailPage() {
                               />
                             </div>
                             
-                            <div className="flex gap-2">
-                              <Select
-                                value={newTicketData.assignee_id || UNASSIGNED_VALUE}
-                                onValueChange={(value) =>
-                                  setNewTicketData({
-                                    ...newTicketData,
-                                    assignee_id: value === UNASSIGNED_VALUE ? undefined : value,
-                                  })
-                                }
-                              >
-                                <SelectTrigger className="h-8 text-xs flex-1">
-                                  <SelectValue placeholder="Assignee" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-                                  {users.map((user) => (
-                                    <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <Select
-                                value={newTicketData.requested_by_id || ""}
-                                onValueChange={(value) =>
-                                  setNewTicketData({
-                                    ...newTicketData,
-                                    requested_by_id: value || undefined,
-                                  })
-                                }
-                              >
-                                <SelectTrigger className="h-8 text-xs flex-1">
-                                  <SelectValue placeholder="Requested by" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {users.map((user) => (
-                                    <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              {epics.length > 0 && (
-                                <EpicSelect
-                                  value={newTicketData.epic_id}
+                            <div className="space-y-2">
+                              <div className="flex gap-2">
+                                <Select
+                                  value={newTicketData.assignee_id || UNASSIGNED_VALUE}
                                   onValueChange={(value) =>
                                     setNewTicketData({
                                       ...newTicketData,
-                                      epic_id: value || undefined,
+                                      assignee_id: value === UNASSIGNED_VALUE ? undefined : value,
                                     })
                                   }
-                                  epics={epics}
-                                  triggerClassName="h-8 text-xs flex-1"
-                                />
-                              )}
-                              {sprints.length > 0 && (
-                                <SprintSelect
-                                  value={newTicketData.sprint_id}
+                                >
+                                  <SelectTrigger className="h-8 text-xs flex-1">
+                                    <SelectValue placeholder="Assignee" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+                                    {users.map((user) => (
+                                      <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <Select
+                                  value={newTicketData.requested_by_id || ""}
                                   onValueChange={(value) =>
                                     setNewTicketData({
                                       ...newTicketData,
-                                      sprint_id: value || undefined,
+                                      requested_by_id: value || undefined,
                                     })
                                   }
-                                  sprints={sprints}
-                                  triggerClassName="h-8 text-xs flex-1"
-                                />
+                                >
+                                  <SelectTrigger className="h-8 text-xs flex-1">
+                                    <SelectValue placeholder="Requested by" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {users.map((user) => (
+                                      <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              {(epics.length > 0 || sprints.length > 0) && (
+                                <div className="flex gap-2">
+                                  {epics.length > 0 && (
+                                    <EpicSelect
+                                      value={newTicketData.epic_id}
+                                      onValueChange={(value) =>
+                                        setNewTicketData({
+                                          ...newTicketData,
+                                          epic_id: value || undefined,
+                                        })
+                                      }
+                                      epics={epics}
+                                      triggerClassName="h-8 text-xs flex-1"
+                                    />
+                                  )}
+                                  {sprints.length > 0 && (
+                                    <SprintSelect
+                                      value={newTicketData.sprint_id}
+                                      onValueChange={(value) =>
+                                        setNewTicketData({
+                                          ...newTicketData,
+                                          sprint_id: value || undefined,
+                                        })
+                                      }
+                                      sprints={sprints}
+                                      triggerClassName="h-8 text-xs flex-1"
+                                    />
+                                  )}
+                                </div>
                               )}
                             </div>
                             
@@ -1786,6 +1804,7 @@ export default function ProjectDetailPage() {
                                     </Button>
                                     <span className="text-xs font-mono text-muted-foreground">
                                       {ticket.display_id || ticket.id.slice(0, 8)}
+                                      {ticket.sprint && ` / Sprint: ${ticket.sprint.name}`}
                                     </span>
                                   </div>
                                   <h4 className="text-sm font-medium line-clamp-2">{ticket.title}</h4>
@@ -1836,11 +1855,6 @@ export default function ProjectDetailPage() {
                                 {ticket.department && (
                                   <Badge variant="outline" className="text-xs">
                                     {ticket.department.name}
-                                  </Badge>
-                                )}
-                                {ticket.sprint && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {ticket.sprint.name}
                                   </Badge>
                                 )}
                               </div>
