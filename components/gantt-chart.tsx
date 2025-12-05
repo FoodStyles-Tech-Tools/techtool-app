@@ -62,7 +62,6 @@ const STATUS_COLORS: Record<string, string> = {
   // Sprint status colors (as specified)
   active: "bg-yellow-500",
   planned: "bg-blue-500",
-  completed: "bg-green-500",
   closed: "bg-red-500",
 }
 
@@ -208,14 +207,16 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
             epic.startDate = epicStart
             epic.endDate = epicEnd
 
-            if (epicStart) {
-              if (!sprintStart || epicStart < sprintStart) {
-                sprintStart = epicStart
+            if (epicStart !== null) {
+              const epicStartDate: Date = epicStart
+              if (!sprintStart || epicStartDate < sprintStart) {
+                sprintStart = epicStartDate
               }
             }
-            if (epicEnd) {
-              if (!sprintEnd || epicEnd > sprintEnd) {
-                sprintEnd = epicEnd
+            if (epicEnd !== null) {
+              const epicEndDate: Date = epicEnd
+              if (!sprintEnd || epicEndDate > sprintEnd) {
+                sprintEnd = epicEndDate
               }
             }
           }

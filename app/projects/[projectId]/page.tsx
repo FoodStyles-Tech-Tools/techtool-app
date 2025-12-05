@@ -38,7 +38,7 @@ import {
 import { useEpics, useCreateEpic } from "@/hooks/use-epics"
 import { EpicForm } from "@/components/forms/epic-form"
 import { EpicSelect } from "@/components/epic-select"
-import { useSprints } from "@/hooks/use-sprints"
+import { useSprints, type Sprint } from "@/hooks/use-sprints"
 import { SprintSelect } from "@/components/sprint-select"
 import { SprintForm } from "@/components/forms/sprint-form"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
@@ -115,7 +115,7 @@ export default function ProjectDetailPage() {
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
   const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false)
   const [isSprintDialogOpen, setIsSprintDialogOpen] = useState(false)
-  const [editingSprint, setEditingSprint] = useState<{ id: string; name: string; description?: string; status: string; start_date?: string | null; end_date?: string | null } | null>(null)
+  const [editingSprint, setEditingSprint] = useState<Pick<Sprint, "id" | "name" | "description" | "status" | "start_date" | "end_date"> | null>(null)
   const [isAddingNew, setIsAddingNew] = useState(false)
   const [addingToStatus, setAddingToStatus] = useState<string | null>(null)
   const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
@@ -1290,10 +1290,10 @@ export default function ProjectDetailPage() {
                 setEditingSprint({
                   id: sprint.id,
                   name: sprint.name,
-                  description: sprint.description || undefined,
+                  description: sprint.description,
                   status: sprint.status,
-                  start_date: sprint.start_date || null,
-                  end_date: sprint.end_date || null,
+                  start_date: sprint.start_date,
+                  end_date: sprint.end_date,
                 })
                 setIsSprintDialogOpen(true)
               }
@@ -1904,7 +1904,14 @@ export default function ProjectDetailPage() {
           </DialogHeader>
           <SprintForm
             projectId={projectId}
-            initialData={editingSprint || undefined}
+            initialData={editingSprint ? {
+              id: editingSprint.id,
+              name: editingSprint.name,
+              description: editingSprint.description ?? undefined,
+              status: editingSprint.status,
+              start_date: editingSprint.start_date ?? undefined,
+              end_date: editingSprint.end_date ?? undefined,
+            } : undefined}
             onSuccess={() => {
               setIsSprintDialogOpen(false)
               setEditingSprint(null)
