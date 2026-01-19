@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, FolderKanban, Package, Ticket, Users, Shield, Keyboard } from "lucide-react"
+import { LayoutDashboard, FolderKanban, Package, Ticket, Users, Shield, Keyboard, Clock } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -39,6 +39,12 @@ const navItems = [
     href: "/assets",
     icon: Package,
     permission: { resource: "assets", action: "view" },
+  },
+  {
+    title: "Clockify",
+    href: "/clockify",
+    icon: Clock,
+    permission: { resource: "clockify", action: "view" },
   },
   {
     title: "Tickets",

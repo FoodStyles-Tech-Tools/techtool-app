@@ -44,7 +44,7 @@ interface Role {
   created_at: string
 }
 
-const resources = ["projects", "tickets", "users", "roles", "settings", "assets"] as const
+const resources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify"] as const
 const actions = ["view", "create", "edit", "delete", "manage"] as const
 
 // Map resources to display names
@@ -55,6 +55,7 @@ const resourceLabels: Record<string, string> = {
   roles: "Roles",
   settings: "Settings",
   assets: "Assets",
+  clockify: "Clockify",
 }
 
 export default function RolesPage() {

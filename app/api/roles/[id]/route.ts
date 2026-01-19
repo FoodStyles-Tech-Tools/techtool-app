@@ -119,7 +119,7 @@ export async function PATCH(
       // Insert new permissions
       if (Array.isArray(permissions) && permissions.length > 0) {
         // Validate and map permissions
-        const validResources = ["projects", "tickets", "users", "roles", "settings"]
+        const validResources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify"]
         const validActions = ["view", "create", "edit", "delete", "manage"]
         
         const permissionInserts = permissions

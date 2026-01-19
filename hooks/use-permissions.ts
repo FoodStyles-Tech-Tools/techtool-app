@@ -90,7 +90,7 @@ export function usePermissions() {
 
       // Admin role has all permissions (case-insensitive check)
       if (user.role?.toLowerCase() === "admin") {
-        const allResources = ["projects", "tickets", "users", "roles", "settings", "assets"]
+        const allResources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify"]
         const allActions = ["view", "create", "edit", "delete", "manage"]
         permissions = allResources.flatMap((resource) =>
           allActions.map((action) => ({ resource, action }))
@@ -138,7 +138,7 @@ export function usePermissions() {
 
   const hasPermission = useMemo(
     () => (
-      resource: "projects" | "tickets" | "users" | "roles" | "settings" | "assets",
+      resource: "projects" | "tickets" | "users" | "roles" | "settings" | "assets" | "clockify",
       action: "view" | "create" | "edit" | "delete" | "manage"
     ): boolean => {
       if (!user) return false

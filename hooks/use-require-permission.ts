@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { usePermissions } from "./use-permissions"
 
 export function useRequirePermission(
-  resource: "projects" | "tickets" | "users" | "roles" | "settings" | "assets",
+  resource: "projects" | "tickets" | "users" | "roles" | "settings" | "assets" | "clockify",
   action: "view" | "create" | "edit" | "delete" | "manage"
 ) {
   const { hasPermission, loading } = usePermissions()
