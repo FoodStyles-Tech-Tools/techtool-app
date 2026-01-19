@@ -44,8 +44,8 @@ interface Role {
   created_at: string
 }
 
-const resources = ["projects", "tickets", "users", "roles", "settings"] as const
-const actions = ["view", "create", "edit", "manage"] as const
+const resources = ["projects", "tickets", "users", "roles", "settings", "assets"] as const
+const actions = ["view", "create", "edit", "delete", "manage"] as const
 
 // Map resources to display names
 const resourceLabels: Record<string, string> = {
@@ -54,6 +54,7 @@ const resourceLabels: Record<string, string> = {
   users: "User",
   roles: "Roles",
   settings: "Settings",
+  assets: "Assets",
 }
 
 export default function RolesPage() {
@@ -167,7 +168,7 @@ export default function RolesPage() {
         if (pAction === action) return false // Remove the unchecked permission
         // Remove dependent permissions based on hierarchy
         if (action === "view") {
-          // If view is unchecked, remove all (create, edit, manage)
+          // If view is unchecked, remove all (create, edit, delete, manage)
           return false
         } else if (action === "create") {
           // If create is unchecked, remove edit and manage
@@ -175,6 +176,8 @@ export default function RolesPage() {
         } else if (action === "edit") {
           // If edit is unchecked, remove manage
           return pAction !== "manage"
+        } else if (action === "delete") {
+          return pAction !== "delete"
         }
         return true
       })
@@ -189,7 +192,10 @@ export default function RolesPage() {
       if ((action === "manage" || action === "edit") && !current.includes(`${resource}:create`)) {
         updated.push(`${resource}:create`)
       }
-      if ((action === "manage" || action === "edit" || action === "create") && !current.includes(`${resource}:view`)) {
+      if (
+        (action === "manage" || action === "edit" || action === "create" || action === "delete") &&
+        !current.includes(`${resource}:view`)
+      ) {
         updated.push(`${resource}:view`)
       }
       
@@ -393,6 +399,8 @@ export default function RolesPage() {
                                   if (action === "create" && !hasView) {
                                     isDisabled = true
                                   } else if (action === "edit" && !hasCreate) {
+                                    isDisabled = true
+                                  } else if (action === "delete" && !hasView) {
                                     isDisabled = true
                                   } else if (action === "manage" && !hasEdit) {
                                     isDisabled = true
