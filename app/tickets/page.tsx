@@ -291,9 +291,8 @@ export default function TicketsPage() {
   
   const { user, hasPermission } = usePermissions()
   const createTicket = useCreateTicket()
-  const { preferences, updatePreferences, isUpdating: isUpdatingPreferences } = useUserPreferences()
+  const { preferences } = useUserPreferences()
   const [view, setView] = useState<"table" | "kanban">(preferences.tickets_view || "table")
-  const [applyingView, setApplyingView] = useState<"table" | "kanban" | null>(null)
   const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
   const [dropIndicator, setDropIndicator] = useState<{ columnId: string; ticketId: string | null; top: number } | null>(null)
   const [sortConfig, setSortConfig] = useState<{ column: SortColumn; direction: "asc" | "desc" }>(
@@ -865,68 +864,26 @@ export default function TicketsPage() {
             <Button
               variant={view === "table" ? "default" : "ghost"}
               size="sm"
-              onClick={async () => {
-                if (view === "table" || applyingView !== null) return
-                const previousView = view
-                setApplyingView("table")
+              onClick={() => {
+                if (view === "table") return
                 setView("table")
-                try {
-                  await updatePreferences({ tickets_view: "table" })
-                  toast("View changed to Table")
-                } catch (error) {
-                  setView(previousView) // Revert on error
-                  toast("Failed to change view", "error")
-                } finally {
-                  setApplyingView(null)
-                }
               }}
-              disabled={applyingView !== null}
               className="h-9 rounded-r-none"
             >
-              {applyingView === "table" ? (
-                <>
-                  <span className="mr-2 inline-flex h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Applying...
-                </>
-              ) : (
-                <>
-                  <Table2 className="h-4 w-4 mr-2" />
-                  Table
-                </>
-              )}
+              <Table2 className="h-4 w-4 mr-2" />
+              Table
             </Button>
             <Button
               variant={view === "kanban" ? "default" : "ghost"}
               size="sm"
-              onClick={async () => {
-                if (view === "kanban" || applyingView !== null) return
-                const previousView = view
-                setApplyingView("kanban")
+              onClick={() => {
+                if (view === "kanban") return
                 setView("kanban")
-                try {
-                  await updatePreferences({ tickets_view: "kanban" })
-                  toast("View changed to Kanban")
-                } catch (error) {
-                  setView(previousView) // Revert on error
-                  toast("Failed to change view", "error")
-                } finally {
-                  setApplyingView(null)
-                }
               }}
-              disabled={applyingView !== null}
               className="h-9 rounded-l-none"
             >
-              {applyingView === "kanban" ? (
-                <>
-                  <span className="mr-2 inline-flex h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  Applying...
-                </>
-              ) : (
-                <>
-                  <LayoutGrid className="h-4 w-4 mr-2" />
-                  Kanban
-                </>
-              )}
+              <LayoutGrid className="h-4 w-4 mr-2" />
+              Kanban
             </Button>
           </div>
           {canCreateTickets && (
