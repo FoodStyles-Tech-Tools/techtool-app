@@ -13,8 +13,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Trash2, Pencil, Github, Link2 } from "lucide-react"
+import { Plus, Trash2, Pencil } from "lucide-react"
 import { AssetForm } from "@/components/forms/asset-form"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { BrandLinkIcon } from "@/components/brand-link-icon"
 import {
   Dialog,
   DialogContent,
@@ -33,25 +35,17 @@ const formatLinkLabel = (url: string) => {
   }
 }
 
-const isGithubLink = (url: string) => {
-  try {
-    const hostname = new URL(url).hostname.toLowerCase()
-    return hostname === "github.com" || hostname.endsWith(".github.com")
-  } catch {
-    return false
-  }
-}
-
-
 export default function AssetsPage() {
   const { hasPermission: canView, loading: permissionLoading } = useRequirePermission("assets", "view")
-  const { hasPermission } = usePermissions()
+  const { hasPermission, user: currentUser } = usePermissions()
+  const canManageAssets = hasPermission("assets", "manage")
   const { data, isLoading } = useAssets()
   const deleteAsset = useDeleteAsset()
 
   const assets = useMemo(() => data || [], [data])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null)
+  const [detailAsset, setDetailAsset] = useState<Asset | null>(null)
 
   const canCreateAssets = hasPermission("assets", "create") || hasPermission("assets", "manage")
   const canEditAssets = hasPermission("assets", "edit") || hasPermission("assets", "manage")
@@ -129,9 +123,14 @@ export default function AssetsPage() {
                         name: editingAsset.name,
                         description: editingAsset.description || "",
                         links: editingAsset.links || [],
+                        collaborator_ids: editingAsset.collaborator_ids || [],
+                        owner_id: editingAsset.owner_id,
+                        production_url: editingAsset.production_url || "",
                       }
                     : undefined
                 }
+                defaultOwnerId={currentUser?.id}
+                canManageOwner={canManageAssets}
                 onSuccess={() => {
                   setIsDialogOpen(false)
                   setEditingAsset(null)
@@ -151,13 +150,15 @@ export default function AssetsPage() {
           </p>
         </div>
       ) : (
-        <div className="rounded-md border">
+        <div className="rounded-md border max-h-[65vh] overflow-y-auto">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="h-9 py-2 text-xs">Asset</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Owner</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Links</TableHead>
+                <TableHead className="h-9 py-2 text-xs">Collaborators</TableHead>
+                <TableHead className="h-9 py-2 text-xs">Source URLs</TableHead>
+                <TableHead className="h-9 py-2 text-xs">Production URL</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Created</TableHead>
                 <TableHead className="h-9 py-2 text-xs text-right">Actions</TableHead>
               </TableRow>
@@ -168,16 +169,27 @@ export default function AssetsPage() {
                   <TableCell className="py-2">
                     <div>
                       <p className="text-sm">{asset.name}</p>
-                      {asset.description ? (
-                        <div
-                          className="asset-description"
-                          dangerouslySetInnerHTML={{ __html: asset.description }}
-                        />
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          No description provided.
-                        </p>
-                      )}
+                      <div className="space-y-1">
+                        {asset.description ? (
+                          <>
+                            <div
+                              className="asset-description asset-description--clamped"
+                              dangerouslySetInnerHTML={{ __html: asset.description }}
+                            />
+                            <button
+                              type="button"
+                              className="text-xs text-blue-600 hover:underline"
+                              onClick={() => setDetailAsset(asset)}
+                            >
+                              See more
+                            </button>
+                          </>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            No description provided.
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="py-2 text-sm">
@@ -191,6 +203,32 @@ export default function AssetsPage() {
                     )}
                   </TableCell>
                   <TableCell className="py-2">
+                    {asset.collaborators?.length ? (
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex -space-x-2">
+                          {asset.collaborators.slice(0, 3).map((collaborator) => (
+                            <Avatar key={collaborator.id} className="h-5 w-5 border border-background">
+                              <AvatarImage
+                                src={collaborator.image || undefined}
+                                alt={collaborator.name || collaborator.email}
+                              />
+                              <AvatarFallback className="text-[10px]">
+                                {collaborator.name?.[0]?.toUpperCase() || collaborator.email[0].toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
+                        </div>
+                        {asset.collaborators.length > 3 && (
+                          <span className="text-[10px] text-muted-foreground">
+                            +{asset.collaborators.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No collaborators</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-2">
                     {asset.links && asset.links.length > 0 ? (
                       <div className="flex flex-col gap-1">
                         {asset.links.slice(0, 2).map((url, idx) => (
@@ -201,11 +239,7 @@ export default function AssetsPage() {
                             rel="noopener noreferrer"
                             className="text-xs text-primary hover:underline inline-flex items-center gap-1 truncate max-w-[220px]"
                           >
-                            {isGithubLink(url) ? (
-                              <Github className="h-3 w-3 flex-shrink-0" />
-                            ) : (
-                              <Link2 className="h-3 w-3 flex-shrink-0" />
-                            )}
+                            <BrandLinkIcon url={url} className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate">{formatLinkLabel(url)}</span>
                           </a>
                         ))}
@@ -215,6 +249,21 @@ export default function AssetsPage() {
                           </span>
                         )}
                       </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    {asset.production_url ? (
+                      <a
+                        href={asset.production_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-primary hover:underline inline-flex items-center gap-1 truncate max-w-[220px]"
+                      >
+                        <BrandLinkIcon url={asset.production_url} className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{formatLinkLabel(asset.production_url)}</span>
+                      </a>
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>
                     )}
@@ -252,6 +301,24 @@ export default function AssetsPage() {
           </Table>
         </div>
       )}
+      <Dialog open={!!detailAsset} onOpenChange={(open) => !open && setDetailAsset(null)}>
+        <DialogContent className="max-w-3xl w-[90vw]">
+          <DialogHeader>
+            <DialogTitle>{detailAsset?.name || "Asset Details"}</DialogTitle>
+            <DialogDescription>
+              Full asset description
+            </DialogDescription>
+          </DialogHeader>
+          {detailAsset?.description ? (
+            <div
+              className="asset-description max-h-[60vh] overflow-y-auto"
+              dangerouslySetInnerHTML={{ __html: detailAsset.description }}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">No description provided.</p>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { getCurrentUserWithSupabase } from "@/lib/current-user"
 import { fetchGoogleCalendarEvents, refreshAccessToken } from "@/lib/google-calendar"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {

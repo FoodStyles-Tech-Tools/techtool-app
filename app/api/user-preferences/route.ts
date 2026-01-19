@@ -3,6 +3,7 @@ import { requireAuth } from "@/lib/auth-helpers"
 import { getCurrentUserWithSupabase } from "@/lib/current-user"
 
 export const runtime = 'nodejs'
+export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {

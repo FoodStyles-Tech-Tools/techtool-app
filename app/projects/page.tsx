@@ -17,7 +17,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, X, Check, Link2, Circle } from "lucide-react"
+import { Plus, X, Check, Circle } from "lucide-react"
+import { BrandLinkIcon } from "@/components/brand-link-icon"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
@@ -824,7 +825,7 @@ const ProjectRow = memo(function ProjectRow({
                 rel="noopener noreferrer"
                 className="text-xs text-primary hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
               >
-                <Link2 className="h-3 w-3 flex-shrink-0" />
+                <BrandLinkIcon url={url} className="h-3 w-3 flex-shrink-0" />
                 <span className="truncate">{formatLinkLabel(url)}</span>
               </a>
             ))}

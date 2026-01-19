@@ -5,7 +5,8 @@ import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useRequirePermission } from "@/hooks/use-require-permission"
-import { ArrowLeft, Link2, ExternalLink } from "lucide-react"
+import { ArrowLeft, ExternalLink } from "lucide-react"
+import { BrandLinkIcon } from "@/components/brand-link-icon"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -1245,7 +1246,7 @@ export default function ProjectDetailPage() {
                       className="flex items-center gap-2 min-w-0 flex-1"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <BrandLinkIcon url={url} className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate">{url}</p>
                         <p className="text-[11px] text-muted-foreground truncate">{formatLinkLabel(url)}</p>
@@ -1821,7 +1822,7 @@ export default function ProjectDetailPage() {
                                       onClick={(e) => e.stopPropagation()}
                                       className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                                     >
-                                      <Link2 className="h-3 w-3" />
+                                      <BrandLinkIcon url={ticket.links[0]} className="h-3 w-3" />
                                       <span className="truncate">{formatLinkLabel(ticket.links[0])}</span>
                                       {ticket.links.length > 1 && (
                                         <span className="text-[10px] font-medium">

@@ -15,23 +15,49 @@ import {
 import { Input } from "@/components/ui/input"
 import { useCreateAsset, useUpdateAsset } from "@/hooks/use-assets"
 import { RichTextEditor } from "@/components/rich-text-editor"
+import { CollaboratorSelector } from "@/components/collaborator-selector"
+import { useUsers } from "@/hooks/use-users"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 const assetSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   links: z.array(z.string().url("Enter a valid URL")).default([]),
+  production_url: z.string().url("Enter a valid URL").optional().or(z.literal("")),
+  collaborator_ids: z.array(z.string().uuid()).default([]),
+  owner_id: z.string().uuid().optional(),
 })
 
 type AssetFormValues = z.infer<typeof assetSchema>
 
 interface AssetFormProps {
   onSuccess?: () => void
-  initialData?: Partial<AssetFormValues> & { id?: string }
+  initialData?: Partial<AssetFormValues> & {
+    id?: string
+    collaborator_ids?: string[]
+    owner_id?: string
+    production_url?: string | null
+  }
+  defaultOwnerId?: string
+  canManageOwner?: boolean
 }
 
-export function AssetForm({ onSuccess, initialData }: AssetFormProps) {
+export function AssetForm({
+  onSuccess,
+  initialData,
+  defaultOwnerId,
+  canManageOwner = false,
+}: AssetFormProps) {
   const createAsset = useCreateAsset()
   const updateAsset = useUpdateAsset()
+  const { data: usersData } = useUsers()
+  const users = usersData || []
   const isEditing = Boolean(initialData?.id)
 
   const form = useForm<AssetFormValues>({
@@ -40,6 +66,9 @@ export function AssetForm({ onSuccess, initialData }: AssetFormProps) {
       name: initialData?.name || "",
       description: initialData?.description || "",
       links: initialData?.links || [],
+      production_url: initialData?.production_url || "",
+      collaborator_ids: initialData?.collaborator_ids || [],
+      owner_id: initialData?.owner_id || defaultOwnerId || "",
     },
   })
 
@@ -66,6 +95,9 @@ export function AssetForm({ onSuccess, initialData }: AssetFormProps) {
         name: values.name,
         description: isDescriptionEmpty ? null : descriptionValue,
         links: sanitizedLinks,
+        collaborator_ids: values.collaborator_ids || [],
+        owner_id: values.owner_id || undefined,
+        production_url: values.production_url ? values.production_url.trim() : null,
       }
 
       if (initialData?.id) {
@@ -121,7 +153,7 @@ export function AssetForm({ onSuccess, initialData }: AssetFormProps) {
           render={() => (
             <FormItem>
               <div className="flex items-center justify-between">
-                <FormLabel>Links</FormLabel>
+                <FormLabel>Source URLs</FormLabel>
                 <Button type="button" variant="ghost" size="sm" onClick={() => appendLink("")}>
                   Add URL
                 </Button>
@@ -159,6 +191,61 @@ export function AssetForm({ onSuccess, initialData }: AssetFormProps) {
             </FormItem>
           )}
         />
+        <FormField
+          control={form.control}
+          name="production_url"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Production URL</FormLabel>
+              <FormControl>
+                <Input placeholder="https://app.example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="collaborator_ids"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Collaborators</FormLabel>
+              <CollaboratorSelector
+                users={users}
+                value={field.value || []}
+                onChange={field.onChange}
+                placeholder="Add collaborators"
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {canManageOwner && (
+          <FormField
+            control={form.control}
+            name="owner_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Owner</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value || ""}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an owner" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <Button
           type="submit"
           className="w-full"

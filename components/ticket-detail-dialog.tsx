@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Copy, AlertTriangle, Link2, ExternalLink, Pencil, Trash2, Plus, X } from "lucide-react"
+import { Copy, AlertTriangle, ExternalLink, Pencil, Trash2, Plus, X } from "lucide-react"
+import { BrandLinkIcon } from "@/components/brand-link-icon"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -773,7 +774,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                                     className="flex items-center gap-2 min-w-0 flex-1"
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    <Link2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                                    <BrandLinkIcon url={url} className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                                     <div className="min-w-0 flex-1">
                                       <p className="truncate">{url}</p>
                                       <p className="text-[11px] text-muted-foreground truncate">

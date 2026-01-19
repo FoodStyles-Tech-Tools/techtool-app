@@ -482,6 +482,7 @@ export function useCreateTicket() {
       project_id?: string | null
       title: string
       description?: string
+      due_date?: string
       assignee_id?: string
       requested_by_id?: string
       priority?: string
@@ -607,6 +608,7 @@ export function useUpdateTicket() {
       id: string
       title?: string
       description?: string
+      due_date?: string | null
       status?: string
       priority?: string
       type?: string

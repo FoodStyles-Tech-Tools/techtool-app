@@ -22,14 +22,81 @@ export interface AssetOwner {
   email: string
 }
 
+export interface AssetCollaborator {
+  id: string
+  name: string | null
+  email: string
+  image: string | null
+}
+
 export interface Asset {
   id: string
   name: string
   description: string | null
   links: string[]
+  production_url: string | null
   owner: AssetOwner | null
   owner_id: string
+  collaborator_ids: string[]
+  collaborators: AssetCollaborator[]
   created_at: string
+}
+
+async function attachCollaboratorsToAssets(
+  supabase: ReturnType<typeof useSupabaseClient>,
+  assets: any[]
+): Promise<any[]> {
+  if (!assets?.length) return assets
+
+  const collaboratorIds = new Set<string>()
+  assets.forEach((asset) => {
+    const ids: string[] = asset.collaborator_ids || []
+    ids.forEach((id) => {
+      if (id) collaboratorIds.add(id)
+    })
+  })
+
+  if (collaboratorIds.size === 0) {
+    return assets.map((asset) => ({
+      ...asset,
+      collaborator_ids: asset.collaborator_ids || [],
+      collaborators: [],
+    }))
+  }
+
+  const { data: collaboratorUsers } = await supabase
+    .from("users")
+    .select("id, name, email")
+    .in("id", Array.from(collaboratorIds))
+
+  const emails = collaboratorUsers?.map((user) => user.email) || []
+  const { data: authUsers } = await supabase
+    .from("auth_user")
+    .select("email, image")
+    .in("email", emails)
+
+  const imageMap = new Map<string, string | null>()
+  authUsers?.forEach((au) => {
+    imageMap.set(au.email, au.image || null)
+  })
+
+  const collaboratorMap = new Map<string, AssetCollaborator>()
+  collaboratorUsers?.forEach((user) => {
+    collaboratorMap.set(user.id, {
+      ...user,
+      image: imageMap.get(user.email) || null,
+    })
+  })
+
+  return assets.map((asset) => {
+    const ids: string[] = asset.collaborator_ids || []
+    const collaborators = ids.map((id) => collaboratorMap.get(id)).filter(Boolean)
+    return {
+      ...asset,
+      collaborator_ids: ids,
+      collaborators,
+    }
+  })
 }
 
 export function useAssets() {
@@ -49,7 +116,9 @@ export function useAssets() {
       if (error) throw error
       if (!data) return []
 
-      return data.map((asset: any) => ({
+      const assetsWithCollaborators = await attachCollaboratorsToAssets(supabase, data)
+
+      return assetsWithCollaborators.map((asset: any) => ({
         ...asset,
         links: sanitizeLinkArray(asset.links),
       })) as Asset[]
@@ -64,7 +133,14 @@ export function useCreateAsset() {
   const userEmail = useUserEmail()
 
   return useMutation({
-    mutationFn: async (data: { name: string; description?: string | null; links?: string[] }) => {
+    mutationFn: async (data: {
+      name: string
+      description?: string | null
+      links?: string[]
+      collaborator_ids?: string[]
+      owner_id?: string
+      production_url?: string | null
+    }) => {
       if (!userEmail) throw new Error("Not authenticated")
 
       await ensureUserContext(supabase, userEmail)
@@ -79,8 +155,10 @@ export function useCreateAsset() {
       const payload = {
         name: data.name,
         description: data.description || null,
-        owner_id: user.id,
+        owner_id: data.owner_id || user.id,
         links: prepareLinkPayload(data.links),
+        collaborator_ids: Array.isArray(data.collaborator_ids) ? data.collaborator_ids : [],
+        production_url: data.production_url || null,
       }
 
       const { data: asset, error } = await supabase
@@ -92,10 +170,11 @@ export function useCreateAsset() {
       if (error) throw error
       if (!asset) throw new Error("Failed to create asset")
 
+      const [assetWithCollaborators] = await attachCollaboratorsToAssets(supabase, [asset])
       return {
         asset: {
-          ...asset,
-          links: sanitizeLinkArray(asset.links),
+          ...assetWithCollaborators,
+          links: sanitizeLinkArray(assetWithCollaborators.links),
         } as Asset,
       }
     },
@@ -122,6 +201,9 @@ export function useUpdateAsset() {
       name?: string
       description?: string | null
       links?: string[]
+      collaborator_ids?: string[]
+      owner_id?: string | null
+      production_url?: string | null
     }) => {
       if (!userEmail) throw new Error("Not authenticated")
 
@@ -131,6 +213,17 @@ export function useUpdateAsset() {
       if (data.name !== undefined) updatePayload.name = data.name
       if (data.description !== undefined) updatePayload.description = data.description
       if (data.links !== undefined) updatePayload.links = prepareLinkPayload(data.links)
+      if (data.collaborator_ids !== undefined) {
+        updatePayload.collaborator_ids = Array.isArray(data.collaborator_ids)
+          ? data.collaborator_ids
+          : []
+      }
+      if (data.owner_id !== undefined) {
+        updatePayload.owner_id = data.owner_id
+      }
+      if (data.production_url !== undefined) {
+        updatePayload.production_url = data.production_url
+      }
 
       const { data: asset, error } = await supabase
         .from("assets")
@@ -142,10 +235,11 @@ export function useUpdateAsset() {
       if (error) throw error
       if (!asset) throw new Error("Asset not found")
 
+      const [assetWithCollaborators] = await attachCollaboratorsToAssets(supabase, [asset])
       return {
         asset: {
-          ...asset,
-          links: sanitizeLinkArray(asset.links),
+          ...assetWithCollaborators,
+          links: sanitizeLinkArray(assetWithCollaborators.links),
         } as Asset,
       }
     },
