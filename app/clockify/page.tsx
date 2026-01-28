@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
@@ -385,6 +385,7 @@ export default function ClockifyPage() {
   const [reconcileMap, setReconcileMap] = useState<
     Record<string, { ticketDisplayId: string; status: string; ticketId?: string }>
   >({})
+  const reconcileMapRef = useRef(reconcileMap)
   const [isSavingReconcile, setIsSavingReconcile] = useState(false)
   const [isReconciling, setIsReconciling] = useState(false)
   const [ticketLookup, setTicketLookup] = useState<
@@ -401,11 +402,15 @@ export default function ClockifyPage() {
     sessionId?: string
   } | null>(null)
 
-  const resolveReconcileStatus = async (
+  useEffect(() => {
+    reconcileMapRef.current = reconcileMap
+  }, [reconcileMap])
+
+  const resolveReconcileStatus = useCallback(async (
     displayIds: string[],
     sourceMap?: Record<string, { ticketDisplayId: string; status: string; ticketId?: string }>
   ) => {
-    const baseMap = sourceMap || reconcileMap
+    const baseMap = sourceMap || reconcileMapRef.current
     const normalizedIds = Array.from(
       new Set(displayIds.map((id) => normalizeTicketId(id)).filter((id) => id.length > 0))
     )
@@ -468,7 +473,7 @@ export default function ClockifyPage() {
     setTicketLookup((prev) => ({ ...prev, ...lookup }))
     setReconcileMap(updatedMap)
     return { lookup, updatedMap }
-  }
+  }, [])
 
   useEffect(() => {
     if (currentUser?.name) {
@@ -541,7 +546,7 @@ export default function ClockifyPage() {
 
     setReconcileMap(nextMap)
     resolveReconcileStatus(Array.from(displayIds), nextMap)
-  }, [reportEntriesRaw, selectedSession])
+  }, [reportEntriesRaw, resolveReconcileStatus, selectedSession])
 
   useEffect(() => {
     if (!activeTicketEntryId) return

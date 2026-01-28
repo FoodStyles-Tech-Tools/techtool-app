@@ -188,6 +188,12 @@ export default function ProjectDetailPage() {
     }
   }, [user?.id, newTicketData.requested_by_id])
 
+  const defaultStatusKey = useMemo(() => {
+    return ticketStatuses.find((status) => status.key === "open")?.key
+      || ticketStatuses[0]?.key
+      || "open"
+  }, [ticketStatuses])
+
   // Keyboard shortcut: Press "a" to quick-add, ESC to close
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -273,11 +279,6 @@ export default function ProjectDetailPage() {
     () => kanbanColumns.map((column) => column.id),
     [kanbanColumns]
   )
-  const defaultStatusKey = useMemo(() => {
-    return ticketStatuses.find((status) => status.key === "open")?.key
-      || ticketStatuses[0]?.key
-      || "open"
-  }, [ticketStatuses])
 
   const getUserById = (id?: string | null) => {
     if (!id) return undefined
