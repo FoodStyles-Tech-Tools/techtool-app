@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { format, parseISO, isToday } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { TicketDetailDialog } from "@/components/ticket-detail-dialog"
+import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
+import { formatStatusLabel, normalizeStatusKey } from "@/lib/ticket-statuses"
 
 interface CalendarEvent {
   id: string
@@ -52,6 +54,15 @@ export default function DashboardPage() {
   const [ticketsLoading, setTicketsLoading] = useState(true)
   const [ticketsError, setTicketsError] = useState<string | null>(null)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const { statusMap } = useTicketStatuses()
+
+  const getTicketStatusLabel = useCallback(
+    (statusValue: string) => {
+      const normalized = normalizeStatusKey(statusValue)
+      return statusMap.get(normalized)?.label || formatStatusLabel(statusValue)
+    },
+    [statusMap]
+  )
 
   const fetchEvents = useCallback(async () => {
     setLoadingEvents(true)
@@ -242,7 +253,7 @@ export default function DashboardPage() {
                     <h3 className="mt-1 text-sm font-semibold line-clamp-2">{ticket.title}</h3>
                     <div className="mt-3 flex items-center justify-between text-[11px] text-muted-foreground">
                       <span className="font-medium text-foreground">{ticket.display_id || ticket.id.slice(0, 6)}</span>
-                      <span className="capitalize">{ticket.status.replace("_", " ")}</span>
+                      <span>{getTicketStatusLabel(ticket.status)}</span>
                     </div>
                     <p className="mt-auto text-[11px] text-muted-foreground">
                       {format(new Date(ticket.created_at), "MMM d, yyyy")}

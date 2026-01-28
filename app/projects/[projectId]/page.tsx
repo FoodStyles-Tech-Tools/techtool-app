@@ -27,6 +27,7 @@ import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect, TicketTypeIcon } from "@/components/ticket-type-select"
 import { TicketPrioritySelect, TicketPriorityIcon } from "@/components/ticket-priority-select"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
+import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import { TicketDetailDialog } from "@/components/ticket-detail-dialog"
 import {
   Dialog,
@@ -45,6 +46,7 @@ import { SprintForm } from "@/components/forms/sprint-form"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
 import { GanttChart } from "@/components/gantt-chart"
 import { LayoutGrid } from "lucide-react"
+import { isDoneStatus } from "@/lib/ticket-statuses"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 
@@ -75,13 +77,6 @@ type ProjectTicket = {
   links?: string[]
 } & Record<string, any>
 
-const KANBAN_COLUMNS = [
-  { id: "open", label: "Open", color: "fill-gray-500 text-gray-500" },
-  { id: "in_progress", label: "In Progress", color: "fill-yellow-500 text-yellow-500" },
-  { id: "blocked", label: "Blocked", color: "fill-purple-500 text-purple-500" },
-  { id: "cancelled", label: "Cancelled", color: "fill-red-500 text-red-500" },
-  { id: "completed", label: "Completed", color: "fill-green-500 text-green-500" },
-]
 
 export default function ProjectDetailPage() {
   // Require view permission for projects - redirects if not authorized
@@ -105,6 +100,7 @@ export default function ProjectDetailPage() {
   const createTicket = useCreateTicket()
   const queryClient = useQueryClient()
   const { preferences } = useUserPreferences()
+  const { statuses: ticketStatuses } = useTicketStatuses()
   const groupByEpicInitialized = useRef(false)
   
   const [searchQuery, setSearchQuery] = useState("")
@@ -232,13 +228,13 @@ export default function ProjectDetailPage() {
 
       e.preventDefault()
       setIsAddingNew(true)
-      setAddingToStatus("open") // Default to "open" status
-      setNewTicketData(prev => ({ ...prev, status: "open" }))
+      setAddingToStatus(defaultStatusKey) // Default to first status
+      setNewTicketData(prev => ({ ...prev, status: defaultStatusKey }))
     }
 
     window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
     return () => window.removeEventListener("keydown", handleKeyDown, true)
-  }, [isAddingNew, hasPermission])
+  }, [isAddingNew, hasPermission, defaultStatusKey])
 
   // Derive data values (must be before any hooks that use them)
   const project = projectData?.project || null
@@ -264,6 +260,24 @@ export default function ProjectDetailPage() {
     assignee_id: "Assignee",
     department_id: "Department",
   }
+  const kanbanColumns = useMemo(
+    () =>
+      ticketStatuses.map((status) => ({
+        id: status.key,
+        label: status.label,
+        color: status.color,
+      })),
+    [ticketStatuses]
+  )
+  const statusKeys = useMemo(
+    () => kanbanColumns.map((column) => column.id),
+    [kanbanColumns]
+  )
+  const defaultStatusKey = useMemo(() => {
+    return ticketStatuses.find((status) => status.key === "open")?.key
+      || ticketStatuses[0]?.key
+      || "open"
+  }, [ticketStatuses])
 
   const getUserById = (id?: string | null) => {
     if (!id) return undefined
@@ -288,7 +302,7 @@ export default function ProjectDetailPage() {
       if (!matchesSearch) return false
 
       // Exclude done filter
-      if (excludeDone && (ticket.status === "completed" || ticket.status === "cancelled")) {
+      if (excludeDone && isDoneStatus(ticket.status)) {
         return false
       }
 
@@ -307,43 +321,36 @@ export default function ProjectDetailPage() {
 
   // Group tickets by status for kanban
   const ticketsByStatus = useMemo(() => {
-    const grouped: Record<string, typeof filteredTickets> = {
-      open: [],
-      in_progress: [],
-      blocked: [],
-      cancelled: [],
-      completed: [],
-    }
+    const grouped: Record<string, typeof filteredTickets> = statusKeys.reduce(
+      (acc, key) => {
+        acc[key] = []
+        return acc
+      },
+      {} as Record<string, typeof filteredTickets>
+    )
     filteredTickets.forEach(ticket => {
       if (grouped[ticket.status]) {
         grouped[ticket.status].push(ticket)
       }
     })
     return grouped
-  }, [filteredTickets])
+  }, [filteredTickets, statusKeys])
 
   // Group tickets by epic, then by status
   const ticketsByEpic = useMemo(() => {
     const epicGroups: Record<string, Record<string, typeof filteredTickets>> = {}
+    const createStatusBuckets = () =>
+      statusKeys.reduce((acc, key) => {
+        acc[key] = []
+        return acc
+      }, {} as Record<string, typeof filteredTickets>)
     
     // Initialize "No Epic" group
-    epicGroups["no_epic"] = {
-      open: [],
-      in_progress: [],
-      blocked: [],
-      cancelled: [],
-      completed: [],
-    }
+    epicGroups["no_epic"] = createStatusBuckets()
     
     // Initialize epic groups
     epics.forEach(epic => {
-      epicGroups[epic.id] = {
-        open: [],
-        in_progress: [],
-        blocked: [],
-        cancelled: [],
-        completed: [],
-      }
+      epicGroups[epic.id] = createStatusBuckets()
     })
     
     // Group tickets
@@ -352,13 +359,7 @@ export default function ProjectDetailPage() {
       const status = ticket.status
       
       if (!epicGroups[epicKey]) {
-        epicGroups[epicKey] = {
-          open: [],
-          in_progress: [],
-          blocked: [],
-          cancelled: [],
-          completed: [],
-        }
+        epicGroups[epicKey] = createStatusBuckets()
       }
       
       if (epicGroups[epicKey][status]) {
@@ -367,7 +368,7 @@ export default function ProjectDetailPage() {
     })
     
     return epicGroups
-  }, [filteredTickets, epics])
+  }, [filteredTickets, epics, statusKeys])
 
   const handleDragStart = (e: React.DragEvent, ticketId: string) => {
     if (!hasPermission("tickets", "edit")) {
@@ -1392,7 +1393,7 @@ export default function ProjectDetailPage() {
                         </div>
                         
                         <div className="space-y-3 overflow-y-auto flex-1 min-h-0">
-                          {KANBAN_COLUMNS.map((statusColumn) => {
+                          {kanbanColumns.map((statusColumn) => {
                             const statusTickets = epicTickets[statusColumn.id] || []
                             
                             return (
@@ -1415,7 +1416,10 @@ export default function ProjectDetailPage() {
                                     setDropIndicator(null)
                                   }}
                                 >
-                                  <Circle className={`h-2.5 w-2.5 ${statusColumn.color}`} />
+                                  <Circle
+                                    className="h-2.5 w-2.5"
+                                    style={{ color: statusColumn.color, fill: statusColumn.color }}
+                                  />
                                   <span className="text-xs font-medium text-muted-foreground">
                                     {statusColumn.label} ({statusTickets.length})
                                   </span>
@@ -1514,7 +1518,7 @@ export default function ProjectDetailPage() {
               })()
             ) : (
               // Status-based grouping (original)
-              KANBAN_COLUMNS.map((column) => {
+              kanbanColumns.map((column) => {
                 const columnTickets = ticketsByStatus[column.id] || []
                 const isAddingToThisColumn = isAddingNew && addingToStatus === column.id
               
@@ -1529,7 +1533,10 @@ export default function ProjectDetailPage() {
                   <div className="bg-muted/30 rounded-lg p-3 flex flex-col h-full">
                     <div className="flex items-center justify-between mb-3 flex-shrink-0">
                       <div className="flex items-center gap-2">
-                        <Circle className={`h-3 w-3 ${column.color}`} />
+                        <Circle
+                          className="h-3 w-3"
+                          style={{ color: column.color, fill: column.color }}
+                        />
                         <h3 className="text-sm font-medium">{column.label}</h3>
                         <Badge variant="secondary" className="text-xs">
                           {columnTickets.length}

@@ -36,7 +36,7 @@ export async function requireAdmin() {
  * Admin role always has all permissions
  */
 export async function hasPermission(
-  resource: "projects" | "tickets" | "users" | "roles" | "settings" | "assets" | "clockify",
+  resource: "projects" | "tickets" | "users" | "roles" | "settings" | "assets" | "clockify" | "status",
   action: "view" | "create" | "edit" | "delete" | "manage"
 ): Promise<boolean> {
   const session = await requireAuth()
@@ -92,7 +92,7 @@ export async function hasPermission(
  * Require a specific permission, throw error if user doesn't have it
  */
 export async function requirePermission(
-  resource: "projects" | "tickets" | "users" | "roles" | "settings" | "assets" | "clockify",
+  resource: "projects" | "tickets" | "users" | "roles" | "settings" | "assets" | "clockify" | "status",
   action: "view" | "create" | "edit" | "delete" | "manage"
 ) {
   const hasPerm = await hasPermission(resource, action)

@@ -28,6 +28,7 @@ import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
+import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import { TicketDetailDialog } from "@/components/ticket-detail-dialog"
 import { GlobalTicketDialog } from "@/components/global-ticket-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -48,19 +49,13 @@ import {
 } from "@/components/ui/dialog"
 import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { cn } from "@/lib/utils"
+import { isDoneStatus } from "@/lib/ticket-statuses"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 const ROWS_PER_PAGE = 20
 const UNASSIGNED_VALUE = "unassigned"
 const NO_DEPARTMENT_VALUE = "no_department"
 
-const KANBAN_COLUMNS = [
-  { id: "open", label: "Open", color: "fill-gray-500 text-gray-500" },
-  { id: "in_progress", label: "In Progress", color: "fill-yellow-500 text-yellow-500" },
-  { id: "blocked", label: "Blocked", color: "fill-purple-500 text-purple-500" },
-  { id: "cancelled", label: "Cancelled", color: "fill-red-500 text-red-500" },
-  { id: "completed", label: "Completed", color: "fill-green-500 text-green-500" },
-]
 const FIELD_LABELS: Record<string, string> = {
   status: "Status",
   priority: "Priority",
@@ -332,7 +327,7 @@ export default function TicketsPage() {
   
   // Reset status filter if it's cancelled or completed when excludeDone is enabled
   useEffect(() => {
-    if (excludeDone && (statusFilter === "cancelled" || statusFilter === "completed")) {
+    if (excludeDone && statusFilter !== "all" && isDoneStatus(statusFilter)) {
       setStatusFilter("all")
     }
   }, [excludeDone, statusFilter])
@@ -352,6 +347,7 @@ export default function TicketsPage() {
   const { data: usersData } = useUsers()
   const { departments } = useDepartments()
   const updateTicket = useUpdateTicket()
+  const { statuses: ticketStatuses } = useTicketStatuses()
 
   // Reset page when filters change (but not search, which is client-side)
   useEffect(() => {
@@ -361,6 +357,24 @@ export default function TicketsPage() {
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
   const projects = useMemo(() => projectsData || [], [projectsData])
   const users = useMemo(() => usersData || [], [usersData])
+  const kanbanColumns = useMemo(
+    () =>
+      ticketStatuses.map((status) => ({
+        id: status.key,
+        label: status.label,
+        color: status.color,
+      })),
+    [ticketStatuses]
+  )
+  const statusKeys = useMemo(
+    () => kanbanColumns.map((column) => column.id),
+    [kanbanColumns]
+  )
+  const defaultStatusKey = useMemo(() => {
+    return ticketStatuses.find((status) => status.key === "open")?.key
+      || ticketStatuses[0]?.key
+      || "open"
+  }, [ticketStatuses])
   // Only show loading if we have no data at all
   const loading = !ticketsData && ticketsLoading
   const canCreateTickets = hasPermission("tickets", "create")
@@ -498,20 +512,20 @@ export default function TicketsPage() {
 
   // Group tickets by status for kanban
   const ticketsByStatus = useMemo(() => {
-    const grouped: Record<string, typeof filteredTickets> = {
-      open: [],
-      in_progress: [],
-      blocked: [],
-      cancelled: [],
-      completed: [],
-    }
+    const grouped: Record<string, typeof filteredTickets> = statusKeys.reduce(
+      (acc, key) => {
+        acc[key] = []
+        return acc
+      },
+      {} as Record<string, typeof filteredTickets>
+    )
     filteredTickets.forEach(ticket => {
       if (grouped[ticket.status]) {
         grouped[ticket.status].push(ticket)
       }
     })
     return grouped
-  }, [filteredTickets])
+  }, [filteredTickets, statusKeys])
 
   useEffect(() => {
     if (filteredTickets.length === 0 && isAddingNew) {
@@ -561,13 +575,13 @@ export default function TicketsPage() {
       e.preventDefault()
       setIsAddingNew(true)
       if (view === "kanban") {
-        setAddingToStatus("open") // Default to "open" status in kanban
+        setAddingToStatus(defaultStatusKey) // Default to first status in kanban
       }
     }
 
     window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
     return () => window.removeEventListener("keydown", handleKeyDown, true)
-  }, [isAddingNew, hasPermission, filteredTickets.length, view])
+  }, [isAddingNew, hasPermission, filteredTickets.length, view, defaultStatusKey])
 
   // Memoize callbacks before early return to maintain hook order
   const handleCopyTicketLabel = useCallback((ticket: Ticket) => {
@@ -933,11 +947,21 @@ export default function TicketsPage() {
           </SelectTrigger>
           <SelectContent className="dark:bg-[#1f1f1f]">
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="open">Open</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="blocked">Blocked</SelectItem>
-            <SelectItem value="cancelled" disabled={excludeDone}>Cancelled</SelectItem>
-            <SelectItem value="completed" disabled={excludeDone}>Completed</SelectItem>
+            {ticketStatuses.map((status) => (
+              <SelectItem
+                key={status.key}
+                value={status.key}
+                disabled={excludeDone && isDoneStatus(status.key)}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Circle
+                    className="h-3 w-3"
+                    style={{ color: status.color, fill: status.color }}
+                  />
+                  {status.label}
+                </div>
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={projectFilter} onValueChange={setProjectFilter}>
@@ -1026,7 +1050,7 @@ export default function TicketsPage() {
         </div>
       ) : view === "kanban" ? (
         <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-4">
-          {KANBAN_COLUMNS.map((column) => {
+          {kanbanColumns.map((column) => {
             const columnTickets = ticketsByStatus[column.id] || []
             
             return (
@@ -1040,7 +1064,10 @@ export default function TicketsPage() {
                 <div className="bg-muted/30 rounded-lg p-3 flex flex-col h-full">
                   <div className="flex items-center justify-between mb-3 flex-shrink-0">
                     <div className="flex items-center gap-2">
-                      <Circle className={`h-3 w-3 ${column.color}`} />
+                      <Circle
+                        className="h-3 w-3"
+                        style={{ color: column.color, fill: column.color }}
+                      />
                       <h3 className="text-sm font-medium">{column.label}</h3>
                       <Badge variant="secondary" className="text-xs">
                         {columnTickets.length}

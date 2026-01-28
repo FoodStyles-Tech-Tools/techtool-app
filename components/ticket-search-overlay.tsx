@@ -7,6 +7,8 @@ import { useTickets } from "@/hooks/use-tickets"
 import { Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { TicketStatusIcon } from "@/components/ticket-status-select"
+import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
+import { formatStatusLabel, normalizeStatusKey } from "@/lib/ticket-statuses"
 import { TicketPriorityIcon } from "@/components/ticket-priority-select"
 import { TicketTypeIcon } from "@/components/ticket-type-select"
 
@@ -23,6 +25,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const { data: ticketsData, isLoading } = useTickets()
+  const { statusMap } = useTicketStatuses()
   const deferredQuery = useDeferredValue(searchQuery)
 
   const tickets = useMemo(() => ticketsData || [], [ticketsData])
@@ -178,7 +181,8 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
                         </span>
                         <Badge variant="outline" className="text-xs flex items-center gap-1">
                           <TicketStatusIcon status={ticket.status} />
-                          {ticket.status.replace("_", " ")}
+                          {statusMap.get(normalizeStatusKey(ticket.status))?.label ||
+                            formatStatusLabel(ticket.status)}
                         </Badge>
                         <Badge variant="outline" className="text-xs flex items-center gap-1">
                           <TicketPriorityIcon priority={ticket.priority} />

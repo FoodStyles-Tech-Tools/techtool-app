@@ -8,22 +8,41 @@ interface Toast {
   id: string
   message: string
   type: "success" | "error"
+  duration: number
+}
+
+type ToastOptions = {
+  id?: string
+  duration?: number
 }
 
 let toastId = 0
 const listeners: Array<(toasts: Toast[]) => void> = []
 let toasts: Toast[] = []
 
-function addToast(message: string, type: "success" | "error" = "success") {
-  const id = `toast-${++toastId}`
-  const newToast: Toast = { id, message, type }
+const DEFAULT_DURATIONS: Record<Toast["type"], number> = {
+  success: 1000,
+  error: 3200,
+}
+
+function addToast(
+  message: string,
+  type: "success" | "error" = "success",
+  options?: ToastOptions
+) {
+  const id = options?.id ?? `toast-${++toastId}`
+  const duration = options?.duration ?? DEFAULT_DURATIONS[type]
+  const newToast: Toast = { id, message, type, duration }
   toasts = [...toasts, newToast]
   listeners.forEach((listener) => listener(toasts))
 
-  // Auto remove after 3 seconds
-  setTimeout(() => {
-    removeToast(id)
-  }, 3000)
+  if (duration > 0) {
+    setTimeout(() => {
+      removeToast(id)
+    }, duration)
+  }
+
+  return id
 }
 
 function removeToast(id: string) {
@@ -31,9 +50,47 @@ function removeToast(id: string) {
   listeners.forEach((listener) => listener(toasts))
 }
 
-export function toast(message: string, type: "success" | "error" = "success") {
-  addToast(message, type)
+function updateToast(id: string, message: string, type?: Toast["type"], options?: ToastOptions) {
+  toasts = toasts.map((toast) =>
+    toast.id === id
+      ? {
+          ...toast,
+          message,
+          type: type ?? toast.type,
+          duration: options?.duration ?? toast.duration,
+        }
+      : toast
+  )
+  listeners.forEach((listener) => listener(toasts))
 }
+
+type ToastFn = {
+  (message: string, type?: Toast["type"], options?: ToastOptions): string
+  dismiss: (id?: string) => void
+  update: (id: string, message: string, type?: Toast["type"], options?: ToastOptions) => void
+  success: (message: string, options?: ToastOptions) => string
+  error: (message: string, options?: ToastOptions) => string
+}
+
+export const toast: ToastFn = ((message, type = "success", options) => {
+  return addToast(message, type, options)
+}) as ToastFn
+
+toast.dismiss = (id?: string) => {
+  if (id) {
+    removeToast(id)
+    return
+  }
+  toasts = []
+  listeners.forEach((listener) => listener(toasts))
+}
+
+toast.update = (id: string, message: string, type?: Toast["type"], options?: ToastOptions) => {
+  updateToast(id, message, type, options)
+}
+
+toast.success = (message: string, options?: ToastOptions) => addToast(message, "success", options)
+toast.error = (message: string, options?: ToastOptions) => addToast(message, "error", options)
 
 export function useToast() {
   const [toastList, setToastList] = useState<Toast[]>(toasts)

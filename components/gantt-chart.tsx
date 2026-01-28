@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge"
 import { ChevronRight, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
+import { formatStatusLabel, normalizeStatusKey } from "@/lib/ticket-statuses"
 
 interface GanttItem {
   id: string
@@ -52,17 +54,12 @@ interface GanttChartProps {
   onSprintClick?: (sprintId: string) => void
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  // Ticket status colors
-  open: "bg-gray-400",
-  in_progress: "bg-yellow-500",
-  blocked: "bg-purple-500",
-  cancelled: "bg-red-500",
-  completed: "bg-green-500",
-  // Sprint status colors (as specified)
-  active: "bg-yellow-500",
-  planned: "bg-blue-500",
-  closed: "bg-red-500",
+const SPRINT_STATUS_COLORS: Record<string, string> = {
+  active: "#f59e0b",
+  planned: "#3b82f6",
+  closed: "#ef4444",
+  completed: "#22c55e",
+  cancelled: "#ef4444",
 }
 
 const DAY_WIDTH = 20 // pixels per day
@@ -74,6 +71,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
   const [scrollLeft, setScrollLeft] = useState(0)
   const timelineRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  const { statusMap } = useTicketStatuses()
 
   // Organize tickets into Sprint > Epic > Ticket hierarchy
   const ganttData = useMemo(() => {
@@ -316,11 +314,22 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
     }
   }
 
-  const getStatusColor = (status?: string) => {
-    if (!status) return "bg-gray-300"
-    // Normalize status to lowercase and handle spaces/underscores
-    const normalizedStatus = status.toLowerCase().replace(/\s+/g, '_')
-    return STATUS_COLORS[normalizedStatus] || STATUS_COLORS[status] || "bg-gray-300"
+  const getStatusColor = (status: string | undefined, type: GanttItem["type"]) => {
+    if (!status) return "#d1d5db"
+    const normalizedStatus = normalizeStatusKey(status)
+    if (type === "ticket") {
+      return statusMap.get(normalizedStatus)?.color || "#9ca3af"
+    }
+    return SPRINT_STATUS_COLORS[normalizedStatus] || "#d1d5db"
+  }
+
+  const getStatusLabel = (status: string | undefined, type: GanttItem["type"]) => {
+    if (!status) return ""
+    if (type === "ticket") {
+      const normalizedStatus = normalizeStatusKey(status)
+      return statusMap.get(normalizedStatus)?.label || formatStatusLabel(status)
+    }
+    return formatStatusLabel(status)
   }
 
   const renderListRow = (item: GanttItem): JSX.Element => {
@@ -403,11 +412,11 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
               variant="outline"
               className={cn(
                 "text-xs ml-2 flex-shrink-0 border-0 text-white",
-                item.type === "sprint" && "font-medium",
-                getStatusColor(item.status)
+                item.type === "sprint" && "font-medium"
               )}
+              style={{ backgroundColor: getStatusColor(item.status, item.type) }}
             >
-              {item.status.replace("_", " ")}
+              {getStatusLabel(item.status, item.type)}
             </Badge>
           )}
         </div>
@@ -443,7 +452,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
                 "absolute h-6 rounded-md top-1/2 -translate-y-1/2 flex items-center px-2 text-xs text-white font-medium transition-all",
                 item.type === "sprint" && "opacity-70 hover:opacity-90 shadow-sm",
                 item.type === "epic" && "opacity-85 hover:opacity-100 shadow-sm",
-                item.type === "ticket" && getStatusColor(item.status) + " hover:shadow-md",
+                item.type === "ticket" && "hover:shadow-md",
                 (item.type === "ticket" && onTicketClick) || (item.type === "sprint" && onSprintClick)
                   ? "cursor-pointer"
                   : "cursor-default"
@@ -455,6 +464,8 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
                   ? item.color 
                   : item.type === "sprint"
                   ? "#6366f1"
+                  : item.type === "ticket"
+                  ? getStatusColor(item.status, "ticket")
                   : undefined,
               }}
               onClick={(e) => {
