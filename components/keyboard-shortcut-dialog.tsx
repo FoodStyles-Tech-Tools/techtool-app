@@ -1,9 +1,30 @@
 "use client"
 
-import { Fragment } from "react"
+import { Fragment, useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
-const shortcuts = [
+type ShortcutCombo = string[]
+
+type BaseShortcut =
+  | {
+      action: string
+      description: string
+      combos: ShortcutCombo[]
+    }
+  | {
+      action: string
+      description: string
+      combosMac: ShortcutCombo[]
+      combosWin: ShortcutCombo[]
+    }
+
+type Shortcut = {
+  action: string
+  description: string
+  combos: ShortcutCombo[]
+}
+
+const baseShortcuts: BaseShortcut[] = [
   {
     action: "Open ticket search",
     description: "Quickly find tickets from anywhere in the app.",
@@ -38,6 +59,17 @@ const shortcuts = [
     description: "Closes the active ticket dialog.",
     combos: [["Esc"]],
   },
+  {
+    action: "Send comment",
+    description: "Submit the current comment or reply from the comment box.",
+    combosMac: [["⌘", "Enter"]],
+    combosWin: [["Ctrl", "Enter"]],
+  },
+  {
+    action: "Reply to comment",
+    description: "Hover a comment and press R to open the reply box.",
+    combos: [["R"]],
+  },
 ]
 
 interface KeyboardShortcutDialogProps {
@@ -49,6 +81,26 @@ const keyClass =
   "rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
 
 export function KeyboardShortcutDialog({ open, onOpenChange }: KeyboardShortcutDialogProps) {
+  const [isMac, setIsMac] = useState(false)
+  useEffect(() => {
+    setIsMac(typeof navigator !== "undefined" && /Mac|iPad|iPhone/i.test(navigator.platform))
+  }, [])
+
+  const shortcuts: Shortcut[] = baseShortcuts.map((s) => {
+    if ("combosMac" in s && "combosWin" in s) {
+      return {
+        action: s.action,
+        description: s.description,
+        combos: isMac ? s.combosMac : s.combosWin,
+      }
+    }
+    return {
+      action: s.action,
+      description: s.description,
+      combos: s.combos,
+    }
+  })
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">

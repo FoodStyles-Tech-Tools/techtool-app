@@ -1,102 +1,102 @@
--- Seed data for development
--- Note: Make sure to run migrations first
+-- -- Seed data for development
+-- -- Note: Make sure to run migrations first
 
--- Insert sample admin user (email should match BetterAuth user)
-INSERT INTO users (id, email, name, avatar_url, role)
-VALUES 
-  ('00000000-0000-0000-0000-000000000001', 'admin@example.com', 'Admin User', NULL, 'admin'),
-  ('00000000-0000-0000-0000-000000000002', 'member@example.com', 'Member User', NULL, 'member')
-ON CONFLICT (email) DO NOTHING;
+-- -- Insert sample admin user (email should match BetterAuth user)
+-- INSERT INTO users (id, email, name, avatar_url, role)
+-- VALUES 
+--   ('00000000-0000-0000-0000-000000000001', 'admin@example.com', 'Admin User', NULL, 'admin'),
+--   ('00000000-0000-0000-0000-000000000002', 'member@example.com', 'Member User', NULL, 'member')
+-- ON CONFLICT (email) DO NOTHING;
 
--- Insert sample projects
-INSERT INTO projects (id, name, description, owner_id, status)
-VALUES 
-  (
-    '10000000-0000-0000-0000-000000000001',
-    'Website Redesign',
-    'Complete redesign of the company website with modern UI/UX',
-    '00000000-0000-0000-0000-000000000001',
-    'in_progress'
-  ),
-  (
-    '10000000-0000-0000-0000-000000000002',
-    'API Migration',
-    'Migrate legacy API to new microservices architecture',
-    '00000000-0000-0000-0000-000000000001',
-    'open'
-  ),
-  (
-    '10000000-0000-0000-0000-000000000003',
-    'Mobile App',
-    'Build native mobile app for iOS and Android',
-    '00000000-0000-0000-0000-000000000002',
-    'open'
-  )
-ON CONFLICT DO NOTHING;
+-- -- Insert sample projects
+-- INSERT INTO projects (id, name, description, owner_id, status)
+-- VALUES 
+--   (
+--     '10000000-0000-0000-0000-000000000001',
+--     'Website Redesign',
+--     'Complete redesign of the company website with modern UI/UX',
+--     '00000000-0000-0000-0000-000000000001',
+--     'in_progress'
+--   ),
+--   (
+--     '10000000-0000-0000-0000-000000000002',
+--     'API Migration',
+--     'Migrate legacy API to new microservices architecture',
+--     '00000000-0000-0000-0000-000000000001',
+--     'open'
+--   ),
+--   (
+--     '10000000-0000-0000-0000-000000000003',
+--     'Mobile App',
+--     'Build native mobile app for iOS and Android',
+--     '00000000-0000-0000-0000-000000000002',
+--     'open'
+--   )
+-- ON CONFLICT DO NOTHING;
 
--- Insert sample tickets
-INSERT INTO tickets (id, project_id, title, description, assignee_id, requested_by_id, status, priority)
-VALUES 
-  (
-    '20000000-0000-0000-0000-000000000001',
-    '10000000-0000-0000-0000-000000000001',
-    'Design homepage mockup',
-    'Create initial design mockup for the new homepage layout',
-    '00000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000001',
-    'in_progress',
-    'high'
-  ),
-  (
-    '20000000-0000-0000-0000-000000000002',
-    '10000000-0000-0000-0000-000000000001',
-    'Implement responsive navigation',
-    'Build responsive navigation menu for mobile and desktop',
-    '00000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000001',
-    'todo',
-    'medium'
-  ),
-  (
-    '20000000-0000-0000-0000-000000000003',
-    '10000000-0000-0000-0000-000000000002',
-    'Set up authentication service',
-    'Implement OAuth authentication for the new API',
-    NULL,
-    '00000000-0000-0000-0000-000000000001',
-    'todo',
-    'high'
-  ),
-  (
-    '20000000-0000-0000-0000-000000000004',
-    '10000000-0000-0000-0000-000000000002',
-    'Database migration script',
-    'Create migration script to move data from old database',
-    '00000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000001',
-    'blocked',
-    'urgent'
-  ),
-  (
-    '20000000-0000-0000-0000-000000000005',
-    '10000000-0000-0000-0000-000000000003',
-    'iOS app setup',
-    'Initialize Xcode project and set up development environment',
-    NULL,
-    '00000000-0000-0000-0000-000000000002',
-    'todo',
-    'medium'
-  ),
-  (
-    '20000000-0000-0000-0000-000000000006',
-    '10000000-0000-0000-0000-000000000001',
-    'Add dark mode support',
-    'Implement dark mode toggle and theme switching',
-    '00000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000001',
-    'done',
-    'low'
-  )
-ON CONFLICT DO NOTHING;
+-- -- Insert sample tickets
+-- INSERT INTO tickets (id, project_id, title, description, assignee_id, requested_by_id, status, priority)
+-- VALUES 
+--   (
+--     '20000000-0000-0000-0000-000000000001',
+--     '10000000-0000-0000-0000-000000000001',
+--     'Design homepage mockup',
+--     'Create initial design mockup for the new homepage layout',
+--     '00000000-0000-0000-0000-000000000002',
+--     '00000000-0000-0000-0000-000000000001',
+--     'in_progress',
+--     'high'
+--   ),
+--   (
+--     '20000000-0000-0000-0000-000000000002',
+--     '10000000-0000-0000-0000-000000000001',
+--     'Implement responsive navigation',
+--     'Build responsive navigation menu for mobile and desktop',
+--     '00000000-0000-0000-0000-000000000002',
+--     '00000000-0000-0000-0000-000000000001',
+--     'todo',
+--     'medium'
+--   ),
+--   (
+--     '20000000-0000-0000-0000-000000000003',
+--     '10000000-0000-0000-0000-000000000002',
+--     'Set up authentication service',
+--     'Implement OAuth authentication for the new API',
+--     NULL,
+--     '00000000-0000-0000-0000-000000000001',
+--     'todo',
+--     'high'
+--   ),
+--   (
+--     '20000000-0000-0000-0000-000000000004',
+--     '10000000-0000-0000-0000-000000000002',
+--     'Database migration script',
+--     'Create migration script to move data from old database',
+--     '00000000-0000-0000-0000-000000000002',
+--     '00000000-0000-0000-0000-000000000001',
+--     'blocked',
+--     'urgent'
+--   ),
+--   (
+--     '20000000-0000-0000-0000-000000000005',
+--     '10000000-0000-0000-0000-000000000003',
+--     'iOS app setup',
+--     'Initialize Xcode project and set up development environment',
+--     NULL,
+--     '00000000-0000-0000-0000-000000000002',
+--     'todo',
+--     'medium'
+--   ),
+--   (
+--     '20000000-0000-0000-0000-000000000006',
+--     '10000000-0000-0000-0000-000000000001',
+--     'Add dark mode support',
+--     'Implement dark mode toggle and theme switching',
+--     '00000000-0000-0000-0000-000000000002',
+--     '00000000-0000-0000-0000-000000000001',
+--     'done',
+--     'low'
+--   )
+-- ON CONFLICT DO NOTHING;
 
 

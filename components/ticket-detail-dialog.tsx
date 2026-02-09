@@ -17,6 +17,7 @@ import { useProjects } from "@/hooks/use-projects"
 import { useEpics } from "@/hooks/use-epics"
 import { useSprints } from "@/hooks/use-sprints"
 import { Subtasks } from "@/components/subtasks"
+import { TicketComments } from "@/components/ticket-comments"
 import { useTicket, useUpdateTicket } from "@/hooks/use-tickets"
 import { useUsers } from "@/hooks/use-users"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
@@ -830,6 +831,8 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                     <Subtasks ticketId={ticketId} projectName={ticket.project?.name || null} displayId={ticket.display_id} />
                   </CardContent>
                 </Card>
+
+                <TicketComments ticketId={ticketId} displayId={ticket.display_id} />
               </div>
 
               <div>

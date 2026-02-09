@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { LayoutDashboard, FolderKanban, Package, Ticket, Keyboard, Clock, Settings } from "lucide-react"
+import { CommentNotificationsDropdown } from "@/components/comment-notifications-dropdown"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -111,8 +112,9 @@ export function Sidebar() {
     <aside className="flex h-screen w-60 flex-col border-r bg-muted">
       <div className="flex-1 overflow-y-auto">
         <div className="p-4">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-lg">TechTool</span>
+            <CommentNotificationsDropdown />
           </div>
         </div>
         <nav className="space-y-0.5 px-3">

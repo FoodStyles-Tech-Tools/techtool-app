@@ -13,6 +13,30 @@ export async function requireAuth() {
   return session
 }
 
+/** Get current user's id from users table (by session email). Use in API routes. */
+export async function getCurrentUserId(): Promise<string | null> {
+  const session = await requireAuth()
+  const { createServerClient } = await import("./supabase")
+  const supabase = createServerClient()
+  const { data: user } = await supabase
+    .from("users")
+    .select("id")
+    .eq("email", session.user.email)
+    .single()
+  return user?.id ?? null
+}
+
+/** Server Supabase client with RLS user context set. Use for comment/notification APIs so RLS sees the current user. */
+export async function getSupabaseWithUserContext(): Promise<{ supabase: Awaited<ReturnType<typeof import("./supabase").createServerClient>>; userId: string }> {
+  const session = await requireAuth()
+  const { createServerClient } = await import("./supabase")
+  const supabase = createServerClient()
+  await supabase.rpc("set_user_context", { user_email: session.user.email ?? "" })
+  const { data: user } = await supabase.from("users").select("id").eq("email", session.user.email).single()
+  if (!user?.id) throw new Error("User not found")
+  return { supabase, userId: user.id }
+}
+
 export async function requireAdmin() {
   const session = await requireAuth()
   
