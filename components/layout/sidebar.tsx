@@ -67,7 +67,8 @@ export function Sidebar() {
   const { data: session } = useSession()
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
-  const { hasPermission } = usePermissions()
+  const { flags } = usePermissions()
+  const canOpenSettings = flags?.canAccessSettings ?? false
   const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()
 
   const handleSignOut = async () => {
@@ -121,25 +122,28 @@ export function Sidebar() {
           {navItems
             .filter((item) => {
               if (item.href === "/settings") {
-                return (
-                  hasPermission("users", "view") ||
-                  hasPermission("roles", "view") ||
-                  hasPermission("roles", "edit") ||
-                  hasPermission("roles", "create") ||
-                  hasPermission("roles", "manage") ||
-                  hasPermission("status", "manage") ||
-                  hasPermission("settings", "manage")
-                )
+                return canOpenSettings
               }
 
-              // Always show if no permission required
               if (!item.permission) return true
-              
-              // Check if user has the required permission
-              return hasPermission(
-                item.permission.resource as any,
-                item.permission.action as any
-              )
+
+              if (item.href === "/projects") {
+                return flags?.canViewProjects ?? false
+              }
+
+              if (item.href === "/assets") {
+                return flags?.canViewAssets ?? false
+              }
+
+              if (item.href === "/clockify") {
+                return flags?.canViewClockify ?? false
+              }
+
+              if (item.href === "/tickets") {
+                return flags?.canViewTickets ?? false
+              }
+
+              return true
             })
             .map((item) => {
               const Icon = item.icon
@@ -195,9 +199,11 @@ export function Sidebar() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
-              Preferences
-            </DropdownMenuItem>
+            {canOpenSettings && (
+              <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                Preferences
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleSignOut}>
               Sign out
@@ -219,7 +225,9 @@ export function Sidebar() {
           </div>
         </div>
       </div>
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      {canOpenSettings && (
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      )}
       <KeyboardShortcutDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </aside>
   )

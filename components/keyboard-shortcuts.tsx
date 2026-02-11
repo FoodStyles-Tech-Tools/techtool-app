@@ -22,10 +22,10 @@ export function KeyboardShortcuts() {
   const [isUserSearchOverlayOpen, setIsUserSearchOverlayOpen] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
-  const { hasPermission } = usePermissions()
+  const { flags } = usePermissions()
   const { data: usersData } = useUsers()
   const { departments } = useDepartments()
-  const canCreateProjects = hasPermission("projects", "create")
+  const canCreateProjects = flags?.canCreateProjects ?? false
   const isUsersPage = pathname === "/users"
 
   useEffect(() => {

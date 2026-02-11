@@ -15,29 +15,19 @@ type SettingsTabsClientProps = {
   users: User[]
   roles: Role[]
   statuses: TicketStatus[]
+  allowedTabs: Array<{ key: "users" | "roles" | "status"; label: string }>
 }
 
-const SETTINGS_TABS = [
-  {
-    key: "users",
-    label: "Users",
-  },
-  {
-    key: "roles",
-    label: "Roles",
-  },
-  {
-    key: "status",
-    label: "Status",
-  },
-]
-
-export default function SettingsTabsClient({ users, roles, statuses }: SettingsTabsClientProps) {
+export default function SettingsTabsClient({
+  users,
+  roles,
+  statuses,
+  allowedTabs,
+}: SettingsTabsClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const requestedTab = searchParams.get("tab") || "users"
 
-  const allowedTabs = useMemo(() => SETTINGS_TABS, [])
   const preferredTab = useMemo(() => allowedTabs[0], [allowedTabs])
   const activeTab = useMemo(
     () => allowedTabs.find((tab) => tab.key === requestedTab) || preferredTab,
@@ -45,10 +35,24 @@ export default function SettingsTabsClient({ users, roles, statuses }: SettingsT
   )
 
   useEffect(() => {
+    if (!activeTab) return
     if (activeTab.key !== requestedTab) {
       router.replace(`/settings?tab=${activeTab.key}`)
     }
   }, [activeTab, requestedTab, router])
+
+  if (!allowedTabs.length || !activeTab) {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-2xl">Settings</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            No settings sections are available for your account.
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

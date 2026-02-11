@@ -44,7 +44,10 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
-  const { hasPermission } = usePermissions()
+  const { flags } = usePermissions()
+  const canCreateUsers = flags?.canCreateUsers ?? false
+  const canEditUsers = flags?.canEditUsers ?? false
+  const canDeleteUsers = flags?.canDeleteUsers ?? false
 
   useEffect(() => {
     setUsers(initialUsers)
@@ -131,7 +134,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
             Manage users and their roles
           </p>
         </div>
-        {hasPermission("users", "create") && (
+        {canCreateUsers && (
           <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
               <Button onClick={handleAddUser}>
@@ -224,9 +227,9 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
                     {user.created_at ? new Date(user.created_at).toLocaleDateString() : "-"}
                   </TableCell>
                   <TableCell className="py-2 text-right">
-                    {(hasPermission("users", "edit") || hasPermission("users", "delete")) && (
+                    {(canEditUsers || canDeleteUsers) && (
                       <div className="flex justify-end space-x-2">
-                        {hasPermission("users", "edit") && (
+                        {canEditUsers && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -235,7 +238,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
                             <Pencil className="h-4 w-4" />
                           </Button>
                         )}
-                        {hasPermission("users", "delete") && (
+                        {canDeleteUsers && (
                           <Button
                             variant="ghost"
                             size="icon"

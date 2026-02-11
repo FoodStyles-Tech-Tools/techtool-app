@@ -73,7 +73,7 @@ const GlobalTicketDialog = dynamic(
 
 export default function TicketsPage() {
   // Require view permission for tickets - redirects if not authorized
-  const { hasPermission: canView, loading: permissionLoading } = useRequirePermission("tickets", "view")
+  const { canAccess: canView, loading: permissionLoading } = useRequirePermission("tickets", "view")
   const [searchQuery, setSearchQuery] = useState("")
   const deferredSearchQuery = useDeferredValue(searchQuery)
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -93,7 +93,7 @@ export default function TicketsPage() {
   const [pendingStatusChange, setPendingStatusChange] = useState<{ ticketId: string; newStatus: string; body: any } | null>(null)
   const queryClient = useQueryClient()
   
-  const { user, hasPermission } = usePermissions()
+  const { user, flags } = usePermissions()
   const createTicket = useCreateTicket()
   const { preferences } = useUserPreferences()
   const [view, setView] = useState<"table" | "kanban">(preferences.tickets_view || "table")
@@ -186,7 +186,8 @@ export default function TicketsPage() {
   }, [ticketStatuses])
   // Only show loading if we have no data at all
   const loading = !ticketsData && ticketsLoading
-  const canCreateTickets = hasPermission("tickets", "create")
+  const canCreateTickets = flags?.canCreateTickets ?? false
+  const canEditTickets = flags?.canEditTickets ?? false
 
   const assigneeEligibleUsers = useMemo(
     () => users.filter((user) =>
@@ -399,7 +400,7 @@ export default function TicketsPage() {
       if (hasOpenDialog) return
 
       // Don't trigger if already adding or no permission
-      if (isAddingNew || !hasPermission("tickets", "create") || filteredTickets.length === 0) return
+      if (isAddingNew || !canCreateTickets || filteredTickets.length === 0) return
 
       e.preventDefault()
       setIsAddingNew(true)
@@ -410,7 +411,7 @@ export default function TicketsPage() {
 
     window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
     return () => window.removeEventListener("keydown", handleKeyDown, true)
-  }, [isAddingNew, hasPermission, filteredTickets.length, view, defaultStatusKey])
+  }, [isAddingNew, canCreateTickets, filteredTickets.length, view, defaultStatusKey])
 
   // Memoize callbacks before early return to maintain hook order
   const handleCopyTicketLabel = useCallback((ticket: Ticket) => {
@@ -539,10 +540,10 @@ export default function TicketsPage() {
 
   // Drag and drop handlers for kanban
   const handleDragStart = useCallback((e: React.DragEvent, ticketId: string) => {
-    if (!hasPermission("tickets", "edit")) return
+    if (!canEditTickets) return
     setDraggedTicket(ticketId)
     e.dataTransfer.effectAllowed = "move"
-  }, [hasPermission])
+  }, [canEditTickets])
 
   const handleDragOver = useCallback((e: React.DragEvent, columnId: string) => {
     if (!draggedTicket) return
@@ -842,7 +843,7 @@ export default function TicketsPage() {
                         {columnTickets.length}
                       </Badge>
                     </div>
-                    {hasPermission("tickets", "create") && !isAddingNew && (
+                    {canCreateTickets && !isAddingNew && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -897,7 +898,7 @@ export default function TicketsPage() {
                             "p-3 cursor-pointer transition-colors border shadow-sm",
                             dueDateDisplay.highlightClassName ?? "bg-background hover:bg-muted/50"
                           )}
-                          draggable={hasPermission("tickets", "edit")}
+                          draggable={canEditTickets}
                           onDragStart={(e) => handleDragStart(e, ticket.id)}
                           onClick={() => {
                             setSelectedTicketId(ticket.id)
@@ -1031,7 +1032,7 @@ export default function TicketsPage() {
                   updateTicketField={updateTicketField}
                   updatingFields={updatingFields}
                   excludeDone={excludeDone}
-                  canEdit={hasPermission("tickets", "edit")}
+                  canEdit={canEditTickets}
                 />
               ))}
               </tbody>
@@ -1042,7 +1043,7 @@ export default function TicketsPage() {
               Showing {startIndex + 1} to {Math.min(endIndex, sortedTickets.length)} of {sortedTickets.length} tickets
             </div>
             <div className="flex items-center space-x-2">
-              {hasPermission("tickets", "create") && !isAddingNew && filteredTickets.length > 0 && (
+              {canCreateTickets && !isAddingNew && filteredTickets.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"

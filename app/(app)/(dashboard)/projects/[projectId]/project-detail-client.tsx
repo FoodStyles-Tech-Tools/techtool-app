@@ -101,7 +101,10 @@ export default function ProjectDetailClient() {
   const createEpic = useCreateEpic()
   const updateTicket = useUpdateTicket()
   const updateProject = useUpdateProject()
-  const { user, hasPermission } = usePermissions()
+  const { user, flags } = usePermissions()
+  const canCreateTickets = flags?.canCreateTickets ?? false
+  const canEditTickets = flags?.canEditTickets ?? false
+  const canEditProjects = flags?.canEditProjects ?? false
   const createTicket = useCreateTicket()
   const queryClient = useQueryClient()
   const { preferences } = useUserPreferences()
@@ -235,7 +238,7 @@ export default function ProjectDetailClient() {
       if (hasOpenDialog) return
 
       // Don't trigger if already adding or no permission
-      if (isAddingNew || !hasPermission("tickets", "create")) return
+      if (isAddingNew || !canCreateTickets) return
 
       e.preventDefault()
       setIsAddingNew(true)
@@ -245,7 +248,7 @@ export default function ProjectDetailClient() {
 
     window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
     return () => window.removeEventListener("keydown", handleKeyDown, true)
-  }, [isAddingNew, hasPermission, defaultStatusKey])
+  }, [isAddingNew, canCreateTickets, defaultStatusKey])
 
   // Derive data values (must be before any hooks that use them)
   const project = projectData?.project || null
@@ -377,7 +380,7 @@ export default function ProjectDetailClient() {
   }, [filteredTickets, epics, statusKeys])
 
   const handleDragStart = (e: React.DragEvent, ticketId: string) => {
-    if (!hasPermission("tickets", "edit")) {
+    if (!canEditTickets) {
       e.preventDefault()
       return
     }
@@ -1110,7 +1113,7 @@ export default function ProjectDetailClient() {
               </Label>
             </>
           )}
-          {hasPermission("projects", "edit") && (
+          {canEditProjects && (
             <>
               <Button
                 variant="outline"
@@ -1145,7 +1148,7 @@ export default function ProjectDetailClient() {
             <Badge variant="outline" className="text-xs">
               {project.links?.length || 0} link{project.links?.length === 1 ? "" : "s"}
             </Badge>
-            {hasPermission("projects", "edit") && (
+            {canEditProjects && (
               <Button
                 type="button"
                 variant="ghost"
@@ -1260,7 +1263,7 @@ export default function ProjectDetailClient() {
                       </div>
                       <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
                     </a>
-                    {hasPermission("projects", "edit") && (
+                    {canEditProjects && (
                       <div className="flex items-center gap-1">
                         <Button
                           type="button"
@@ -1469,7 +1472,7 @@ export default function ProjectDetailClient() {
                                       key={ticket.id}
                                       data-ticket-id={ticket.id}
                                       className="p-3 bg-background hover:bg-muted/50 cursor-pointer transition-colors border shadow-sm"
-                                      draggable={hasPermission("tickets", "edit")}
+                                      draggable={canEditTickets}
                                       onDragStart={(e) => handleDragStart(e, ticket.id)}
                                       onClick={() => setSelectedTicketId(ticket.id)}
                                     >
@@ -1548,7 +1551,7 @@ export default function ProjectDetailClient() {
                           {columnTickets.length}
                         </Badge>
                       </div>
-                      {hasPermission("tickets", "create") && !isAddingNew && (
+                      {canCreateTickets && !isAddingNew && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1735,7 +1738,7 @@ export default function ProjectDetailClient() {
                       {columnTickets.map((ticket) => {
                         const isUpdating = Object.keys(updatingFields).some(key => key.startsWith(`${ticket.id}-`))
                         const isDroppingThis = droppingTicketId === ticket.id
-                        const canDrag = hasPermission("tickets", "edit") && !isUpdating && !isDroppingThis
+                        const canDrag = canEditTickets && !isUpdating && !isDroppingThis
                         
                         return (
                           <Card

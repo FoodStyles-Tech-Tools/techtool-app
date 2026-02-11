@@ -1,5 +1,4 @@
-import { Sidebar } from "./sidebar"
-import { PermissionsBootstrap } from "@/components/permissions-bootstrap"
+"use client"
 
 type PermissionsBootstrapPayload = {
   user: {
@@ -39,23 +38,23 @@ type PermissionsBootstrapPayload = {
   ts: number
 }
 
-export function AppShell({
-  children,
-  permissionsBootstrap,
-}: {
-  children: React.ReactNode
-  permissionsBootstrap?: PermissionsBootstrapPayload
-}) {
-  return (
-    <div className="flex h-screen overflow-hidden">
-      {permissionsBootstrap ? (
-        <PermissionsBootstrap payload={permissionsBootstrap} />
-      ) : null}
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="w-full px-4 py-4">{children}</div>
-      </main>
-    </div>
-  )
+const CACHE_KEY = "tt.permissions"
+
+declare global {
+  interface Window {
+    __PERMISSIONS_CACHE__?: PermissionsBootstrapPayload
+  }
 }
 
+export function PermissionsBootstrap({ payload }: { payload: PermissionsBootstrapPayload }) {
+  if (typeof window !== "undefined") {
+    window.__PERMISSIONS_CACHE__ = payload
+    try {
+      window.localStorage.setItem(CACHE_KEY, JSON.stringify(payload))
+    } catch {
+      // ignore cache write failures
+    }
+  }
+
+  return null
+}

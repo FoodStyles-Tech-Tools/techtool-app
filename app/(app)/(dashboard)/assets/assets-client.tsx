@@ -43,8 +43,8 @@ type AssetsClientProps = {
 
 export default function AssetsClient({ initialAssets, users }: AssetsClientProps) {
   const router = useRouter()
-  const { hasPermission, user: currentUser } = usePermissions()
-  const canManageAssets = hasPermission("assets", "manage")
+  const { flags, user: currentUser } = usePermissions()
+  const canManageAssets = flags?.canManageAssets ?? false
   const deleteAsset = useDeleteAsset()
 
   const [assets, setAssets] = useState<Asset[]>(initialAssets)
@@ -55,9 +55,9 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null)
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null)
 
-  const canCreateAssets = hasPermission("assets", "create") || hasPermission("assets", "manage")
-  const canEditAssets = hasPermission("assets", "edit") || hasPermission("assets", "manage")
-  const canDeleteAssets = hasPermission("assets", "delete") || hasPermission("assets", "manage")
+  const canCreateAssets = flags?.canCreateAssets ?? false
+  const canEditAssets = flags?.canEditAssets ?? false
+  const canDeleteAssets = flags?.canDeleteAssets ?? false
 
   const handleEdit = (asset: Asset) => {
     setEditingAsset(asset)

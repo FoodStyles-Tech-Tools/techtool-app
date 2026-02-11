@@ -143,10 +143,11 @@ const getEntryId = (entry: any) => {
 
 export default function ClockifyClient() {
   const queryClient = useQueryClient()
-  const { hasPermission, user: currentUser } = usePermissions()
+  const { flags, user: currentUser } = usePermissions()
   const isAdmin = currentUser?.role?.toLowerCase() === "admin"
-  const canManageSettings = hasPermission("clockify", "manage")
-  const canManageSessions = hasPermission("clockify", "manage")
+  const canManageClockify = flags?.canManageClockify ?? false
+  const canManageSettings = canManageClockify
+  const canManageSessions = canManageClockify
   const searchParams = useSearchParams()
 
   const [weekOffset, setWeekOffset] = useState(1)
@@ -607,19 +608,21 @@ export default function ClockifyClient() {
             Review weekly detailed reports and audit fetch sessions.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            onClick={handleReuploadReport}
-            disabled={!isAdmin || createSession.isPending}
-          >
-            Re-upload
-          </Button>
-          <Button onClick={handleFetchReport} disabled={!isAdmin || createSession.isPending}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {createSession.isPending ? "Fetching..." : "Fetch Report"}
-          </Button>
-        </div>
+        {isAdmin && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={handleReuploadReport}
+              disabled={createSession.isPending}
+            >
+              Re-upload
+            </Button>
+            <Button onClick={handleFetchReport} disabled={createSession.isPending}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              {createSession.isPending ? "Fetching..." : "Fetch Report"}
+            </Button>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
@@ -659,105 +662,103 @@ export default function ClockifyClient() {
           </CardContent>
         </Card>
 
+        {canManageSettings && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Schedule</CardTitle>
+              <CardDescription>Select how often the report should run.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select
+                value={settings?.schedule || "weekly"}
+                onValueChange={handleScheduleChange}
+                disabled={settingsLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select schedule" />
+                </SelectTrigger>
+                <SelectContent>
+                  {scheduleOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {canManageSessions && (
         <Card>
           <CardHeader>
-            <CardTitle>Schedule</CardTitle>
-            <CardDescription>Select how often the report should run.</CardDescription>
+            <CardTitle>Audit Log</CardTitle>
+            <CardDescription>Every time a report is fetched, a session is saved here.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Select
-              value={settings?.schedule || "weekly"}
-              onValueChange={handleScheduleChange}
-              disabled={!canManageSettings || settingsLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select schedule" />
-              </SelectTrigger>
-              <SelectContent>
-                {scheduleOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {!canManageSettings && (
-              <p className="text-xs text-muted-foreground mt-2">
-                You do not have permission to edit schedule settings.
-              </p>
+            {isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading sessions...</p>
+            ) : sessions.length === 0 ? (
+              <div className="rounded-lg border p-6 text-center">
+                <p className="text-sm text-muted-foreground">No report sessions yet.</p>
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="h-9 py-2 text-xs">Fetched At</TableHead>
+                      <TableHead className="h-9 py-2 text-xs">Range</TableHead>
+                      <TableHead className="h-9 py-2 text-xs">Status</TableHead>
+                      <TableHead className="h-9 py-2 text-xs text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {sessions.map((session) => (
+                      <TableRow key={session.id}>
+                        <TableCell className="py-2 text-sm">
+                          {new Date(session.fetched_at).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="py-2 text-sm">
+                          {formatRangeLabel(session.start_date, session.end_date)}
+                        </TableCell>
+                        <TableCell className="py-2">
+                          <Badge variant={session.status === "success" ? "default" : "destructive"}>
+                            {session.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2 text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button size="icon" variant="ghost" asChild>
+                              <Link
+                                href={`/clockify?sessionId=${session.id}`}
+                                aria-label="View report session"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDeleteSession(session.id)}
+                              aria-label="Delete report session"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
-      </div>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Audit Log</CardTitle>
-          <CardDescription>Every time a report is fetched, a session is saved here.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading sessions...</p>
-          ) : sessions.length === 0 ? (
-            <div className="rounded-lg border p-6 text-center">
-              <p className="text-sm text-muted-foreground">No report sessions yet.</p>
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-9 py-2 text-xs">Fetched At</TableHead>
-                    <TableHead className="h-9 py-2 text-xs">Range</TableHead>
-                    <TableHead className="h-9 py-2 text-xs">Status</TableHead>
-                    <TableHead className="h-9 py-2 text-xs text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sessions.map((session) => (
-                    <TableRow key={session.id}>
-                      <TableCell className="py-2 text-sm">
-                        {new Date(session.fetched_at).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="py-2 text-sm">
-                        {formatRangeLabel(session.start_date, session.end_date)}
-                      </TableCell>
-                      <TableCell className="py-2">
-                        <Badge variant={session.status === "success" ? "default" : "destructive"}>
-                          {session.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-2 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button size="icon" variant="ghost" asChild>
-                            <Link
-                              href={`/clockify?sessionId=${session.id}`}
-                              aria-label="View report session"
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Link>
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleDeleteSession(session.id)}
-                            disabled={!canManageSessions}
-                            aria-label="Delete report session"
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {selectedSession && (
+      {selectedSession && canManageSessions && (
         <Card>
           <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -822,24 +823,26 @@ export default function ClockifyClient() {
                         Total duration: {totalDurationHours} hrs
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSmartReconcile}
-                        disabled={!canManageSessions || isReconciling}
-                      >
-                        {isReconciling ? "Reconciling..." : "Smart reconcile"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSaveReconciliation}
-                        disabled={!canManageSessions || isSavingReconcile}
-                      >
-                        {isSavingReconcile ? "Saving..." : "Save reconciliation"}
-                      </Button>
-                    </div>
+                    {canManageSessions && (
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSmartReconcile}
+                          disabled={isReconciling}
+                        >
+                          {isReconciling ? "Reconciling..." : "Smart reconcile"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSaveReconciliation}
+                          disabled={isSavingReconcile}
+                        >
+                          {isSavingReconcile ? "Saving..." : "Save reconciliation"}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                   {reportEntries.length > 0 ? (
                     <div className="rounded-md border max-h-[60vh] overflow-y-auto">

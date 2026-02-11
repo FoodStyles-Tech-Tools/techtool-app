@@ -106,7 +106,7 @@ export default function ProjectsClient({
 }: ProjectsClientProps) {
   const router = useRouter()
   // All hooks must be called before any conditional returns
-  const { hasPermission, user: currentUser } = usePermissions()
+  const { flags, user: currentUser } = usePermissions()
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()
   
@@ -141,8 +141,8 @@ export default function ProjectsClient({
     [initialUsers]
   )
   const loading = false
-  const canCreateProjects = hasPermission("projects", "create")
-  const canEditProjects = hasPermission("projects", "edit")
+  const canCreateProjects = flags?.canCreateProjects ?? false
+  const canEditProjects = flags?.canEditProjects ?? false
 
   // Calculate ticket stats per project
   const projectStats = projectTicketStats

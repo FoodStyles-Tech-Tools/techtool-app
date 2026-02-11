@@ -17,7 +17,7 @@ const NO_PROJECT_VALUE = "__no_project__"
 
 export function GlobalTicketDialog({ open, onOpenChange }: GlobalTicketDialogProps) {
   const pathname = usePathname()
-  const { hasPermission } = usePermissions()
+  const { flags } = usePermissions()
   const [projectId, setProjectId] = useState<string | null>(null)
   const [selectedProjectId, setSelectedProjectId] = useState<string>(NO_PROJECT_VALUE)
 
@@ -50,7 +50,7 @@ export function GlobalTicketDialog({ open, onOpenChange }: GlobalTicketDialogPro
   const { data: projectsData } = useProjects()
 
   const projects = projectsData || []
-  const canCreate = hasPermission("tickets", "create")
+  const canCreate = flags?.canCreateTickets ?? false
 
   // Don't show dialog if user doesn't have permission
   if (!canCreate) {

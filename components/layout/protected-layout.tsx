@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
 import { AppShell } from "./app-shell"
+import { buildPermissionFlags, getCurrentUserPermissions } from "@/lib/server/permissions"
 
 /**
  * Server-side protected layout. Checks session before rendering AppShell;
@@ -18,5 +19,13 @@ export default async function ProtectedLayout({
   if (!session) {
     redirect("/signin")
   }
-  return <AppShell>{children}</AppShell>
+  const permissionsUser = await getCurrentUserPermissions(session)
+  const permissionFlags = buildPermissionFlags(permissionsUser?.permissions ?? [])
+  const bootstrapPayload = {
+    user: permissionsUser,
+    flags: permissionFlags,
+    ts: Date.now(),
+  }
+
+  return <AppShell permissionsBootstrap={bootstrapPayload}>{children}</AppShell>
 }

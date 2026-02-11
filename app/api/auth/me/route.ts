@@ -42,7 +42,7 @@ export async function GET() {
     
     // Admin role has all permissions (case-insensitive check)
     if (user.role?.toLowerCase() === "admin") {
-      const allResources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify"]
+      const allResources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status"]
       const allActions = ["view", "create", "edit", "delete", "manage"]
       permissions = allResources.flatMap((resource) =>
         allActions.map((action) => ({ resource, action }))

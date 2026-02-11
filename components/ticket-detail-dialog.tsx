@@ -67,7 +67,15 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const NO_EPIC_VALUE = "no_epic"
   const { departments } = useDepartments()
   const { data: projectsData } = useProjects()
-  const { hasPermission } = usePermissions()
+  const { flags } = usePermissions()
+  const canEditTickets = flags?.canEditTickets ?? false
+  const ensureCanEdit = () => {
+    if (!canEditTickets) {
+      toast("You do not have permission to edit tickets.", "error")
+      return false
+    }
+    return true
+  }
   
   const projects = projectsData || []
 
@@ -144,6 +152,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleAddLink = async () => {
+    if (!ensureCanEdit()) return
     if (!ticket || !newLinkUrl.trim()) return
     
     try {
@@ -166,6 +175,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleUpdateLink = async (index: number) => {
+    if (!ensureCanEdit()) return
     if (!ticket || !newLinkUrl.trim()) return
     
     try {
@@ -188,6 +198,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleRemoveLink = async (index: number) => {
+    if (!ensureCanEdit()) return
     if (!ticket) return
     
     try {
@@ -201,6 +212,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleStatusChange = async (newStatus: string) => {
+    if (!ensureCanEdit()) return
     if (!ticket) return
     
     // If changing to cancelled, prompt for reason
@@ -256,6 +268,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleCancelReasonSubmit = async () => {
+    if (!ensureCanEdit()) return
     if (!cancelReason.trim()) {
       toast("Please provide a reason for cancellation", "error")
       return
@@ -292,14 +305,17 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleTypeChange = (newType: string) => {
+    if (!ensureCanEdit()) return
     updateTicketWithToast({ type: newType }, "Type updated", "type")
   }
 
   const handlePriorityChange = (newPriority: string) => {
+    if (!ensureCanEdit()) return
     updateTicketWithToast({ priority: newPriority }, "Priority updated", "priority")
   }
 
   const handleDueDateChange = (value: Date | null) => {
+    if (!ensureCanEdit()) return
     updateTicketWithToast(
       { due_date: value ? toUTCISOStringPreserveLocal(value) : null },
       value ? "Due date updated" : "Due date cleared",
@@ -308,6 +324,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleDepartmentChange = (newDepartmentId: string) => {
+    if (!ensureCanEdit()) return
     updateTicketWithToast(
       { department_id: newDepartmentId === NO_DEPARTMENT_VALUE ? null : newDepartmentId },
       "Department updated",
@@ -316,6 +333,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleEpicChange = (newEpicId: string | null) => {
+    if (!ensureCanEdit()) return
     updateTicketWithToast(
       { epic_id: newEpicId },
       "Epic updated",
@@ -324,6 +342,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleSprintChange = (newSprintId: string | null) => {
+    if (!ensureCanEdit()) return
     updateTicketWithToast(
       { sprint_id: newSprintId },
       "Sprint updated",
@@ -332,6 +351,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleProjectChange = (newProjectId: string) => {
+    if (!ensureCanEdit()) return
     updateTicketWithToast(
       { project_id: newProjectId === NO_PROJECT_VALUE ? null : newProjectId },
       "Project updated",
@@ -340,6 +360,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleAssigneeChange = async (newAssigneeId: string | null) => {
+    if (!ensureCanEdit()) return
     if (!ticket) return
     
     const previousAssigneeId = (ticket as any).assignee_id
@@ -360,6 +381,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleRequestedByChange = (newRequestedById: string) => {
+    if (!ensureCanEdit()) return
     if (!newRequestedById) {
       toast("Requested by cannot be empty", "error")
       return
@@ -368,6 +390,10 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleTitleSave = async () => {
+    if (!ensureCanEdit()) {
+      setIsEditingTitle(false)
+      return
+    }
     if (!ticket) return
     if (titleValue.trim() === ticket.title) {
       setIsEditingTitle(false)
@@ -378,6 +404,10 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleDescriptionSave = async () => {
+    if (!ensureCanEdit()) {
+      setIsEditingDescription(false)
+      return
+    }
     if (!ticket) return
     if (descriptionValue === (ticket.description || "")) {
       setIsEditingDescription(false)
@@ -405,6 +435,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleTimestampChange = async (field: "created_at" | "assigned_at" | "started_at" | "completed_at", value: Date | null) => {
+    if (!ensureCanEdit()) return
     if (!ticket || !ticketId) return
     
     // Validate timestamp order before sending
@@ -586,7 +617,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                 <TicketStatusSelect
                   value={ticket.status}
                   onValueChange={handleStatusChange}
-                  disabled={!hasPermission("tickets", "edit") || updatingFields["status"]}
+                  disabled={!canEditTickets || updatingFields["status"]}
                   triggerClassName="h-7 text-xs"
                 />
               )}
@@ -611,14 +642,17 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         onBlur={handleTitleSave}
                         onKeyDown={handleTitleKeyDown}
                         className="text-2xl font-semibold border-2"
-                        disabled={!hasPermission("tickets", "edit")}
+                        disabled={!canEditTickets}
                         autoFocus
                       />
                     ) : (
                       <h1
-                        className="text-3xl font-bold cursor-pointer hover:bg-muted/50 -mx-3 px-3 py-2.5 rounded-md transition-colors leading-tight"
+                        className={[
+                          "text-3xl font-bold -mx-3 px-3 py-2.5 rounded-md transition-colors leading-tight",
+                          canEditTickets ? "cursor-pointer hover:bg-muted/50" : ""
+                        ].join(" ")}
                         onClick={() => {
-                          if (hasPermission("tickets", "edit")) {
+                          if (canEditTickets) {
                             setIsEditingTitle(true)
                           }
                         }}
@@ -636,15 +670,18 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onBlur={handleDescriptionSave}
                           onKeyDown={handleDescriptionKeyDown}
                           className="min-h-[180px] text-sm border-2"
-                          disabled={!hasPermission("tickets", "edit")}
+                          disabled={!canEditTickets}
                           autoFocus
                         />
                       </div>
                     ) : (
                       <div
-                        className="space-y-2.5 cursor-pointer hover:bg-muted/50 -mx-3 px-3 py-3 rounded-md transition-colors mt-4"
+                        className={[
+                          "space-y-2.5 -mx-3 px-3 py-3 rounded-md transition-colors mt-4",
+                          canEditTickets ? "cursor-pointer hover:bg-muted/50" : ""
+                        ].join(" ")}
                         onClick={() => {
-                          if (hasPermission("tickets", "edit")) {
+                          if (canEditTickets) {
                             setIsEditingDescription(true)
                           }
                         }}
@@ -667,7 +704,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                               {ticket.links.length} link{ticket.links.length === 1 ? "" : "s"}
                             </Badge>
                           ) : null}
-                          {hasPermission("tickets", "edit") && (
+                          {canEditTickets && (
                             <Button
                               type="button"
                               variant="ghost"
@@ -784,7 +821,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                                     </div>
                                     <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
                                   </a>
-                                  {hasPermission("tickets", "edit") && (
+                                  {canEditTickets && (
                                     <div className="flex items-center gap-1">
                                       <Button
                                         type="button"
@@ -850,7 +887,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onValueChange={(value) =>
                             handleAssigneeChange(value === UNASSIGNED_VALUE ? null : value)
                           }
-                          disabled={!hasPermission("tickets", "edit") || updatingFields["assignee_id"]}
+                          disabled={!canEditTickets || updatingFields["assignee_id"]}
                         >
                           <SelectTrigger className="h-9 w-full relative overflow-hidden">
                             {ticket.assignee?.id ? (
@@ -883,7 +920,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         <Select
                           value={ticket.requested_by?.id ?? undefined}
                           onValueChange={handleRequestedByChange}
-                          disabled={!hasPermission("tickets", "edit") || updatingFields["requested_by_id"]}
+                          disabled={!canEditTickets || updatingFields["requested_by_id"]}
                         >
                           <SelectTrigger className="h-9 w-full relative overflow-hidden">
                             {ticket.requested_by?.id ? (
@@ -913,7 +950,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         <TicketTypeSelect
                           value={ticket.type || "task"}
                           onValueChange={handleTypeChange}
-                          disabled={!hasPermission("tickets", "edit") || updatingFields["type"]}
+                          disabled={!canEditTickets || updatingFields["type"]}
                           triggerClassName="h-9 w-full"
                         />
                       </div>
@@ -925,7 +962,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         <TicketPrioritySelect
                           value={ticket.priority}
                           onValueChange={handlePriorityChange}
-                          disabled={!hasPermission("tickets", "edit") || updatingFields["priority"]}
+                          disabled={!canEditTickets || updatingFields["priority"]}
                           triggerClassName="h-9 w-full"
                         />
                       </div>
@@ -937,7 +974,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         <DateTimePicker
                           value={parseTimestamp(ticket.due_date)}
                           onChange={handleDueDateChange}
-                          disabled={!hasPermission("tickets", "edit") || updatingFields["due_date"]}
+                          disabled={!canEditTickets || updatingFields["due_date"]}
                           placeholder="No due date"
                           className="w-full h-9"
                           hideIcon
@@ -951,7 +988,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         <Select
                           value={ticket.department?.id || NO_DEPARTMENT_VALUE}
                           onValueChange={handleDepartmentChange}
-                          disabled={!hasPermission("tickets", "edit") || updatingFields["department_id"]}
+                          disabled={!canEditTickets || updatingFields["department_id"]}
                         >
                           <SelectTrigger className="h-9 w-full">
                             <SelectValue placeholder="No Department" />
@@ -975,7 +1012,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           value={ticket.epic?.id || null}
                           onValueChange={handleEpicChange}
                           epics={epics}
-                          disabled={!hasPermission("tickets", "edit") || updatingFields["epic_id"] || !projectId}
+                          disabled={!canEditTickets || updatingFields["epic_id"] || !projectId}
                           triggerClassName="h-9 w-full"
                         />
                       </div>
@@ -988,7 +1025,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           value={ticket.sprint?.id || null}
                           onValueChange={handleSprintChange}
                           sprints={sprints}
-                          disabled={!hasPermission("tickets", "edit") || updatingFields["sprint_id"] || !projectId}
+                          disabled={!canEditTickets || updatingFields["sprint_id"] || !projectId}
                           triggerClassName="h-9 w-full"
                         />
                       </div>
@@ -1000,7 +1037,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         <Select
                           value={ticket.project?.id || NO_PROJECT_VALUE}
                           onValueChange={handleProjectChange}
-                          disabled={!hasPermission("tickets", "edit") || updatingFields["project_id"]}
+                          disabled={!canEditTickets || updatingFields["project_id"]}
                         >
                           <SelectTrigger className="h-9 w-full">
                             <SelectValue placeholder="No Project" />
@@ -1051,7 +1088,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                             <DateTimePicker
                               value={parseTimestamp(ticket.created_at)}
                               onChange={(date) => handleTimestampChange("created_at", date)}
-                              disabled={!hasPermission("tickets", "edit") || updatingFields["created_at"]}
+                              disabled={!canEditTickets || updatingFields["created_at"]}
                               placeholder="Not set"
                               className="w-full h-9"
                               hideIcon
@@ -1072,7 +1109,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                             <DateTimePicker
                               value={parseTimestamp((ticket as any).assigned_at)}
                               onChange={(date) => handleTimestampChange("assigned_at", date)}
-                              disabled={!hasPermission("tickets", "edit") || !ticket.assignee || updatingFields["assigned_at"]}
+                              disabled={!canEditTickets || !ticket.assignee || updatingFields["assigned_at"]}
                               placeholder="Not set"
                               className="w-full h-9"
                               hideIcon
@@ -1093,7 +1130,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                             <DateTimePicker
                               value={parseTimestamp((ticket as any).started_at)}
                               onChange={(date) => handleTimestampChange("started_at", date)}
-                              disabled={!hasPermission("tickets", "edit") || ticket.status === "open" || updatingFields["started_at"]}
+                              disabled={!canEditTickets || ticket.status === "open" || updatingFields["started_at"]}
                               placeholder="Not set"
                               className="w-full h-9"
                               hideIcon
@@ -1114,7 +1151,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                             <DateTimePicker
                               value={parseTimestamp((ticket as any).completed_at)}
                               onChange={(date) => handleTimestampChange("completed_at", date)}
-                              disabled={!hasPermission("tickets", "edit") || (ticket.status !== "completed" && ticket.status !== "cancelled") || updatingFields["completed_at"]}
+                              disabled={!canEditTickets || (ticket.status !== "completed" && ticket.status !== "cancelled") || updatingFields["completed_at"]}
                               placeholder="Not set"
                               className="w-full h-9"
                               hideIcon
@@ -1160,7 +1197,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
           >
             Cancel
           </Button>
-          <Button onClick={handleCancelReasonSubmit}>
+          <Button onClick={handleCancelReasonSubmit} disabled={!canEditTickets}>
             Confirm Cancellation
           </Button>
         </DialogFooter>

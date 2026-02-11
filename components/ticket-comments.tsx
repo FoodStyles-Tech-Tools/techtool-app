@@ -596,11 +596,11 @@ function CommentComposer({
 
 export function TicketComments({ ticketId, displayId }: TicketCommentsProps) {
   const { data: session } = useSession()
-  const { hasPermission } = usePermissions()
+  const { flags } = usePermissions()
   const { data: usersData } = useUsers()
   const users = usersData || []
   const currentUserId = users.find((u) => u.email === session?.user?.email)?.id ?? null
-  const canEdit = hasPermission("tickets", "edit")
+  const canEdit = flags?.canEditTickets ?? false
 
   const {
     comments,

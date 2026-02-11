@@ -1,10 +1,7 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useMemo } from "react"
-import { useSupabaseClient } from "@/lib/supabase-client"
-import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
-import { useRealtimeSubscription } from "./use-realtime"
+import { useCallback, useEffect, useState } from "react"
+import { useSession } from "@/lib/auth-client"
 
 interface Permission {
   resource: string
@@ -15,152 +12,193 @@ interface User {
   id: string
   email: string
   name: string | null
-  role: string
+  role: string | null
   image: string | null
   permissions?: Permission[]
 }
 
-export function usePermissions() {
-  const queryClient = useQueryClient()
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
+export type PermissionFlags = {
+  canViewProjects: boolean
+  canCreateProjects: boolean
+  canEditProjects: boolean
+  canViewAssets: boolean
+  canCreateAssets: boolean
+  canEditAssets: boolean
+  canDeleteAssets: boolean
+  canManageAssets: boolean
+  canViewClockify: boolean
+  canManageClockify: boolean
+  canViewTickets: boolean
+  canCreateTickets: boolean
+  canEditTickets: boolean
+  canViewUsers: boolean
+  canCreateUsers: boolean
+  canEditUsers: boolean
+  canDeleteUsers: boolean
+  canViewRoles: boolean
+  canCreateRoles: boolean
+  canEditRoles: boolean
+  canDeleteRoles: boolean
+  canManageStatus: boolean
+  canManageSettings: boolean
+  canAccessSettings: boolean
+}
 
-  // Real-time subscription for roles and permissions changes
-  useRealtimeSubscription({
-    table: "roles",
-    enabled: true,
-    onUpdate: () => {
-      // Refresh permissions when roles change
-      queryClient.invalidateQueries({ queryKey: ["user-permissions"] })
-    },
-  })
+type PermissionsCache = {
+  user: User | null
+  flags: PermissionFlags
+  ts: number
+}
 
-  useRealtimeSubscription({
-    table: "permissions",
-    enabled: true,
-    onInsert: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-permissions"] })
-    },
-    onUpdate: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-permissions"] })
-    },
-    onDelete: () => {
-      queryClient.invalidateQueries({ queryKey: ["user-permissions"] })
-    },
-  })
+const PERMISSIONS_REFRESH_EVENT = "permissions:refresh"
+const CACHE_KEY = "tt.permissions"
+const CACHE_TTL_MS = 5 * 60 * 1000
 
-  useRealtimeSubscription({
-    table: "users",
-    enabled: true,
-    onUpdate: (payload) => {
-      // Refresh if current user's role changed
-      const updatedUser = payload.new as any
-      if (updatedUser.email === userEmail) {
-        queryClient.invalidateQueries({ queryKey: ["user-permissions"] })
-      }
-    },
-  })
-
-  const { data, isLoading, refetch } = useQuery<{ user: User }>({
-    queryKey: ["user-permissions"],
-    queryFn: async () => {
-      if (!userEmail) throw new Error("Not authenticated")
-
-      // Set user context for RLS (cached, only called once per session)
-      await ensureUserContext(supabase, userEmail)
-
-      // Get user from users table
-      const { data: user, error: userError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("email", userEmail)
-        .single()
-
-      if (userError || !user) throw new Error("User not found")
-
-      // Get image from auth_user
-      const { data: authUser } = await supabase
-        .from("auth_user")
-        .select("image")
-        .eq("email", user.email)
-        .single()
-
-      // Get permissions based on role
-      let permissions: Permission[] = []
-
-      // Admin role has all permissions (case-insensitive check)
-      if (user.role?.toLowerCase() === "admin") {
-        const allResources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status"]
-        const allActions = ["view", "create", "edit", "delete", "manage"]
-        permissions = allResources.flatMap((resource) =>
-          allActions.map((action) => ({ resource, action }))
-        )
-      } else {
-        // Get permissions from database using case-insensitive matching
-        const { data: roleData } = await supabase
-          .from("roles")
-          .select("id")
-          .ilike("name", user.role || "")
-          .single()
-
-        if (roleData) {
-          const { data: permData } = await supabase
-            .from("permissions")
-            .select("resource, action")
-            .eq("role_id", roleData.id)
-
-          if (permData) {
-            permissions = permData.map((p) => ({
-              resource: p.resource,
-              action: p.action,
-            }))
-          }
-        }
-      }
-
-      return {
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          image: authUser?.image || null,
-          role: user.role,
-          permissions,
-        },
-      }
-    },
-    enabled: !!userEmail,
-    staleTime: 5 * 60 * 1000, // 5 minutes - permissions don't change often
-    gcTime: 10 * 60 * 1000, // 10 minutes cache
-  })
-
-  const user = data?.user || null
-
-  const hasPermission = useMemo(
-    () => (
-      resource: "projects" | "tickets" | "users" | "roles" | "settings" | "assets" | "clockify" | "status",
-      action: "view" | "create" | "edit" | "delete" | "manage"
-    ): boolean => {
-      if (!user) return false
-
-      // Admin role always has all permissions (case-insensitive check)
-      if (user.role?.toLowerCase() === "admin") {
-        return true
-      }
-
-      // Check if user has the specific permission
-      return user.permissions?.some(
-        (p) => p.resource === resource && p.action === action
-      ) || false
-    },
-    [user]
-  )
-
-  return {
-    user,
-    loading: isLoading,
-    hasPermission,
-    refetch,
+declare global {
+  interface Window {
+    __PERMISSIONS_CACHE__?: PermissionsCache
   }
 }
 
+function computeFlags(permissions: Permission[] = []): PermissionFlags {
+  const has = (resource: string, action: string) =>
+    permissions.some((p) => p.resource === resource && p.action === action)
+
+  const canAccessSettings =
+    has("users", "view") ||
+    has("roles", "view") ||
+    has("roles", "edit") ||
+    has("roles", "create") ||
+    has("roles", "manage") ||
+    has("status", "manage") ||
+    has("settings", "manage")
+
+  return {
+    canViewProjects: has("projects", "view"),
+    canCreateProjects: has("projects", "create"),
+    canEditProjects: has("projects", "edit"),
+    canViewAssets: has("assets", "view"),
+    canCreateAssets: has("assets", "create"),
+    canEditAssets: has("assets", "edit"),
+    canDeleteAssets: has("assets", "delete"),
+    canManageAssets: has("assets", "manage"),
+    canViewClockify: has("clockify", "view"),
+    canManageClockify: has("clockify", "manage"),
+    canViewTickets: has("tickets", "view"),
+    canCreateTickets: has("tickets", "create"),
+    canEditTickets: has("tickets", "edit"),
+    canViewUsers: has("users", "view"),
+    canCreateUsers: has("users", "create"),
+    canEditUsers: has("users", "edit"),
+    canDeleteUsers: has("users", "delete"),
+    canViewRoles: has("roles", "view"),
+    canCreateRoles: has("roles", "create"),
+    canEditRoles: has("roles", "edit"),
+    canDeleteRoles: has("roles", "delete"),
+    canManageStatus: has("status", "manage"),
+    canManageSettings: has("settings", "manage"),
+    canAccessSettings,
+  }
+}
+
+function readPermissionsCache(): PermissionsCache | null {
+  if (typeof window === "undefined") return null
+
+  const inMemory = window.__PERMISSIONS_CACHE__
+  if (inMemory && Date.now() - inMemory.ts < CACHE_TTL_MS) {
+    return inMemory
+  }
+
+  try {
+    const raw = window.localStorage.getItem(CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as PermissionsCache
+    if (!parsed?.ts || Date.now() - parsed.ts > CACHE_TTL_MS) {
+      return null
+    }
+    window.__PERMISSIONS_CACHE__ = parsed
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writePermissionsCache(payload: PermissionsCache) {
+  if (typeof window === "undefined") return
+  window.__PERMISSIONS_CACHE__ = payload
+  try {
+    window.localStorage.setItem(CACHE_KEY, JSON.stringify(payload))
+  } catch {
+    // ignore cache write failures
+  }
+}
+
+export function emitPermissionsRefresh() {
+  if (typeof window === "undefined") return
+  window.dispatchEvent(new Event(PERMISSIONS_REFRESH_EVENT))
+}
+
+export function usePermissions() {
+  const { data: session, isPending } = useSession()
+  const cached = readPermissionsCache()
+  const [user, setUser] = useState<User | null>(cached?.user ?? null)
+  const [flags, setFlags] = useState<PermissionFlags>(
+    cached?.flags ?? computeFlags(cached?.user?.permissions)
+  )
+  const [loading, setLoading] = useState(!cached)
+
+  const refresh = useCallback(async () => {
+    if (!session?.user?.email) {
+      setUser(null)
+      setFlags(computeFlags())
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await fetch("/api/auth/me", { cache: "no-store" })
+      if (!res.ok) {
+        setUser(null)
+        setFlags(computeFlags())
+        return
+      }
+      const data = await res.json()
+      const nextUser = data?.user ?? null
+      const nextFlags = computeFlags(nextUser?.permissions || [])
+      setUser(nextUser)
+      setFlags(nextFlags)
+      writePermissionsCache({ user: nextUser, flags: nextFlags, ts: Date.now() })
+    } catch (error) {
+      console.error("Failed to load permissions:", error)
+      setUser(null)
+      setFlags(computeFlags())
+    } finally {
+      setLoading(false)
+    }
+  }, [session?.user?.email])
+
+  useEffect(() => {
+    if (isPending) return
+    const cache = readPermissionsCache()
+    const isStale = !cache || Date.now() - cache.ts > CACHE_TTL_MS
+    if (isStale) {
+      void refresh()
+    }
+  }, [isPending, refresh])
+
+  useEffect(() => {
+    const handler = () => {
+      void refresh()
+    }
+    window.addEventListener(PERMISSIONS_REFRESH_EVENT, handler)
+    return () => window.removeEventListener(PERMISSIONS_REFRESH_EVENT, handler)
+  }, [refresh])
+
+  return {
+    user,
+    flags,
+    loading: isPending || loading,
+    refresh,
+  }
+}

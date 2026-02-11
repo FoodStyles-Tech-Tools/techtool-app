@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
-import { usePermissions } from "@/hooks/use-permissions"
+import { emitPermissionsRefresh, usePermissions } from "@/hooks/use-permissions"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -64,14 +63,16 @@ type RolesClientProps = {
 
 export default function RolesClient({ initialRoles }: RolesClientProps) {
   const router = useRouter()
-  const queryClient = useQueryClient()
   const [roles, setRoles] = useState<Role[]>(initialRoles)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
   const [editingPermissions, setEditingPermissions] = useState<Record<string, string[]>>({})
   const [originalPermissions, setOriginalPermissions] = useState<Record<string, string[]>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
-  const { hasPermission } = usePermissions()
+  const { flags } = usePermissions()
+  const canCreateRoles = flags?.canCreateRoles ?? false
+  const canEditRoles = flags?.canEditRoles ?? false
+  const canDeleteRoles = flags?.canDeleteRoles ?? false
 
   useEffect(() => {
     setRoles(initialRoles)
@@ -122,8 +123,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
       if (res.ok) {
         setRoles((prev) => prev.filter((role) => role.id !== id))
         router.refresh()
-        // Invalidate user permissions to refresh sidebar and other components
-        queryClient.invalidateQueries({ queryKey: ["user-permissions"] })
+        emitPermissionsRefresh()
         toast("Role deleted successfully", "success")
       } else {
         const error = await res.json()
@@ -231,8 +231,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
           [roleId]: [...(editingPermissions[roleId] || [])],
         })
         router.refresh()
-        // Invalidate user permissions to refresh sidebar and other components
-        queryClient.invalidateQueries({ queryKey: ["user-permissions"] })
+        emitPermissionsRefresh()
         toast("Permissions updated successfully", "success")
       } else {
         const error = await res.json()
@@ -270,7 +269,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
             Manage roles and their permissions
           </p>
         </div>
-        {hasPermission("roles", "create") && (
+        {canCreateRoles && (
           <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
               <Button onClick={handleAddRole}>
@@ -303,8 +302,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                 setIsDialogOpen(false)
                 setEditingRole(null)
                 router.refresh()
-                // Invalidate user permissions to refresh sidebar and other components
-                queryClient.invalidateQueries({ queryKey: ["user-permissions"] })
+                emitPermissionsRefresh()
               }}
             />
           </DialogContent>
@@ -332,9 +330,9 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                       </CardDescription>
                     </div>
                     <div className="flex space-x-2">
-                      {isEditable && (hasPermission("roles", "edit") || hasPermission("roles", "delete")) && (
+                      {isEditable && (canEditRoles || canDeleteRoles) && (
                         <>
-                          {hasPermission("roles", "edit") && (
+                          {canEditRoles && (
                             <Button
                               variant="outline"
                               size="icon"
@@ -343,7 +341,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                               <Pencil className="h-4 w-4" />
                             </Button>
                           )}
-                          {hasPermission("roles", "delete") && (
+                          {canDeleteRoles && (
                             <Button
                               variant="outline"
                               size="icon"
