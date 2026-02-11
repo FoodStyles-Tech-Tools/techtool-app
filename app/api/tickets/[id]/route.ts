@@ -18,6 +18,7 @@ export async function GET(
         *,
         project:projects(id, name, description),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
+        sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
         department:departments(id, name),
         epic:epics(id, name, color),
@@ -49,9 +50,10 @@ export async function GET(
       )
     }
 
-    // Get images from auth_user for assignee and requested_by
+    // Get images from auth_user for assignee, SQA assignee, and requested_by
     const emails = new Set<string>()
     if (ticket.assignee?.email) emails.add(ticket.assignee.email)
+    if (ticket.sqa_assignee?.email) emails.add(ticket.sqa_assignee.email)
     if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
     
     let enrichedTicket = ticket
@@ -73,6 +75,10 @@ export async function GET(
         assignee: ticket.assignee ? {
           ...ticket.assignee,
           image: imageMap.get(ticket.assignee.email) || null,
+        } : null,
+        sqa_assignee: ticket.sqa_assignee ? {
+          ...ticket.sqa_assignee,
+          image: imageMap.get(ticket.sqa_assignee.email) || null,
         } : null,
       }
     }
@@ -106,6 +112,8 @@ export async function PATCH(
       title,
       description,
       assignee_id,
+      sqa_assignee_id,
+      sqa_assigned_at,
       requested_by_id,
       status,
       priority,
@@ -122,10 +130,10 @@ export async function PATCH(
 
     // Fetch current ticket state if we need it for conditional logic or timestamp validation
     let currentTicket: any = null
-    if (assignee_id !== undefined || status !== undefined || created_at !== undefined || assigned_at !== undefined || started_at !== undefined || completed_at !== undefined) {
+    if (assignee_id !== undefined || sqa_assignee_id !== undefined || status !== undefined || created_at !== undefined || assigned_at !== undefined || started_at !== undefined || completed_at !== undefined) {
       const { data, error: fetchError } = await supabase
         .from("tickets")
-        .select("assignee_id, assigned_at, status, started_at, completed_at, created_at")
+        .select("assignee_id, sqa_assignee_id, assigned_at, sqa_assigned_at, status, started_at, completed_at, created_at")
         .eq("id", params.id)
         .maybeSingle()
       
@@ -162,6 +170,18 @@ export async function PATCH(
         // Condition 2: If assignee is not null then change value then change timestamp assigned_at
         if (!previousAssigneeId || previousAssigneeId !== assignee_id) {
           updates.assigned_at = new Date().toISOString()
+        }
+      }
+    }
+    if (sqa_assignee_id !== undefined) {
+      const previousSqaAssigneeId = currentTicket?.sqa_assignee_id
+      updates.sqa_assignee_id = sqa_assignee_id || null
+
+      if (!sqa_assignee_id) {
+        updates.sqa_assigned_at = null
+      } else if (sqa_assigned_at === undefined) {
+        if (!previousSqaAssigneeId || previousSqaAssigneeId !== sqa_assignee_id) {
+          updates.sqa_assigned_at = new Date().toISOString()
         }
       }
     }
@@ -297,6 +317,10 @@ export async function PATCH(
         )
       }
     }
+
+    if (sqa_assigned_at !== undefined) {
+      updates.sqa_assigned_at = sqa_assigned_at || null
+    }
     
     if (started_at !== undefined) {
       timestampMap.started_at = started_at || null
@@ -330,6 +354,7 @@ export async function PATCH(
         *,
         project:projects(id, name),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
+        sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
         department:departments(id, name),
         epic:epics(id, name, color),
@@ -360,9 +385,10 @@ export async function PATCH(
       )
     }
 
-    // Get images from auth_user for assignee and requested_by
+    // Get images from auth_user for assignee, SQA assignee, and requested_by
     const emails = new Set<string>()
     if (ticket.assignee?.email) emails.add(ticket.assignee.email)
+    if (ticket.sqa_assignee?.email) emails.add(ticket.sqa_assignee.email)
     if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
     
     let enrichedTicket = ticket
@@ -384,6 +410,10 @@ export async function PATCH(
         assignee: ticket.assignee ? {
           ...ticket.assignee,
           image: imageMap.get(ticket.assignee.email) || null,
+        } : null,
+        sqa_assignee: ticket.sqa_assignee ? {
+          ...ticket.sqa_assignee,
+          image: imageMap.get(ticket.sqa_assignee.email) || null,
         } : null,
       }
     }

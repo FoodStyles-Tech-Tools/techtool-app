@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient()
 
     const body = await request.json()
-    const { name, description, status = "open", department_id, collaborator_ids } = body
+    const { name, description, status = "open", department_id, collaborator_ids, require_sqa } = body
 
     if (!name) {
       return NextResponse.json(
@@ -196,6 +196,7 @@ export async function POST(request: NextRequest) {
         status,
         department_id: department_id || null,
         collaborator_ids: Array.isArray(collaborator_ids) ? collaborator_ids : [],
+        require_sqa: require_sqa ?? false,
       })
       .select(`
         *,

@@ -137,13 +137,14 @@ export async function PATCH(
     const supabase = createServerClient()
 
     const body = await request.json()
-    const { name, description, status, department_id, collaborator_ids } = body
+    const { name, description, status, department_id, collaborator_ids, require_sqa } = body
 
     const updates: any = {}
     if (name !== undefined) updates.name = name
     if (description !== undefined) updates.description = description
     if (status !== undefined) updates.status = status
     if (department_id !== undefined) updates.department_id = department_id || null
+    if (require_sqa !== undefined) updates.require_sqa = require_sqa
     if (collaborator_ids !== undefined) {
       updates.collaborator_ids = Array.isArray(collaborator_ids) ? collaborator_ids : []
     }

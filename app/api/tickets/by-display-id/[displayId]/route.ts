@@ -21,6 +21,7 @@ export async function GET(
         *,
         project:projects(id, name, description),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
+        sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
         department:departments(id, name),
         epic:epics(id, name, color)
@@ -43,9 +44,10 @@ export async function GET(
       )
     }
 
-    // Get images from auth_user for assignee and requested_by
+    // Get images from auth_user for assignee, SQA assignee, and requested_by
     const emails = new Set<string>()
     if (ticket.assignee?.email) emails.add(ticket.assignee.email)
+    if (ticket.sqa_assignee?.email) emails.add(ticket.sqa_assignee.email)
     if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
     
     let enrichedTicket = ticket
@@ -67,6 +69,10 @@ export async function GET(
         assignee: ticket.assignee ? {
           ...ticket.assignee,
           image: imageMap.get(ticket.assignee.email) || null,
+        } : null,
+        sqa_assignee: ticket.sqa_assignee ? {
+          ...ticket.sqa_assignee,
+          image: imageMap.get(ticket.sqa_assignee.email) || null,
         } : null,
       }
     }

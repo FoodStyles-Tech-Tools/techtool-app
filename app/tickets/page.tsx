@@ -52,6 +52,7 @@ import { cn } from "@/lib/utils"
 import { isDoneStatus } from "@/lib/ticket-statuses"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
+const SQA_ALLOWED_ROLES = new Set(["sqa"])
 const ROWS_PER_PAGE = 20
 const UNASSIGNED_VALUE = "unassigned"
 const NO_DEPARTMENT_VALUE = "no_department"
@@ -62,6 +63,8 @@ const FIELD_LABELS: Record<string, string> = {
   type: "Type",
   requested_by_id: "Requested By",
   assignee_id: "Assignee",
+  sqa_assignee_id: "SQA Assignee",
+  sqa_assigned_at: "SQA Assigned At",
   department_id: "Department",
   due_date: "Due Date",
 }
@@ -76,6 +79,8 @@ type SortColumn =
   | "priority"
   | "requested_by"
   | "assignee"
+  | "sqa_assignee"
+  | "sqa_assigned_at"
 
 const PRIORITY_ORDER: Record<string, number> = {
   urgent: 1,
@@ -93,6 +98,7 @@ interface Ticket {
   priority: string
   type: string
   due_date: string | null
+  sqa_assigned_at?: string | null
   links: string[]
   reason?: {
     cancelled?: {
@@ -114,6 +120,12 @@ interface Ticket {
     name: string
   } | null
   assignee: {
+    id: string
+    name: string | null
+    email: string
+    image: string | null
+  } | null
+  sqa_assignee: {
     id: string
     name: string | null
     email: string
@@ -151,6 +163,7 @@ interface QuickAddTicketData {
   status: string
   department_id?: string
   assignee_id?: string
+  sqa_assignee_id?: string
   requested_by_id?: string
   due_date?: string | null
 }
@@ -385,6 +398,12 @@ export default function TicketsPage() {
     ),
     [users]
   )
+  const sqaEligibleUsers = useMemo(
+    () => users.filter((user) =>
+      user.role ? SQA_ALLOWED_ROLES.has(user.role.toLowerCase()) : false
+    ),
+    [users]
+  )
 
   // Client-side search filtering only (other filters are server-side)
   // Use debounced search to avoid filtering on every keystroke
@@ -465,6 +484,20 @@ export default function TicketsPage() {
             b.assignee?.name || b.assignee?.email || ""
           )
           break
+        case "sqa_assignee":
+          result = (a.sqa_assignee?.name || a.sqa_assignee?.email || "").localeCompare(
+            b.sqa_assignee?.name || b.sqa_assignee?.email || ""
+          )
+          break
+        case "sqa_assigned_at": {
+          const aTime = a.sqa_assigned_at ? new Date(a.sqa_assigned_at).getTime() : null
+          const bTime = b.sqa_assigned_at ? new Date(b.sqa_assigned_at).getTime() : null
+          if (aTime === null && bTime === null) result = 0
+          else if (aTime === null) result = 1
+          else if (bTime === null) result = -1
+          else result = aTime - bTime
+          break
+        }
         default:
           result = 0
       }
@@ -624,6 +657,16 @@ export default function TicketsPage() {
       } else if (!previousAssigneeId || previousAssigneeId !== newAssigneeId) {
         body.assigned_at = new Date().toISOString()
       }
+    } else if (field === "sqa_assignee_id") {
+      const previousSqaAssigneeId = currentTicket?.sqa_assignee?.id || null
+      const newSqaAssigneeId = value || null
+      body[field] = newSqaAssigneeId
+
+      if (!newSqaAssigneeId) {
+        body.sqa_assigned_at = null
+      } else if (!previousSqaAssigneeId || previousSqaAssigneeId !== newSqaAssigneeId) {
+        body.sqa_assigned_at = new Date().toISOString()
+      }
     } else if (field === "status") {
       const previousStatus = currentTicket?.status
       const newStatus = value as string
@@ -728,6 +771,8 @@ export default function TicketsPage() {
         project_id: null,
         department_id: formData.department_id || undefined,
         assignee_id: formData.assignee_id || undefined,
+        sqa_assignee_id: formData.sqa_assignee_id || undefined,
+        sqa_assigned_at: formData.sqa_assignee_id ? new Date().toISOString() : null,
         requested_by_id: formData.requested_by_id,
         status: formData.status,
         due_date: formData.due_date || undefined,
@@ -1230,6 +1275,9 @@ export default function TicketsPage() {
                   <th className="h-9 py-2 px-4 text-left align-middle">
                     {renderSortableHeader("assignee", "Assignee")}
                   </th>
+                  <th className="h-9 py-2 px-4 text-left align-middle">
+                    {renderSortableHeader("sqa_assignee", "SQA Assignee")}
+                  </th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
@@ -1238,6 +1286,7 @@ export default function TicketsPage() {
                   departments={departments}
                   users={users}
                   assigneeEligibleUsers={assigneeEligibleUsers}
+                  sqaEligibleUsers={sqaEligibleUsers}
                   onCancel={() => setIsAddingNew(false)}
                   onSubmit={handleQuickAdd}
                   defaultDepartmentId={departmentFilter !== "all" && departmentFilter !== "no_department" ? departmentFilter : undefined}
@@ -1254,6 +1303,7 @@ export default function TicketsPage() {
                   departments={departments}
                   users={users}
                   assigneeEligibleUsers={assigneeEligibleUsers}
+                  sqaEligibleUsers={sqaEligibleUsers}
                   updateTicketField={updateTicketField}
                   updatingFields={updatingFields}
                   excludeDone={excludeDone}
@@ -1398,6 +1448,7 @@ interface QuickAddRowProps {
   departments: Department[]
   users: BasicUser[]
   assigneeEligibleUsers: BasicUser[]
+  sqaEligibleUsers: BasicUser[]
   onCancel: () => void
   onSubmit: (data: QuickAddTicketData) => Promise<void>
   defaultDepartmentId?: string
@@ -1409,6 +1460,7 @@ const QuickAddRow = memo(function QuickAddRow({
   departments,
   users,
   assigneeEligibleUsers,
+  sqaEligibleUsers,
   onCancel,
   onSubmit,
   defaultDepartmentId,
@@ -1423,6 +1475,7 @@ const QuickAddRow = memo(function QuickAddRow({
     status: "open",
     department_id: defaultDepartmentId,
     assignee_id: defaultAssigneeId,
+    sqa_assignee_id: undefined,
     requested_by_id: defaultRequesterId,
     due_date: null,
   }))
@@ -1586,12 +1639,45 @@ const QuickAddRow = memo(function QuickAddRow({
               {assigneeEligibleUsers.map((user) => (
                 <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
               ))}
-            </SelectContent>
-          </Select>
-        </TableCell>
-      </TableRow>
-      <TableRow>
-        <TableCell colSpan={8} className="py-2">
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="py-2">
+        <Select
+          value={formData.sqa_assignee_id || UNASSIGNED_VALUE}
+          onValueChange={(value) =>
+            setFormData((prev) => ({
+              ...prev,
+              sqa_assignee_id: value === UNASSIGNED_VALUE ? undefined : value,
+            }))
+          }
+        >
+          <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-[#1f1f1f] overflow-hidden">
+            {formData.sqa_assignee_id ? (
+              <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
+                <UserSelectValue
+                  users={sqaEligibleUsers}
+                  value={formData.sqa_assignee_id}
+                  placeholder="Unassigned"
+                  unassignedValue={UNASSIGNED_VALUE}
+                  unassignedLabel="Unassigned"
+                />
+              </div>
+            ) : (
+              <SelectValue placeholder="Unassigned" />
+            )}
+          </SelectTrigger>
+          <SelectContent className="dark:bg-[#1f1f1f]">
+            <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+            {sqaEligibleUsers.map((user) => (
+              <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+    </TableRow>
+    <TableRow>
+        <TableCell colSpan={10} className="py-2">
           <div className="flex items-center justify-end gap-2">
             <Button variant="outline" size="sm" onClick={onCancel}>
               Cancel
@@ -1763,6 +1849,7 @@ interface TicketRowProps {
   departments: Department[]
   users: BasicUser[]
   assigneeEligibleUsers: BasicUser[]
+  sqaEligibleUsers: BasicUser[]
   updateTicketField: (ticketId: string, field: string, value: string | null | undefined) => Promise<void> | void
   updatingFields: Record<string, string>
   excludeDone: boolean
@@ -1776,6 +1863,7 @@ const TicketRow = memo(function TicketRow({
   departments,
   users,
   assigneeEligibleUsers,
+  sqaEligibleUsers,
   updateTicketField,
   updatingFields,
   excludeDone,
@@ -1935,6 +2023,37 @@ const TicketRow = memo(function TicketRow({
           <SelectContent className="dark:bg-[#1f1f1f]">
             <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
             {assigneeEligibleUsers.map((user) => (
+              <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="py-2">
+        <Select
+          value={ticket.sqa_assignee?.id || UNASSIGNED_VALUE}
+          onValueChange={(value) =>
+            updateTicketField(ticket.id, "sqa_assignee_id", value === UNASSIGNED_VALUE ? null : value)
+          }
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-sqa_assignee_id`]}
+        >
+          <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-[#1f1f1f] overflow-hidden">
+            {ticket.sqa_assignee?.id ? (
+              <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
+                <UserSelectValue
+                  users={sqaEligibleUsers}
+                  value={ticket.sqa_assignee.id}
+                  placeholder="Unassigned"
+                  unassignedValue={UNASSIGNED_VALUE}
+                  unassignedLabel="Unassigned"
+                />
+              </div>
+            ) : (
+              <SelectValue placeholder="Unassigned" />
+            )}
+          </SelectTrigger>
+          <SelectContent className="dark:bg-[#1f1f1f]">
+            <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+            {sqaEligibleUsers.map((user) => (
               <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
             ))}
           </SelectContent>

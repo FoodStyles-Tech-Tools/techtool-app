@@ -36,6 +36,7 @@ interface Ticket {
   priority: string
   type: string
   due_date: string | null
+  sqa_assigned_at?: string | null
   links: string[]
   reason?: {
     cancelled?: {
@@ -67,6 +68,12 @@ interface Ticket {
     email: string
     image: string | null
   } | null
+  sqa_assignee: {
+    id: string
+    name: string | null
+    email: string
+    image: string | null
+  } | null
   requested_by: {
     id: string
     name: string | null
@@ -84,10 +91,11 @@ async function enrichTicketsWithImages(
 ): Promise<Ticket[]> {
   if (!tickets || tickets.length === 0) return tickets as Ticket[]
   
-  // Collect all unique emails from assignees and requested_by
+  // Collect all unique emails from assignees, SQA assignees, and requested_by
   const emails = new Set<string>()
   tickets.forEach(ticket => {
     if (ticket.assignee?.email) emails.add(ticket.assignee.email)
+    if (ticket.sqa_assignee?.email) emails.add(ticket.sqa_assignee.email)
     if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
   })
   
@@ -112,6 +120,10 @@ async function enrichTicketsWithImages(
     assignee: ticket.assignee ? {
       ...ticket.assignee,
       image: imageMap.get(ticket.assignee.email) || null,
+    } : null,
+    sqa_assignee: ticket.sqa_assignee ? {
+      ...ticket.sqa_assignee,
+      image: imageMap.get(ticket.sqa_assignee.email) || null,
     } : null,
     requested_by: ticket.requested_by ? {
       ...ticket.requested_by,
@@ -150,6 +162,7 @@ export function useTickets(options?: {
             department:departments(id, name),
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
+            sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
             epic:epics(id, name, color),
             sprint:sprints(id, name, status)
@@ -205,6 +218,7 @@ export function useTickets(options?: {
             department:departments(id, name),
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
+            sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
             epic:epics(id, name, color),
             sprint:sprints(id, name, status)
@@ -395,6 +409,7 @@ export function useTicket(ticketId: string, options?: { enabled?: boolean }) {
             department:departments(id, name),
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
+            sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
             epic:epics(id, name, color)
           `)
@@ -453,6 +468,7 @@ export function useTicket(ticketId: string, options?: { enabled?: boolean }) {
             department:departments(id, name),
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
+            sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
             epic:epics(id, name, color),
             sprint:sprints(id, name, status)
@@ -484,6 +500,8 @@ export function useCreateTicket() {
       description?: string
       due_date?: string
       assignee_id?: string
+      sqa_assignee_id?: string
+      sqa_assigned_at?: string | null
       requested_by_id?: string
       priority?: string
       type?: string
@@ -536,6 +554,7 @@ export function useCreateTicket() {
           .insert({
             ...data,
             assigned_at: assignedAt,
+            sqa_assigned_at: data.sqa_assigned_at ?? (data.sqa_assignee_id ? now : null),
             started_at: startedAt,
             completed_at: completedAt,
             requested_by_id: data.requested_by_id || user.id,
@@ -549,6 +568,7 @@ export function useCreateTicket() {
             department:departments(id, name),
             project:projects(id, name),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
+            sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
             epic:epics(id, name, color),
             sprint:sprints(id, name, status)
@@ -613,11 +633,13 @@ export function useUpdateTicket() {
       priority?: string
       type?: string
       assignee_id?: string | null
+      sqa_assignee_id?: string | null
       requested_by_id?: string
       department_id?: string | null
       epic_id?: string | null
       sprint_id?: string | null
       assigned_at?: string | null
+      sqa_assigned_at?: string | null
       started_at?: string | null
       completed_at?: string | null
       created_at?: string | null
@@ -642,6 +664,7 @@ export function useUpdateTicket() {
           department:departments(id, name),
           project:projects(id, name),
           assignee:users!tickets_assignee_id_fkey(id, name, email),
+          sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
           requested_by:users!tickets_requested_by_id_fkey(id, name, email),
           epic:epics(id, name, color),
           sprint:sprints(id, name, status)
@@ -681,6 +704,7 @@ export function useUpdateTicket() {
         if (variables.priority !== undefined) updatedTicket.priority = variables.priority
         if (variables.type !== undefined) updatedTicket.type = variables.type
       if (variables.links !== undefined) updatedTicket.links = prepareLinkPayload(variables.links)
+        if (variables.sqa_assigned_at !== undefined) updatedTicket.sqa_assigned_at = variables.sqa_assigned_at
         
         if (variables.assignee_id !== undefined) {
           if (variables.assignee_id && usersData) {
@@ -693,6 +717,20 @@ export function useUpdateTicket() {
             } : null
           } else {
             updatedTicket.assignee = null
+          }
+        }
+
+        if (variables.sqa_assignee_id !== undefined) {
+          if (variables.sqa_assignee_id && usersData) {
+            const sqaAssignee = usersData.find(u => u.id === variables.sqa_assignee_id)
+            updatedTicket.sqa_assignee = sqaAssignee ? {
+              id: sqaAssignee.id,
+              name: sqaAssignee.name,
+              email: sqaAssignee.email,
+              image: sqaAssignee.image
+            } : null
+          } else {
+            updatedTicket.sqa_assignee = null
           }
         }
         
@@ -761,6 +799,7 @@ export function useUpdateTicket() {
               if (variables.priority !== undefined) updatedTicket.priority = variables.priority
               if (variables.type !== undefined) updatedTicket.type = variables.type
               if (variables.links !== undefined) updatedTicket.links = prepareLinkPayload(variables.links)
+              if (variables.sqa_assigned_at !== undefined) updatedTicket.sqa_assigned_at = variables.sqa_assigned_at
               
               if (variables.assignee_id !== undefined) {
                 if (variables.assignee_id && usersData) {
@@ -773,6 +812,20 @@ export function useUpdateTicket() {
                   } : null
                 } else {
                   updatedTicket.assignee = null
+                }
+              }
+
+              if (variables.sqa_assignee_id !== undefined) {
+                if (variables.sqa_assignee_id && usersData) {
+                  const sqaAssignee = usersData.find(u => u.id === variables.sqa_assignee_id)
+                  updatedTicket.sqa_assignee = sqaAssignee ? {
+                    id: sqaAssignee.id,
+                    name: sqaAssignee.name,
+                    email: sqaAssignee.email,
+                    image: sqaAssignee.image
+                  } : null
+                } else {
+                  updatedTicket.sqa_assignee = null
                 }
               }
               
@@ -933,4 +986,3 @@ export function useDeleteTicket() {
     },
   })
 }
-

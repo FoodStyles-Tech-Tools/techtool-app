@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
         *,
         project:projects(id, name),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
+        sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
         department:departments(id, name),
         epic:epics(id, name, color),
@@ -85,10 +86,11 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Get images from auth_user for all assignees and requested_by
+    // Get images from auth_user for all assignees, SQA assignees, and requested_by
     const emails = new Set<string>()
     tickets.forEach(ticket => {
       if (ticket.assignee?.email) emails.add(ticket.assignee.email)
+      if (ticket.sqa_assignee?.email) emails.add(ticket.sqa_assignee.email)
       if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
     })
     
@@ -109,6 +111,10 @@ export async function GET(request: NextRequest) {
       assignee: ticket.assignee ? {
         ...ticket.assignee,
         image: imageMap.get(ticket.assignee.email) || null,
+      } : null,
+      sqa_assignee: ticket.sqa_assignee ? {
+        ...ticket.sqa_assignee,
+        image: imageMap.get(ticket.sqa_assignee.email) || null,
       } : null,
     }))
 
@@ -147,6 +153,8 @@ export async function POST(request: NextRequest) {
       title,
       description,
       assignee_id,
+      sqa_assignee_id,
+      sqa_assigned_at,
       requested_by_id,
       priority = "medium",
       type = "task",
@@ -192,6 +200,7 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString()
     
     const assignedAt = assignee_id ? now : null
+    const sqaAssignedAt = sqa_assigned_at ?? (sqa_assignee_id ? now : null)
     let startedAt: string | null = null
     let completedAt: string | null = null
     
@@ -213,6 +222,8 @@ export async function POST(request: NextRequest) {
         title,
         description,
         assignee_id: assignee_id || null,
+        sqa_assignee_id: sqa_assignee_id || null,
+        sqa_assigned_at: sqaAssignedAt,
         assigned_at: assignedAt,
         started_at: startedAt,
         completed_at: completedAt,
@@ -228,6 +239,7 @@ export async function POST(request: NextRequest) {
         *,
         project:projects(id, name),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
+        sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
         department:departments(id, name),
         epic:epics(id, name, color),
@@ -251,9 +263,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-      // Get images from auth_user for assignee and requested_by
+      // Get images from auth_user for assignee, SQA assignee, and requested_by
       const emails = new Set<string>()
       if (ticket.assignee?.email) emails.add(ticket.assignee.email)
+      if (ticket.sqa_assignee?.email) emails.add(ticket.sqa_assignee.email)
       if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
       
       let enrichedTicket = ticket
@@ -275,6 +288,10 @@ export async function POST(request: NextRequest) {
           assignee: ticket.assignee ? {
             ...ticket.assignee,
             image: imageMap.get(ticket.assignee.email) || null,
+          } : null,
+          sqa_assignee: ticket.sqa_assignee ? {
+            ...ticket.sqa_assignee,
+            image: imageMap.get(ticket.sqa_assignee.email) || null,
           } : null,
         }
       }

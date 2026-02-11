@@ -87,6 +87,7 @@ interface Project {
   name: string
   description: string | null
   status: string
+  require_sqa: boolean
   links: string[]
   department: {
     id: string
@@ -411,6 +412,7 @@ export function useCreateProject() {
       description?: string
       status?: string
       department_id?: string
+      require_sqa?: boolean
       links?: string[]
       collaborator_ids?: string[]
     }) => {
@@ -432,6 +434,7 @@ export function useCreateProject() {
         status: data.status || "open",
         links: prepareLinkPayload(data.links),
         collaborator_ids: Array.isArray(data.collaborator_ids) ? data.collaborator_ids : [],
+        require_sqa: data.require_sqa ?? false,
       }
 
       // Create project
@@ -477,6 +480,7 @@ export function useUpdateProject() {
       description?: string
       status?: string
       department_id?: string
+      require_sqa?: boolean
       owner_id?: string | null
       links?: string[]
       collaborator_ids?: string[]

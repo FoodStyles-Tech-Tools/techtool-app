@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
   SelectContent,
@@ -33,6 +34,7 @@ const projectSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   status: z.enum(["open", "in_progress", "closed"]).default("open"),
+  require_sqa: z.boolean().default(false),
   department_id: z
     .union([
       z.string().uuid(),
@@ -67,6 +69,7 @@ export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
       name: initialData?.name || "",
       description: initialData?.description || "",
       status: initialData?.status || "open",
+      require_sqa: initialData?.require_sqa ?? false,
       department_id: initialData?.department_id || NO_DEPARTMENT_VALUE,
       collaborator_ids: initialData?.collaborator_ids || [],
       links: initialData?.links || [],
@@ -85,6 +88,7 @@ export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
         name: values.name,
         description: values.description,
         status: values.status,
+        require_sqa: values.require_sqa,
         department_id:
           values.department_id && values.department_id !== NO_DEPARTMENT_VALUE ? values.department_id : undefined,
         collaborator_ids: values.collaborator_ids || [],
@@ -158,6 +162,22 @@ export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
                   <SelectItem value="closed">Closed</SelectItem>
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="require_sqa"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between rounded-md border px-3 py-2">
+              <FormLabel className="mb-0">Require SQA?</FormLabel>
+              <FormControl>
+                <Checkbox
+                  checked={field.value}
+                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

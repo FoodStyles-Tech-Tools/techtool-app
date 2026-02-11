@@ -52,6 +52,7 @@ interface ProjectRowData {
   name: string
   description: string | null
   status: "open" | "in_progress" | "closed"
+  require_sqa: boolean
   links?: string[] | null
   created_at: string
   department: Department | null
@@ -64,6 +65,7 @@ interface ProjectQuickAddData {
   name: string
   description: string
   status: "open" | "in_progress" | "closed"
+  require_sqa: boolean
   department_id?: string
   collaborator_ids?: string[]
 }
@@ -243,6 +245,7 @@ export default function ProjectsPage() {
         name: formData.name,
         description: formData.description || undefined,
         status: formData.status,
+        require_sqa: formData.require_sqa,
         department_id: formData.department_id || undefined,
         collaborator_ids: formData.collaborator_ids || [],
       })
@@ -256,7 +259,7 @@ export default function ProjectsPage() {
   const updateProjectField = useCallback(async (
     projectId: string,
     field: string,
-    value: string | null | undefined | string[]
+    value: string | null | undefined | string[] | boolean
   ) => {
     const cellKey = `${projectId}-${field}`
     setUpdatingFields(prev => ({ ...prev, [cellKey]: field }))
@@ -271,6 +274,8 @@ export default function ProjectsPage() {
         updates.status = value
       } else if (field === "collaborator_ids") {
         updates.collaborator_ids = Array.isArray(value) ? value : []
+      } else if (field === "require_sqa") {
+        updates.require_sqa = Boolean(value)
       }
 
       await updateProject.mutateAsync({
@@ -281,6 +286,7 @@ export default function ProjectsPage() {
       if (field === "owner_id") label = "Owner"
       else if (field === "department_id") label = "Department"
       else if (field === "collaborator_ids") label = "Collaborators"
+      else if (field === "require_sqa") label = "Require SQA"
       toast(`${label} updated`)
     } catch (error: any) {
       toast(error.message || "Failed to update project", "error")
@@ -395,6 +401,7 @@ export default function ProjectsPage() {
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Collaborators</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Department</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Status</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Require SQA?</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Links</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Created</th>
                 </tr>
@@ -492,6 +499,7 @@ const QuickAddProjectRow = memo(function QuickAddProjectRow({
     name: "",
     description: "",
     status: "open",
+    require_sqa: false,
     department_id: undefined,
     collaborator_ids: [],
   })
@@ -620,6 +628,13 @@ const QuickAddProjectRow = memo(function QuickAddProjectRow({
           </SelectContent>
         </Select>
       </TableCell>
+      <TableCell className="py-2">
+        <Checkbox
+          checked={formData.require_sqa}
+          onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, require_sqa: checked === true }))}
+          className="dark:bg-[#1f1f1f]"
+        />
+      </TableCell>
       <TableCell className="py-2 text-xs text-muted-foreground">-</TableCell>
       <TableCell className="py-2 text-xs text-muted-foreground">-</TableCell>
     </TableRow>
@@ -632,7 +647,7 @@ interface ProjectRowProps {
   users: BasicUser[]
   departments: Department[]
   canEditProjects: boolean
-  updateProjectField: (projectId: string, field: string, value: string | null | undefined | string[]) => Promise<void> | void
+  updateProjectField: (projectId: string, field: string, value: string | null | undefined | string[] | boolean) => Promise<void> | void
   updatingFields: Record<string, string>
 }
 
@@ -649,6 +664,7 @@ const ProjectRow = memo(function ProjectRow({
   const isUpdatingDept = !!updatingFields[`${project.id}-department_id`]
   const isUpdatingStatus = !!updatingFields[`${project.id}-status`]
   const isUpdatingCollaborators = !!updatingFields[`${project.id}-collaborator_ids`]
+  const isUpdatingRequireSqa = !!updatingFields[`${project.id}-require_sqa`]
   const collaboratorIds = project.collaborators?.map((collab) => collab.id) || []
 
   return (
@@ -812,6 +828,18 @@ const ProjectRow = memo(function ProjectRow({
             {getStatusIcon(project.status)}
             <span className="text-xs capitalize">{project.status.replace("_", " ")}</span>
           </div>
+        )}
+      </TableCell>
+      <TableCell className="py-2">
+        {canEditProjects ? (
+          <Checkbox
+            checked={project.require_sqa}
+            onCheckedChange={(checked) => updateProjectField(project.id, "require_sqa", checked === true)}
+            disabled={isUpdatingRequireSqa}
+            className="dark:bg-[#1f1f1f]"
+          />
+        ) : (
+          <span className="text-xs text-muted-foreground">{project.require_sqa ? "Yes" : "No"}</span>
         )}
       </TableCell>
       <TableCell className="py-2">
