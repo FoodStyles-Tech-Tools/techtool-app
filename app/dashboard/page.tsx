@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { format, parseISO, isToday } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { TicketDetailDialog } from "@/components/ticket-detail-dialog"
@@ -46,15 +47,58 @@ export default function DashboardPage() {
   }, [])
   const today = useMemo(() => format(new Date(), "EEEE, MMMM d"), [])
 
-  const [events, setEvents] = useState<CalendarEvent[]>([])
-  const [status, setStatus] = useState<"loading" | "needs_connection" | "connected">("loading")
-  const [loadingEvents, setLoadingEvents] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [ticketCarousel, setTicketCarousel] = useState<DashboardTicket[]>([])
-  const [ticketsLoading, setTicketsLoading] = useState(true)
-  const [ticketsError, setTicketsError] = useState<string | null>(null)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
+  const queryClient = useQueryClient()
   const { statusMap } = useTicketStatuses()
+
+  const {
+    data: calendarData,
+    isLoading: loadingEvents,
+    error: calendarError,
+  } = useQuery({
+    queryKey: ["dashboard", "calendar", "events"],
+    queryFn: async () => {
+      const res = await fetch("/api/calendar/events")
+      if (res.status === 401 || res.status === 404) {
+        const data = await res.json().catch(() => null)
+        return { status: "needs_connection" as const, events: [], error: data?.error ?? null }
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || "Failed to load events")
+      }
+      const data = await res.json()
+      return { status: "connected" as const, events: data.events || [], error: null }
+    },
+    staleTime: 2 * 60 * 1000,
+    retry: false,
+  })
+
+  const events = useMemo(() => calendarData?.events ?? [], [calendarData?.events])
+  const status = calendarData?.status ?? (loadingEvents ? "loading" : "needs_connection")
+  const error = calendarData?.error ?? (calendarError ? (calendarError as Error).message : null)
+
+  const {
+    data: ticketsData,
+    isLoading: ticketsLoading,
+    error: ticketsErrorResp,
+  } = useQuery<DashboardTicket[]>({
+    queryKey: ["dashboard", "my-tickets"],
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/my-tickets")
+      if (res.status === 401) throw new Error("You need to sign in to see your tickets.")
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || "Failed to load tickets")
+      }
+      const data = await res.json()
+      return data.tickets || []
+    },
+    staleTime: 30 * 1000,
+  })
+
+  const ticketCarousel = ticketsData ?? []
+  const ticketsError = ticketsErrorResp ? (ticketsErrorResp as Error).message : null
 
   const getTicketStatusLabel = useCallback(
     (statusValue: string) => {
@@ -63,63 +107,6 @@ export default function DashboardPage() {
     },
     [statusMap]
   )
-
-  const fetchEvents = useCallback(async () => {
-    setLoadingEvents(true)
-    setError(null)
-    try {
-      const response = await fetch("/api/calendar/events")
-      if (response.status === 401 || response.status === 404) {
-        const data = await response.json().catch(() => null)
-        setStatus("needs_connection")
-        setEvents([])
-        setError(data?.error || null)
-        return
-      }
-      if (!response.ok) {
-        const data = await response.json().catch(() => null)
-        throw new Error(data?.error || "Failed to load events")
-      }
-      const data = await response.json()
-      setEvents(data.events || [])
-      setStatus("connected")
-    } catch (err: any) {
-      setError(err.message || "Unable to load events")
-    } finally {
-      setLoadingEvents(false)
-    }
-  }, [])
-
-  const fetchAssignedTickets = useCallback(async () => {
-    setTicketsLoading(true)
-    setTicketsError(null)
-    try {
-      const response = await fetch("/api/dashboard/my-tickets")
-      if (response.status === 401) {
-        setTicketCarousel([])
-        setTicketsError("You need to sign in to see your tickets.")
-        return
-      }
-      if (!response.ok) {
-        const data = await response.json().catch(() => null)
-        throw new Error(data?.error || "Failed to load tickets")
-      }
-      const data = await response.json()
-      setTicketCarousel(data.tickets || [])
-    } catch (err: any) {
-      setTicketsError(err.message || "Unable to load tickets")
-    } finally {
-      setTicketsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchEvents()
-  }, [fetchEvents])
-
-  useEffect(() => {
-    fetchAssignedTickets()
-  }, [fetchAssignedTickets])
 
   const handleConnect = () => {
     if (typeof window === "undefined") return
@@ -145,11 +132,7 @@ export default function DashboardPage() {
       if (event.origin !== window.location.origin) return
       if (event.data?.type === "calendar_connect") {
         if (event.data.status === "success") {
-          setStatus("connected")
-          fetchEvents()
-        } else {
-          setStatus("needs_connection")
-          setError(event.data.error || "Failed to connect calendar")
+          queryClient.invalidateQueries({ queryKey: ["dashboard", "calendar", "events"] })
         }
         window.removeEventListener("message", messageHandler)
         popup.close()
@@ -200,16 +183,15 @@ export default function DashboardPage() {
     }
   }
 
-  const groupedEvents = useMemo(() => {
-    return Object.entries(
-      events.reduce<Record<string, CalendarEvent[]>>((acc, event) => {
-        const startValue = event.start?.dateTime || event.start?.date
-        const key = startValue ? format(parseISO(startValue), "yyyy-MM-dd") : "unknown"
-        if (!acc[key]) acc[key] = []
-        acc[key].push(event)
-        return acc
-      }, {})
-    ).sort(([a], [b]) => (a > b ? 1 : -1))
+  const groupedEvents = useMemo((): [string, CalendarEvent[]][] => {
+    const byDate = events.reduce((acc: Record<string, CalendarEvent[]>, event: CalendarEvent) => {
+      const startValue = event.start?.dateTime || event.start?.date
+      const key = startValue ? format(parseISO(startValue), "yyyy-MM-dd") : "unknown"
+      if (!acc[key]) acc[key] = []
+      acc[key].push(event)
+      return acc
+    }, {} as Record<string, CalendarEvent[]>)
+    return Object.entries(byDate).sort(([a], [b]) => (a > b ? 1 : -1)) as [string, CalendarEvent[]][]
   }, [events])
 
   return (
@@ -280,7 +262,7 @@ export default function DashboardPage() {
               <Button onClick={handleConnect}>Connect to my calendar</Button>
               {error && <p className="mt-3 text-sm text-red-500">{error}</p>}
             </div>
-          ) : loadingEvents && status === "loading" ? (
+          ) : loadingEvents ? (
             <div className="grid gap-3">
               {Array.from({ length: 3 }).map((_, idx) => (
                 <div key={idx} className="h-20 rounded-2xl bg-muted/40" />

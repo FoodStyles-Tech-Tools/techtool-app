@@ -49,7 +49,7 @@ import {
 } from "@/components/ui/dialog"
 import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { cn } from "@/lib/utils"
-import { isDoneStatus } from "@/lib/ticket-statuses"
+import { isDoneStatus, buildStatusChangeBody } from "@/lib/ticket-statuses"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 const SQA_ALLOWED_ROLES = new Set(["sqa"])
@@ -668,68 +668,25 @@ export default function TicketsPage() {
         body.sqa_assigned_at = new Date().toISOString()
       }
     } else if (field === "status") {
-      const previousStatus = currentTicket?.status
+      const previousStatus = currentTicket?.status ?? "open"
       const newStatus = value as string
-      
-      // If changing to cancelled, prompt for reason first
+
       if (newStatus === "cancelled" && previousStatus !== "cancelled") {
-        // Build the body with all the status change logic
+        const statusBody = buildStatusChangeBody(previousStatus, newStatus, {
+          startedAt: (currentTicket as { started_at?: string | null })?.started_at,
+        })
+        Object.assign(body, statusBody)
         body[field] = newStatus
-        
-        // Condition 2: When status from Open/Blocked to any other status then update started_at timestamp
-        if (previousStatus === "open" || previousStatus === "blocked") {
-          body.started_at = new Date().toISOString()
-        }
-        
-        // Condition 3: When any status changed to Cancelled or Completed then update completed_at timestamp
-        body.completed_at = new Date().toISOString()
-        // Also ensure started_at is set if not already
-        const ticketStartedAt = (currentTicket as any)?.started_at
-        if (!ticketStartedAt) {
-          body.started_at = new Date().toISOString()
-        }
-        
-        // Store pending change and show dialog
         setPendingStatusChange({ ticketId, newStatus, body })
         setCancelReason("")
         setShowCancelReasonDialog(true)
         return
       }
-      
+
       body[field] = newStatus
-      
-      // Condition 2: When status from Open/Blocked to any other status then update started_at timestamp
-      if ((previousStatus === "open" || previousStatus === "blocked") && newStatus !== "open" && newStatus !== "blocked") {
-        body.started_at = new Date().toISOString()
-      }
-      
-      // Condition 3: When any status changed to Cancelled or Completed then update completed_at timestamp
-      if (newStatus === "completed" || newStatus === "cancelled") {
-        body.completed_at = new Date().toISOString()
-        // Also ensure started_at is set if not already
-        const ticketStartedAt = (currentTicket as any)?.started_at
-        if (!ticketStartedAt) {
-          body.started_at = new Date().toISOString()
-        }
-      }
-      
-      // Condition 4: If status changed from Completed/Cancelled to other status then remove timestamp completed_at
-      if ((previousStatus === "completed" || previousStatus === "cancelled") && newStatus !== "completed" && newStatus !== "cancelled") {
-        body.completed_at = null
-        // Clear reason when moving away from cancelled
-        body.reason = null
-      }
-      
-      // Condition 5: If status changed from In Progress to Blocked or Open then remove timestamp started_at
-      if (previousStatus === "in_progress" && (newStatus === "blocked" || newStatus === "open")) {
-        body.started_at = null
-      }
-      
-      // Additional: If status is open, clear started_at and completed_at
-      if (newStatus === "open") {
-        body.started_at = null
-        body.completed_at = null
-      }
+      Object.assign(body, buildStatusChangeBody(previousStatus, newStatus, {
+        startedAt: (currentTicket as { started_at?: string | null })?.started_at,
+      }))
     } else if (field === "department_id") {
       body[field] = value || null
     } else {
@@ -819,19 +776,16 @@ export default function TicketsPage() {
 
     const previousStatus = ticket.status
     const newStatus = columnId
-    const body: any = { status: newStatus }
 
-    // Condition 1: If moving to cancelled, show cancel reason dialog
     if (newStatus === "cancelled") {
-      body.completed_at = new Date().toISOString()
-      // Also ensure started_at is set if not already
-      const ticketStartedAt = (ticket as any)?.started_at
-      if (!ticketStartedAt) {
-        body.started_at = new Date().toISOString()
-      }
-      
-      // Store pending change and show dialog
-      setPendingStatusChange({ ticketId: draggedTicket, newStatus, body })
+      const statusBody = buildStatusChangeBody(previousStatus, newStatus, {
+        startedAt: (ticket as { started_at?: string | null })?.started_at,
+      })
+      setPendingStatusChange({
+        ticketId: draggedTicket,
+        newStatus,
+        body: { status: newStatus, ...statusBody },
+      })
       setCancelReason("")
       setShowCancelReasonDialog(true)
       setDraggedTicket(null)
@@ -839,37 +793,11 @@ export default function TicketsPage() {
       return
     }
 
-    // Condition 2: When status from Open/Blocked to any other status then update started_at timestamp
-    if ((previousStatus === "open" || previousStatus === "blocked") && newStatus !== "open" && newStatus !== "blocked") {
-      body.started_at = new Date().toISOString()
-    }
-
-    // Condition 3: When any status changed to Completed then update completed_at timestamp
-    if (newStatus === "completed") {
-      body.completed_at = new Date().toISOString()
-      // Also ensure started_at is set if not already
-      const ticketStartedAt = (ticket as any)?.started_at
-      if (!ticketStartedAt) {
-        body.started_at = new Date().toISOString()
-      }
-    }
-
-    // Condition 4: If status changed from Completed/Cancelled to other status then remove timestamp completed_at
-    if ((previousStatus === "completed" || previousStatus === "cancelled") && newStatus !== "completed" && newStatus !== "cancelled") {
-      body.completed_at = null
-      // Clear reason when moving away from cancelled
-      body.reason = null
-    }
-
-    // Condition 5: If status changed from In Progress to Blocked or Open then remove timestamp started_at
-    if (previousStatus === "in_progress" && (newStatus === "blocked" || newStatus === "open")) {
-      body.started_at = null
-    }
-
-    // Additional: If status is open, clear started_at and completed_at
-    if (newStatus === "open") {
-      body.started_at = null
-      body.completed_at = null
+    const body: any = {
+      status: newStatus,
+      ...buildStatusChangeBody(previousStatus, newStatus, {
+        startedAt: (ticket as { started_at?: string | null })?.started_at,
+      }),
     }
 
     try {

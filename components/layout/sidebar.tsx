@@ -120,16 +120,6 @@ export function Sidebar() {
         <nav className="space-y-0.5 px-3">
           {navItems
             .filter((item) => {
-              // Special case for Roles: show if user has view, edit, create, or manage
-              if (item.href === "/roles") {
-                return (
-                  hasPermission("roles", "view") ||
-                  hasPermission("roles", "edit") ||
-                  hasPermission("roles", "create") ||
-                  hasPermission("roles", "manage")
-                )
-              }
-
               if (item.href === "/settings") {
                 return (
                   hasPermission("users", "view") ||
@@ -234,10 +224,6 @@ export function Sidebar() {
     </aside>
   )
 }
-
-
-
-
 
 
 

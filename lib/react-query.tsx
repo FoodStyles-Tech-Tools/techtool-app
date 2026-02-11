@@ -9,16 +9,13 @@ export function ReactQueryProvider({ children }: { children: React.ReactNode }) 
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 30 * 1000, // 30 seconds default - data is fresh for 30 seconds
-            gcTime: 10 * 60 * 1000, // 10 minutes - cache persists longer for better performance
-            refetchOnWindowFocus: false, // Don't refetch on window focus
-            refetchOnMount: false, // Don't refetch on mount if data exists (use cached data)
-            refetchOnReconnect: false, // Don't refetch on reconnect
-            retry: 1, // Only retry once on failure
-            // Use cached data immediately if available (optimistic UI)
-            placeholderData: (previousData: any) => previousData,
-            // Better query key hashing for deduplication
-            structuralSharing: true, // Enable structural sharing to prevent unnecessary re-renders
+            staleTime: 30 * 1000, // 30 seconds - data is fresh, no refetch when switching tabs
+            gcTime: 10 * 60 * 1000, // 10 minutes - cache persists for fast back-navigation
+            refetchOnWindowFocus: false,
+            refetchOnMount: false,
+            refetchOnReconnect: false,
+            retry: 1,
+            structuralSharing: true,
           },
           mutations: {
             // Retry mutations once on failure
