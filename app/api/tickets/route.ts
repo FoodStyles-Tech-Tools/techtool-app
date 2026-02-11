@@ -114,10 +114,22 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    const normalizeUser = (value: any) => {
+      if (!value) return null
+      return Array.isArray(value) ? value[0] || null : value
+    }
+
+    const normalizedTickets = tickets.map(ticket => ({
+      ...ticket,
+      assignee: normalizeUser(ticket.assignee),
+      sqa_assignee: normalizeUser(ticket.sqa_assignee),
+      requested_by: normalizeUser(ticket.requested_by),
+    }))
+
     // OPTIMIZED: Batch fetch images in parallel with main query if possible
     // Get images from auth_user for all assignees, SQA assignees, and requested_by
     const emails = new Set<string>()
-    tickets.forEach(ticket => {
+    normalizedTickets.forEach(ticket => {
       if (ticket.assignee?.email) emails.add(ticket.assignee.email)
       if (ticket.sqa_assignee?.email) emails.add(ticket.sqa_assignee.email)
       if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
@@ -139,7 +151,7 @@ export async function GET(request: NextRequest) {
     })
     
     // Enrich tickets with images
-    const enrichedTickets = tickets.map(ticket => ({
+    const enrichedTickets = normalizedTickets.map(ticket => ({
       ...ticket,
       assignee: ticket.assignee ? {
         ...ticket.assignee,
@@ -353,4 +365,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

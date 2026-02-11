@@ -45,12 +45,12 @@ export async function getAssetsPageData(): Promise<{
     const collaboratorIds = Array.isArray(asset.collaborator_ids) ? asset.collaborator_ids : []
     const collaborators = collaboratorIds
       .map((id: string) => userMap.get(id))
-      .filter(Boolean)
-      .map((user) => ({
-        id: user!.id,
-        name: user!.name,
-        email: user!.email,
-        image: user!.image,
+      .filter((user: ServerUser | undefined): user is ServerUser => Boolean(user))
+      .map((user: ServerUser) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
       }))
 
     const owner = userMap.get(asset.owner_id)

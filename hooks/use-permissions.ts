@@ -44,7 +44,7 @@ export type PermissionFlags = {
   canAccessSettings: boolean
 }
 
-type PermissionsCache = {
+export type PermissionsCache = {
   user: User | null
   flags: PermissionFlags
   ts: number

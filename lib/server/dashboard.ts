@@ -126,7 +126,10 @@ export async function getDashboardData(): Promise<{
   ])
 
   const ticketsError = ticketsResult.error ? "Failed to load tickets" : null
-  const tickets = (ticketsResult.data || []) as TicketSummary[]
+  const tickets = (ticketsResult.data || []).map((ticket: any) => {
+    const project = Array.isArray(ticket.project) ? ticket.project[0] || null : ticket.project
+    return { ...ticket, project }
+  }) as TicketSummary[]
 
   const statusFallback = sortTicketStatuses(DEFAULT_TICKET_STATUSES)
   const ticketStatuses = statusesResult.error

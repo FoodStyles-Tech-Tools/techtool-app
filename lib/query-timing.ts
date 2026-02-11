@@ -52,9 +52,9 @@ export function endTiming(id: string, logThreshold: number = 100): number | null
  */
 export async function timeQuery<T>(
   label: string,
-  fn: () => Promise<T>,
+  fn: () => T,
   logThreshold: number = 100
-): Promise<T> {
+): Promise<Awaited<T>> {
   const id = startTiming(label)
   try {
     const result = await fn()
@@ -62,7 +62,7 @@ export async function timeQuery<T>(
     if (duration && duration > logThreshold) {
       console.log(`[TIMED] ${label}: ${duration.toFixed(2)}ms`)
     }
-    return result
+    return result as Awaited<T>
   } catch (error) {
     endTiming(id, logThreshold)
     throw error

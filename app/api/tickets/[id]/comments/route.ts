@@ -81,7 +81,7 @@ export async function GET(
       created_at: string
       updated_at: string
       author: { id: string; name: string | null; email: string }
-      mentions: { user_id: string; user: { id: string; name: string | null; email: string } | null }[]
+      mentions: { user_id: string; user: { id: string; name: string | null; email: string } }[]
     }
 
     // Normalize author field from Supabase response (may be array or object)
@@ -106,7 +106,7 @@ export async function GET(
         created_at: c.created_at,
         updated_at: c.updated_at,
         author,
-        mentions,
+        mentions: mentions as { user_id: string; user: { id: string; name: string | null; email: string } }[],
       }
     })
 
