@@ -25,9 +25,7 @@ import {
 } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DepartmentForm } from "@/components/forms/department-form"
-import { useDepartments } from "@/hooks/use-departments"
 import { useCreateProject, useUpdateProject } from "@/hooks/use-projects"
-import { useUsers } from "@/hooks/use-users"
 import { CollaboratorSelector } from "@/components/collaborator-selector"
 
 const projectSchema = z.object({
@@ -51,13 +49,13 @@ type ProjectFormValues = z.infer<typeof projectSchema>
 interface ProjectFormProps {
   onSuccess?: () => void
   initialData?: Partial<ProjectFormValues> & { id?: string }
+  departments: Array<{ id: string; name: string }>
+  users: Array<{ id: string; name: string | null; email: string; image: string | null; role?: string | null }>
 }
 
 const NO_DEPARTMENT_VALUE = "no_department"
 
-export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
-  const { departments, refresh } = useDepartments()
-  const { data: users } = useUsers()
+export function ProjectForm({ onSuccess, initialData, departments, users }: ProjectFormProps) {
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()
@@ -218,7 +216,6 @@ export function ProjectForm({ onSuccess, initialData }: ProjectFormProps) {
                   <DepartmentForm
                     onSuccess={() => {
                       setDepartmentDialogOpen(false)
-                      refresh()
                     }}
                   />
                 </DialogContent>

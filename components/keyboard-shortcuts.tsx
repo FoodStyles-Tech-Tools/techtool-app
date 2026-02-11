@@ -10,6 +10,8 @@ import { TicketDetailDialog } from "./ticket-detail-dialog"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectForm } from "@/components/forms/project-form"
+import { useUsers } from "@/hooks/use-users"
+import { useDepartments } from "@/hooks/use-departments"
 import { toast } from "@/components/ui/toast"
 
 export function KeyboardShortcuts() {
@@ -21,6 +23,8 @@ export function KeyboardShortcuts() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const { hasPermission } = usePermissions()
+  const { data: usersData } = useUsers()
+  const { departments } = useDepartments()
   const canCreateProjects = hasPermission("projects", "create")
   const isUsersPage = pathname === "/users"
 
@@ -194,6 +198,8 @@ export function KeyboardShortcuts() {
               <DialogTitle>Add Project</DialogTitle>
             </DialogHeader>
             <ProjectForm
+              departments={departments}
+              users={usersData || []}
               onSuccess={() => {
                 setIsProjectDialogOpen(false)
                 toast("Project created successfully")

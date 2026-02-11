@@ -485,6 +485,8 @@ export default function ProjectsClient({
             <DialogTitle>Add Project</DialogTitle>
           </DialogHeader>
           <ProjectForm
+            departments={departments}
+            users={users}
             onSuccess={() => {
               setProjectFormOpen(false)
               toast("Project created successfully")

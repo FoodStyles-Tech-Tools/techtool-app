@@ -13,6 +13,23 @@ export interface User {
   created_at?: string
 }
 
+/** Role permission shape */
+export interface RolePermission {
+  id?: string
+  resource: string
+  action: string
+}
+
+/** Role with permissions */
+export interface Role {
+  id: string
+  name: string
+  description: string | null
+  is_system: boolean
+  created_at: string
+  permissions: RolePermission[]
+}
+
 /** Department as returned by API / useDepartments */
 export interface Department {
   id: string

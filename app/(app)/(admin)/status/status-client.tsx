@@ -23,7 +23,6 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "@/components/ui/toast"
 import { GripVertical, Plus, Pencil, Trash2 } from "lucide-react"
-import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import { normalizeStatusKey, type TicketStatus } from "@/lib/ticket-statuses"
 
 type StatusFormState = {
@@ -34,8 +33,15 @@ type StatusFormState = {
 
 const DEFAULT_COLOR = "#9ca3af"
 
-export default function StatusClient() {
-  const { statuses, statusMap, loading, refresh, error } = useTicketStatuses({ fallback: false })
+type StatusClientProps = {
+  initialStatuses: TicketStatus[]
+}
+
+export default function StatusClient({ initialStatuses }: StatusClientProps) {
+  const [statuses, setStatuses] = useState<TicketStatus[]>(initialStatuses)
+  const [statusMap, setStatusMap] = useState(() => new Map(initialStatuses.map((status) => [status.key, status])))
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingStatus, setEditingStatus] = useState<TicketStatus | null>(null)
   const [formState, setFormState] = useState<StatusFormState>({
@@ -51,6 +57,30 @@ export default function StatusClient() {
   const nextSortOrder = useMemo(() => {
     return statuses.length + 1
   }, [statuses])
+
+  useEffect(() => {
+    setStatuses(initialStatuses)
+  }, [initialStatuses])
+
+  useEffect(() => {
+    setStatusMap(new Map(statuses.map((status) => [status.key, status])))
+  }, [statuses])
+
+  const refreshStatuses = async () => {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/ticket-statuses")
+      const data = await res.json().catch(() => null)
+      if (res.ok && data?.statuses) {
+        setStatuses(data.statuses)
+        setError(null)
+      } else {
+        setError(data?.error || "Failed to refresh statuses")
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     if (!statuses.length) {
@@ -148,7 +178,7 @@ export default function StatusClient() {
         return
       }
 
-      await refresh()
+      await refreshStatuses()
       toast(editingStatus ? "Status updated" : "Status created", "success")
       setIsDialogOpen(false)
       setEditingStatus(null)
@@ -156,6 +186,7 @@ export default function StatusClient() {
       console.error("Failed to save status:", err)
       toast("Failed to save status", "error")
     } finally {
+      setLoading(false)
       setSaving(false)
     }
   }
@@ -176,11 +207,13 @@ export default function StatusClient() {
         return
       }
 
-      await refresh()
+      await refreshStatuses()
       toast("Status deleted", "success")
     } catch (err) {
       console.error("Failed to delete status:", err)
       toast("Failed to delete status", "error")
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -205,16 +238,18 @@ export default function StatusClient() {
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}))
         toast(errorData.error || "Failed to reorder statuses", "error")
-        await refresh()
+        await refreshStatuses()
         return
       }
 
-      await refresh()
+      await refreshStatuses()
       toast("Status order updated", "success")
     } catch (err) {
       console.error("Failed to reorder statuses:", err)
       toast("Failed to reorder statuses", "error")
-      await refresh()
+      await refreshStatuses()
+    } finally {
+      setLoading(false)
     }
   }
 

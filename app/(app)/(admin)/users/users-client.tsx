@@ -36,9 +36,10 @@ interface User {
 
 type UsersClientProps = {
   initialUsers: User[]
+  roles: Array<{ id: string; name: string }>
 }
 
-export default function UsersClient({ initialUsers }: UsersClientProps) {
+export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
   const router = useRouter()
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -160,6 +161,7 @@ export default function UsersClient({ initialUsers }: UsersClientProps) {
                     }
                   : undefined
               }
+              roles={roles}
               onSuccess={() => {
                 setIsDialogOpen(false)
                 setEditingUser(null)

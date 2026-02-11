@@ -20,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useEffect, useState } from "react"
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -38,25 +37,10 @@ type UserFormValues = z.infer<typeof userSchema>
 interface UserFormProps {
   onSuccess?: () => void
   initialData?: Partial<UserFormValues> & { id?: string }
+  roles: Role[]
 }
 
-export function UserForm({ onSuccess, initialData }: UserFormProps) {
-  const [roles, setRoles] = useState<Role[]>([])
-
-  useEffect(() => {
-    // Fetch available roles
-    fetch("/api/roles")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.roles) {
-          setRoles(data.roles)
-        }
-      })
-      .catch((error) => {
-        console.error("Error fetching roles:", error)
-      })
-  }, [])
-
+export function UserForm({ onSuccess, initialData, roles }: UserFormProps) {
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
     defaultValues: {
