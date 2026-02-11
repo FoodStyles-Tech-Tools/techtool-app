@@ -36,7 +36,7 @@ export function TicketPrioritySelect({
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className={cn("h-7 w-[100px] text-xs relative dark:bg-[#1f1f1f]", triggerClassName)}>
+      <SelectTrigger className={cn("h-7 w-[100px] text-xs relative dark:bg-input", triggerClassName)}>
         {value ? (
           <div className="absolute left-2 flex items-center gap-1.5">
             {getPriorityIcon(value)}
@@ -46,7 +46,7 @@ export function TicketPrioritySelect({
           <SelectValue />
         )}
       </SelectTrigger>
-      <SelectContent className={cn("dark:bg-[#1f1f1f]", className)}>
+      <SelectContent className={cn("dark:bg-input", className)}>
         <SelectItem value="low">
           <div className="flex items-center gap-1.5">
             <ChevronDown className="h-3.5 w-3.5 text-blue-500" />

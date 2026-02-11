@@ -39,7 +39,8 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [dragStartElement, setDragStartElement] = useState<HTMLElement | null>(null)
-  const { hasPermission } = usePermissions()
+  const { flags } = usePermissions()
+  const canEditTickets = flags?.canEditTickets ?? false
   const supabase = useSupabaseClient()
   const userEmail = useUserEmail()
 
@@ -102,7 +103,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
   })
 
   const handleToggleComplete = async (subtask: Subtask) => {
-    if (!hasPermission("tickets", "edit")) return
+    if (!canEditTickets) return
 
     const previousCompleted = subtask.completed
     const optimisticSubtasks = subtasks.map((s) =>
@@ -144,7 +145,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
   }
 
   const handleStartEdit = (subtask: Subtask) => {
-    if (!hasPermission("tickets", "edit")) return
+    if (!canEditTickets) return
     setEditingId(subtask.id)
     setEditValue(subtask.title)
   }
@@ -202,7 +203,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
   }
 
   const handleDelete = async (subtaskId: string) => {
-    if (!hasPermission("tickets", "edit")) return
+    if (!canEditTickets) return
 
     const previousSubtasks = subtasks
     setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId))
@@ -232,7 +233,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
   }
 
   const handleAddSubtask = async () => {
-    if (!newSubtaskTitle.trim() || !hasPermission("tickets", "edit")) {
+    if (!newSubtaskTitle.trim() || !canEditTickets) {
       // If no text, just close the input
       setIsAdding(false)
       setNewSubtaskTitle("")
@@ -287,7 +288,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
   }
 
   const handleDragStart = (e: React.DragEvent, subtaskId: string) => {
-    if (!hasPermission("tickets", "edit")) {
+    if (!canEditTickets) {
       e.preventDefault()
       return
     }
@@ -319,7 +320,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
     e.preventDefault()
     setDragOverId(null)
 
-    if (!draggedId || draggedId === targetId || !hasPermission("tickets", "edit")) {
+    if (!draggedId || draggedId === targetId || !canEditTickets) {
       setDraggedId(null)
       return
     }
@@ -402,7 +403,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
     return <div className="text-sm text-muted-foreground">Loading subtasks...</div>
   }
 
-  const canEdit = hasPermission("tickets", "edit")
+  const canEdit = canEditTickets
 
   return (
     <div className="space-y-3">

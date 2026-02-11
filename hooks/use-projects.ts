@@ -4,26 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
 import { useSupabaseClient } from "@/lib/supabase-client"
 import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
-
-const sanitizeLinkArray = (value: unknown): string[] => {
-  if (!Array.isArray(value)) return []
-  return value
-    .map((item) => {
-      if (typeof item === "string") return item.trim()
-      if (item && typeof item === "object" && "url" in item && typeof (item as any).url === "string") {
-        return (item as any).url.trim()
-      }
-      return ""
-    })
-    .filter((url) => url.length > 0)
-}
-
-const prepareLinkPayload = (links?: string[]): string[] => {
-  if (!links) return []
-  return links
-    .map((link) => (typeof link === "string" ? link.trim() : ""))
-    .filter((url) => url.length > 0)
-}
+import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
 
 async function attachCollaboratorsToProjects(
   supabase: ReturnType<typeof useSupabaseClient>,

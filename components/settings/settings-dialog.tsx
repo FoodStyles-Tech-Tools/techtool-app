@@ -46,13 +46,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { data: session } = useSession()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const { user: permissionsUser } = usePermissions()
+  const { user: permissionsUser, flags } = usePermissions()
   const { preferences, updatePreferences, isUpdating } = useUserPreferences()
   const user = useMemo<CombinedUser | null>(
     () => permissionsUser || (session?.user as CombinedUser) || null,
     [permissionsUser, session?.user]
   )
   const [signingOut, setSigningOut] = useState(false)
+  const canManageSettings = flags?.canManageSettings ?? false
   const [activeSection, setActiveSection] = useState<SettingsSection>("preferences")
   const { show, hide } = useSignOutOverlay()
 
@@ -93,16 +94,18 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               >
                 Preferences
               </button>
-              <button
-                onClick={() => setActiveSection("settings")}
-                className={`w-full px-3 py-2 rounded-md text-sm text-left transition-colors ${
-                  activeSection === "settings"
-                    ? "bg-accent text-accent-foreground"
-                    : "hover:bg-accent/50"
-                }`}
-              >
-                Settings
-              </button>
+              {canManageSettings && (
+                <button
+                  onClick={() => setActiveSection("settings")}
+                  className={`w-full px-3 py-2 rounded-md text-sm text-left transition-colors ${
+                    activeSection === "settings"
+                      ? "bg-accent text-accent-foreground"
+                      : "hover:bg-accent/50"
+                  }`}
+                >
+                  Settings
+                </button>
+              )}
             </div>
           </div>
 

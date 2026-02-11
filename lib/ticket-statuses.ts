@@ -36,3 +36,33 @@ export const formatStatusLabel = (key: string) =>
 
 export const isDoneStatus = (key: string) =>
   key === "completed" || key === "cancelled"
+
+/** Build API body for a status change (started_at, completed_at, reason). Caller adds status and optional reason. */
+export function buildStatusChangeBody(
+  previousStatus: string,
+  newStatus: string,
+  options?: { startedAt?: string | null }
+): Record<string, unknown> {
+  const now = new Date().toISOString()
+  const body: Record<string, unknown> = {}
+
+  if ((previousStatus === "open" || previousStatus === "blocked") && newStatus !== "open" && newStatus !== "blocked") {
+    body.started_at = now
+  }
+  if (newStatus === "completed" || newStatus === "cancelled") {
+    body.completed_at = now
+    if (!options?.startedAt) body.started_at = now
+  }
+  if ((previousStatus === "completed" || previousStatus === "cancelled") && newStatus !== "completed" && newStatus !== "cancelled") {
+    body.completed_at = null
+    body.reason = null
+  }
+  if (previousStatus === "in_progress" && (newStatus === "blocked" || newStatus === "open")) {
+    body.started_at = null
+  }
+  if (newStatus === "open") {
+    body.started_at = null
+    body.completed_at = null
+  }
+  return body
+}

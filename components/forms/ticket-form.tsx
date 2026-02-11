@@ -90,11 +90,14 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
   const { departments, refresh } = useDepartments()
   const { epics } = useEpics(projectId || "")
   const { sprints } = useSprints(projectId || "")
-  const { user } = usePermissions()
+  const { user, flags } = usePermissions()
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
   const createTicket = useCreateTicket()
   const updateTicket = useUpdateTicket()
   const isEditing = Boolean(initialData?.id)
+  const canCreateTickets = flags?.canCreateTickets ?? false
+  const canEditTickets = flags?.canEditTickets ?? false
+  const canSubmit = isEditing ? canEditTickets : canCreateTickets
 
   useEffect(() => {
     // Fetch users for assignee dropdown
@@ -139,6 +142,10 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
 
   const onSubmit = async (values: TicketFormValues) => {
     try {
+      if (!canSubmit) {
+        toast("You do not have permission to perform this action.", "error")
+        return
+      }
       const sanitizedLinks = (values.links || []).map((link) => link.trim()).filter(Boolean)
       const payload = {
         title: values.title,
@@ -180,9 +187,15 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
     }
   }
 
+  const isReadOnly = !canSubmit
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <fieldset
+          disabled={isReadOnly}
+          className={isReadOnly ? "space-y-4 opacity-70" : "space-y-4"}
+        >
         <FormField
           control={form.control}
           name="title"
@@ -429,10 +442,16 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
         <Button
           type="submit"
           className="w-full"
-          disabled={createTicket.isPending || updateTicket.isPending}
+          disabled={createTicket.isPending || updateTicket.isPending || !canSubmit}
         >
           {isEditing ? "Update Ticket" : "Create Ticket"}
         </Button>
+        {isReadOnly && (
+          <p className="text-xs text-muted-foreground text-center">
+            You do not have permission to {isEditing ? "update" : "create"} tickets.
+          </p>
+        )}
+        </fieldset>
       </form>
     </Form>
   )

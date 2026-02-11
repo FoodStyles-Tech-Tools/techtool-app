@@ -1,23 +1,23 @@
 "use client"
 
 import {
-  SiAsana,
-  SiFigma,
-  SiGithub,
-  SiGooglecalendar,
-  SiGoogledocs,
-  SiGoogledrive,
-  SiGooglemeet,
-  SiGooglesheets,
-  SiGoogleslides,
-  SiJira,
-  SiLinear,
-  SiNotion,
-  SiSlack,
-  SiTrello,
-  SiVercel,
-} from "react-icons/si"
-import { Link2 } from "lucide-react"
+  Calendar,
+  CheckCircle2,
+  Figma,
+  FileSpreadsheet,
+  FileText,
+  Github,
+  HardDrive,
+  KanbanSquare,
+  LineChart,
+  Link2,
+  NotebookText,
+  Presentation,
+  Slack,
+  Trello,
+  Triangle,
+  Video,
+} from "lucide-react"
 
 interface BrandLinkIconProps {
   url: string
@@ -30,26 +30,26 @@ const getBrandIcon = (url: string) => {
     const host = parsed.hostname.toLowerCase()
     const path = parsed.pathname.toLowerCase()
 
-    if (host === "github.com" || host.endsWith(".github.com")) return SiGithub
-    if (host === "vercel.com" || host.endsWith(".vercel.app")) return SiVercel
-    if (host === "notion.so" || host.endsWith(".notion.so")) return SiNotion
-    if (host === "linear.app") return SiLinear
-    if (host === "trello.com") return SiTrello
-    if (host === "asana.com") return SiAsana
-    if (host === "figma.com") return SiFigma
-    if (host === "slack.com") return SiSlack
-    if (host.endsWith("atlassian.net") || host === "jira.com") return SiJira
+    if (host === "github.com" || host.endsWith(".github.com")) return Github
+    if (host === "vercel.com" || host.endsWith(".vercel.app")) return Triangle
+    if (host === "notion.so" || host.endsWith(".notion.so")) return NotebookText
+    if (host === "linear.app") return LineChart
+    if (host === "trello.com") return Trello
+    if (host === "asana.com") return CheckCircle2
+    if (host === "figma.com") return Figma
+    if (host === "slack.com") return Slack
+    if (host.endsWith("atlassian.net") || host === "jira.com") return KanbanSquare
 
-    if (host === "calendar.google.com" || path.includes("/calendar")) return SiGooglecalendar
-    if (host === "meet.google.com") return SiGooglemeet
-    if (host === "drive.google.com") return SiGoogledrive
+    if (host === "calendar.google.com" || path.includes("/calendar")) return Calendar
+    if (host === "meet.google.com") return Video
+    if (host === "drive.google.com") return HardDrive
     if (host === "docs.google.com") {
-      if (path.includes("spreadsheets")) return SiGooglesheets
-      if (path.includes("presentation")) return SiGoogleslides
-      if (path.includes("document")) return SiGoogledocs
-      return SiGoogledocs
+      if (path.includes("spreadsheets")) return FileSpreadsheet
+      if (path.includes("presentation")) return Presentation
+      if (path.includes("document")) return FileText
+      return FileText
     }
-    if (host === "sheets.google.com") return SiGooglesheets
+    if (host === "sheets.google.com") return FileSpreadsheet
   } catch {
     return Link2
   }

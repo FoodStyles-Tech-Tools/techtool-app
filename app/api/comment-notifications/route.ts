@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 /** GET /api/comment-notifications – list current user's notifications (with unread count); optional ?unread_only */
 export async function GET(request: NextRequest) {

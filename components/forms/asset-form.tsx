@@ -1,6 +1,7 @@
 "use client"
 
 import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
+import dynamic from "next/dynamic"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -14,9 +15,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { useCreateAsset, useUpdateAsset } from "@/hooks/use-assets"
-import { RichTextEditor } from "@/components/rich-text-editor"
 import { CollaboratorSelector } from "@/components/collaborator-selector"
-import { useUsers } from "@/hooks/use-users"
 import {
   Select,
   SelectContent,
@@ -24,6 +23,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+
+const RichTextEditor = dynamic(
+  () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
+  { ssr: false }
+)
 
 const assetSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -46,6 +50,7 @@ interface AssetFormProps {
   }
   defaultOwnerId?: string
   canManageOwner?: boolean
+  users: Array<{ id: string; name: string | null; email: string; image: string | null; role?: string | null }>
 }
 
 export function AssetForm({
@@ -53,11 +58,10 @@ export function AssetForm({
   initialData,
   defaultOwnerId,
   canManageOwner = false,
+  users,
 }: AssetFormProps) {
   const createAsset = useCreateAsset()
   const updateAsset = useUpdateAsset()
-  const { data: usersData } = useUsers()
-  const users = usersData || []
   const isEditing = Boolean(initialData?.id)
 
   const form = useForm<AssetFormValues>({

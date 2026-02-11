@@ -1,37 +1,56 @@
-"use client"
-
 import { Sidebar } from "./sidebar"
-import { useSession } from "@/lib/auth-client"
-import { useRouter } from "next/navigation"
-import { useEffect } from "react"
+import { PermissionsBootstrap } from "@/components/permissions-bootstrap"
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const { data: session, isPending } = useSession()
-  const router = useRouter()
-
-  useEffect(() => {
-    if (!isPending && !session) {
-      router.push("/signin")
-    }
-  }, [session, isPending, router])
-
-  if (isPending) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    )
+type PermissionsBootstrapPayload = {
+  user: {
+    id: string
+    email: string
+    name: string | null
+    role: string | null
+    image: string | null
+    permissions: Array<{ resource: string; action: string }>
+  } | null
+  flags: {
+    canViewProjects: boolean
+    canCreateProjects: boolean
+    canEditProjects: boolean
+    canViewAssets: boolean
+    canCreateAssets: boolean
+    canEditAssets: boolean
+    canDeleteAssets: boolean
+    canManageAssets: boolean
+    canViewClockify: boolean
+    canManageClockify: boolean
+    canViewTickets: boolean
+    canCreateTickets: boolean
+    canEditTickets: boolean
+    canViewUsers: boolean
+    canCreateUsers: boolean
+    canEditUsers: boolean
+    canDeleteUsers: boolean
+    canViewRoles: boolean
+    canCreateRoles: boolean
+    canEditRoles: boolean
+    canDeleteRoles: boolean
+    canManageStatus: boolean
+    canManageSettings: boolean
+    canAccessSettings: boolean
   }
+  ts: number
+}
 
-  if (!session) {
-    return null
-  }
-
+export function AppShell({
+  children,
+  permissionsBootstrap,
+}: {
+  children: React.ReactNode
+  permissionsBootstrap?: PermissionsBootstrapPayload
+}) {
   return (
     <div className="flex h-screen overflow-hidden">
+      {permissionsBootstrap ? (
+        <PermissionsBootstrap payload={permissionsBootstrap} />
+      ) : null}
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
         <div className="w-full px-4 py-4">{children}</div>

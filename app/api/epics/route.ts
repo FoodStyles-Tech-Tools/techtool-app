@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
+import { timeQuery } from "@/lib/query-timing"
 
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
+  const startTime = performance.now()
   try {
     await requirePermission("projects", "view")
     const supabase = createServerClient()
@@ -19,11 +21,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { data: epics, error } = await supabase
-      .from("epics")
-      .select("*")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
+    // OPTIMIZED: Use composite index (project_id, created_at DESC)
+    // Select only needed columns instead of *
+    const { data: epics, error } = await timeQuery(
+      `GET /api/epics?project_id=${projectId}`,
+      () => supabase
+        .from("epics")
+        .select("id, name, description, project_id, color, sprint_id, created_at, updated_at")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+    )
 
     if (error) {
       console.error("Error fetching epics:", error)
@@ -33,6 +40,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    const totalTime = performance.now() - startTime
+    if (totalTime > 500) {
+      console.log(`[SLOW ENDPOINT] GET /api/epics: ${totalTime.toFixed(2)}ms`)
+    }
     return NextResponse.json({ epics: epics || [] })
   } catch (error: any) {
     if (error.message === "Unauthorized") {

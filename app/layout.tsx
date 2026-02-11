@@ -1,11 +1,6 @@
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
-import { Toaster } from "@/components/ui/toast"
-import { ThemeProvider } from "@/components/theme-provider"
-import { ReactQueryProvider } from "@/lib/react-query"
-import { KeyboardShortcuts } from "@/components/keyboard-shortcuts"
-import { SignOutOverlayProvider } from "@/components/signout-overlay"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -21,17 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <ReactQueryProvider>
-          <ThemeProvider defaultTheme="system" storageKey="techtool-theme">
-            <SignOutOverlayProvider>
-              {children}
-              <Toaster />
-              <KeyboardShortcuts />
-            </SignOutOverlayProvider>
-          </ThemeProvider>
-        </ReactQueryProvider>
-      </body>
+      <body className={inter.className}>{children}</body>
     </html>
   )
 }

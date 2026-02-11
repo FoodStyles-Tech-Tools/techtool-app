@@ -3,86 +3,105 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
 import { useSupabaseClient } from "@/lib/supabase-client"
-import { useSession } from "@/lib/auth-client"
 import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
-import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js"
+import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
+import type { Ticket } from "@/lib/types"
 
-const sanitizeLinkArray = (value: unknown): string[] => {
-  if (!Array.isArray(value)) return []
-  return value
-    .map((item) => {
-      if (typeof item === "string") return item.trim()
-      if (item && typeof item === "object" && "url" in item && typeof (item as any).url === "string") {
-        return (item as any).url.trim()
-      }
-      return ""
-    })
-    .filter((url) => url.length > 0)
+export type TicketFilterOptions = {
+  project_id?: string
+  assignee_id?: string
+  status?: string
+  department_id?: string
+  requested_by_id?: string
+  exclude_done?: boolean
 }
 
-const prepareLinkPayload = (links?: string[]): string[] => {
-  if (!links) return []
-  return links
-    .map((link) => (typeof link === "string" ? link.trim() : ""))
-    .filter((url) => url.length > 0)
-}
-
-interface Ticket {
-  id: string
-  display_id: string | null
-  title: string
-  description: string | null
-  status: string
-  priority: string
-  type: string
-  due_date: string | null
-  sqa_assigned_at?: string | null
-  links: string[]
-  reason?: {
-    cancelled?: {
-      reason: string
-      cancelledAt: string
-    }
-  } | null
-  department: {
-    id: string
-    name: string
-  } | null
-  epic: {
-    id: string
-    name: string
-    color: string
-  } | null
-  sprint: {
-    id: string
-    name: string
-    status: string
-  } | null
-  project: {
-    id: string
-    name: string
-  } | null
-  assignee: {
-    id: string
-    name: string | null
-    email: string
-    image: string | null
-  } | null
-  sqa_assignee: {
-    id: string
-    name: string | null
-    email: string
-    image: string | null
-  } | null
-  requested_by: {
-    id: string
-    name: string | null
-    email: string
+function ticketMatchesFilter(
+  ticket: Ticket & { project_id?: string; assignee_id?: string; department_id?: string; requested_by_id?: string },
+  opts?: TicketFilterOptions
+): boolean {
+  if (!opts) return true
+  if (opts.project_id && ticket.project_id !== opts.project_id) return false
+  if (opts.assignee_id) {
+    if (opts.assignee_id === "unassigned" && ticket.assignee_id) return false
+    if (opts.assignee_id !== "unassigned" && ticket.assignee_id !== opts.assignee_id) return false
   }
-  created_at: string
+  if (opts.status && ticket.status !== opts.status) return false
+  if (opts.department_id) {
+    if (opts.department_id === "no_department" && ticket.department_id) return false
+    if (opts.department_id !== "no_department" && ticket.department_id !== opts.department_id) return false
+  }
+  if (opts.requested_by_id && ticket.requested_by_id !== opts.requested_by_id) return false
+  if (opts.exclude_done && (ticket.status === "completed" || ticket.status === "cancelled")) return false
+  return true
 }
 
-// Removed TicketsResponse - using Ticket[] directly now
+type TicketUpdateVariables = {
+  title?: string
+  description?: string
+  status?: string
+  priority?: string
+  type?: string
+  links?: string[]
+  sqa_assigned_at?: string | null
+  assignee_id?: string | null
+  sqa_assignee_id?: string | null
+  requested_by_id?: string
+  department_id?: string | null
+  epic_id?: string | null
+  sprint_id?: string | null
+}
+
+function applyTicketUpdateVariables(
+  ticket: Ticket,
+  variables: TicketUpdateVariables,
+  cache: {
+    users?: Array<{ id: string; name: string | null; email: string; image: string | null }>
+    departments?: Array<{ id: string; name: string }>
+    epics?: Array<{ id: string; name: string; color: string }>
+    sprints?: Array<{ id: string; name: string; status: string }>
+  }
+): Ticket {
+  const updated: Ticket = { ...ticket }
+  if (variables.title !== undefined) updated.title = variables.title
+  if (variables.description !== undefined) updated.description = variables.description
+  if (variables.status !== undefined) updated.status = variables.status
+  if (variables.priority !== undefined) updated.priority = variables.priority
+  if (variables.type !== undefined) updated.type = variables.type
+  if (variables.links !== undefined) updated.links = prepareLinkPayload(variables.links)
+  if (variables.sqa_assigned_at !== undefined) updated.sqa_assigned_at = variables.sqa_assigned_at
+  const { users: usersData, departments: departmentsData, epics: epicsData, sprints: sprintsData } = cache
+  if (variables.assignee_id !== undefined) {
+    updated.assignee = variables.assignee_id && usersData
+      ? (() => { const u = usersData.find(x => x.id === variables.assignee_id); return u ? { id: u.id, name: u.name, email: u.email, image: u.image } : null })()
+      : null
+  }
+  if (variables.sqa_assignee_id !== undefined) {
+    updated.sqa_assignee = variables.sqa_assignee_id && usersData
+      ? (() => { const u = usersData.find(x => x.id === variables.sqa_assignee_id); return u ? { id: u.id, name: u.name, email: u.email, image: u.image } : null })()
+      : null
+  }
+  if (variables.requested_by_id !== undefined && usersData) {
+    const u = usersData.find(x => x.id === variables.requested_by_id)
+    if (u) updated.requested_by = { id: u.id, name: u.name, email: u.email }
+  }
+  if (variables.department_id !== undefined) {
+    updated.department = variables.department_id && departmentsData
+      ? (() => { const d = departmentsData.find(x => x.id === variables.department_id); return d ? { id: d.id, name: d.name } : null })()
+      : null
+  }
+  if (variables.epic_id !== undefined) {
+    updated.epic = variables.epic_id && epicsData
+      ? (() => { const e = epicsData.find(x => x.id === variables.epic_id); return e ? { id: e.id, name: e.name, color: e.color } : null })()
+      : null
+  }
+  if (variables.sprint_id !== undefined) {
+    updated.sprint = variables.sprint_id && sprintsData
+      ? (() => { const s = sprintsData.find(x => x.id === variables.sprint_id); return s ? { id: s.id, name: s.name, status: s.status } : null })()
+      : null
+  }
+  return updated
+}
 
 // Helper function to enrich tickets with images from auth_user
 async function enrichTicketsWithImages(
@@ -175,16 +194,7 @@ export function useTickets(options?: {
           const enrichedTickets = await enrichTicketsWithImages(supabase, [ticket])
           const enrichedTicket = enrichedTickets[0]
           
-          // Check if ticket matches current filters
-          const matchesFilter = 
-            (!options?.project_id || (enrichedTicket as any).project_id === options.project_id) &&
-            (!options?.assignee_id || (options.assignee_id === "unassigned" ? !(enrichedTicket as any).assignee_id : (enrichedTicket as any).assignee_id === options.assignee_id)) &&
-            (!options?.status || enrichedTicket.status === options.status) &&
-            (!options?.department_id || (options.department_id === "no_department" ? !(enrichedTicket as any).department_id : (enrichedTicket as any).department_id === options.department_id)) &&
-            (!options?.requested_by_id || (enrichedTicket as any).requested_by_id === options.requested_by_id) &&
-            (!options?.exclude_done || (enrichedTicket.status !== "completed" && enrichedTicket.status !== "cancelled"))
-          
-          if (matchesFilter) {
+          if (ticketMatchesFilter(enrichedTicket as any, options)) {
             queryClient.setQueriesData<Ticket[]>(
               { queryKey: ["tickets"] },
               (old) => {
@@ -231,40 +241,12 @@ export function useTickets(options?: {
           const enrichedTickets = await enrichTicketsWithImages(supabase, [ticket])
           const enrichedTicket = enrichedTickets[0]
           
-          // Helper function to check if ticket matches filter options
-          const matchesFilter = (filterOptions?: {
-            project_id?: string
-            assignee_id?: string
-            status?: string
-            department_id?: string
-            requested_by_id?: string
-            exclude_done?: boolean
-          }) => {
-            if (!filterOptions) return true
-            
-            return (
-              (!filterOptions.project_id || (enrichedTicket as any).project_id === filterOptions.project_id) &&
-              (!filterOptions.assignee_id || 
-                (filterOptions.assignee_id === "unassigned" ? !(enrichedTicket as any).assignee_id : (enrichedTicket as any).assignee_id === filterOptions.assignee_id)) &&
-              (!filterOptions.status || enrichedTicket.status === filterOptions.status) &&
-              (!filterOptions.department_id || 
-                (filterOptions.department_id === "no_department" ? !(enrichedTicket as any).department_id : (enrichedTicket as any).department_id === filterOptions.department_id)) &&
-              (!filterOptions.requested_by_id || (enrichedTicket as any).requested_by_id === filterOptions.requested_by_id) &&
-              (!filterOptions.exclude_done || (enrichedTicket.status !== "completed" && enrichedTicket.status !== "cancelled"))
-            )
-          }
-
-          // Update all ticket query caches intelligently
           const allQueries = queryClient.getQueriesData<Ticket[]>({ queryKey: ["tickets"] })
-          
           for (const [queryKey, oldData] of allQueries) {
             if (!oldData) continue
-            
-            // Extract filter options from query key
             const [, project_id, assignee_id, status, department_id, requested_by_id, exclude_done] = queryKey as any[]
-            const filterOptions = { project_id, assignee_id, status, department_id, requested_by_id, exclude_done }
-            
-            const ticketMatches = matchesFilter(filterOptions)
+            const filterOptions: TicketFilterOptions = { project_id, assignee_id, status, department_id, requested_by_id, exclude_done }
+            const ticketMatches = ticketMatchesFilter(enrichedTicket as any, filterOptions)
             const ticketIndex = oldData.findIndex(t => t.id === enrichedTicket.id)
             const ticketExists = ticketIndex !== -1
 
@@ -687,202 +669,23 @@ export function useUpdateTicket() {
       const previousTicket = queryClient.getQueryData<{ ticket: Ticket }>(["ticket", variables.id])
       const previousTickets = queryClient.getQueriesData<Ticket[]>({ queryKey: ["tickets"] })
 
-      // Get users, departments, epics, and sprints from cache for optimistic updates
       const usersData = queryClient.getQueryData<Array<{ id: string; name: string | null; email: string; image: string | null }>>(["users"])
       const departmentsData = queryClient.getQueryData<Array<{ id: string; name: string }>>(["departments"])
       const projectId = previousTicket?.ticket?.project?.id || ""
       const epicsData = queryClient.getQueryData<Array<{ id: string; name: string; color: string }>>(["epics", projectId])
       const sprintsData = queryClient.getQueryData<Array<{ id: string; name: string; status: string }>>(["sprints", projectId])
+      const cache = { users: usersData, departments: departmentsData, epics: epicsData, sprints: sprintsData }
 
-      // Optimistically update single ticket
       if (previousTicket) {
-        const updatedTicket: Ticket = { ...previousTicket.ticket }
-        
-        if (variables.title !== undefined) updatedTicket.title = variables.title
-        if (variables.description !== undefined) updatedTicket.description = variables.description
-        if (variables.status !== undefined) updatedTicket.status = variables.status
-        if (variables.priority !== undefined) updatedTicket.priority = variables.priority
-        if (variables.type !== undefined) updatedTicket.type = variables.type
-      if (variables.links !== undefined) updatedTicket.links = prepareLinkPayload(variables.links)
-        if (variables.sqa_assigned_at !== undefined) updatedTicket.sqa_assigned_at = variables.sqa_assigned_at
-        
-        if (variables.assignee_id !== undefined) {
-          if (variables.assignee_id && usersData) {
-            const assignee = usersData.find(u => u.id === variables.assignee_id)
-            updatedTicket.assignee = assignee ? {
-              id: assignee.id,
-              name: assignee.name,
-              email: assignee.email,
-              image: assignee.image
-            } : null
-          } else {
-            updatedTicket.assignee = null
-          }
-        }
-
-        if (variables.sqa_assignee_id !== undefined) {
-          if (variables.sqa_assignee_id && usersData) {
-            const sqaAssignee = usersData.find(u => u.id === variables.sqa_assignee_id)
-            updatedTicket.sqa_assignee = sqaAssignee ? {
-              id: sqaAssignee.id,
-              name: sqaAssignee.name,
-              email: sqaAssignee.email,
-              image: sqaAssignee.image
-            } : null
-          } else {
-            updatedTicket.sqa_assignee = null
-          }
-        }
-        
-        if (variables.requested_by_id !== undefined && usersData) {
-          const requestedBy = usersData.find(u => u.id === variables.requested_by_id)
-          if (requestedBy) {
-            updatedTicket.requested_by = {
-              id: requestedBy.id,
-              name: requestedBy.name,
-              email: requestedBy.email
-            }
-          }
-        }
-        
-        if (variables.department_id !== undefined) {
-          if (variables.department_id && departmentsData) {
-            const department = departmentsData.find(d => d.id === variables.department_id)
-            updatedTicket.department = department ? {
-              id: department.id,
-              name: department.name
-            } : null
-          } else {
-            updatedTicket.department = null
-          }
-        }
-        
-        if (variables.epic_id !== undefined) {
-          if (variables.epic_id && epicsData) {
-            const epic = epicsData.find(e => e.id === variables.epic_id)
-            updatedTicket.epic = epic ? {
-              id: epic.id,
-              name: epic.name,
-              color: epic.color
-            } : null
-          } else {
-            updatedTicket.epic = null
-          }
-        }
-        
-        if (variables.sprint_id !== undefined) {
-          if (variables.sprint_id && sprintsData) {
-            const sprint = sprintsData.find(s => s.id === variables.sprint_id)
-            updatedTicket.sprint = sprint ? {
-              id: sprint.id,
-              name: sprint.name,
-              status: sprint.status
-            } : null
-          } else {
-            updatedTicket.sprint = null
-          }
-        }
-
+        const updatedTicket = applyTicketUpdateVariables(previousTicket.ticket, variables, cache)
         queryClient.setQueryData<{ ticket: Ticket }>(["ticket", variables.id], { ticket: updatedTicket })
       }
 
-      // Optimistically update tickets list
       previousTickets.forEach(([queryKey, data]) => {
         if (data) {
-          const updatedTickets = data.map(ticket => {
-            if (ticket.id === variables.id) {
-              const updatedTicket: Ticket = { ...ticket }
-              
-              if (variables.title !== undefined) updatedTicket.title = variables.title
-              if (variables.description !== undefined) updatedTicket.description = variables.description
-              if (variables.status !== undefined) updatedTicket.status = variables.status
-              if (variables.priority !== undefined) updatedTicket.priority = variables.priority
-              if (variables.type !== undefined) updatedTicket.type = variables.type
-              if (variables.links !== undefined) updatedTicket.links = prepareLinkPayload(variables.links)
-              if (variables.sqa_assigned_at !== undefined) updatedTicket.sqa_assigned_at = variables.sqa_assigned_at
-              
-              if (variables.assignee_id !== undefined) {
-                if (variables.assignee_id && usersData) {
-                  const assignee = usersData.find(u => u.id === variables.assignee_id)
-                  updatedTicket.assignee = assignee ? {
-                    id: assignee.id,
-                    name: assignee.name,
-                    email: assignee.email,
-                    image: assignee.image
-                  } : null
-                } else {
-                  updatedTicket.assignee = null
-                }
-              }
-
-              if (variables.sqa_assignee_id !== undefined) {
-                if (variables.sqa_assignee_id && usersData) {
-                  const sqaAssignee = usersData.find(u => u.id === variables.sqa_assignee_id)
-                  updatedTicket.sqa_assignee = sqaAssignee ? {
-                    id: sqaAssignee.id,
-                    name: sqaAssignee.name,
-                    email: sqaAssignee.email,
-                    image: sqaAssignee.image
-                  } : null
-                } else {
-                  updatedTicket.sqa_assignee = null
-                }
-              }
-              
-              if (variables.requested_by_id !== undefined && usersData) {
-                const requestedBy = usersData.find(u => u.id === variables.requested_by_id)
-                if (requestedBy) {
-                  updatedTicket.requested_by = {
-                    id: requestedBy.id,
-                    name: requestedBy.name,
-                    email: requestedBy.email
-                  }
-                }
-              }
-              
-              if (variables.department_id !== undefined) {
-                if (variables.department_id && departmentsData) {
-                  const department = departmentsData.find(d => d.id === variables.department_id)
-                  updatedTicket.department = department ? {
-                    id: department.id,
-                    name: department.name
-                  } : null
-                } else {
-                  updatedTicket.department = null
-                }
-              }
-              
-              if (variables.epic_id !== undefined) {
-                if (variables.epic_id && epicsData) {
-                  const epic = epicsData.find(e => e.id === variables.epic_id)
-                  updatedTicket.epic = epic ? {
-                    id: epic.id,
-                    name: epic.name,
-                    color: epic.color
-                  } : null
-                } else {
-                  updatedTicket.epic = null
-                }
-              }
-              
-              if (variables.sprint_id !== undefined) {
-                if (variables.sprint_id && sprintsData) {
-                  const sprint = sprintsData.find(s => s.id === variables.sprint_id)
-                  updatedTicket.sprint = sprint ? {
-                    id: sprint.id,
-                    name: sprint.name,
-                    status: sprint.status
-                  } : null
-                } else {
-                  updatedTicket.sprint = null
-                }
-              }
-              
-              return updatedTicket
-            }
-            return ticket
-          })
-          
+          const updatedTickets = data.map(ticket =>
+            ticket.id === variables.id ? applyTicketUpdateVariables(ticket, variables, cache) : ticket
+          )
           queryClient.setQueryData<Ticket[]>(queryKey, updatedTickets)
         }
       })
