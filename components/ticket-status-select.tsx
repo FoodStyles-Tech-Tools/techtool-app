@@ -32,7 +32,7 @@ export function TicketStatusSelect({
 
   return (
     <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className={cn("h-7 w-[120px] text-xs relative dark:bg-[#1f1f1f]", triggerClassName)}>
+      <SelectTrigger className={cn("h-7 w-[120px] text-xs relative dark:bg-input", triggerClassName)}>
         {value ? (
           <div className="absolute left-2 flex items-center gap-1.5">
             <Circle className="h-3 w-3" style={{ color: currentColor, fill: currentColor }} />
@@ -42,7 +42,7 @@ export function TicketStatusSelect({
           <SelectValue />
         )}
       </SelectTrigger>
-      <SelectContent className={cn("dark:bg-[#1f1f1f]", className)}>
+      <SelectContent className={cn("dark:bg-input", className)}>
         {statuses.map((status) => (
           <SelectItem key={status.key} value={status.key}>
             <div className="flex items-center gap-1.5">

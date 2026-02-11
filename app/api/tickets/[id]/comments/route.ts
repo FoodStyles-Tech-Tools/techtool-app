@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requirePermission, getSupabaseWithUserContext } from "@/lib/auth-helpers"
+import { startTiming, endTiming } from "@/lib/query-timing"
 
 export const runtime = "nodejs"
 
@@ -8,38 +9,60 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const startTime = performance.now()
   try {
     await requirePermission("tickets", "view")
     const { supabase } = await getSupabaseWithUserContext()
 
     const ticketId = params.id
 
-    const { data: ticket, error: ticketError } = await supabase
-      .from("tickets")
-      .select("id, display_id")
-      .eq("id", ticketId)
-      .maybeSingle()
+    const timings: Record<string, number> = {}
+
+    // OPTIMIZED: Parallelize ticket check and comments fetch
+    const [ticketResult, commentsResult] = await Promise.all([
+      (async () => {
+        const timingId = startTiming(`GET /api/tickets/${ticketId}/comments - check ticket`)
+        const result = await supabase
+          .from("tickets")
+          .select("id, display_id")
+          .eq("id", ticketId)
+          .maybeSingle()
+        timings.ticket = endTiming(timingId, 100) || 0
+        return result
+      })(),
+      (async () => {
+        const timingId = startTiming(`GET /api/tickets/${ticketId}/comments - fetch comments`)
+        const result = await supabase
+          .from("ticket_comments")
+          .select(
+            `
+            id,
+            ticket_id,
+            parent_id,
+            author_id,
+            body,
+            created_at,
+            updated_at,
+            author:users!ticket_comments_author_id_fkey(id, name, email),
+            mentions:comment_mentions(
+              user_id,
+              user:users!comment_mentions_user_id_fkey(id, name, email)
+            )
+          `
+          )
+          .eq("ticket_id", ticketId)
+          .order("created_at", { ascending: true })
+        timings.comments = endTiming(timingId, 100) || 0
+        return result
+      })(),
+    ])
+
+    const { data: ticket, error: ticketError } = ticketResult
+    const { data: comments, error: commentsError } = commentsResult
 
     if (ticketError || !ticket) {
       return NextResponse.json({ error: "Ticket not found" }, { status: 404 })
     }
-
-    const { data: comments, error: commentsError } = await supabase
-      .from("ticket_comments")
-      .select(
-        `
-        id,
-        ticket_id,
-        parent_id,
-        author_id,
-        body,
-        created_at,
-        updated_at,
-        author:users!ticket_comments_author_id_fkey(id, name, email)
-      `
-      )
-      .eq("ticket_id", ticketId)
-      .order("created_at", { ascending: true })
 
     if (commentsError) {
       console.error("Error fetching comments:", commentsError)
@@ -58,60 +81,34 @@ export async function GET(
       created_at: string
       updated_at: string
       author: { id: string; name: string | null; email: string }
+      mentions: { user_id: string; user: { id: string; name: string | null; email: string } | null }[]
     }
 
     // Normalize author field from Supabase response (may be array or object)
-    const normalizedComments: CommentWithAuthor[] = (comments || []).map((c: any) => ({
-      id: c.id,
-      ticket_id: c.ticket_id,
-      parent_id: c.parent_id,
-      author_id: c.author_id,
-      body: c.body,
-      created_at: c.created_at,
-      updated_at: c.updated_at,
-      author: Array.isArray(c.author) ? c.author[0] : c.author,
-    }))
-
-    const commentIds = normalizedComments.map((c) => c.id)
-    type MentionRow = {
-      comment_id: string
-      user_id: string
-      user: { id: string; name: string | null; email: string } | null
-    }
-    let mentions: MentionRow[] = []
-
-    if (commentIds.length > 0) {
-      const { data: mentionsData } = await supabase
-        .from("comment_mentions")
-        .select(
-          `
-          comment_id,
-          user_id,
-          user:users!comment_mentions_user_id_fkey(id, name, email)
-        `
-        )
-        .in("comment_id", commentIds)
-      
-      if (mentionsData) {
-        mentions = mentionsData.map((m: any) => ({
-          comment_id: m.comment_id as string,
+    const normalizedComments: CommentWithAuthor[] = (comments || []).map((c: any) => {
+      const author = Array.isArray(c.author) ? c.author[0] : c.author
+      const rawMentions = Array.isArray(c.mentions) ? c.mentions : []
+      const mentions = rawMentions
+        .map((m: any) => ({
           user_id: m.user_id as string,
-          user: (Array.isArray(m.user) ? m.user[0] : m.user) as { id: string; name: string | null; email: string } | null,
+          user: (Array.isArray(m.user) ? m.user[0] : m.user) as
+            | { id: string; name: string | null; email: string }
+            | null,
         }))
-      }
-    }
+        .filter((m: any) => m.user)
 
-    const mentionsByComment = mentions.reduce(
-      (acc, m) => {
-        const cid = m.comment_id
-        if (!acc[cid]) acc[cid] = []
-        if (m.user) {
-          acc[cid].push({ user_id: m.user_id, user: m.user })
-        }
-        return acc
-      },
-      {} as Record<string, { user_id: string; user: { id: string; name: string | null; email: string } }[]>
-    )
+      return {
+        id: c.id,
+        ticket_id: c.ticket_id,
+        parent_id: c.parent_id,
+        author_id: c.author_id,
+        body: c.body,
+        created_at: c.created_at,
+        updated_at: c.updated_at,
+        author,
+        mentions,
+      }
+    })
 
     type EnrichedComment = CommentWithAuthor & {
       mentions: { user_id: string; user: { id: string; name: string | null; email: string } }[]
@@ -132,11 +129,23 @@ export async function GET(
 
     const enrich = (c: CommentWithAuthor): EnrichedComment => ({
       ...c,
-      mentions: mentionsByComment[c.id] || [],
+      mentions: c.mentions || [],
       replies: (repliesByParent[c.id] || []).map(enrich),
     })
 
     const tree = rootComments.map(enrich)
+
+    const totalTime = performance.now() - startTime
+    if (totalTime > 500) {
+      const ticketTiming = timings.ticket?.toFixed(2) ?? "0.00"
+      const commentsTiming = timings.comments?.toFixed(2) ?? "0.00"
+      console.log(
+        `[SLOW ENDPOINT] GET /api/tickets/${params.id}/comments: ${totalTime.toFixed(2)}ms`
+      )
+      console.log(
+        `[QUERY TIMINGS] GET /api/tickets/${params.id}/comments: ticket=${ticketTiming}ms comments=${commentsTiming}ms total=${totalTime.toFixed(2)}ms`
+      )
+    }
 
     return NextResponse.json({
       comments: tree,

@@ -34,7 +34,7 @@ export function EpicSelect({
       onValueChange={(val) => onValueChange(val === NO_EPIC_VALUE ? null : val)} 
       disabled={disabled}
     >
-      <SelectTrigger className={cn("h-7 w-[140px] text-xs relative dark:bg-[#1f1f1f]", triggerClassName)}>
+      <SelectTrigger className={cn("h-7 w-[140px] text-xs relative dark:bg-input", triggerClassName)}>
         {selectedEpic ? (
           <div className="absolute left-2 flex items-center gap-1.5">
             <Circle className="h-3 w-3" style={{ fill: selectedEpic.color, color: selectedEpic.color }} />
@@ -46,7 +46,7 @@ export function EpicSelect({
           </div>
         )}
       </SelectTrigger>
-      <SelectContent className={cn("dark:bg-[#1f1f1f]", className)}>
+      <SelectContent className={cn("dark:bg-input", className)}>
         <SelectItem value={NO_EPIC_VALUE}>
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground">No Epic</span>

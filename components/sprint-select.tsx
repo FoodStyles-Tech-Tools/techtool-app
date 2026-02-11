@@ -33,7 +33,7 @@ export function SprintSelect({
       onValueChange={(val) => onValueChange(val === NO_SPRINT_VALUE ? null : val)} 
       disabled={disabled}
     >
-      <SelectTrigger className={cn("h-7 w-[140px] text-xs relative dark:bg-[#1f1f1f]", triggerClassName)}>
+      <SelectTrigger className={cn("h-7 w-[140px] text-xs relative dark:bg-input", triggerClassName)}>
         {selectedSprint ? (
           <div className="absolute left-2 flex items-center gap-1.5">
             <span className="truncate">{selectedSprint.name}</span>
@@ -44,7 +44,7 @@ export function SprintSelect({
           </div>
         )}
       </SelectTrigger>
-      <SelectContent className={cn("dark:bg-[#1f1f1f]", className)}>
+      <SelectContent className={cn("dark:bg-input", className)}>
         <SelectItem value={NO_SPRINT_VALUE}>
           <div className="flex items-center gap-1.5">
             <span className="text-muted-foreground">No Sprint</span>

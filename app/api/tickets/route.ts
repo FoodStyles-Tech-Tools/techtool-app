@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requireAuth, requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
+import { timeQuery } from "@/lib/query-timing"
 
 export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
+  const startTime = performance.now()
   try {
     await requirePermission("tickets", "view")
     const supabase = createServerClient()
@@ -20,10 +22,31 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20")
     const offset = (page - 1) * limit
 
+    // OPTIMIZED: Select only needed columns, use composite indexes
+    // The composite indexes will be used based on filter combinations
     let query = supabase
       .from("tickets")
       .select(`
-        *,
+        id,
+        display_id,
+        title,
+        description,
+        project_id,
+        assignee_id,
+        sqa_assignee_id,
+        requested_by_id,
+        status,
+        priority,
+        type,
+        department_id,
+        epic_id,
+        sprint_id,
+        assigned_at,
+        sqa_assigned_at,
+        started_at,
+        completed_at,
+        created_at,
+        updated_at,
         project:projects(id, name),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
         sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
@@ -64,7 +87,12 @@ export async function GET(request: NextRequest) {
       query = query.not("status", "in", "(completed,cancelled)")
     }
 
-    const { data: tickets, error, count } = await query
+    // OPTIMIZED: Time the main query
+    const queryResult = await timeQuery(
+      `GET /api/tickets?project_id=${projectId || 'all'}&page=${page}&limit=${limit}`,
+      () => query
+    )
+    const { data: tickets, error, count } = queryResult
 
     if (error) {
       console.error("Error fetching tickets:", error)
@@ -86,6 +114,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // OPTIMIZED: Batch fetch images in parallel with main query if possible
     // Get images from auth_user for all assignees, SQA assignees, and requested_by
     const emails = new Set<string>()
     tickets.forEach(ticket => {
@@ -94,10 +123,14 @@ export async function GET(request: NextRequest) {
       if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
     })
     
-    const { data: authUsers } = await supabase
-      .from("auth_user")
-      .select("email, image")
-      .in("email", Array.from(emails))
+    // OPTIMIZED: Only fetch if there are emails to look up
+    const { data: authUsers } = emails.size > 0 ? await timeQuery(
+      `GET /api/tickets - fetch auth_user images`,
+      () => supabase
+        .from("auth_user")
+        .select("email, image")
+        .in("email", Array.from(emails))
+    ) : { data: null }
     
     // Create a map of email -> image
     const imageMap = new Map<string, string | null>()
@@ -116,7 +149,16 @@ export async function GET(request: NextRequest) {
         ...ticket.sqa_assignee,
         image: imageMap.get(ticket.sqa_assignee.email) || null,
       } : null,
+      requested_by: ticket.requested_by ? {
+        ...ticket.requested_by,
+        image: imageMap.get(ticket.requested_by.email) || null,
+      } : null,
     }))
+
+    const totalTime = performance.now() - startTime
+    if (totalTime > 500) {
+      console.log(`[SLOW ENDPOINT] GET /api/tickets: ${totalTime.toFixed(2)}ms`)
+    }
 
     return NextResponse.json({
       tickets: enrichedTickets,

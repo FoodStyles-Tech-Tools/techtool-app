@@ -5,61 +5,7 @@ import { useRealtimeSubscription } from "./use-realtime"
 import { useSupabaseClient } from "@/lib/supabase-client"
 import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
 import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
-
-interface Ticket {
-  id: string
-  display_id: string | null
-  title: string
-  description: string | null
-  status: string
-  priority: string
-  type: string
-  due_date: string | null
-  sqa_assigned_at?: string | null
-  links: string[]
-  reason?: {
-    cancelled?: {
-      reason: string
-      cancelledAt: string
-    }
-  } | null
-  department: {
-    id: string
-    name: string
-  } | null
-  epic: {
-    id: string
-    name: string
-    color: string
-  } | null
-  sprint: {
-    id: string
-    name: string
-    status: string
-  } | null
-  project: {
-    id: string
-    name: string
-  } | null
-  assignee: {
-    id: string
-    name: string | null
-    email: string
-    image: string | null
-  } | null
-  sqa_assignee: {
-    id: string
-    name: string | null
-    email: string
-    image: string | null
-  } | null
-  requested_by: {
-    id: string
-    name: string | null
-    email: string
-  }
-  created_at: string
-}
+import type { Ticket } from "@/lib/types"
 
 export type TicketFilterOptions = {
   project_id?: string
