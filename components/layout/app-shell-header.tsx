@@ -1,8 +1,8 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { usePathname } from "next/navigation"
-import { PanelLeft } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { Check, ChevronDown, PanelLeft } from "lucide-react"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,6 +12,16 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import { Separator } from "@/components/ui/separator"
+import { useProjects } from "@/hooks/use-projects"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Switch } from "@/components/ui/switch"
 
 const PAGE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -26,7 +36,9 @@ const PAGE_LABELS: Record<string, string> = {
 
 export function AppShellHeader() {
   const pathname = usePathname()
+  const router = useRouter()
   const [detailLabel, setDetailLabel] = useState<string | null>(null)
+  const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
 
   useEffect(() => {
     const handleDetail = (event: Event) => {
@@ -45,18 +57,46 @@ export function AppShellHeader() {
     setDetailLabel(null)
   }, [pathname])
 
-  const { baseLabel, baseHref, nestedLabel } = useMemo(() => {
+  const { baseLabel, baseHref, nestedLabel, isProjectDetail, projectId } = useMemo(() => {
     const segments = pathname.split("/").filter(Boolean)
     const firstSegment = segments[0] || "dashboard"
     const secondSegment = segments[1]
-    const isProjectDetail = firstSegment === "projects" && Boolean(secondSegment)
+    const isProjectDetailPage = firstSegment === "projects" && Boolean(secondSegment)
 
     return {
       baseLabel: PAGE_LABELS[firstSegment] || "Overview",
       baseHref: `/${firstSegment}`,
-      nestedLabel: isProjectDetail ? detailLabel || "Project" : null,
+      nestedLabel: isProjectDetailPage ? detailLabel || "Project" : null,
+      isProjectDetail: isProjectDetailPage,
+      projectId: isProjectDetailPage ? secondSegment : null,
     }
   }, [pathname, detailLabel])
+
+  const { data: projects = [], isLoading: projectsLoading } = useProjects({
+    enabled: isProjectDetail,
+    realtime: false,
+  })
+
+  const activeProjectName = useMemo(() => {
+    if (!isProjectDetail) return nestedLabel
+    const fromList = projects.find((project) => project.id === projectId)?.name
+    return fromList || nestedLabel
+  }, [isProjectDetail, nestedLabel, projectId, projects])
+
+  const projectOptions = useMemo(
+    () => {
+      const visibleProjects = includeInactiveProjects
+        ? projects
+        : projects.filter(
+            (project) =>
+              project.status?.toLowerCase() !== "inactive" || project.id === projectId
+          )
+      return [...visibleProjects].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+      )
+    },
+    [projects, includeInactiveProjects, projectId]
+  )
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2">
@@ -84,7 +124,58 @@ export function AppShellHeader() {
             {nestedLabel ? <BreadcrumbSeparator /> : null}
             {nestedLabel ? (
               <BreadcrumbItem>
-                <BreadcrumbPage>{nestedLabel}</BreadcrumbPage>
+                {isProjectDetail && projectId ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex max-w-[320px] items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                        aria-label="Switch project"
+                      >
+                        <span className="truncate">{activeProjectName}</span>
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-72">
+                      <DropdownMenuLabel>Switch Project</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        className="justify-between gap-2"
+                        onSelect={(event) => event.preventDefault()}
+                      >
+                        <span>Include Inactive</span>
+                        <Switch
+                          checked={includeInactiveProjects}
+                          onCheckedChange={setIncludeInactiveProjects}
+                          aria-label="Include inactive projects"
+                        />
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <div className="max-h-72 overflow-y-auto">
+                        {projectsLoading ? (
+                          <DropdownMenuItem disabled>Loading projects...</DropdownMenuItem>
+                        ) : projectOptions.length === 0 ? (
+                          <DropdownMenuItem disabled>No projects</DropdownMenuItem>
+                        ) : (
+                          projectOptions.map((project) => (
+                            <DropdownMenuItem
+                              key={project.id}
+                              onSelect={() => router.push(`/projects/${project.id}`)}
+                              className="flex items-center justify-between gap-2"
+                            >
+                              <span className="truncate">{project.name}</span>
+                              {project.id === projectId ? (
+                                <Check className="h-3.5 w-3.5 text-primary" />
+                              ) : null}
+                            </DropdownMenuItem>
+                          ))
+                        )}
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <BreadcrumbPage>{nestedLabel}</BreadcrumbPage>
+                )}
               </BreadcrumbItem>
             ) : null}
           </BreadcrumbList>

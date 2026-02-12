@@ -14,7 +14,7 @@ export type ServerProject = {
   id: string
   name: string
   description: string | null
-  status: "open" | "in_progress" | "closed"
+  status: "active" | "inactive"
   require_sqa: boolean
   links?: string[] | null
   created_at: string

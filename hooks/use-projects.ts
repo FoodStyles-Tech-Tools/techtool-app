@@ -425,7 +425,7 @@ export function useCreateProject() {
       const payload = {
         ...data,
         owner_id: user.id,
-        status: data.status || "open",
+        status: data.status || "active",
         links: prepareLinkPayload(data.links),
         collaborator_ids: Array.isArray(data.collaborator_ids) ? data.collaborator_ids : [],
         require_sqa: data.require_sqa ?? false,

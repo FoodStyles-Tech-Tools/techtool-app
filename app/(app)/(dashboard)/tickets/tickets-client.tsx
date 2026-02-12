@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback, memo, useDeferredValue } from "react"
+import { useState, useMemo, useEffect, useCallback, memo, useDeferredValue, useRef } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import {
@@ -92,6 +92,7 @@ export default function TicketsPage() {
   const deferredSearchQuery = useDeferredValue(searchQuery)
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [projectFilter, setProjectFilter] = useState<string>("all")
+  const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [requestedByFilter, setRequestedByFilter] = useState<string>("all")
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
@@ -108,10 +109,94 @@ export default function TicketsPage() {
   const { preferences } = useUserPreferences()
   const [view, setView] = useState<"table" | "kanban">(preferences.tickets_view || "table")
   const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
+  const [justDroppedTicketId, setJustDroppedTicketId] = useState<string | null>(null)
   const [dropIndicator, setDropIndicator] = useState<{ columnId: string; ticketId: string | null; top: number } | null>(null)
   const [sortConfig, setSortConfig] = useState<{ column: SortColumn; direction: "asc" | "desc" }>(
     { column: "due_date", direction: "asc" }
   )
+  const [kanbanScrollTrackWidth, setKanbanScrollTrackWidth] = useState(0)
+  const kanbanScrollRef = useRef<HTMLDivElement>(null)
+  const kanbanTopScrollRef = useRef<HTMLDivElement>(null)
+  const kanbanSyncingRef = useRef<"top" | "board" | null>(null)
+  const autoScrollVelocityRef = useRef(0)
+  const autoScrollFrameRef = useRef<number | null>(null)
+
+  const stopAutoScroll = useCallback(() => {
+    autoScrollVelocityRef.current = 0
+    if (autoScrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(autoScrollFrameRef.current)
+      autoScrollFrameRef.current = null
+    }
+  }, [])
+
+  const runAutoScroll = useCallback(() => {
+    const container = kanbanScrollRef.current
+    if (!container || !draggedTicket || autoScrollVelocityRef.current === 0) {
+      autoScrollFrameRef.current = null
+      return
+    }
+    container.scrollLeft += autoScrollVelocityRef.current
+    autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
+  }, [draggedTicket])
+
+  const updateAutoScroll = useCallback((clientX: number) => {
+    const container = kanbanScrollRef.current
+    if (!container || !draggedTicket) {
+      stopAutoScroll()
+      return
+    }
+
+    const rect = container.getBoundingClientRect()
+    const edgeThreshold = Math.min(140, rect.width * 0.25)
+    const maxSpeed = 24
+    const minSpeed = 6
+    let velocity = 0
+
+    if (clientX < rect.left + edgeThreshold) {
+      const strength = Math.min(1, (rect.left + edgeThreshold - clientX) / edgeThreshold)
+      velocity = -(minSpeed + (maxSpeed - minSpeed) * strength)
+    } else if (clientX > rect.right - edgeThreshold) {
+      const strength = Math.min(1, (clientX - (rect.right - edgeThreshold)) / edgeThreshold)
+      velocity = minSpeed + (maxSpeed - minSpeed) * strength
+    }
+
+    autoScrollVelocityRef.current = velocity
+    if (velocity !== 0) {
+      if (autoScrollFrameRef.current === null) {
+        autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
+      }
+    } else {
+      stopAutoScroll()
+    }
+  }, [draggedTicket, runAutoScroll, stopAutoScroll])
+
+  const syncKanbanScroll = useCallback((source: "top" | "board", scrollLeft: number) => {
+    if (kanbanSyncingRef.current && kanbanSyncingRef.current !== source) return
+    kanbanSyncingRef.current = source
+
+    if (source === "top") {
+      if (kanbanScrollRef.current) {
+        kanbanScrollRef.current.scrollLeft = scrollLeft
+      }
+    } else {
+      if (kanbanTopScrollRef.current) {
+        kanbanTopScrollRef.current.scrollLeft = scrollLeft
+      }
+    }
+
+    window.requestAnimationFrame(() => {
+      if (kanbanSyncingRef.current === source) {
+        kanbanSyncingRef.current = null
+      }
+    })
+  }, [])
+
+  const refreshKanbanTrackWidth = useCallback(() => {
+    const container = kanbanScrollRef.current
+    if (!container) return
+    setKanbanScrollTrackWidth(container.scrollWidth)
+  }, [])
   
   // Set default view from preferences
   useEffect(() => {
@@ -151,6 +236,60 @@ export default function TicketsPage() {
     }
   }, [excludeDone, statusFilter])
 
+  useEffect(() => {
+    if (!draggedTicket) {
+      stopAutoScroll()
+    }
+    return () => stopAutoScroll()
+  }, [draggedTicket, stopAutoScroll])
+
+  useEffect(() => {
+    if (view !== "kanban") return
+
+    refreshKanbanTrackWidth()
+    const container = kanbanScrollRef.current
+    if (!container) return
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => refreshKanbanTrackWidth()) : null
+
+    resizeObserver?.observe(container)
+    const firstChild = container.firstElementChild
+    if (firstChild) {
+      resizeObserver?.observe(firstChild)
+    }
+
+    const handleResize = () => refreshKanbanTrackWidth()
+    window.addEventListener("resize", handleResize)
+
+    return () => {
+      resizeObserver?.disconnect()
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [view, refreshKanbanTrackWidth])
+
+  useEffect(() => {
+    if (!draggedTicket) return
+
+    const handleGlobalDragOver = (event: DragEvent) => {
+      updateAutoScroll(event.clientX)
+    }
+
+    const handleGlobalDragStop = () => {
+      stopAutoScroll()
+    }
+
+    window.addEventListener("dragover", handleGlobalDragOver)
+    window.addEventListener("drop", handleGlobalDragStop)
+    window.addEventListener("dragend", handleGlobalDragStop)
+
+    return () => {
+      window.removeEventListener("dragover", handleGlobalDragOver)
+      window.removeEventListener("drop", handleGlobalDragStop)
+      window.removeEventListener("dragend", handleGlobalDragStop)
+    }
+  }, [draggedTicket, stopAutoScroll, updateAutoScroll])
+
   // Fetch tickets with server-side filtering (except search which is client-side for now)
   const { data: ticketsData, isLoading: ticketsLoading } = useTickets({
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -175,6 +314,17 @@ export default function TicketsPage() {
 
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
   const projects = useMemo(() => projectsData || [], [projectsData])
+  const projectOptions = useMemo(
+    () => {
+      const visibleProjects = includeInactiveProjects
+        ? projects
+        : projects.filter((project) => project.status?.toLowerCase() !== "inactive")
+      return [...visibleProjects].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+      )
+    },
+    [projects, includeInactiveProjects]
+  )
   const users = useMemo(() => usersData || [], [usersData])
   const kanbanColumns = useMemo(
     () =>
@@ -193,6 +343,14 @@ export default function TicketsPage() {
   const loading = !ticketsData && ticketsLoading
   const canCreateTickets = flags?.canCreateTickets ?? false
   const canEditTickets = flags?.canEditTickets ?? false
+
+  useEffect(() => {
+    if (includeInactiveProjects || projectFilter === "all") return
+    const selectedProject = projects.find((project) => project.id === projectFilter)
+    if (selectedProject?.status?.toLowerCase() === "inactive") {
+      setProjectFilter("all")
+    }
+  }, [includeInactiveProjects, projectFilter, projects])
 
   const assigneeEligibleUsers = useMemo(
     () => users.filter((user) =>
@@ -511,32 +669,51 @@ export default function TicketsPage() {
   // Drag and drop handlers for kanban
   const handleDragStart = useCallback((e: React.DragEvent, ticketId: string) => {
     if (!canEditTickets) return
+    setDragOverColumn(null)
+    setDropIndicator(null)
     setDraggedTicket(ticketId)
     e.dataTransfer.effectAllowed = "move"
   }, [canEditTickets])
+
+  const handleDragEnd = useCallback(() => {
+    stopAutoScroll()
+    setDraggedTicket(null)
+    setDragOverColumn(null)
+    setDropIndicator(null)
+  }, [stopAutoScroll])
 
   const handleDragOver = useCallback((e: React.DragEvent, columnId: string) => {
     if (!draggedTicket) return
     e.preventDefault()
     e.stopPropagation()
+    updateAutoScroll(e.clientX)
+    setDragOverColumn(columnId)
     
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
     const y = e.clientY - rect.top
     setDropIndicator({ columnId, ticketId: null, top: y })
-  }, [draggedTicket])
+  }, [draggedTicket, updateAutoScroll])
 
-  const handleDragLeave = useCallback(() => {
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    const relatedTarget = e.relatedTarget as Node | null
+    if (relatedTarget && e.currentTarget.contains(relatedTarget)) {
+      return
+    }
+    stopAutoScroll()
+    setDragOverColumn(null)
     setDropIndicator(null)
-  }, [])
+  }, [stopAutoScroll])
 
   const handleDrop = useCallback(async (e: React.DragEvent, columnId: string) => {
     e.preventDefault()
     e.stopPropagation()
     if (!draggedTicket) return
+    stopAutoScroll()
 
     const ticket = allTickets.find(t => t.id === draggedTicket)
     if (!ticket || ticket.status === columnId) {
       setDraggedTicket(null)
+      setDragOverColumn(null)
       setDropIndicator(null)
       return
     }
@@ -556,6 +733,7 @@ export default function TicketsPage() {
       setCancelReason("")
       setShowCancelReasonDialog(true)
       setDraggedTicket(null)
+      setDragOverColumn(null)
       setDropIndicator(null)
       return
     }
@@ -573,13 +751,18 @@ export default function TicketsPage() {
         ...body,
       })
       toast("Ticket status updated")
+      setJustDroppedTicketId(draggedTicket)
+      window.setTimeout(() => {
+        setJustDroppedTicketId((prev) => (prev === draggedTicket ? null : prev))
+      }, 550)
     } catch (error: any) {
       toast(error.message || "Failed to update ticket", "error")
     } finally {
       setDraggedTicket(null)
+      setDragOverColumn(null)
       setDropIndicator(null)
     }
-  }, [draggedTicket, allTickets, updateTicket])
+  }, [draggedTicket, allTickets, stopAutoScroll, updateTicket])
 
   const hasSearchQuery = deferredSearchQuery.trim().length > 0
 
@@ -610,9 +793,21 @@ export default function TicketsPage() {
             <DropdownMenuContent align="start" className="w-64">
               <DropdownMenuLabel>Project</DropdownMenuLabel>
               <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="justify-between gap-2"
+                onSelect={(event) => event.preventDefault()}
+              >
+                <span>Include Inactive</span>
+                <Switch
+                  checked={includeInactiveProjects}
+                  onCheckedChange={setIncludeInactiveProjects}
+                  aria-label="Include inactive projects"
+                />
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuRadioGroup value={projectFilter} onValueChange={setProjectFilter}>
                 <DropdownMenuRadioItem value="all">All Projects</DropdownMenuRadioItem>
-                {projects.map((project) => (
+                {projectOptions.map((project) => (
                   <DropdownMenuRadioItem key={project.id} value={project.id}>
                     {project.name}
                   </DropdownMenuRadioItem>
@@ -756,19 +951,40 @@ export default function TicketsPage() {
           </p>
         </div>
       ) : view === "kanban" ? (
-        <div className="flex gap-4 overflow-x-auto overflow-y-hidden pb-4">
-          {kanbanColumns.map((column) => {
+        <div className="flex flex-col min-h-0">
+          <div
+            ref={kanbanTopScrollRef}
+            className="horizontal-scroll mb-2 h-4 overflow-x-auto overflow-y-hidden flex-shrink-0"
+            onScroll={(e) => syncKanbanScroll("top", e.currentTarget.scrollLeft)}
+          >
+            <div style={{ width: Math.max(kanbanScrollTrackWidth, 1), height: 1 }} />
+          </div>
+          <div
+            ref={kanbanScrollRef}
+            className={cn(
+              "horizontal-scroll flex gap-4 overflow-x-auto overflow-y-hidden pb-4 max-h-[70vh]",
+              draggedTicket && "kanban-board-dragging"
+            )}
+            onScroll={(e) => {
+              syncKanbanScroll("board", e.currentTarget.scrollLeft)
+              refreshKanbanTrackWidth()
+            }}
+          >
+            {kanbanColumns.map((column) => {
             const columnTickets = ticketsByStatus[column.id] || []
             
             return (
               <div
                 key={column.id}
-                className="flex-shrink-0 w-80 flex flex-col"
+                className={cn(
+                  "flex-shrink-0 w-80 flex flex-col rounded-lg transition-all duration-200",
+                  dragOverColumn === column.id && "kanban-drop-target"
+                )}
                 onDragOver={(e) => handleDragOver(e, column.id)}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, column.id)}
               >
-                <div className="bg-muted/30 rounded-lg p-3 flex flex-col h-full">
+                <div className="bg-muted/55 border border-border/60 rounded-xl p-3 flex flex-col h-full">
                   <div className="flex items-center justify-between mb-3 flex-shrink-0">
                     <div className="flex items-center gap-2">
                       <Circle
@@ -786,7 +1002,7 @@ export default function TicketsPage() {
                     {/* Drop indicator line */}
                     {dropIndicator?.columnId === column.id && (
                       <div 
-                        className="absolute left-0 right-0 h-1 bg-primary z-10 pointer-events-none rounded-full shadow-sm"
+                        className="kanban-drop-indicator absolute left-0 right-0 h-1 z-10 pointer-events-none rounded-full"
                         style={{
                           top: `${dropIndicator.top}px`
                         }}
@@ -799,16 +1015,20 @@ export default function TicketsPage() {
                           key={ticket.id}
                           data-ticket-id={ticket.id}
                           className={cn(
-                            "p-3 cursor-pointer transition-colors border shadow-sm",
+                            "kanban-card p-4 cursor-pointer border shadow-sm",
+                            draggedTicket === ticket.id && "kanban-card-dragging",
+                            draggedTicket && draggedTicket !== ticket.id && "kanban-card-dimmed",
+                            justDroppedTicketId === ticket.id && "kanban-card-landed",
                             dueDateDisplay.highlightClassName ?? "bg-background hover:bg-muted/50"
                           )}
                           draggable={canEditTickets}
                           onDragStart={(e) => handleDragStart(e, ticket.id)}
+                          onDragEnd={handleDragEnd}
                           onClick={() => {
                             setSelectedTicketId(ticket.id)
                           }}
                         >
-                          <div className="space-y-2">
+                          <div className="space-y-3">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 mb-1">
@@ -851,11 +1071,6 @@ export default function TicketsPage() {
                                 {ticket.department.name}
                               </Badge>
                             )}
-                            {ticket.sprint && (
-                              <Badge variant="outline" className="text-xs">
-                                {ticket.sprint.name}
-                              </Badge>
-                            )}
                             {ticket.project && (
                               <Badge variant="outline" className="text-xs">
                                 {ticket.project.name}
@@ -870,6 +1085,7 @@ export default function TicketsPage() {
               </div>
             )
           })}
+          </div>
         </div>
       ) : (
         <div className="rounded-md border">

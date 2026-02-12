@@ -52,7 +52,7 @@ interface ProjectRowData {
   id: string
   name: string
   description: string | null
-  status: "open" | "in_progress" | "closed"
+  status: "active" | "inactive"
   require_sqa: boolean
   links?: string[] | null
   created_at: string
@@ -64,12 +64,10 @@ interface ProjectRowData {
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case "open":
-      return <Circle className="h-3 w-3 fill-gray-500 text-gray-500" />
-    case "in_progress":
-      return <Circle className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-    case "closed":
+    case "active":
       return <Circle className="h-3 w-3 fill-green-500 text-green-500" />
+    case "inactive":
+      return <Circle className="h-3 w-3 fill-red-500 text-red-500" />
     default:
       return null
   }
@@ -162,8 +160,7 @@ export default function ProjectsClient({
         if (departmentFilter !== "no_department" && project.department?.id !== departmentFilter) return false
       }
 
-      // Exclude done filter (exclude "closed" projects)
-      if (excludeDone && project.status === "closed") return false
+      if (excludeDone && project.status === "inactive") return false
 
       if (assignedToMeOnly && currentUserId) {
         const isOwner = project.owner?.id === currentUserId
@@ -306,7 +303,7 @@ export default function ProjectsClient({
                 <Switch checked={assignedToMeOnly} onCheckedChange={setAssignedToMeOnly} />
               </div>
               <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
-                <span className="text-sm">Exclude Done</span>
+                <span className="text-sm">Exclude Inactive</span>
                 <Switch checked={excludeDone} onCheckedChange={setExcludeDone} />
               </div>
               <Button variant="ghost" size="sm" className="h-8 px-2" onClick={resetProjectFilters}>
@@ -610,22 +607,16 @@ const ProjectRow = memo(function ProjectRow({
               )}
             </SelectTrigger>
             <SelectContent className="dark:bg-input">
-              <SelectItem value="open">
-                <div className="flex items-center gap-1.5">
-                  <Circle className="h-3 w-3 fill-gray-500 text-gray-500" />
-                  Open
-                </div>
-              </SelectItem>
-              <SelectItem value="in_progress">
-                <div className="flex items-center gap-1.5">
-                  <Circle className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                  In Progress
-                </div>
-              </SelectItem>
-              <SelectItem value="closed">
+              <SelectItem value="active">
                 <div className="flex items-center gap-1.5">
                   <Circle className="h-3 w-3 fill-green-500 text-green-500" />
-                  Closed
+                  Active
+                </div>
+              </SelectItem>
+              <SelectItem value="inactive">
+                <div className="flex items-center gap-1.5">
+                  <Circle className="h-3 w-3 fill-red-500 text-red-500" />
+                  Inactive
                 </div>
               </SelectItem>
             </SelectContent>
@@ -633,7 +624,7 @@ const ProjectRow = memo(function ProjectRow({
         ) : (
           <div className="flex items-center gap-1.5">
             {getStatusIcon(project.status)}
-            <span className="text-xs capitalize">{project.status.replace("_", " ")}</span>
+            <span className="text-xs capitalize">{project.status}</span>
           </div>
         )}
       </TableCell>

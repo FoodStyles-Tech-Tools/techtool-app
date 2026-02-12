@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -37,6 +37,7 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { useSprints } from "@/hooks/use-sprints"
 import { SprintSelect } from "@/components/sprint-select"
 import { cn } from "@/lib/utils"
+import { Switch } from "@/components/ui/switch"
 
 const NO_PROJECT_VALUE = "__no_project__"
 
@@ -82,7 +83,7 @@ type TicketFormValues = z.infer<typeof ticketSchema>
 
 interface TicketFormProps {
   projectId?: string
-  projectOptions?: Array<{ id: string; name: string }>
+  projectOptions?: Array<{ id: string; name: string; status?: string }>
   onSuccess?: () => void
   initialData?: Partial<TicketFormValues> & { id?: string }
   formId?: string
@@ -139,6 +140,7 @@ export function TicketForm({
   hideSubmitButton = false,
 }: TicketFormProps) {
   const [users, setUsers] = useState<User[]>([])
+  const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
   const { departments, refresh } = useDepartments()
   const { user, flags } = usePermissions()
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
@@ -181,6 +183,17 @@ export function TicketForm({
   const selectedProjectId = form.watch("project_id")
   const effectiveProjectId =
     projectId || (selectedProjectId && selectedProjectId !== NO_PROJECT_VALUE ? selectedProjectId : "")
+  const filteredProjectOptions = useMemo(() => {
+    const visibleProjects = includeInactiveProjects
+      ? projectOptions
+      : projectOptions.filter(
+      (project) =>
+        project.status?.toLowerCase() !== "inactive" || project.id === selectedProjectId
+    )
+    return [...visibleProjects].sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+    )
+  }, [projectOptions, includeInactiveProjects, selectedProjectId])
   const { epics } = useEpics(effectiveProjectId)
   const { sprints } = useSprints(effectiveProjectId)
 
@@ -359,13 +372,21 @@ export function TicketForm({
                       </FormControl>
                       <SelectContent>
                         <SelectItem value={NO_PROJECT_VALUE}>No Project</SelectItem>
-                        {projectOptions.map((project) => (
+                        {filteredProjectOptions.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <div className="mt-2 flex items-center justify-end gap-2">
+                      <span className="text-xs text-muted-foreground">Include Inactive</span>
+                      <Switch
+                        checked={includeInactiveProjects}
+                        onCheckedChange={setIncludeInactiveProjects}
+                        aria-label="Include inactive projects"
+                      />
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
