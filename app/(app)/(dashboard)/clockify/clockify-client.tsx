@@ -601,14 +601,8 @@ export default function ClockifyClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">Clockify Reports</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Review weekly detailed reports and audit fetch sessions.
-          </p>
-        </div>
-        {isAdmin && (
+      {isAdmin && (
+        <div className="flex justify-end">
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
@@ -622,8 +616,8 @@ export default function ClockifyClient() {
               {createSession.isPending ? "Fetching..." : "Fetch Report"}
             </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
         <Card>

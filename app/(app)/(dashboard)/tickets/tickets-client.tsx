@@ -526,13 +526,7 @@ export default function TicketsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">Tickets</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            View and manage all tickets across projects
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <div className="flex items-center gap-2">
           <div className="flex items-center border rounded-md">
             <Button

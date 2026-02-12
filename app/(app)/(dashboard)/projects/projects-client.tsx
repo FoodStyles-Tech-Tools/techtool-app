@@ -228,25 +228,19 @@ export default function ProjectsClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center gap-4">
-        <div>
-          <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">Projects</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Manage your projects and track progress
-          </p>
-        </div>
-        {canCreateProjects && (
+      {canCreateProjects && (
+        <div className="flex justify-end">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setProjectFormOpen(true)}
-            className="ml-auto h-9"
+            className="h-9"
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Project
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="flex items-center space-x-2 flex-wrap gap-y-2">
         <Input

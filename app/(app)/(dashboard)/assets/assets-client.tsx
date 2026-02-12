@@ -93,14 +93,8 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">Assets</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Track shared links, repositories, and project resources
-          </p>
-        </div>
-        {canCreateAssets && (
+      {canCreateAssets && (
+        <div className="flex justify-end">
           <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
               <Button onClick={handleAddAsset}>
@@ -142,8 +136,8 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
               />
             </DialogContent>
           </Dialog>
-        )}
-      </div>
+        </div>
+      )}
 
       {assets.length === 0 ? (
         <div className="rounded-lg border p-8 text-center">

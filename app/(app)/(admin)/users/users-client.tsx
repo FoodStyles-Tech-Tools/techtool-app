@@ -127,14 +127,8 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">Users</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Manage users and their roles
-          </p>
-        </div>
-        {canCreateUsers && (
+      {canCreateUsers && (
+        <div className="flex justify-end">
           <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
               <Button onClick={handleAddUser}>
@@ -172,9 +166,9 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
               }}
             />
           </DialogContent>
-        </Dialog>
-        )}
-      </div>
+          </Dialog>
+        </div>
+      )}
 
       {users.length === 0 ? (
         <div className="rounded-lg border p-8 text-center">
