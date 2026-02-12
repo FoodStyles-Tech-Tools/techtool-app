@@ -75,7 +75,7 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onOpenPreferences}>
               <BadgeCheck />
-              Account
+              Preference
             </DropdownMenuItem>
           </>
         )}

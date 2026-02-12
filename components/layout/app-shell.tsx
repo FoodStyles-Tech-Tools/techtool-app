@@ -47,13 +47,13 @@ export function AppShell({
   permissionsBootstrap?: PermissionsBootstrapPayload
 }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-muted/40">
+    <div className="flex h-screen overflow-hidden bg-muted/40 dark:bg-[#13161b]">
       {permissionsBootstrap ? (
         <PermissionsBootstrap payload={permissionsBootstrap} />
       ) : null}
       <Sidebar />
-      <div className="min-w-0 flex-1 bg-muted/40 p-2">
-        <main className="h-full min-w-0 overflow-y-auto rounded-2xl border bg-background shadow-sm">
+      <div className="min-w-0 flex-1 bg-muted/40 p-2 dark:bg-[#13161b]">
+        <main className="h-full min-w-0 overflow-y-auto rounded-2xl border bg-background shadow-sm dark:border-white/10 dark:bg-[#2f3339]">
           <div className="mx-auto w-full min-w-0 max-w-[1800px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-10">
             {children}
           </div>
