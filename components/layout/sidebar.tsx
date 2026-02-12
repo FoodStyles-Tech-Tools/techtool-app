@@ -5,13 +5,13 @@ import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
-  LayoutDashboard,
-  FolderKanban,
-  Package,
-  Ticket,
-  Keyboard,
-  Clock,
-  Settings,
+  LayoutGrid,
+  FolderOpen,
+  Box,
+  Command,
+  Timer,
+  SlidersHorizontal,
+  ClipboardList,
   ChevronDown,
   type LucideIcon,
 } from "lucide-react"
@@ -41,30 +41,30 @@ const primaryNavItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/dashboard",
-    icon: LayoutDashboard,
+    icon: LayoutGrid,
   },
   {
     title: "Projects",
     href: "/projects",
-    icon: FolderKanban,
+    icon: FolderOpen,
     flag: "canViewProjects",
   },
   {
     title: "Assets",
     href: "/assets",
-    icon: Package,
+    icon: Box,
     flag: "canViewAssets",
   },
   {
     title: "Clockify",
     href: "/clockify",
-    icon: Clock,
+    icon: Timer,
     flag: "canViewClockify",
   },
   {
     title: "Tickets",
     href: "/tickets",
-    icon: Ticket,
+    icon: ClipboardList,
     flag: "canViewTickets",
   },
 ]
@@ -169,7 +169,7 @@ export function Sidebar() {
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         )}
       >
-        <Icon className="h-4 w-4" />
+        <Icon className="h-4 w-4 stroke-[1.75]" />
         <span>{item.title}</span>
       </Link>
     )
@@ -217,7 +217,7 @@ export function Sidebar() {
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
-                  <Settings className="h-4 w-4" />
+                  <SlidersHorizontal className="h-4 w-4 stroke-[1.75]" />
                   <span>Settings</span>
                   <ChevronDown
                     className={cn(
@@ -260,7 +260,7 @@ export function Sidebar() {
             className="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             <span className="flex items-center gap-2">
-              <Keyboard className="h-3.5 w-3.5" />
+              <Command className="h-3.5 w-3.5 stroke-[1.75]" />
               <span>Shortcuts</span>
             </span>
             <span className="hidden items-center gap-1 sm:flex">

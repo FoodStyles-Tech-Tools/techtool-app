@@ -181,11 +181,6 @@ export function KeyboardShortcuts() {
     isUsersPage,
   ])
 
-  // Don't render dialogs if not authenticated
-  if (isPending || !session) {
-    return null
-  }
-
   const handleSelectUser = (userId: string) => {
     // Dispatch custom event to scroll to user in Users page
     const event = new CustomEvent("scrollToUser", { detail: { userId } })
@@ -215,6 +210,11 @@ export function KeyboardShortcuts() {
       window.removeEventListener("open-project-dialog", handleOpenProjectDialog)
     }
   }, [canCreateProjects])
+
+  // Don't render dialogs if not authenticated
+  if (isPending || !session) {
+    return null
+  }
 
   return (
     <>
