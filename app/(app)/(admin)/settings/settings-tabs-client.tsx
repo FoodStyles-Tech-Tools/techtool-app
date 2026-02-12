@@ -45,8 +45,8 @@ export default function SettingsTabsClient({
     return (
       <div className="space-y-4">
         <div>
-          <h1 className="text-2xl">Settings</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="typography-h3">Settings</h1>
+          <p className="typography-muted mt-0.5">
             No settings sections are available for your account.
           </p>
         </div>
@@ -57,8 +57,8 @@ export default function SettingsTabsClient({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl">Settings</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
+        <h1 className="typography-h3">Settings</h1>
+        <p className="typography-muted mt-0.5">
           Manage users, roles, and ticket status settings
         </p>
       </div>

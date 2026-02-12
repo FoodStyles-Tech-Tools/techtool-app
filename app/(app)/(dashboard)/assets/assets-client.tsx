@@ -95,8 +95,8 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl">Assets</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="typography-h3">Assets</h1>
+          <p className="typography-muted mt-0.5">
             Track shared links, repositories, and project resources
           </p>
         </div>

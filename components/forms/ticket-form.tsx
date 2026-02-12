@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { X } from "lucide-react"
+import { Bug, CheckSquare, ChevronDown, ChevronUp, ChevronsUp, Minus, Sparkles, X } from "lucide-react"
 import { DepartmentForm } from "@/components/forms/department-form"
 import { useDepartments } from "@/hooks/use-departments"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
@@ -36,12 +36,23 @@ import { EpicSelect } from "@/components/epic-select"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useSprints } from "@/hooks/use-sprints"
 import { SprintSelect } from "@/components/sprint-select"
+import { cn } from "@/lib/utils"
+
+const NO_PROJECT_VALUE = "__no_project__"
 
 const ticketSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   type: z.enum(["bug", "request", "task"]).default("task"),
+  project_id: z
+    .union([
+      z.string().uuid(),
+      z.literal(NO_PROJECT_VALUE),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional(),
   assignee_id: z.string().optional(),
   department_id: z
     .union([
@@ -71,8 +82,11 @@ type TicketFormValues = z.infer<typeof ticketSchema>
 
 interface TicketFormProps {
   projectId?: string
+  projectOptions?: Array<{ id: string; name: string }>
   onSuccess?: () => void
   initialData?: Partial<TicketFormValues> & { id?: string }
+  formId?: string
+  hideSubmitButton?: boolean
 }
 
 interface User {
@@ -85,11 +99,47 @@ interface User {
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 
-export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProps) {
+const CREATE_TYPE_OPTIONS = [
+  {
+    value: "bug",
+    label: "Bug",
+    description: "Report a problem",
+    icon: Bug,
+    iconClassName: "text-rose-500",
+  },
+  {
+    value: "request",
+    label: "Feature",
+    description: "Ask for a feature",
+    icon: Sparkles,
+    iconClassName: "text-blue-500",
+  },
+  {
+    value: "task",
+    label: "Task",
+    description: "Track a deliverable",
+    icon: CheckSquare,
+    iconClassName: "text-emerald-500",
+  },
+] as const
+
+const PRIORITY_OPTIONS = [
+  { value: "low", label: "Low", icon: ChevronDown, iconClassName: "text-blue-500" },
+  { value: "medium", label: "Medium", icon: Minus, iconClassName: "text-amber-500" },
+  { value: "high", label: "High", icon: ChevronUp, iconClassName: "text-orange-500" },
+  { value: "urgent", label: "Urgent", icon: ChevronsUp, iconClassName: "text-rose-500" },
+] as const
+
+export function TicketForm({
+  projectId,
+  projectOptions = [],
+  onSuccess,
+  initialData,
+  formId,
+  hideSubmitButton = false,
+}: TicketFormProps) {
   const [users, setUsers] = useState<User[]>([])
   const { departments, refresh } = useDepartments()
-  const { epics } = useEpics(projectId || "")
-  const { sprints } = useSprints(projectId || "")
   const { user, flags } = usePermissions()
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
   const createTicket = useCreateTicket()
@@ -120,6 +170,7 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
       description: initialData?.description || "",
       priority: initialData?.priority || "medium",
       type: initialData?.type || "task",
+      project_id: initialData?.project_id || projectId || NO_PROJECT_VALUE,
       assignee_id: initialData?.assignee_id || (isEditing ? "" : (user?.id || "")),
       department_id: initialData?.department_id || "",
       epic_id: initialData?.epic_id || "",
@@ -127,6 +178,17 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
       links: initialData?.links || [],
     },
   })
+  const selectedProjectId = form.watch("project_id")
+  const effectiveProjectId =
+    projectId || (selectedProjectId && selectedProjectId !== NO_PROJECT_VALUE ? selectedProjectId : "")
+  const { epics } = useEpics(effectiveProjectId)
+  const { sprints } = useSprints(effectiveProjectId)
+
+  useEffect(() => {
+    if (projectId) return
+    form.setValue("epic_id", "")
+    form.setValue("sprint_id", "")
+  }, [selectedProjectId, projectId, form])
 
   // Set default assignee to current user when creating a new ticket
   useEffect(() => {
@@ -152,7 +214,8 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
         description: values.description,
         priority: values.priority,
         type: values.type,
-        project_id: projectId || null,
+        project_id:
+          projectId || (values.project_id && values.project_id !== NO_PROJECT_VALUE ? values.project_id : null),
         assignee_id: values.assignee_id || undefined,
         department_id: values.department_id || undefined,
         epic_id: values.epic_id || undefined,
@@ -191,11 +254,126 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <fieldset
           disabled={isReadOnly}
           className={isReadOnly ? "space-y-4 opacity-70" : "space-y-4"}
         >
+        {!isEditing && (
+          <div className="space-y-5 rounded-xl border border-border/70 bg-muted/20 p-4">
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                    Type
+                  </FormLabel>
+                  <FormControl>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      {CREATE_TYPE_OPTIONS.map((option) => {
+                        const Icon = option.icon
+                        const isActive = field.value === option.value
+
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => field.onChange(option.value)}
+                            className={cn(
+                              "rounded-xl border p-4 text-left transition-all",
+                              isActive
+                                ? "border-primary/60 bg-primary/10 shadow-sm"
+                                : "border-border/80 bg-background hover:border-primary/40 hover:bg-muted/40"
+                            )}
+                          >
+                            <Icon className={cn("mb-3 h-4 w-4", option.iconClassName)} />
+                            <p className="text-sm font-semibold">{option.label}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                    Priority
+                  </FormLabel>
+                  <FormControl>
+                    <div className="grid grid-cols-4 gap-1 rounded-xl border border-border/80 bg-background p-1">
+                      {PRIORITY_OPTIONS.map((option) => {
+                        const Icon = option.icon
+                        const isActive = field.value === option.value
+
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => field.onChange(option.value)}
+                            className={cn(
+                              "flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors",
+                              isActive
+                                ? "bg-primary text-primary-foreground shadow-sm"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                            )}
+                          >
+                            <Icon
+                              className={cn(
+                                "h-3.5 w-3.5",
+                                isActive ? "text-primary-foreground" : option.iconClassName
+                              )}
+                            />
+                            <span>{option.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            {!projectId && projectOptions.length > 0 && (
+              <FormField
+                control={form.control}
+                name="project_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                      Project
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || NO_PROJECT_VALUE}>
+                      <FormControl>
+                        <SelectTrigger className="h-10 bg-background">
+                          <SelectValue placeholder="No Project" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value={NO_PROJECT_VALUE}>No Project</SelectItem>
+                        {projectOptions.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </div>
+        )}
+
         <FormField
           control={form.control}
           name="title"
@@ -226,38 +404,42 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="type"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Type</FormLabel>
-              <FormControl>
-                <TicketTypeSelect
-                  value={field.value}
-                  onValueChange={field.onChange}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="priority"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Priority</FormLabel>
-              <FormControl>
-                <TicketPrioritySelect
-                  value={field.value}
-                  onValueChange={field.onChange}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {isEditing && (
+          <>
+            <FormField
+              control={form.control}
+              name="type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Type</FormLabel>
+                  <FormControl>
+                    <TicketTypeSelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="priority"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Priority</FormLabel>
+                  <FormControl>
+                    <TicketPrioritySelect
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
         <FormField
           control={form.control}
           name="assignee_id"
@@ -362,7 +544,7 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
             </FormItem>
           )}
         />
-        {projectId && epics.length > 0 && (
+        {effectiveProjectId && epics.length > 0 && (
           <FormField
             control={form.control}
             name="epic_id"
@@ -381,7 +563,7 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
             )}
           />
         )}
-        {projectId && sprints.length > 0 && (
+        {effectiveProjectId && sprints.length > 0 && (
           <FormField
             control={form.control}
             name="sprint_id"
@@ -439,13 +621,15 @@ export function TicketForm({ projectId, onSuccess, initialData }: TicketFormProp
             </FormItem>
           )}
         />
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={createTicket.isPending || updateTicket.isPending || !canSubmit}
-        >
-          {isEditing ? "Update Ticket" : "Create Ticket"}
-        </Button>
+        {!hideSubmitButton && (
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={createTicket.isPending || updateTicket.isPending || !canSubmit}
+          >
+            {isEditing ? "Update Ticket" : "Create Ticket"}
+          </Button>
+        )}
         {isReadOnly && (
           <p className="text-xs text-muted-foreground text-center">
             You do not have permission to {isEditing ? "update" : "create"} tickets.

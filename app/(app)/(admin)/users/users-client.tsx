@@ -129,8 +129,8 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl">Users</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="typography-h3">Users</h1>
+          <p className="typography-muted mt-0.5">
             Manage users and their roles
           </p>
         </div>

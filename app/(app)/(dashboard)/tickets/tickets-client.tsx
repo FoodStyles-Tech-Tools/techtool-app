@@ -4,11 +4,7 @@ import { useState, useMemo, useEffect, useCallback, memo, useDeferredValue } fro
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import {
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
@@ -16,14 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
-import { Copy, Plus, X, Check, Circle, LayoutGrid, Table2, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react"
+import { Copy, Plus, Circle, LayoutGrid, Table2, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { useDepartments } from "@/hooks/use-departments"
-import { useTickets, useUpdateTicket, useCreateTicket } from "@/hooks/use-tickets"
+import { useTickets, useUpdateTicket } from "@/hooks/use-tickets"
 import { useProjects } from "@/hooks/use-projects"
 import { useUsers } from "@/hooks/use-users"
 import { usePermissions } from "@/hooks/use-permissions"
-import { useQueryClient } from "@tanstack/react-query"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
@@ -48,7 +43,7 @@ import {
 import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { cn } from "@/lib/utils"
 import { isDoneStatus, buildStatusChangeBody } from "@/lib/ticket-statuses"
-import type { Ticket, Department, User as BasicUser, QuickAddTicketData } from "@/lib/types"
+import type { Ticket, Department, User as BasicUser } from "@/lib/types"
 import {
   ASSIGNEE_ALLOWED_ROLES,
   SQA_ALLOWED_ROLES,
@@ -81,17 +76,13 @@ export default function TicketsPage() {
   const [excludeDone, setExcludeDone] = useState(true)
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
   const [currentPage, setCurrentPage] = useState(1)
-  const [isAddingNew, setIsAddingNew] = useState(false)
-  const [addingToStatus, setAddingToStatus] = useState<string | null>(null)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isTicketDialogOpen, setTicketDialogOpen] = useState(false)
   const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
   const [pendingStatusChange, setPendingStatusChange] = useState<{ ticketId: string; newStatus: string; body: any } | null>(null)
-  const queryClient = useQueryClient()
   
   const { user, flags } = usePermissions()
-  const createTicket = useCreateTicket()
   const { preferences } = useUserPreferences()
   const [view, setView] = useState<"table" | "kanban">(preferences.tickets_view || "table")
   const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
@@ -176,11 +167,6 @@ export default function TicketsPage() {
     () => kanbanColumns.map((column) => column.id),
     [kanbanColumns]
   )
-  const defaultStatusKey = useMemo(() => {
-    return ticketStatuses.find((status) => status.key === "open")?.key
-      || ticketStatuses[0]?.key
-      || "open"
-  }, [ticketStatuses])
   // Only show loading if we have no data at all
   const loading = !ticketsData && ticketsLoading
   const canCreateTickets = flags?.canCreateTickets ?? false
@@ -354,62 +340,6 @@ export default function TicketsPage() {
     return grouped
   }, [filteredTickets, statusKeys])
 
-  useEffect(() => {
-    if (filteredTickets.length === 0 && isAddingNew) {
-      setIsAddingNew(false)
-      setAddingToStatus(null)
-    }
-  }, [filteredTickets.length, isAddingNew])
-
-  // Keyboard shortcut: Press "a" to quick-add
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC: Close quick-add form
-      if (e.key === "Escape" && isAddingNew) {
-        // Don't close if a select dropdown is open
-        const target = e.target as HTMLElement | null
-        const isSelectOpen = target?.closest('[role="listbox"]') || target?.closest('[data-state="open"]')
-        if (!isSelectOpen) {
-          e.preventDefault()
-          e.stopPropagation()
-          setIsAddingNew(false)
-          setAddingToStatus(null)
-          return
-        }
-      }
-
-      // Only trigger if "a" key is pressed (not Alt+A or Ctrl+A)
-      if (e.key !== "a" && e.key !== "A") return
-      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
-
-      // Don't trigger if user is typing in an input, textarea, or select
-      const target = e.target as HTMLElement | null
-      const isInputElement = target && (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.tagName === "SELECT" ||
-        target.isContentEditable
-      )
-      if (isInputElement) return
-
-      // Don't trigger if a dialog is open
-      const hasOpenDialog = document.querySelector('[role="dialog"][data-state="open"]')
-      if (hasOpenDialog) return
-
-      // Don't trigger if already adding or no permission
-      if (isAddingNew || !canCreateTickets || filteredTickets.length === 0) return
-
-      e.preventDefault()
-      setIsAddingNew(true)
-      if (view === "kanban") {
-        setAddingToStatus(defaultStatusKey) // Default to first status in kanban
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
-    return () => window.removeEventListener("keydown", handleKeyDown, true)
-  }, [isAddingNew, canCreateTickets, filteredTickets.length, view, defaultStatusKey])
-
   // Memoize callbacks before early return to maintain hook order
   const handleCopyTicketLabel = useCallback((ticket: Ticket) => {
     const projectName = ticket.project?.name || "No Project"
@@ -507,34 +437,6 @@ export default function TicketsPage() {
     }
   }, [allTickets, updateTicket])
 
-  const handleQuickAdd = useCallback(async (formData: QuickAddTicketData) => {
-    if (!formData.title.trim()) {
-      toast("Title is required", "error")
-      return
-    }
-
-    try {
-      await createTicket.mutateAsync({
-        title: formData.title,
-        description: formData.description || undefined,
-        type: formData.type,
-        priority: formData.priority,
-        project_id: null,
-        department_id: formData.department_id || undefined,
-        assignee_id: formData.assignee_id || undefined,
-        sqa_assignee_id: formData.sqa_assignee_id || undefined,
-        sqa_assigned_at: formData.sqa_assignee_id ? new Date().toISOString() : null,
-        requested_by_id: formData.requested_by_id,
-        status: formData.status,
-        due_date: formData.due_date || undefined,
-      })
-      toast("Ticket created successfully")
-      setIsAddingNew(false)
-    } catch (error: any) {
-      toast(error.message || "Failed to create ticket", "error")
-    }
-  }, [createTicket])
-
   // Drag and drop handlers for kanban
   const handleDragStart = useCallback((e: React.DragEvent, ticketId: string) => {
     if (!canEditTickets) return
@@ -626,8 +528,8 @@ export default function TicketsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl">Tickets</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="typography-h3">Tickets</h1>
+          <p className="typography-muted mt-0.5">
             View and manage all tickets across projects
           </p>
         </div>
@@ -831,19 +733,6 @@ export default function TicketsPage() {
                         {columnTickets.length}
                       </Badge>
                     </div>
-                    {canCreateTickets && !isAddingNew && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => {
-                          setIsAddingNew(true)
-                          setAddingToStatus(column.id)
-                        }}
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
                   </div>
                   
                   <div className="space-y-2 overflow-y-auto flex-1 min-h-0 relative">
@@ -854,26 +743,6 @@ export default function TicketsPage() {
                         style={{
                           top: `${dropIndicator.top}px`
                         }}
-                      />
-                    )}
-                    {/* Quick add form for kanban */}
-                    {isAddingNew && addingToStatus === column.id && canCreateTickets && (
-                      <QuickAddKanbanCard
-                        departments={departments}
-                        users={users}
-                        assigneeEligibleUsers={assigneeEligibleUsers}
-                        onCancel={() => {
-                          setIsAddingNew(false)
-                          setAddingToStatus(null)
-                        }}
-                        onSubmit={async (formData) => {
-                          await handleQuickAdd({ ...formData, status: column.id })
-                          setIsAddingNew(false)
-                          setAddingToStatus(null)
-                        }}
-                        defaultDepartmentId={departmentFilter !== "all" && departmentFilter !== "no_department" ? departmentFilter : undefined}
-                        defaultAssigneeId={assigneeFilter !== "all" && assigneeFilter !== "unassigned" ? assigneeFilter : undefined}
-                        defaultRequesterId={user?.id}
                       />
                     )}
                     {columnTickets.map((ticket) => {
@@ -994,19 +863,6 @@ export default function TicketsPage() {
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
-              {isAddingNew && canCreateTickets && filteredTickets.length > 0 && (
-                <QuickAddRow
-                  departments={departments}
-                  users={users}
-                  assigneeEligibleUsers={assigneeEligibleUsers}
-                  sqaEligibleUsers={sqaEligibleUsers}
-                  onCancel={() => setIsAddingNew(false)}
-                  onSubmit={handleQuickAdd}
-                  defaultDepartmentId={departmentFilter !== "all" && departmentFilter !== "no_department" ? departmentFilter : undefined}
-                  defaultAssigneeId={assigneeFilter !== "all" && assigneeFilter !== "unassigned" ? assigneeFilter : undefined}
-                  defaultRequesterId={user?.id}
-                />
-              )}
               {paginatedTickets.map((ticket) => (
                 <TicketRow
                   key={ticket.id}
@@ -1031,17 +887,6 @@ export default function TicketsPage() {
               Showing {startIndex + 1} to {Math.min(endIndex, sortedTickets.length)} of {sortedTickets.length} tickets
             </div>
             <div className="flex items-center space-x-2">
-              {canCreateTickets && !isAddingNew && filteredTickets.length > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsAddingNew(true)}
-                  className="h-8"
-                >
-                  <Plus className="mr-2 h-3.5 w-3.5" />
-                  Quick Add
-                </Button>
-              )}
               <div className="flex items-center space-x-1">
                 <Button
                   variant="outline"
@@ -1156,404 +1001,6 @@ export default function TicketsPage() {
     </div>
   )
 }
-
-interface QuickAddRowProps {
-  departments: Department[]
-  users: BasicUser[]
-  assigneeEligibleUsers: BasicUser[]
-  sqaEligibleUsers: BasicUser[]
-  onCancel: () => void
-  onSubmit: (data: QuickAddTicketData) => Promise<void>
-  defaultDepartmentId?: string
-  defaultAssigneeId?: string
-  defaultRequesterId?: string
-}
-
-const QuickAddRow = memo(function QuickAddRow({
-  departments,
-  users,
-  assigneeEligibleUsers,
-  sqaEligibleUsers,
-  onCancel,
-  onSubmit,
-  defaultDepartmentId,
-  defaultAssigneeId,
-  defaultRequesterId,
-}: QuickAddRowProps) {
-  const [formData, setFormData] = useState<QuickAddTicketData>(() => ({
-    title: "",
-    description: "",
-    type: "task",
-    priority: "medium",
-    status: "open",
-    department_id: defaultDepartmentId,
-    assignee_id: defaultAssigneeId,
-    sqa_assignee_id: undefined,
-    requested_by_id: defaultRequesterId,
-    due_date: null,
-  }))
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  useEffect(() => {
-    if (!defaultRequesterId) return
-    setFormData((prev) => {
-      if (prev.requested_by_id) return prev
-      return { ...prev, requested_by_id: defaultRequesterId }
-    })
-  }, [defaultRequesterId])
-
-  const handleSubmit = async () => {
-    if (!formData.title.trim() || isSubmitting) return
-    setIsSubmitting(true)
-    try {
-      await onSubmit(formData)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  return (
-    <>
-      <TableRow className="bg-muted/30">
-        <TableCell className="py-2">
-          <span className="text-xs font-mono text-muted-foreground">-</span>
-        </TableCell>
-        <TableCell className="py-2 w-[400px] min-w-[300px]">
-          <Input
-            placeholder="Title..."
-            value={formData.title}
-            onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-            className="h-7 text-sm dark:bg-input"
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                handleSubmit()
-              } else if (e.key === "Escape") {
-                e.preventDefault()
-                onCancel()
-              }
-            }}
-          />
-          <Input
-            placeholder="Description (optional)..."
-            value={formData.description}
-            onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-            className="h-7 text-xs mt-1 dark:bg-input"
-          />
-        </TableCell>
-        <TableCell className="py-2">
-          <DateTimePicker
-            value={formData.due_date ? new Date(formData.due_date) : null}
-            onChange={(date) => setFormData((prev) => ({ 
-              ...prev, 
-              due_date: date ? toUTCISOStringPreserveLocal(date) : null 
-            }))}
-            placeholder="No due date"
-            hideIcon
-            className="h-7 text-xs"
-          />
-        </TableCell>
-        <TableCell className="py-2">
-          <TicketTypeSelect
-            value={formData.type}
-            onValueChange={(value) => setFormData((prev) => ({ ...prev, type: value as "bug" | "request" | "task" }))}
-          />
-        </TableCell>
-        <TableCell className="py-2">
-          <Select
-            value={formData.department_id || NO_DEPARTMENT_VALUE}
-            onValueChange={(value) =>
-              setFormData((prev) => ({
-                ...prev,
-                department_id: value === NO_DEPARTMENT_VALUE ? undefined : value,
-              }))
-            }
-          >
-            <SelectTrigger className="h-7 w-[140px] text-xs dark:bg-input">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="dark:bg-input">
-              <SelectItem value={NO_DEPARTMENT_VALUE}>No Department</SelectItem>
-              {departments.map((department) => (
-                <SelectItem key={department.id} value={department.id}>
-                  {department.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </TableCell>
-        <TableCell className="py-2">
-          <TicketStatusSelect
-            value={formData.status}
-            onValueChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
-            excludeDone={false}
-          />
-        </TableCell>
-        <TableCell className="py-2">
-          <TicketPrioritySelect
-            value={formData.priority}
-            onValueChange={(value) => setFormData((prev) => ({ ...prev, priority: value as "low" | "medium" | "high" | "urgent" }))}
-          />
-        </TableCell>
-        <TableCell className="py-2">
-          <Select
-            value={formData.requested_by_id || ""}
-            onValueChange={(value) =>
-              setFormData((prev) => ({
-                ...prev,
-                requested_by_id: value || undefined,
-              }))
-            }
-          >
-            <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-input overflow-hidden">
-              {formData.requested_by_id ? (
-                <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
-                  <UserSelectValue users={users} value={formData.requested_by_id} placeholder="Select user" />
-                </div>
-              ) : (
-                <SelectValue placeholder="Select user" />
-              )}
-            </SelectTrigger>
-            <SelectContent className="dark:bg-input">
-              {users.map((user) => (
-                <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
-              ))}
-            </SelectContent>
-          </Select>
-        </TableCell>
-        <TableCell className="py-2">
-          <Select
-            value={formData.assignee_id || UNASSIGNED_VALUE}
-            onValueChange={(value) =>
-              setFormData((prev) => ({
-                ...prev,
-                assignee_id: value === UNASSIGNED_VALUE ? undefined : value,
-              }))
-            }
-          >
-            <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-input overflow-hidden">
-              {formData.assignee_id ? (
-                <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
-                  <UserSelectValue
-                    users={assigneeEligibleUsers}
-                    value={formData.assignee_id}
-                    placeholder="Unassigned"
-                    unassignedValue={UNASSIGNED_VALUE}
-                    unassignedLabel="Unassigned"
-                  />
-                </div>
-              ) : (
-                <SelectValue placeholder="Unassigned" />
-              )}
-            </SelectTrigger>
-            <SelectContent className="dark:bg-input">
-              <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-              {assigneeEligibleUsers.map((user) => (
-                <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
-              ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="py-2">
-        <Select
-          value={formData.sqa_assignee_id || UNASSIGNED_VALUE}
-          onValueChange={(value) =>
-            setFormData((prev) => ({
-              ...prev,
-              sqa_assignee_id: value === UNASSIGNED_VALUE ? undefined : value,
-            }))
-          }
-        >
-          <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-input overflow-hidden">
-            {formData.sqa_assignee_id ? (
-              <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
-                <UserSelectValue
-                  users={sqaEligibleUsers}
-                  value={formData.sqa_assignee_id}
-                  placeholder="Unassigned"
-                  unassignedValue={UNASSIGNED_VALUE}
-                  unassignedLabel="Unassigned"
-                />
-              </div>
-            ) : (
-              <SelectValue placeholder="Unassigned" />
-            )}
-          </SelectTrigger>
-          <SelectContent className="dark:bg-input">
-            <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-            {sqaEligibleUsers.map((user) => (
-              <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-    </TableRow>
-    <TableRow>
-        <TableCell colSpan={10} className="py-2">
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleSubmit}
-              disabled={!formData.title.trim() || isSubmitting}
-            >
-              Confirm
-            </Button>
-          </div>
-        </TableCell>
-      </TableRow>
-    </>
-  )
-})
-
-interface QuickAddKanbanCardProps {
-  departments: Department[]
-  users: BasicUser[]
-  assigneeEligibleUsers: BasicUser[]
-  onCancel: () => void
-  onSubmit: (data: QuickAddTicketData) => Promise<void>
-  defaultDepartmentId?: string
-  defaultAssigneeId?: string
-  defaultRequesterId?: string
-}
-
-const QuickAddKanbanCard = memo(function QuickAddKanbanCard({
-  departments,
-  users,
-  assigneeEligibleUsers,
-  onCancel,
-  onSubmit,
-  defaultDepartmentId,
-  defaultAssigneeId,
-  defaultRequesterId,
-}: QuickAddKanbanCardProps) {
-  const [formData, setFormData] = useState<QuickAddTicketData>(() => ({
-    title: "",
-    description: "",
-    type: "task",
-    priority: "medium",
-    status: "open",
-    department_id: defaultDepartmentId,
-    assignee_id: defaultAssigneeId,
-    requested_by_id: defaultRequesterId,
-    due_date: null,
-  }))
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  useEffect(() => {
-    if (!defaultRequesterId) return
-    setFormData((prev) => {
-      if (prev.requested_by_id) return prev
-      return { ...prev, requested_by_id: defaultRequesterId }
-    })
-  }, [defaultRequesterId])
-
-  const handleSubmit = async () => {
-    if (!formData.title.trim() || isSubmitting) return
-    setIsSubmitting(true)
-    try {
-      await onSubmit(formData)
-      setFormData({
-        title: "",
-        description: "",
-        type: "task",
-        priority: "medium",
-        status: "open",
-        department_id: defaultDepartmentId,
-        assignee_id: defaultAssigneeId,
-        requested_by_id: defaultRequesterId,
-      })
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  return (
-    <Card className="p-3 bg-muted/50 border-dashed border-2">
-      <div className="space-y-2">
-        <Input
-          placeholder="Title..."
-          value={formData.title}
-          onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-          className="h-7 text-sm dark:bg-input"
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault()
-              handleSubmit()
-            } else if (e.key === "Escape") {
-              e.preventDefault()
-              onCancel()
-            }
-          }}
-        />
-        <Textarea
-          placeholder="Description (optional)..."
-          value={formData.description}
-          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-          className="min-h-[60px] text-xs dark:bg-input"
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              e.preventDefault()
-              onCancel()
-            }
-          }}
-        />
-        <div className="flex items-center gap-2 flex-wrap">
-          <TicketTypeSelect
-            value={formData.type}
-            onValueChange={(value) => setFormData((prev) => ({ ...prev, type: value as "bug" | "request" | "task" }))}
-          />
-          <TicketPrioritySelect
-            value={formData.priority}
-            onValueChange={(value) => setFormData((prev) => ({ ...prev, priority: value as "low" | "medium" | "high" | "urgent" }))}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Select
-            value={formData.department_id || NO_DEPARTMENT_VALUE}
-            onValueChange={(value) =>
-              setFormData((prev) => ({
-                ...prev,
-                department_id: value === NO_DEPARTMENT_VALUE ? undefined : value,
-              }))
-            }
-          >
-            <SelectTrigger className="h-7 flex-1 text-xs dark:bg-input">
-              <SelectValue placeholder="Department" />
-            </SelectTrigger>
-            <SelectContent className="dark:bg-input">
-              <SelectItem value={NO_DEPARTMENT_VALUE}>No Department</SelectItem>
-              {departments.map((department) => (
-                <SelectItem key={department.id} value={department.id}>
-                  {department.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" size="sm" onClick={onCancel} className="h-7 text-xs">
-            Cancel
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleSubmit}
-            disabled={!formData.title.trim() || isSubmitting}
-            className="h-7 text-xs"
-          >
-            {isSubmitting ? "Adding..." : "Add"}
-          </Button>
-        </div>
-      </div>
-    </Card>
-  )
-})
 
 interface TicketRowProps {
   ticket: Ticket

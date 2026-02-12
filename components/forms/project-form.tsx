@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
 import {
   Select,
   SelectContent,
@@ -51,11 +52,20 @@ interface ProjectFormProps {
   initialData?: Partial<ProjectFormValues> & { id?: string }
   departments: Array<{ id: string; name: string }>
   users: Array<{ id: string; name: string | null; email: string; image: string | null; role?: string | null }>
+  formId?: string
+  hideSubmitButton?: boolean
 }
 
 const NO_DEPARTMENT_VALUE = "no_department"
 
-export function ProjectForm({ onSuccess, initialData, departments, users }: ProjectFormProps) {
+export function ProjectForm({
+  onSuccess,
+  initialData,
+  departments,
+  users,
+  formId,
+  hideSubmitButton = false,
+}: ProjectFormProps) {
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()
@@ -109,7 +119,7 @@ export function ProjectForm({ onSuccess, initialData, departments, users }: Proj
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-4">
           <FormField
             control={form.control}
@@ -168,14 +178,24 @@ export function ProjectForm({ onSuccess, initialData, departments, users }: Proj
           control={form.control}
           name="require_sqa"
           render={({ field }) => (
-            <FormItem className="flex items-center justify-between rounded-md border px-3 py-2">
-              <FormLabel className="mb-0">Require SQA?</FormLabel>
-              <FormControl>
-                <Checkbox
-                  checked={field.value}
-                  onCheckedChange={(checked) => field.onChange(checked === true)}
-                />
-              </FormControl>
+            <FormItem>
+              <FieldGroup className="rounded-md border border-border/70 bg-muted/20 px-3 py-2">
+                <Field orientation="horizontal" className="justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <FieldLabel htmlFor="project-require-sqa">Require SQA</FieldLabel>
+                    <p className="text-xs text-muted-foreground">
+                      Enforce SQA assignment before this project can be completed.
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Checkbox
+                      id="project-require-sqa"
+                      checked={field.value}
+                      onCheckedChange={(checked) => field.onChange(checked === true)}
+                    />
+                  </FormControl>
+                </Field>
+              </FieldGroup>
               <FormMessage />
             </FormItem>
           )}
@@ -282,13 +302,15 @@ export function ProjectForm({ onSuccess, initialData, departments, users }: Proj
             </FormItem>
           )}
         />
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={createProject.isPending || updateProject.isPending}
-        >
-          {isEditing ? "Update Project" : "Create Project"}
-        </Button>
+        {!hideSubmitButton && (
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={createProject.isPending || updateProject.isPending}
+          >
+            {isEditing ? "Update Project" : "Create Project"}
+          </Button>
+        )}
       </form>
     </Form>
   )

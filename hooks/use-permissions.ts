@@ -140,12 +140,11 @@ export function emitPermissionsRefresh() {
 
 export function usePermissions() {
   const { data: session, isPending } = useSession()
-  const cached = readPermissionsCache()
-  const [user, setUser] = useState<User | null>(cached?.user ?? null)
-  const [flags, setFlags] = useState<PermissionFlags>(
-    cached?.flags ?? computeFlags(cached?.user?.permissions)
-  )
-  const [loading, setLoading] = useState(!cached)
+  // Keep initial client render deterministic with server render.
+  // Cache hydration happens after mount in an effect.
+  const [user, setUser] = useState<User | null>(null)
+  const [flags, setFlags] = useState<PermissionFlags>(computeFlags())
+  const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
     if (!session?.user?.email) {
@@ -193,8 +192,18 @@ export function usePermissions() {
 
   useEffect(() => {
     if (isPending) return
+
     const cache = readPermissionsCache()
-    const isStale = !cache || Date.now() - cache.ts > CACHE_TTL_MS
+    if (!cache) {
+      void refresh()
+      return
+    }
+
+    setUser(cache.user ?? null)
+    setFlags(cache.flags ?? computeFlags(cache.user?.permissions))
+    setLoading(false)
+
+    const isStale = Date.now() - cache.ts > CACHE_TTL_MS
     if (isStale) {
       void refresh()
     }
