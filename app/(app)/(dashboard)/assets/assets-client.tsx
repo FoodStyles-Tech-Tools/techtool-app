@@ -92,21 +92,19 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl">Assets</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Track shared links, repositories, and project resources
-          </p>
-        </div>
-        {canCreateAssets && (
+    <div className="space-y-6">
+      {canCreateAssets && (
+        <div className="flex justify-end border-b pb-2">
           <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-              <Button onClick={handleAddAsset}>
-                <Plus className="mr-2 h-4 w-4" />
-                New Asset
-              </Button>
+              <button
+                type="button"
+                onClick={handleAddAsset}
+                className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create Asset</span>
+              </button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl w-[90vw]">
               <DialogHeader>
@@ -142,8 +140,8 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
               />
             </DialogContent>
           </Dialog>
-        )}
-      </div>
+        </div>
+      )}
 
       {assets.length === 0 ? (
         <div className="rounded-lg border p-8 text-center">

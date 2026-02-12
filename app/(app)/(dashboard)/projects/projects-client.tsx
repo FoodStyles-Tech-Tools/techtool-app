@@ -4,30 +4,32 @@ import { useState, useMemo, useEffect, useCallback, memo, useDeferredValue } fro
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
-import { useCreateProject, useUpdateProject } from "@/hooks/use-projects"
+import { useUpdateProject } from "@/hooks/use-projects"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { CollaboratorSelector } from "@/components/collaborator-selector"
 import {
-  Table,
-  TableBody,
   TableCell,
-  TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, X, Check, Circle } from "lucide-react"
+import { Plus, Circle, ListFilter, Search } from "lucide-react"
 import { BrandLinkIcon } from "@/components/brand-link-icon"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
 import { truncateText } from "@/lib/utils"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectForm } from "@/components/forms/project-form"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Switch } from "@/components/ui/switch"
 
 const ROWS_PER_PAGE = 20
 type ProjectTicketStats = { total: number; done: number; percentage: number }
@@ -57,15 +59,6 @@ interface ProjectRowData {
   department: Department | null
   owner?: BasicUser | null
   collaborators: BasicUser[]
-  collaborator_ids?: string[]
-}
-
-interface ProjectQuickAddData {
-  name: string
-  description: string
-  status: "open" | "in_progress" | "closed"
-  require_sqa: boolean
-  department_id?: string
   collaborator_ids?: string[]
 }
 
@@ -107,7 +100,6 @@ export default function ProjectsClient({
   const router = useRouter()
   // All hooks must be called before any conditional returns
   const { flags, user: currentUser } = usePermissions()
-  const createProject = useCreateProject()
   const updateProject = useUpdateProject()
   
   const [searchQuery, setSearchQuery] = useState("")
@@ -116,7 +108,6 @@ export default function ProjectsClient({
   const [assignedToMeOnly, setAssignedToMeOnly] = useState(true)
   const [isProjectFormOpen, setProjectFormOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
-  const [isAddingNew, setIsAddingNew] = useState(false)
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
   const deferredSearchQuery = useDeferredValue(searchQuery)
 
@@ -184,57 +175,22 @@ export default function ProjectsClient({
     })
   }, [projects, deferredSearchQuery, departmentFilter, excludeDone, assignedToMeOnly, currentUserId])
   const hasProjectSearch = deferredSearchQuery.trim().length > 0
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (searchQuery.trim()) count += 1
+    if (departmentFilter !== "all") count += 1
+    if (!excludeDone) count += 1
+    if (!assignedToMeOnly) count += 1
+    return count
+  }, [searchQuery, departmentFilter, excludeDone, assignedToMeOnly])
 
-  useEffect(() => {
-    if (filteredProjects.length === 0 && isAddingNew) {
-      setIsAddingNew(false)
-    }
-  }, [filteredProjects.length, isAddingNew])
-
-  // Keyboard shortcut: Press "a" to quick-add, ESC to close
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC: Close quick-add form
-      if (e.key === "Escape" && isAddingNew) {
-        // Don't close if a select dropdown is open
-        const target = e.target as HTMLElement | null
-        const isSelectOpen = target?.closest('[role="listbox"]') || target?.closest('[data-state="open"]')
-        if (!isSelectOpen) {
-          e.preventDefault()
-          e.stopPropagation()
-          setIsAddingNew(false)
-          return
-        }
-      }
-
-      // Only trigger if "a" key is pressed (not Alt+A or Ctrl+A)
-      if (e.key !== "a" && e.key !== "A") return
-      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
-
-      // Don't trigger if user is typing in an input, textarea, or select
-      const target = e.target as HTMLElement | null
-      const isInputElement = target && (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.tagName === "SELECT" ||
-        target.isContentEditable
-      )
-      if (isInputElement) return
-
-      // Don't trigger if a dialog is open
-      const hasOpenDialog = document.querySelector('[role="dialog"][data-state="open"]')
-      if (hasOpenDialog) return
-
-      // Don't trigger if already adding or no permission
-      if (isAddingNew || !canCreateProjects || filteredProjects.length === 0) return
-
-      e.preventDefault()
-      setIsAddingNew(true)
-    }
-
-    window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
-    return () => window.removeEventListener("keydown", handleKeyDown, true)
-  }, [isAddingNew, canCreateProjects, filteredProjects.length])
+  const resetProjectFilters = useCallback(() => {
+    setSearchQuery("")
+    setDepartmentFilter("all")
+    setExcludeDone(true)
+    setAssignedToMeOnly(true)
+    setCurrentPage(1)
+  }, [])
 
   // Pagination
   const totalPages = Math.ceil(filteredProjects.length / ROWS_PER_PAGE)
@@ -244,35 +200,6 @@ export default function ProjectsClient({
     () => filteredProjects.slice(startIndex, endIndex),
     [filteredProjects, startIndex, endIndex]
   )
-
-  const handleQuickAdd = useCallback(async (formData: ProjectQuickAddData) => {
-    if (!formData.name.trim()) {
-      toast("Name is required", "error")
-      return
-    }
-
-    try {
-      const result = await createProject.mutateAsync({
-        name: formData.name,
-        description: formData.description || undefined,
-        status: formData.status,
-        require_sqa: formData.require_sqa,
-        department_id: formData.department_id || undefined,
-        collaborator_ids: formData.collaborator_ids || [],
-      })
-      if (result?.project) {
-        setProjects((prev) => [result.project as ProjectRowData, ...prev])
-        setProjectTicketStats((prev) => ({
-          ...prev,
-          [result.project.id]: DEFAULT_PROJECT_STATS,
-        }))
-      }
-      toast("Project created successfully")
-      setIsAddingNew(false)
-    } catch (error: any) {
-      toast(error.message || "Failed to create project", "error")
-    }
-  }, [createProject])
 
   const updateProjectField = useCallback(async (
     projectId: string,
@@ -323,76 +250,94 @@ export default function ProjectsClient({
   }, [updateProject])
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-4">
-        <div>
-          <h1 className="text-2xl">Projects</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage your projects and track progress
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-end gap-0.5 border-b pb-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+            >
+              <ListFilter className="h-4 w-4" />
+              Filter
+              {activeFilterCount > 0 ? (
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuLabel>Filter Projects</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <div className="space-y-3 p-2" onClick={(event) => event.stopPropagation()}>
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground">Search</p>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search projects..."
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="h-8 pl-8"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground">Department</p>
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    <SelectItem value="no_department">No Department</SelectItem>
+                    {departments.map((department) => (
+                      <SelectItem key={department.id} value={department.id}>
+                        {department.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
+                <span className="text-sm">Assigned to me</span>
+                <Switch checked={assignedToMeOnly} onCheckedChange={setAssignedToMeOnly} />
+              </div>
+              <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
+                <span className="text-sm">Exclude Done</span>
+                <Switch checked={excludeDone} onCheckedChange={setExcludeDone} />
+              </div>
+              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={resetProjectFilters}>
+                Reset Filters
+              </Button>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {canCreateProjects && (
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
             onClick={() => setProjectFormOpen(true)}
-            className="ml-auto h-9"
+            className="ml-1 inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Project
-          </Button>
+            <Plus className="h-4 w-4" />
+            <span>Create Project</span>
+            <span className="hidden items-center gap-1 sm:inline-flex">
+              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                Alt
+              </kbd>
+              <span className="text-[10px] text-muted-foreground">/</span>
+              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                Cmd
+              </kbd>
+              <span className="text-[10px] text-muted-foreground">+</span>
+              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                P
+              </kbd>
+            </span>
+          </button>
         )}
-      </div>
-
-      <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-        <Input
-          placeholder="Search projects..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-[256px] h-9 dark:bg-input"
-        />
-        <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-          <SelectTrigger className="w-[140px] h-9 dark:bg-input">
-            <SelectValue placeholder="Department" />
-          </SelectTrigger>
-          <SelectContent className="dark:bg-input">
-            <SelectItem value="all">All Departments</SelectItem>
-            <SelectItem value="no_department">No Department</SelectItem>
-            {departments.map((department) => (
-              <SelectItem key={department.id} value={department.id}>
-                {department.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="assigned-to-me"
-            checked={assignedToMeOnly}
-            onCheckedChange={(checked) => setAssignedToMeOnly(checked !== false)}
-            className="dark:bg-input"
-          />
-          <Label
-            htmlFor="assigned-to-me"
-            className="text-sm font-normal cursor-pointer whitespace-nowrap"
-          >
-            Assigned to me
-          </Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="exclude-done"
-            checked={excludeDone}
-            onCheckedChange={(checked) => setExcludeDone(checked === true)}
-            className="dark:bg-input"
-          />
-          <Label
-            htmlFor="exclude-done"
-            className="text-sm font-normal cursor-pointer whitespace-nowrap"
-          >
-            Exclude Done
-          </Label>
-        </div>
       </div>
 
       {loading ? (
@@ -421,14 +366,6 @@ export default function ProjectsClient({
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
-              {isAddingNew && canCreateProjects && filteredProjects.length > 0 && (
-                <QuickAddProjectRow
-                  departments={departments}
-                  users={users}
-                  onCancel={() => setIsAddingNew(false)}
-                  onSubmit={handleQuickAdd}
-                />
-              )}
               {paginatedProjects.map((project) => {
                 const stats = projectStats[project.id] || DEFAULT_PROJECT_STATS
                 return (
@@ -480,183 +417,36 @@ export default function ProjectsClient({
         </div>
       )}
       <Dialog open={isProjectFormOpen} onOpenChange={setProjectFormOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Project</DialogTitle>
+        <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle>Create Project</DialogTitle>
           </DialogHeader>
-          <ProjectForm
-            departments={departments}
-            users={users}
-            onSuccess={() => {
-              setProjectFormOpen(false)
-              toast("Project created successfully")
-              router.refresh()
-            }}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+            <ProjectForm
+              departments={departments}
+              users={users}
+              formId="create-project-form"
+              hideSubmitButton={true}
+              onSuccess={() => {
+                setProjectFormOpen(false)
+                toast("Project created successfully")
+                router.refresh()
+              }}
+            />
+          </div>
+          <DialogFooter className="shrink-0 border-t bg-background px-6 py-4 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setProjectFormOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="create-project-form">
+              Create
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   )
 }
-
-interface QuickAddProjectRowProps {
-  departments: Department[]
-  users: BasicUser[]
-  onCancel: () => void
-  onSubmit: (data: ProjectQuickAddData) => Promise<void>
-}
-
-const QuickAddProjectRow = memo(function QuickAddProjectRow({
-  departments,
-  users,
-  onCancel,
-  onSubmit,
-}: QuickAddProjectRowProps) {
-  const [formData, setFormData] = useState<ProjectQuickAddData>({
-    name: "",
-    description: "",
-    status: "open",
-    require_sqa: false,
-    department_id: undefined,
-    collaborator_ids: [],
-  })
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const handleSubmit = async () => {
-    if (!formData.name.trim() || isSubmitting) return
-    setIsSubmitting(true)
-    try {
-      await onSubmit(formData)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  return (
-    <TableRow className="bg-muted/30">
-      <TableCell className="py-2 w-[600px] min-w-[500px]">
-        <Input
-          placeholder="Project name..."
-          value={formData.name}
-          onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-          className="h-7 text-sm dark:bg-input"
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault()
-              handleSubmit()
-            } else if (e.key === "Escape") {
-              e.preventDefault()
-              onCancel()
-            }
-          }}
-        />
-        <Input
-          placeholder="Description (optional)..."
-          value={formData.description}
-          onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-          className="h-7 text-xs mt-1 dark:bg-input"
-        />
-        <div className="flex justify-end space-x-1 mt-2">
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onCancel}>
-            <X className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={handleSubmit}
-            disabled={!formData.name.trim() || isSubmitting}
-          >
-            <Check className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </TableCell>
-      <TableCell className="py-2 text-xs text-muted-foreground">-</TableCell>
-      <TableCell className="py-2 text-xs text-muted-foreground">You</TableCell>
-      <TableCell className="py-2">
-        <CollaboratorSelector
-          users={users}
-          value={formData.collaborator_ids || []}
-          onChange={(ids) => setFormData((prev) => ({ ...prev, collaborator_ids: ids }))}
-          placeholder="Add collaborators"
-          buttonClassName="h-7 w-[170px] text-xs dark:bg-input"
-        />
-      </TableCell>
-      <TableCell className="py-2">
-        <Select
-          value={formData.department_id || "no_department"}
-          onValueChange={(value) =>
-            setFormData((prev) => ({
-              ...prev,
-              department_id: value === "no_department" ? undefined : value,
-            }))
-          }
-        >
-          <SelectTrigger className="h-7 w-[140px] text-xs dark:bg-input">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="dark:bg-input">
-            <SelectItem value="no_department">No Department</SelectItem>
-            {departments.map((department) => (
-              <SelectItem key={department.id} value={department.id}>
-                {department.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="py-2">
-        <Select
-          value={formData.status}
-          onValueChange={(value) =>
-            setFormData((prev) => ({ ...prev, status: value as "open" | "in_progress" | "closed" }))
-          }
-        >
-          <SelectTrigger className="h-7 w-[120px] text-xs relative dark:bg-input">
-            {formData.status ? (
-              <div className="absolute left-2 flex items-center gap-1.5">
-                {getStatusIcon(formData.status)}
-                <span className="capitalize">{formData.status.replace("_", " ")}</span>
-              </div>
-            ) : (
-              <SelectValue />
-            )}
-          </SelectTrigger>
-          <SelectContent className="dark:bg-input">
-            <SelectItem value="open">
-              <div className="flex items-center gap-1.5">
-                <Circle className="h-3 w-3 fill-gray-500 text-gray-500" />
-                Open
-              </div>
-            </SelectItem>
-            <SelectItem value="in_progress">
-              <div className="flex items-center gap-1.5">
-                <Circle className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                In Progress
-              </div>
-            </SelectItem>
-            <SelectItem value="closed">
-              <div className="flex items-center gap-1.5">
-                <Circle className="h-3 w-3 fill-green-500 text-green-500" />
-                Closed
-              </div>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="py-2">
-        <Checkbox
-          checked={formData.require_sqa}
-          onCheckedChange={(checked) => setFormData((prev) => ({ ...prev, require_sqa: checked === true }))}
-          className="dark:bg-input"
-        />
-      </TableCell>
-      <TableCell className="py-2 text-xs text-muted-foreground">-</TableCell>
-      <TableCell className="py-2 text-xs text-muted-foreground">-</TableCell>
-    </TableRow>
-  )
-})
 
 interface ProjectRowProps {
   project: ProjectRowData

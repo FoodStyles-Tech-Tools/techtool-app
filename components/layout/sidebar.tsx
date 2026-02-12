@@ -4,60 +4,86 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, FolderKanban, Package, Ticket, Keyboard, Clock, Settings } from "lucide-react"
-import { CommentNotificationsDropdown } from "@/components/comment-notifications-dropdown"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  LayoutGrid,
+  FolderOpen,
+  Box,
+  Command,
+  Timer,
+  SlidersHorizontal,
+  ClipboardList,
+  ChevronDown,
+  type LucideIcon,
+} from "lucide-react"
+import { CommentNotificationsDropdown } from "@/components/comment-notifications-dropdown"
 import { signOut, useSession } from "@/lib/auth-client"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
-import { usePermissions } from "@/hooks/use-permissions"
+import { type PermissionFlags, usePermissions } from "@/hooks/use-permissions"
 import { KeyboardShortcutDialog } from "@/components/keyboard-shortcut-dialog"
 import { VersionIndicator } from "@/components/version-indicator"
 import { useSignOutOverlay } from "@/components/signout-overlay"
+import { NavUser } from "@/components/layout/nav-user"
 
-const navItems = [
+type NavItem = {
+  title: string
+  href: string
+  icon: LucideIcon
+  flag?: keyof PermissionFlags
+}
+
+type SettingsItem = {
+  title: string
+  href: string
+  flag?: keyof PermissionFlags
+}
+
+const primaryNavItems: NavItem[] = [
   {
     title: "Dashboard",
     href: "/dashboard",
-    icon: LayoutDashboard,
-    permission: null, // Always visible
+    icon: LayoutGrid,
   },
   {
     title: "Projects",
     href: "/projects",
-    icon: FolderKanban,
-    permission: { resource: "projects", action: "view" },
+    icon: FolderOpen,
+    flag: "canViewProjects",
   },
   {
     title: "Assets",
     href: "/assets",
-    icon: Package,
-    permission: { resource: "assets", action: "view" },
+    icon: Box,
+    flag: "canViewAssets",
   },
   {
     title: "Clockify",
     href: "/clockify",
-    icon: Clock,
-    permission: { resource: "clockify", action: "view" },
+    icon: Timer,
+    flag: "canViewClockify",
   },
   {
     title: "Tickets",
     href: "/tickets",
-    icon: Ticket,
-    permission: { resource: "tickets", action: "view" },
+    icon: ClipboardList,
+    flag: "canViewTickets",
+  },
+]
+
+const settingsItems: SettingsItem[] = [
+  {
+    title: "User",
+    href: "/users",
+    flag: "canViewUsers",
   },
   {
-    title: "Settings",
-    href: "/settings",
-    icon: Settings,
-    permission: null,
+    title: "Roles",
+    href: "/roles",
+    flag: "canViewRoles",
+  },
+  {
+    title: "Status",
+    href: "/status",
+    flag: "canManageStatus",
   },
 ]
 
@@ -68,7 +94,19 @@ export function Sidebar() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const { flags } = usePermissions()
-  const canOpenSettings = flags?.canAccessSettings ?? false
+  const canOpenPreferences = flags?.canAccessSettings ?? false
+  const isVisible = (item: { flag?: keyof PermissionFlags }) =>
+    item.flag ? Boolean(flags[item.flag]) : true
+  const visibleSettingsItems = settingsItems.filter(isVisible)
+  const canOpenSettings = visibleSettingsItems.length > 0
+  const settingsSectionActive =
+    pathname === "/users" ||
+    pathname.startsWith("/users/") ||
+    pathname === "/roles" ||
+    pathname.startsWith("/roles/") ||
+    pathname === "/status" ||
+    pathname.startsWith("/status/")
+  const [settingsExpanded, setSettingsExpanded] = useState(settingsSectionActive)
   const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()
 
   const handleSignOut = async () => {
@@ -82,6 +120,12 @@ export function Sidebar() {
   }
 
   const user = session?.user
+
+  useEffect(() => {
+    if (settingsSectionActive) {
+      setSettingsExpanded(true)
+    }
+  }, [settingsSectionActive])
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -109,132 +153,147 @@ export function Sidebar() {
     return () => window.removeEventListener("keydown", handleShortcut)
   }, [])
 
+  const renderNavLink = (item: NavItem) => {
+    const Icon = item.icon
+    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        prefetch={true}
+        className={cn(
+          "flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors",
+          isActive
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        )}
+      >
+        <Icon className="h-4 w-4 stroke-[1.75]" />
+        <span>{item.title}</span>
+      </Link>
+    )
+  }
+
   return (
-    <aside className="flex h-screen w-60 flex-col border-r bg-muted">
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-lg">TechTool</span>
-            <CommentNotificationsDropdown />
+    <aside className="h-full w-72 shrink-0 bg-muted/40 dark:bg-[#1a1a1a]">
+      <div className="flex h-full flex-col px-2 py-2">
+        <div className="px-2 py-2">
+          <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1">
+            <div className="flex items-center gap-2.5">
+              <img src="/icon.svg" alt="TECHTOOL" className="h-9 w-9 rounded-md" />
+              <div className="space-y-0.5">
+                <p className="text-sm font-semibold tracking-tight">TECHTOOL</p>
+                <p className="text-xs text-muted-foreground">Workspace</p>
+              </div>
+            </div>
+            <div>
+              <CommentNotificationsDropdown />
+            </div>
           </div>
         </div>
-        <nav className="space-y-0.5 px-3">
-          {navItems
-            .filter((item) => {
-              if (item.href === "/settings") {
-                return canOpenSettings
-              }
 
-              if (!item.permission) return true
+        <div className="flex-1 overflow-y-auto px-2 py-2">
+          <div className="space-y-1">
+            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+              Platform
+            </p>
+            {primaryNavItems.filter(isVisible).map(renderNavLink)}
+          </div>
 
-              if (item.href === "/projects") {
-                return flags?.canViewProjects ?? false
-              }
-
-              if (item.href === "/assets") {
-                return flags?.canViewAssets ?? false
-              }
-
-              if (item.href === "/clockify") {
-                return flags?.canViewClockify ?? false
-              }
-
-              if (item.href === "/tickets") {
-                return flags?.canViewTickets ?? false
-              }
-
-              return true
-            })
-            .map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  prefetch={true}
+          <div className="mt-4 space-y-1">
+            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+              Admin
+            </p>
+            {canOpenSettings && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setSettingsExpanded((current) => !current)}
                   className={cn(
-                    "flex items-center space-x-2 rounded-md px-2.5 py-2 text-sm transition-colors",
-                    isActive
+                    "flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors",
+                    settingsSectionActive
                       ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span>{item.title}</span>
-                </Link>
-              )
-            })}
-        </nav>
-      </div>
-      <div className="border-t p-3">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center space-x-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent focus:outline-none">
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.image || ""} alt={user?.name || ""} />
-                <AvatarFallback>
-                  {user?.name?.charAt(0).toUpperCase() || "U"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm leading-none truncate">
-                  {user?.name || "User"}
-                </p>
-                <p className="text-xs leading-none text-muted-foreground truncate mt-1">
-                  {user?.email}
-                </p>
-              </div>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm leading-none">
-                  {user?.name || "User"}
-                </p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {canOpenSettings && (
-              <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
-                Preferences
-              </DropdownMenuItem>
+                  <SlidersHorizontal className="h-4 w-4 stroke-[1.75]" />
+                  <span>Settings</span>
+                  <ChevronDown
+                    className={cn(
+                      "ml-auto h-4 w-4 transition-transform",
+                      settingsExpanded ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </button>
+                {settingsExpanded && (
+                  <div className="ml-2 space-y-0.5 border-l pl-2">
+                    {visibleSettingsItems.map((item) => {
+                      const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          prefetch={true}
+                          className={cn(
+                            "block h-8 rounded-md px-2 py-1.5 text-sm leading-5 transition-colors",
+                            isActive
+                              ? "bg-accent text-accent-foreground"
+                              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                          )}
+                        >
+                          {item.title}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleSignOut}>
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <div className="pt-3 px-0.5">
-          <div className="grid grid-cols-4 gap-2">
-            <div className="col-span-3">
-              <VersionIndicator className="h-full" />
-            </div>
-            <button
-              type="button"
-              onClick={() => setShortcutsOpen(true)}
-              className="flex h-full w-full items-center justify-center rounded-md border border-dashed border-border/70 px-2 py-1 transition-colors hover:border-primary hover:bg-primary/5"
-            >
-              <Keyboard className="h-4 w-4 text-muted-foreground" />
-            </button>
           </div>
         </div>
+
+        <div className="space-y-2 px-2 pb-2 pt-2">
+          <button
+            type="button"
+            onClick={() => setShortcutsOpen(true)}
+            className="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            <span className="flex items-center gap-2">
+              <Command className="h-3.5 w-3.5 stroke-[1.75]" />
+              <span>Shortcuts</span>
+            </span>
+            <span className="hidden items-center gap-1 sm:flex">
+              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                Alt
+              </kbd>
+              <span className="text-[10px] text-muted-foreground">/</span>
+              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                Cmd
+              </kbd>
+              <span className="text-[10px] text-muted-foreground">+</span>
+              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                ↓
+              </kbd>
+            </span>
+          </button>
+          <div>
+            <VersionIndicator className="h-8 w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-xs text-muted-foreground shadow-none transition-colors hover:bg-accent hover:text-accent-foreground" />
+          </div>
+          <NavUser
+            user={{
+              name: user?.name || "User",
+              email: user?.email || "",
+              avatar: user?.image || "",
+            }}
+            canOpenPreferences={canOpenPreferences}
+            onOpenPreferences={() => setSettingsOpen(true)}
+            onSignOut={handleSignOut}
+          />
+        </div>
+        {canOpenPreferences && <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />}
+        <KeyboardShortcutDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       </div>
-      {canOpenSettings && (
-        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-      )}
-      <KeyboardShortcutDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </aside>
   )
 }
-
-
-
-
-
-

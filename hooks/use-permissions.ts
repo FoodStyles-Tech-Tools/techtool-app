@@ -140,12 +140,11 @@ export function emitPermissionsRefresh() {
 
 export function usePermissions() {
   const { data: session, isPending } = useSession()
-  const cached = readPermissionsCache()
-  const [user, setUser] = useState<User | null>(cached?.user ?? null)
-  const [flags, setFlags] = useState<PermissionFlags>(
-    cached?.flags ?? computeFlags(cached?.user?.permissions)
-  )
-  const [loading, setLoading] = useState(!cached)
+  // Keep initial client render deterministic with server render.
+  // Cache hydration happens after mount in an effect.
+  const [user, setUser] = useState<User | null>(null)
+  const [flags, setFlags] = useState<PermissionFlags>(computeFlags())
+  const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
     if (!session?.user?.email) {
@@ -157,18 +156,31 @@ export function usePermissions() {
 
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/me", { cache: "no-store" })
-      if (!res.ok) {
-        setUser(null)
-        setFlags(computeFlags())
-        return
+      let nextUser: User | null = null
+      let nextFlags: PermissionFlags = computeFlags()
+      let cacheTs = Date.now()
+
+      const bootstrapRes = await fetch("/api/v2/bootstrap")
+      if (bootstrapRes.ok) {
+        const bootstrapData = await bootstrapRes.json()
+        nextUser = bootstrapData?.user ?? null
+        nextFlags = bootstrapData?.flags ?? computeFlags(nextUser?.permissions || [])
+        cacheTs = typeof bootstrapData?.ts === "number" ? bootstrapData.ts : Date.now()
+      } else {
+        const res = await fetch("/api/auth/me", { cache: "no-store" })
+        if (!res.ok) {
+          setUser(null)
+          setFlags(computeFlags())
+          return
+        }
+        const data = await res.json()
+        nextUser = data?.user ?? null
+        nextFlags = computeFlags(nextUser?.permissions || [])
       }
-      const data = await res.json()
-      const nextUser = data?.user ?? null
-      const nextFlags = computeFlags(nextUser?.permissions || [])
+
       setUser(nextUser)
       setFlags(nextFlags)
-      writePermissionsCache({ user: nextUser, flags: nextFlags, ts: Date.now() })
+      writePermissionsCache({ user: nextUser, flags: nextFlags, ts: cacheTs })
     } catch (error) {
       console.error("Failed to load permissions:", error)
       setUser(null)
@@ -180,8 +192,18 @@ export function usePermissions() {
 
   useEffect(() => {
     if (isPending) return
+
     const cache = readPermissionsCache()
-    const isStale = !cache || Date.now() - cache.ts > CACHE_TTL_MS
+    if (!cache) {
+      void refresh()
+      return
+    }
+
+    setUser(cache.user ?? null)
+    setFlags(cache.flags ?? computeFlags(cache.user?.permissions))
+    setLoading(false)
+
+    const isStale = Date.now() - cache.ts > CACHE_TTL_MS
     if (isStale) {
       void refresh()
     }

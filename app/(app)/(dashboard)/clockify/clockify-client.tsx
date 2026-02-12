@@ -601,29 +601,29 @@ export default function ClockifyClient() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-2xl">Clockify Reports</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Review weekly detailed reports and audit fetch sessions.
-          </p>
-        </div>
-        {isAdmin && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
+      {isAdmin && (
+        <div className="flex justify-end border-b pb-2">
+          <div className="flex flex-wrap items-center gap-0.5">
+            <button
+              type="button"
               onClick={handleReuploadReport}
               disabled={createSession.isPending}
+              className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               Re-upload
-            </Button>
-            <Button onClick={handleFetchReport} disabled={createSession.isPending}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleFetchReport}
+              disabled={createSession.isPending}
+              className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw className="h-4 w-4" />
               {createSession.isPending ? "Fetching..." : "Fetch Report"}
-            </Button>
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
         <Card>

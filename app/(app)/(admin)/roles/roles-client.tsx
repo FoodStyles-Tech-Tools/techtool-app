@@ -261,21 +261,19 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl">Roles & Permissions</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Manage roles and their permissions
-          </p>
-        </div>
-        {canCreateRoles && (
+    <div className="space-y-6">
+      {canCreateRoles && (
+        <div className="flex justify-end border-b pb-2">
           <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-              <Button onClick={handleAddRole}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Role
-              </Button>
+              <button
+                type="button"
+                onClick={handleAddRole}
+                className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create Role</span>
+              </button>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -306,9 +304,9 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
               }}
             />
           </DialogContent>
-        </Dialog>
-        )}
-      </div>
+          </Dialog>
+        </div>
+      )}
 
       {(
         <div className="grid gap-3">

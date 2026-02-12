@@ -159,16 +159,20 @@ export function useTickets(options?: {
   exclude_done?: boolean
   limit?: number
   page?: number
+  enabled?: boolean
+  realtime?: boolean
 }) {
   const queryClient = useQueryClient()
   const supabase = useSupabaseClient()
   const userEmail = useUserEmail()
+  const enabled = options?.enabled !== false
+  const realtime = options?.realtime === true
   const queryKey = ["tickets", options?.project_id, options?.assignee_id, options?.status, options?.department_id, options?.requested_by_id, options?.exclude_done, options?.limit, options?.page]
 
   // Real-time subscription for tickets
   useRealtimeSubscription({
     table: "tickets",
-    enabled: true,
+    enabled: enabled && realtime,
     onInsert: async (payload) => {
       const newTicketData = payload.new as any
       // Fetch full ticket with relations using Supabase
@@ -365,20 +369,23 @@ export function useTickets(options?: {
       // Enrich tickets with images from auth_user
       return await enrichTicketsWithImages(supabase, tickets)
     },
+    enabled,
     staleTime: 30 * 1000, // 30 seconds for list views
   })
 }
 
-export function useTicket(ticketId: string, options?: { enabled?: boolean }) {
+export function useTicket(ticketId: string, options?: { enabled?: boolean; realtime?: boolean }) {
   const queryClient = useQueryClient()
   const supabase = useSupabaseClient()
   const userEmail = useUserEmail()
+  const enabled = !!ticketId && (options?.enabled !== false)
+  const realtime = options?.realtime !== false
 
   // Real-time subscription for specific ticket
   useRealtimeSubscription({
     table: "tickets",
     filter: `id=eq.${ticketId}`,
-    enabled: !!ticketId && (options?.enabled !== false),
+    enabled: enabled && realtime,
     onUpdate: async (payload) => {
       const updatedTicketData = payload.new as any
       // Fetch full ticket with relations
@@ -465,7 +472,7 @@ export function useTicket(ticketId: string, options?: { enabled?: boolean }) {
       const enrichedTickets = await enrichTicketsWithImages(supabase, [ticket])
       return { ticket: enrichedTickets[0] }
     },
-    enabled: !!ticketId && (options?.enabled !== false),
+    enabled,
     staleTime: 60 * 1000, // 1 minute for detail views
   })
 }

@@ -95,6 +95,14 @@ interface ProjectsResponse {
   }
 }
 
+type UseProjectsOptions = {
+  status?: string
+  limit?: number
+  page?: number
+  enabled?: boolean
+  realtime?: boolean
+}
+
 // Helper function to enrich projects with images from auth_user
 async function enrichProjectsWithImages(
   supabase: ReturnType<typeof useSupabaseClient>,
@@ -141,16 +149,18 @@ async function enrichProjectsWithImages(
   })) as Project[]
 }
 
-export function useProjects(options?: { status?: string; limit?: number; page?: number }) {
+export function useProjects(options?: UseProjectsOptions) {
   const queryClient = useQueryClient()
   const supabase = useSupabaseClient()
   const userEmail = useUserEmail()
+  const enabled = options?.enabled !== false
+  const realtime = options?.realtime === true
   const queryKey = ["projects", options?.status, options?.limit, options?.page]
 
   // Real-time subscription for projects
   useRealtimeSubscription({
     table: "projects",
-    enabled: true,
+    enabled: enabled && realtime,
     onInsert: async (payload) => {
       const newProjectData = payload.new as any
       // Fetch full project with relations using Supabase
@@ -289,20 +299,23 @@ export function useProjects(options?: { status?: string; limit?: number; page?: 
       const projectsWithCollaborators = await attachCollaboratorsToProjects(supabase, projects)
       return await enrichProjectsWithImages(supabase, projectsWithCollaborators)
     },
+    enabled,
     staleTime: 30 * 1000, // 30 seconds for list views
   })
 }
 
-export function useProject(projectId: string) {
+export function useProject(projectId: string, options?: { enabled?: boolean; realtime?: boolean }) {
   const queryClient = useQueryClient()
   const supabase = useSupabaseClient()
   const userEmail = useUserEmail()
+  const enabled = !!projectId && (options?.enabled !== false)
+  const realtime = options?.realtime !== false
 
   // Real-time subscription for specific project
   useRealtimeSubscription({
     table: "projects",
     filter: `id=eq.${projectId}`,
-    enabled: !!projectId,
+    enabled: enabled && realtime,
     onUpdate: async (payload) => {
       // Fetch full project with relations
       try {
@@ -377,7 +390,7 @@ export function useProject(projectId: string) {
       const enrichedProjects = await enrichProjectsWithImages(supabase, [projectWithCollaborators])
       return { project: enrichedProjects[0] }
     },
-    enabled: !!projectId,
+    enabled,
     staleTime: 60 * 1000, // 1 minute for detail views
   })
 }

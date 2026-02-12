@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, useDeferredValue, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { useTickets } from "@/hooks/use-tickets"
 import { Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { TicketStatusIcon } from "@/components/ticket-status-select"
@@ -24,29 +24,40 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-  const { data: ticketsData, isLoading } = useTickets()
-  const { statusMap } = useTicketStatuses()
-  const deferredQuery = useDeferredValue(searchQuery)
+  const deferredQuery = useDeferredValue(searchQuery.trim())
+  const ticketsQuery = useQuery<{
+    data: Array<{
+      id: string
+      display_id: string | null
+      title: string
+      status: string
+      priority: string
+      type: string | null
+      project: { id: string; name: string } | null
+    }>
+  }>({
+    queryKey: ["ticket-search", deferredQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        view: "list",
+        limit: String(MAX_SEARCH_RESULTS),
+      })
+      if (deferredQuery) {
+        params.set("q", deferredQuery)
+      }
 
-  const tickets = useMemo(() => ticketsData || [], [ticketsData])
-
-  // Filter tickets based on search query with a deferred value to keep typing responsive
-  const filteredTickets = useMemo(() => {
-    if (!tickets.length) return []
-    const trimmedQuery = deferredQuery.trim().toLowerCase()
-    if (!trimmedQuery) {
-      return tickets.slice(0, MAX_SEARCH_RESULTS)
-    }
-    return tickets
-      .filter(
-        (ticket) =>
-          ticket.title.toLowerCase().includes(trimmedQuery) ||
-          ticket.description?.toLowerCase().includes(trimmedQuery) ||
-          ticket.project?.name.toLowerCase().includes(trimmedQuery) ||
-          ticket.display_id?.toLowerCase().includes(trimmedQuery)
-      )
-      .slice(0, MAX_SEARCH_RESULTS)
-  }, [tickets, deferredQuery])
+      const response = await fetch(`/api/v2/tickets?${params.toString()}`)
+      if (!response.ok) {
+        throw new Error("Failed to load tickets")
+      }
+      return response.json()
+    },
+    enabled: open,
+    staleTime: 30 * 1000,
+  })
+  const { statusMap } = useTicketStatuses({ enabled: open, realtime: false })
+  const filteredTickets = useMemo(() => ticketsQuery.data?.data || [], [ticketsQuery.data?.data])
+  const isLoading = ticketsQuery.isLoading
 
   const handleSelectTicket = useCallback((ticketId: string) => {
     if (onSelectTicket) {
@@ -86,11 +97,14 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
       if (e.key === "ArrowDown") {
         e.preventDefault()
         e.stopPropagation()
-        setSelectedIndex((prev) => Math.min(prev + 1, filteredTickets.length - 1))
+        setSelectedIndex((prev) => {
+          if (filteredTickets.length === 0) return 0
+          return Math.min(prev + 1, filteredTickets.length - 1)
+        })
       } else if (e.key === "ArrowUp") {
         e.preventDefault()
         e.stopPropagation()
-        setSelectedIndex((prev) => Math.max(prev - 1, 0))
+        setSelectedIndex((prev) => (filteredTickets.length === 0 ? 0 : Math.max(prev - 1, 0)))
       } else if (e.key === "Enter" && filteredTickets[selectedIndex]) {
         e.preventDefault()
         e.stopPropagation()
@@ -180,7 +194,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
                           {ticket.display_id || ticket.id.slice(0, 8)}
                         </span>
                         <Badge variant="outline" className="text-xs flex items-center gap-1">
-                          <TicketStatusIcon status={ticket.status} />
+                          <TicketStatusIcon status={ticket.status} statusMap={statusMap} />
                           {statusMap.get(normalizeStatusKey(ticket.status))?.label ||
                             formatStatusLabel(ticket.status)}
                         </Badge>
@@ -194,11 +208,6 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
                         </Badge>
                       </div>
                       <h4 className="text-sm font-medium truncate">{ticket.title}</h4>
-                      {ticket.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                          {ticket.description}
-                        </p>
-                      )}
                       <p className="text-xs text-muted-foreground mt-1">
                         {ticket.project?.name || "No Project"}
                       </p>
@@ -213,7 +222,3 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
     </>
   )
 }
-
-
-
-

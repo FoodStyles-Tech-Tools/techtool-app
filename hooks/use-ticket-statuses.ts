@@ -13,16 +13,20 @@ import {
 
 type UseTicketStatusesOptions = {
   fallback?: boolean
+  enabled?: boolean
+  realtime?: boolean
 }
 
 export function useTicketStatuses(options?: UseTicketStatusesOptions) {
   const queryClient = useQueryClient()
   const supabase = useSupabaseClient()
   const userEmail = useUserEmail()
+  const enabled = options?.enabled !== false
+  const realtime = options?.realtime === true
 
   useRealtimeSubscription({
     table: "ticket_statuses",
-    enabled: true,
+    enabled: enabled && realtime,
     onInsert: (payload) => {
       const newStatus = payload.new as TicketStatus
       queryClient.setQueryData<TicketStatus[]>(["ticket-statuses"], (old) => {
@@ -66,6 +70,7 @@ export function useTicketStatuses(options?: UseTicketStatusesOptions) {
       if (fetchError) throw fetchError
       return statuses || []
     },
+    enabled,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -91,4 +96,3 @@ export function useTicketStatuses(options?: UseTicketStatusesOptions) {
     refresh: refetch,
   }
 }
-

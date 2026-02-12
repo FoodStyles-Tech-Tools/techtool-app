@@ -5,7 +5,7 @@ import { Circle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
-import { formatStatusLabel, isDoneStatus, normalizeStatusKey } from "@/lib/ticket-statuses"
+import { formatStatusLabel, isDoneStatus, normalizeStatusKey, type TicketStatus } from "@/lib/ticket-statuses"
 
 interface TicketStatusSelectProps {
   value: string
@@ -24,7 +24,11 @@ export function TicketStatusSelect({
   triggerClassName,
   excludeDone = false
 }: TicketStatusSelectProps) {
-  const { statuses, statusMap } = useTicketStatuses()
+  const { statuses, statusMap } = useTicketStatuses({ realtime: false })
+  const selectableStatuses = useMemo(
+    () => (excludeDone ? statuses.filter((status) => !isDoneStatus(status.key)) : statuses),
+    [excludeDone, statuses]
+  )
   const normalizedValue = useMemo(() => normalizeStatusKey(value || ""), [value])
   const currentStatus = statusMap.get(normalizedValue) || statusMap.get(value)
   const currentLabel = currentStatus?.label || formatStatusLabel(value || "")
@@ -43,7 +47,7 @@ export function TicketStatusSelect({
         )}
       </SelectTrigger>
       <SelectContent className={cn("dark:bg-input", className)}>
-        {statuses.map((status) => (
+        {selectableStatuses.map((status) => (
           <SelectItem key={status.key} value={status.key}>
             <div className="flex items-center gap-1.5">
               <Circle
@@ -59,10 +63,22 @@ export function TicketStatusSelect({
   )
 }
 
-export function TicketStatusIcon({ status, className }: { status: string; className?: string }) {
-  const { statusMap } = useTicketStatuses()
+export function TicketStatusIcon({
+  status,
+  className,
+  statusMap,
+}: {
+  status: string
+  className?: string
+  statusMap?: Map<string, TicketStatus>
+}) {
+  const { statusMap: fetchedStatusMap } = useTicketStatuses({
+    enabled: !statusMap,
+    realtime: false,
+  })
+  const resolvedStatusMap = statusMap ?? fetchedStatusMap
   const normalizedStatus = normalizeStatusKey(status)
-  const statusEntry = statusMap.get(normalizedStatus) || statusMap.get(status)
+  const statusEntry = resolvedStatusMap.get(normalizedStatus) || resolvedStatusMap.get(status)
   const color = statusEntry?.color || "#9ca3af"
 
   return (
@@ -72,5 +88,4 @@ export function TicketStatusIcon({ status, className }: { status: string; classN
     />
   )
 }
-
 

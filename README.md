@@ -58,6 +58,17 @@ SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
+# Optional: Upstash Redis REST (server cache acceleration)
+UPSTASH_REDIS_REST_URL=https://<your-upstash-endpoint>.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your_upstash_token
+
+# Internal endpoints
+INTERNAL_REVALIDATE_TOKEN=your_internal_revalidate_token
+INTERNAL_CRON_TOKEN=your_internal_cron_token
+
+# Optional calendar cache TTL in seconds (default: 120)
+CALENDAR_EVENTS_CACHE_TTL_SECONDS=120
+
 # Postgres Connection (for BetterAuth)
 POSTGRES_CONNECTION_STRING=postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
 ```
@@ -257,6 +268,22 @@ npm run lint
 npm run build
 npm start
 ```
+
+### Migration Hygiene Check
+
+```bash
+npm run check:migrations
+```
+
+### Optional Scheduled Calendar Sync
+
+You can pre-warm user calendar caches via:
+
+`POST /api/internal/calendar/sync`
+
+- Header: `Authorization: Bearer $INTERNAL_CRON_TOKEN`
+- Optional body: `{ "user_id": "<uuid>" }` to sync one user
+- Without body it syncs all users with Google calendar tokens
 
 ## Troubleshooting
 

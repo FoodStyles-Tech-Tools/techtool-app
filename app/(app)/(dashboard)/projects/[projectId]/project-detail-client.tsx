@@ -1,32 +1,38 @@
 "use client"
 
-import { useState, useMemo, useEffect, useRef } from "react"
+import { useState, useMemo, useEffect, useRef, useCallback } from "react"
 import dynamic from "next/dynamic"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
-import { ArrowLeft, ExternalLink } from "lucide-react"
+import { ExternalLink } from "lucide-react"
 import { BrandLinkIcon } from "@/components/brand-link-icon"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { toast } from "@/components/ui/toast"
-import { Copy, Plus, X, Check, Circle, Pencil, Trash2 } from "lucide-react"
+import {
+  Copy,
+  Plus,
+  X,
+  Circle,
+  Pencil,
+  Trash2,
+  LayoutGrid,
+  BarChart3,
+  ListFilter,
+  Search,
+} from "lucide-react"
 import { useProject, useUpdateProject } from "@/hooks/use-projects"
-import { useTickets, useUpdateTicket, useCreateTicket } from "@/hooks/use-tickets"
-import { useDepartments } from "@/hooks/use-departments"
+import { useTickets, useUpdateTicket } from "@/hooks/use-tickets"
 import { useUsers } from "@/hooks/use-users"
-import { useQueryClient } from "@tanstack/react-query"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
-import { TicketTypeSelect, TicketTypeIcon } from "@/components/ticket-type-select"
-import { TicketPrioritySelect, TicketPriorityIcon } from "@/components/ticket-priority-select"
-import { TicketStatusSelect } from "@/components/ticket-status-select"
+import { TicketTypeIcon } from "@/components/ticket-type-select"
+import { TicketPriorityIcon } from "@/components/ticket-priority-select"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import {
   Dialog,
@@ -36,13 +42,24 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { useEpics, useCreateEpic } from "@/hooks/use-epics"
+import { useEpics } from "@/hooks/use-epics"
 import { EpicForm } from "@/components/forms/epic-form"
-import { EpicSelect } from "@/components/epic-select"
 import { useSprints, type Sprint } from "@/hooks/use-sprints"
-import { SprintSelect } from "@/components/sprint-select"
 import { SprintForm } from "@/components/forms/sprint-form"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Switch } from "@/components/ui/switch"
 
 const TicketDetailDialog = dynamic(
   () => import("@/components/ticket-detail-dialog").then((mod) => mod.TicketDetailDialog),
@@ -52,7 +69,6 @@ const GanttChart = dynamic(
   () => import("@/components/gantt-chart").then((mod) => mod.GanttChart),
   { ssr: false }
 )
-import { LayoutGrid } from "lucide-react"
 import { isDoneStatus } from "@/lib/ticket-statuses"
 
 const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
@@ -94,19 +110,15 @@ export default function ProjectDetailClient() {
   const { data: ticketsData, isLoading: ticketsLoading } = useTickets({
     project_id: projectId,
   })
-  const { departments } = useDepartments()
   const { data: usersData } = useUsers()
   const { epics } = useEpics(projectId)
   const { sprints } = useSprints(projectId)
-  const createEpic = useCreateEpic()
   const updateTicket = useUpdateTicket()
   const updateProject = useUpdateProject()
   const { user, flags } = usePermissions()
   const canCreateTickets = flags?.canCreateTickets ?? false
   const canEditTickets = flags?.canEditTickets ?? false
   const canEditProjects = flags?.canEditProjects ?? false
-  const createTicket = useCreateTicket()
-  const queryClient = useQueryClient()
   const { preferences } = useUserPreferences()
   const { statuses: ticketStatuses } = useTicketStatuses()
   const groupByEpicInitialized = useRef(false)
@@ -121,8 +133,6 @@ export default function ProjectDetailClient() {
   const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false)
   const [isSprintDialogOpen, setIsSprintDialogOpen] = useState(false)
   const [editingSprint, setEditingSprint] = useState<Pick<Sprint, "id" | "name" | "description" | "status" | "start_date" | "end_date"> | null>(null)
-  const [isAddingNew, setIsAddingNew] = useState(false)
-  const [addingToStatus, setAddingToStatus] = useState<string | null>(null)
   const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
   const [dropIndicator, setDropIndicator] = useState<{ 
@@ -176,80 +186,6 @@ export default function ProjectDetailClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferences.group_by_epic])
 
-  const [newTicketData, setNewTicketData] = useState({
-    title: "",
-    description: "",
-    type: "task" as "bug" | "request" | "task",
-    priority: "medium" as "low" | "medium" | "high" | "urgent",
-    status: "open" as string,
-    department_id: undefined,
-    assignee_id: assigneeFilter !== "all" && assigneeFilter !== "unassigned" ? assigneeFilter : undefined,
-    requested_by_id: undefined as string | undefined,
-    epic_id: undefined as string | undefined,
-    sprint_id: undefined as string | undefined,
-  })
-
-  // Update requested_by_id when user is available
-  useEffect(() => {
-    if (user?.id && !newTicketData.requested_by_id) {
-      setNewTicketData(prev => ({ ...prev, requested_by_id: user.id }))
-    }
-  }, [user?.id, newTicketData.requested_by_id])
-
-  const defaultStatusKey = useMemo(() => {
-    return ticketStatuses.find((status) => status.key === "open")?.key
-      || ticketStatuses[0]?.key
-      || "open"
-  }, [ticketStatuses])
-
-  // Keyboard shortcut: Press "a" to quick-add, ESC to close
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // ESC: Close quick-add form
-      if (e.key === "Escape" && isAddingNew) {
-        // Don't close if a select dropdown is open
-        const target = e.target as HTMLElement | null
-        const isSelectOpen = target?.closest('[role="listbox"]') || target?.closest('[data-state="open"]')
-        if (!isSelectOpen) {
-          e.preventDefault()
-          e.stopPropagation()
-          setIsAddingNew(false)
-          setAddingToStatus(null)
-          return
-        }
-      }
-
-      // Only trigger if "a" key is pressed (not Alt+A or Ctrl+A)
-      if (e.key !== "a" && e.key !== "A") return
-      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return
-
-      // Don't trigger if user is typing in an input, textarea, or select
-      const target = e.target as HTMLElement | null
-      const isInputElement = target && (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.tagName === "SELECT" ||
-        target.isContentEditable
-      )
-      if (isInputElement) return
-
-      // Don't trigger if a dialog is open
-      const hasOpenDialog = document.querySelector('[role="dialog"][data-state="open"]')
-      if (hasOpenDialog) return
-
-      // Don't trigger if already adding or no permission
-      if (isAddingNew || !canCreateTickets) return
-
-      e.preventDefault()
-      setIsAddingNew(true)
-      setAddingToStatus(defaultStatusKey) // Default to first status
-      setNewTicketData(prev => ({ ...prev, status: defaultStatusKey }))
-    }
-
-    window.addEventListener("keydown", handleKeyDown, true) // Use capture phase
-    return () => window.removeEventListener("keydown", handleKeyDown, true)
-  }, [isAddingNew, canCreateTickets, defaultStatusKey])
-
   // Derive data values (must be before any hooks that use them)
   const project = projectData?.project || null
   const allTickets = useMemo(() => (ticketsData || []) as ProjectTicket[], [ticketsData])
@@ -264,8 +200,6 @@ export default function ProjectDetailClient() {
     [usersData]
   )
 
-  const UNASSIGNED_VALUE = "unassigned"
-  const NO_DEPARTMENT_VALUE = "no_department"
   const FIELD_LABELS: Record<string, string> = {
     status: "Status",
     priority: "Priority",
@@ -327,6 +261,24 @@ export default function ProjectDetailClient() {
       return true
     })
   }, [allTickets, searchQuery, excludeDone, requestedByFilter, assigneeFilter, optimisticStatusUpdates])
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (searchQuery.trim()) count += 1
+    if (requestedByFilter !== "all") count += 1
+    if (assigneeFilter !== "all") count += 1
+    if (!excludeDone) count += 1
+    if (viewMode === "kanban" && groupByEpic) count += 1
+    return count
+  }, [searchQuery, requestedByFilter, assigneeFilter, excludeDone, viewMode, groupByEpic])
+
+  const resetProjectTicketFilters = useCallback(() => {
+    setSearchQuery("")
+    setRequestedByFilter("all")
+    setAssigneeFilter("all")
+    setExcludeDone(true)
+    setGroupByEpic(false)
+  }, [])
 
   // Group tickets by status for kanban
   const ticketsByStatus = useMemo(() => {
@@ -796,45 +748,6 @@ export default function ProjectDetailClient() {
     }
   }
 
-  const handleQuickAdd = async () => {
-    if (!newTicketData.title.trim()) {
-      toast("Title is required", "error")
-      return
-    }
-
-    try {
-      await createTicket.mutateAsync({
-        title: newTicketData.title,
-        description: newTicketData.description || undefined,
-        type: newTicketData.type,
-        priority: newTicketData.priority,
-        project_id: projectId,
-        department_id: newTicketData.department_id || undefined,
-        assignee_id: newTicketData.assignee_id || undefined,
-        requested_by_id: newTicketData.requested_by_id || user?.id,
-        status: addingToStatus || newTicketData.status,
-        epic_id: newTicketData.epic_id || undefined,
-      })
-      toast("Ticket created successfully")
-      setIsAddingNew(false)
-      setNewTicketData({
-        title: "",
-        description: "",
-        type: "task",
-        priority: "medium",
-        status: addingToStatus || "open",
-        department_id: undefined,
-        assignee_id: assigneeFilter !== "all" && assigneeFilter !== "unassigned" ? assigneeFilter : undefined,
-        requested_by_id: undefined,
-        epic_id: undefined,
-        sprint_id: undefined,
-      })
-      setAddingToStatus(null)
-    } catch (error: any) {
-      toast(error.message || "Failed to create ticket", "error")
-    }
-  }
-
   const handleCopyTicketLabel = (ticket: any) => {
     const projectName = ticket.project?.name || "No Project"
     const label = `[${projectName}] ${ticket.display_id || ticket.id.slice(0, 8)}_${ticket.title}`
@@ -979,6 +892,24 @@ export default function ProjectDetailClient() {
     }
   }
 
+  useEffect(() => {
+    if (!project?.name) return
+
+    window.dispatchEvent(
+      new CustomEvent("app-shell-breadcrumb-detail", {
+        detail: { label: project.name },
+      })
+    )
+
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("app-shell-breadcrumb-detail", {
+          detail: { label: null },
+        })
+      )
+    }
+  }, [project?.name])
+
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading...</p>
   }
@@ -996,145 +927,156 @@ export default function ProjectDetailClient() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] gap-4">
-      <div className="flex items-center space-x-4 flex-shrink-0">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/projects">
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-        </Button>
-        <nav className="text-sm text-muted-foreground">
-          <Link href="/projects" className="hover:underline">
-            Projects
-          </Link>
-          <span className="mx-2">/</span>
-          <span>{project.name}</span>
-        </nav>
-      </div>
-
-      <div className="flex items-center space-x-2 flex-wrap gap-y-2 flex-shrink-0">
-        <Input
-          placeholder="Search tickets..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-sm h-9"
-        />
-        <Button
-          variant={assigneeFilter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setAssigneeFilter("all")}
-          className="h-9"
-        >
-          All Tickets
-        </Button>
-        <Button
-          variant={assigneeFilter === user?.id ? "default" : "outline"}
-          size="sm"
-          onClick={() => setAssigneeFilter(user?.id || "all")}
-          className="h-9"
-          disabled={!user}
-        >
-          My Tickets
-        </Button>
-        <Button
-          variant={assigneeFilter === "unassigned" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setAssigneeFilter("unassigned")}
-          className="h-9"
-        >
-          Unassigned
-        </Button>
-        <Select value={requestedByFilter} onValueChange={setRequestedByFilter}>
-          <SelectTrigger className="w-[140px] h-9 relative">
-            {requestedByFilter !== "all" ? (
-              <div className="absolute left-2">
-                <UserSelectValue
-                  users={users}
-                  value={requestedByFilter}
-                  placeholder="Requested by"
-                />
-              </div>
-            ) : (
-              <SelectValue placeholder="Requested by" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Requesters</SelectItem>
-            {users.map((user) => (
-              <UserSelectItem key={user.id} user={user} value={user.id} />
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="exclude-done"
-            checked={excludeDone}
-            onCheckedChange={(checked) => setExcludeDone(checked === true)}
-          />
-          <Label
-            htmlFor="exclude-done"
-            className="text-sm font-normal cursor-pointer whitespace-nowrap"
-          >
-            Exclude Done
-          </Label>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center border rounded-md">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2 flex-shrink-0">
+        <div className="flex items-center gap-1">
+          <div className="flex items-center rounded-md border p-0.5">
             <Button
-              variant={viewMode === "kanban" ? "default" : "ghost"}
-              size="sm"
+              variant={viewMode === "kanban" ? "secondary" : "ghost"}
+              size="icon"
               onClick={() => setViewMode("kanban")}
-              className="h-8 rounded-r-none"
+              className="h-7 w-7"
             >
-              <LayoutGrid className="h-4 w-4 mr-1.5" />
-              Kanban
+              <LayoutGrid className="h-4 w-4" />
+              <span className="sr-only">Kanban view</span>
             </Button>
             <Button
-              variant={viewMode === "gantt" ? "default" : "ghost"}
-              size="sm"
+              variant={viewMode === "gantt" ? "secondary" : "ghost"}
+              size="icon"
               onClick={() => setViewMode("gantt")}
-              className="h-8 rounded-l-none"
+              className="h-7 w-7"
             >
-              <LayoutGrid className="h-4 w-4 mr-1.5" />
-              Gantt
+              <BarChart3 className="h-4 w-4" />
+              <span className="sr-only">Gantt view</span>
             </Button>
           </div>
-          {viewMode === "kanban" && (
-            <>
-              <Checkbox
-                id="group-by-epic"
-                checked={groupByEpic}
-                onCheckedChange={(checked) => setGroupByEpic(checked === true)}
-              />
-              <Label
-                htmlFor="group-by-epic"
-                className="text-sm font-normal cursor-pointer whitespace-nowrap"
-              >
-                Group by Epic
-              </Label>
-            </>
-          )}
-          {canEditProjects && (
-            <>
+        </div>
+        <div className="flex flex-wrap items-center gap-0.5">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                onClick={() => setIsEpicDialogOpen(true)}
-                className="ml-2 h-8"
+                className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
               >
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Create Epic
+                <ListFilter className="h-4 w-4" />
+                Filter
+                {activeFilterCount > 0 ? (
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsSprintDialogOpen(true)}
-                className="ml-2 h-8"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Create Sprint
-              </Button>
-            </>
-          )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <DropdownMenuLabel>Filter Tickets</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="space-y-3 p-2" onClick={(event) => event.stopPropagation()}>
+                <div className="space-y-1.5">
+                  <p className="text-xs text-muted-foreground">Search</p>
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search tickets..."
+                      value={searchQuery}
+                      onChange={(event) => setSearchQuery(event.target.value)}
+                      className="h-8 pl-8"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-xs text-muted-foreground">Requester</p>
+                  <Select value={requestedByFilter} onValueChange={setRequestedByFilter}>
+                    <SelectTrigger className="h-8 relative">
+                      {requestedByFilter !== "all" ? (
+                        <div className="absolute left-2">
+                          <UserSelectValue
+                            users={users}
+                            value={requestedByFilter}
+                            placeholder="Requested by"
+                          />
+                        </div>
+                      ) : (
+                        <SelectValue placeholder="Requested by" />
+                      )}
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Requesters</SelectItem>
+                      {users.map((user) => (
+                        <UserSelectItem key={user.id} user={user} value={user.id} />
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Show</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-44">
+                    <DropdownMenuItem onClick={() => setAssigneeFilter("all")}>
+                      All Tickets
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setAssigneeFilter(user?.id || "all")}
+                      disabled={!user}
+                    >
+                      My Tickets
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setAssigneeFilter("unassigned")}>
+                      Unassigned
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
+                  <span className="text-sm">Exclude Done</span>
+                  <Switch checked={excludeDone} onCheckedChange={setExcludeDone} />
+                </div>
+                {viewMode === "kanban" ? (
+                  <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
+                    <span className="text-sm">Group by Epic</span>
+                    <Switch checked={groupByEpic} onCheckedChange={setGroupByEpic} />
+                  </div>
+                ) : null}
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={resetProjectTicketFilters}>
+                  Reset Filters
+                </Button>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {canCreateTickets || canEditProjects ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="ml-1 inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Create</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Create</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {canCreateTickets ? (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent("open-ticket-dialog"))
+                    }}
+                  >
+                    Ticket
+                    <DropdownMenuShortcut>Alt/Cmd+A</DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                ) : null}
+                {canEditProjects ? (
+                  <DropdownMenuItem onClick={() => setIsEpicDialogOpen(true)}>
+                    Epic
+                  </DropdownMenuItem>
+                ) : null}
+                {canEditProjects ? (
+                  <DropdownMenuItem onClick={() => setIsSprintDialogOpen(true)}>
+                    Sprint
+                  </DropdownMenuItem>
+                ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       </div>
 
@@ -1529,7 +1471,6 @@ export default function ProjectDetailClient() {
               // Status-based grouping (original)
               kanbanColumns.map((column) => {
                 const columnTickets = ticketsByStatus[column.id] || []
-                const isAddingToThisColumn = isAddingNew && addingToStatus === column.id
               
               return (
                 <div
@@ -1551,20 +1492,6 @@ export default function ProjectDetailClient() {
                           {columnTickets.length}
                         </Badge>
                       </div>
-                      {canCreateTickets && !isAddingNew && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => {
-                            setIsAddingNew(true)
-                            setAddingToStatus(column.id)
-                            setNewTicketData(prev => ({ ...prev, status: column.id }))
-                          }}
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
                     </div>
                     
                     <div className="space-y-2 overflow-y-auto flex-1 min-h-0 relative">
@@ -1577,164 +1504,6 @@ export default function ProjectDetailClient() {
                           }}
                         />
                       )}
-                      {isAddingToThisColumn && (
-                        <Card className="p-4 bg-background border-2 border-dashed border-primary/20 shadow-sm">
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-semibold text-foreground">New Ticket</span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 hover:bg-muted"
-                                onClick={() => {
-                                  setIsAddingNew(false)
-                                  setAddingToStatus(null)
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </div>
-                            
-                            <div className="space-y-2.5">
-                              <Input
-                                placeholder="Ticket title..."
-                                value={newTicketData.title}
-                                onChange={(e) => setNewTicketData({ ...newTicketData, title: e.target.value })}
-                                className="h-9 text-sm font-medium"
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault()
-                                    handleQuickAdd()
-                                  } else if (e.key === "Escape") {
-                                    setIsAddingNew(false)
-                                    setAddingToStatus(null)
-                                  }
-                                }}
-                              />
-                              <Textarea
-                                placeholder="Description (optional)..."
-                                value={newTicketData.description}
-                                onChange={(e) => setNewTicketData({ ...newTicketData, description: e.target.value })}
-                                className="min-h-[60px] text-xs resize-none"
-                                onKeyDown={(e) => {
-                                  if (e.key === "Escape") {
-                                    setIsAddingNew(false)
-                                    setAddingToStatus(null)
-                                  }
-                                }}
-                              />
-                            </div>
-                            
-                            <div className="flex gap-2 flex-wrap">
-                              <TicketTypeSelect
-                                value={newTicketData.type}
-                                onValueChange={(value) => setNewTicketData({ ...newTicketData, type: value as "bug" | "request" | "task" })}
-                              />
-                              <TicketPrioritySelect
-                                value={newTicketData.priority}
-                                onValueChange={(value) => setNewTicketData({ ...newTicketData, priority: value as "low" | "medium" | "high" | "urgent" })}
-                              />
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <div className="flex gap-2">
-                                <Select
-                                  value={newTicketData.assignee_id || UNASSIGNED_VALUE}
-                                  onValueChange={(value) =>
-                                    setNewTicketData({
-                                      ...newTicketData,
-                                      assignee_id: value === UNASSIGNED_VALUE ? undefined : value,
-                                    })
-                                  }
-                                >
-                                  <SelectTrigger className="h-8 text-xs flex-1">
-                                    <SelectValue placeholder="Assignee" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-                                    {users.map((user) => (
-                                      <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                                <Select
-                                  value={newTicketData.requested_by_id || ""}
-                                  onValueChange={(value) =>
-                                    setNewTicketData({
-                                      ...newTicketData,
-                                      requested_by_id: value || undefined,
-                                    })
-                                  }
-                                >
-                                  <SelectTrigger className="h-8 text-xs flex-1">
-                                    <SelectValue placeholder="Requested by" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {users.map((user) => (
-                                      <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              {(epics.length > 0 || sprints.length > 0) && (
-                                <div className="flex gap-2">
-                                  {epics.length > 0 && (
-                                    <EpicSelect
-                                      value={newTicketData.epic_id}
-                                      onValueChange={(value) =>
-                                        setNewTicketData({
-                                          ...newTicketData,
-                                          epic_id: value || undefined,
-                                        })
-                                      }
-                                      epics={epics}
-                                      triggerClassName="h-8 text-xs flex-1"
-                                    />
-                                  )}
-                                  {sprints.length > 0 && (
-                                    <SprintSelect
-                                      value={newTicketData.sprint_id}
-                                      onValueChange={(value) =>
-                                        setNewTicketData({
-                                          ...newTicketData,
-                                          sprint_id: value || undefined,
-                                        })
-                                      }
-                                      sprints={sprints}
-                                      triggerClassName="h-8 text-xs flex-1"
-                                    />
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex gap-2 pt-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="flex-1 h-8"
-                                onClick={() => {
-                                  setIsAddingNew(false)
-                                  setAddingToStatus(null)
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                size="sm"
-                                className="flex-1 h-8"
-                                onClick={handleQuickAdd}
-                                disabled={!newTicketData.title.trim()}
-                              >
-                                <Check className="h-3.5 w-3.5 mr-1.5" />
-                                Create
-                              </Button>
-                            </div>
-                          </div>
-                        </Card>
-                      )}
-                      
                       {columnTickets.map((ticket) => {
                         const isUpdating = Object.keys(updatingFields).some(key => key.startsWith(`${ticket.id}-`))
                         const isDroppingThis = droppingTicketId === ticket.id
@@ -1880,7 +1649,7 @@ export default function ProjectDetailClient() {
                         )
                       })}
                       
-                      {columnTickets.length === 0 && !isAddingToThisColumn && (
+                      {columnTickets.length === 0 && (
                         <div className="text-center py-8 text-sm text-muted-foreground">
                           No tickets
                         </div>
@@ -1893,7 +1662,7 @@ export default function ProjectDetailClient() {
             )}
           </div>
           
-          {filteredTickets.length === 0 && !isAddingNew && (
+          {filteredTickets.length === 0 && (
             <div className="text-center py-8 text-sm text-muted-foreground flex-shrink-0">
               {searchQuery ? "No tickets found" : "No tickets yet."}
             </div>

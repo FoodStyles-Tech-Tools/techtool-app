@@ -3,6 +3,7 @@ import "server-only"
 import { createServerClient } from "@/lib/supabase"
 import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
+import { getServerCache, setServerCache } from "@/lib/server/cache"
 
 export type Permission = {
   resource: string
@@ -47,6 +48,7 @@ export type PermissionFlags = {
 
 const ALL_RESOURCES = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status"] as const
 const ALL_ACTIONS = ["view", "create", "edit", "delete", "manage"] as const
+const PERMISSIONS_CACHE_TTL_MS = 60 * 1000
 
 export function buildPermissionFlags(permissions: Permission[]): PermissionFlags {
   const has = (resource: string, action: string) =>
@@ -125,6 +127,12 @@ export async function getCurrentUserPermissions(
     return null
   }
 
+  const cacheKey = currentSession.user.email
+  const cached = await getServerCache<PermissionsUser | null>(`permissions:${cacheKey}`)
+  if (cached !== null) {
+    return cached
+  }
+
   const supabase = createServerClient()
   const { data: user, error } = await supabase
     .from("users")
@@ -133,6 +141,7 @@ export async function getCurrentUserPermissions(
     .single()
 
   if (error || !user) {
+    await setServerCache(`permissions:${cacheKey}`, null, PERMISSIONS_CACHE_TTL_MS / 1000)
     return null
   }
 
@@ -170,7 +179,7 @@ export async function getCurrentUserPermissions(
     }
   }
 
-  return {
+  const resolvedUser = {
     id: user.id,
     email: user.email,
     name: user.name,
@@ -178,4 +187,12 @@ export async function getCurrentUserPermissions(
     role: user.role,
     permissions,
   }
+
+  await setServerCache(
+    `permissions:${cacheKey}`,
+    resolvedUser,
+    PERMISSIONS_CACHE_TTL_MS / 1000
+  )
+
+  return resolvedUser
 }
