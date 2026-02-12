@@ -323,7 +323,7 @@ export default function ProjectsClient({
   }, [updateProject])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-4">
         <div>
           <h1 className="text-2xl">Projects</h1>

@@ -623,7 +623,7 @@ export default function TicketsPage() {
   )
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl">Tickets</h1>

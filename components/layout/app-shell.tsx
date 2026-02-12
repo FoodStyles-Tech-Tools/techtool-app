@@ -52,10 +52,11 @@ export function AppShell({
         <PermissionsBootstrap payload={permissionsBootstrap} />
       ) : null}
       <Sidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="w-full px-4 py-4">{children}</div>
+      <main className="min-w-0 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full min-w-0 max-w-[1800px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-10">
+          {children}
+        </div>
       </main>
     </div>
   )
 }
-

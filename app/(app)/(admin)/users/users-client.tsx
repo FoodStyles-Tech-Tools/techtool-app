@@ -126,7 +126,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl">Users</h1>
