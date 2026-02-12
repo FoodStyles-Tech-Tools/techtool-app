@@ -55,8 +55,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-    font-weight: 400;
   }
   
   /* Remove focus outline on mouse click, but keep it for keyboard navigation */
@@ -76,30 +74,6 @@
 }
 
 @layer utilities {
-  .typography-h1 {
-    @apply scroll-m-20 text-4xl font-extrabold tracking-tight lg:text-5xl;
-  }
-
-  .typography-h2 {
-    @apply scroll-m-20 text-3xl font-semibold tracking-tight;
-  }
-
-  .typography-h3 {
-    @apply scroll-m-20 text-2xl font-semibold tracking-tight;
-  }
-
-  .typography-h4 {
-    @apply scroll-m-20 text-xl font-semibold tracking-tight;
-  }
-
-  .typography-p {
-    @apply leading-7;
-  }
-
-  .typography-muted {
-    @apply text-sm text-muted-foreground;
-  }
-
   @keyframes highlight-update {
     0% {
       background-color: hsl(var(--primary) / 0.15);

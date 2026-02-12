@@ -528,8 +528,8 @@ export default function TicketsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="typography-h3">Tickets</h1>
-          <p className="typography-muted mt-0.5">
+          <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">Tickets</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             View and manage all tickets across projects
           </p>
         </div>

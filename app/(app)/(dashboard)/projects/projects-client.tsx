@@ -230,8 +230,8 @@ export default function ProjectsClient({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-4">
         <div>
-          <h1 className="typography-h3">Projects</h1>
-          <p className="typography-muted mt-0.5">
+          <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">Projects</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Manage your projects and track progress
           </p>
         </div>

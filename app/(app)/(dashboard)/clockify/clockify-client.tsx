@@ -603,8 +603,8 @@ export default function ClockifyClient() {
     <div className="space-y-6">
       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="typography-h3">Clockify Reports</h1>
-          <p className="typography-muted mt-0.5">
+          <h1 className="scroll-m-20 text-2xl font-semibold tracking-tight">Clockify Reports</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Review weekly detailed reports and audit fetch sessions.
           </p>
         </div>
