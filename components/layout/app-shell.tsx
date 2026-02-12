@@ -1,5 +1,6 @@
 import { Sidebar } from "./sidebar"
 import { PermissionsBootstrap } from "@/components/permissions-bootstrap"
+import { AppShellHeader } from "./app-shell-header"
 
 type PermissionsBootstrapPayload = {
   user: {
@@ -47,15 +48,18 @@ export function AppShell({
   permissionsBootstrap?: PermissionsBootstrapPayload
 }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-muted/40 dark:bg-[#13161b]">
+    <div className="flex h-screen overflow-hidden bg-muted/40 dark:bg-[#1a1a1a]">
       {permissionsBootstrap ? (
         <PermissionsBootstrap payload={permissionsBootstrap} />
       ) : null}
       <Sidebar />
-      <div className="min-w-0 flex-1 bg-muted/40 p-2 dark:bg-[#13161b]">
-        <main className="h-full min-w-0 overflow-y-auto rounded-2xl border bg-background shadow-sm dark:border-white/10 dark:bg-[#2f3339]">
-          <div className="mx-auto w-full min-w-0 max-w-[1800px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8 xl:px-10">
-            {children}
+      <div className="min-w-0 flex-1 bg-muted/40 p-2 dark:bg-[#1a1a1a]">
+        <main className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border bg-background shadow-sm dark:border-white/10 dark:bg-[#202020]">
+          <AppShellHeader />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mx-auto w-full min-w-0 max-w-[1800px] px-4 pb-5 pt-0 sm:px-6 sm:pb-6 lg:px-8 xl:px-10">
+              {children}
+            </div>
           </div>
         </main>
       </div>
