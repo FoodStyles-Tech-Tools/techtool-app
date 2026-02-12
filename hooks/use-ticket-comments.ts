@@ -36,6 +36,47 @@ function getCommentsQueryKey(ticketId: string) {
   return ["ticket-comments", ticketId] as const
 }
 
+function updateCommentInTree(
+  comments: TicketComment[],
+  commentId: string,
+  updater: (comment: TicketComment) => TicketComment
+): TicketComment[] {
+  return comments.map((comment) => {
+    if (comment.id === commentId) {
+      return updater(comment)
+    }
+    if (comment.replies && comment.replies.length > 0) {
+      return {
+        ...comment,
+        replies: updateCommentInTree(comment.replies, commentId, updater),
+      }
+    }
+    return comment
+  })
+}
+
+function removeCommentFromTree(
+  comments: TicketComment[],
+  commentId: string
+): TicketComment[] {
+  return comments
+    .filter((comment) => comment.id !== commentId)
+    .map((comment) => ({
+      ...comment,
+      replies: comment.replies ? removeCommentFromTree(comment.replies, commentId) : [],
+    }))
+}
+
+function commentExistsInTree(comments: TicketComment[], commentId: string): boolean {
+  for (const comment of comments) {
+    if (comment.id === commentId) return true
+    if (comment.replies?.length && commentExistsInTree(comment.replies, commentId)) {
+      return true
+    }
+  }
+  return false
+}
+
 export function useTicketComments(ticketId: string, options?: { enabled?: boolean }) {
   const queryClient = useQueryClient()
   const enabled = !!ticketId && (options?.enabled !== false)
@@ -44,26 +85,28 @@ export function useTicketComments(ticketId: string, options?: { enabled?: boolea
     table: "ticket_comments",
     filter: `ticket_id=eq.${ticketId}`,
     enabled,
-    onInsert: () => {
-      queryClient.invalidateQueries({ queryKey: getCommentsQueryKey(ticketId) })
+    onInsert: (payload) => {
+      const insertedCommentId = (payload.new as { id: string }).id
+      const existing = queryClient.getQueryData<CommentsResponse>(getCommentsQueryKey(ticketId))
+      const alreadyExists = existing ? commentExistsInTree(existing.comments, insertedCommentId) : false
+
+      if (!alreadyExists) {
+        queryClient.invalidateQueries({ queryKey: getCommentsQueryKey(ticketId) })
+      }
     },
     onUpdate: (payload) => {
       const updatedComment = payload.new as any
       if (updatedComment.ticket_id === ticketId) {
         queryClient.setQueryData<CommentsResponse>(getCommentsQueryKey(ticketId), (old) => {
           if (!old) return old
-          const updateInTree = (comments: TicketComment[]): TicketComment[] => {
-            return comments.map((c) => {
-              if (c.id === updatedComment.id) {
-                return { ...c, body: updatedComment.body, updated_at: updatedComment.updated_at }
-              }
-              if (c.replies && c.replies.length > 0) {
-                return { ...c, replies: updateInTree(c.replies) }
-              }
-              return c
-            })
+          return {
+            ...old,
+            comments: updateCommentInTree(old.comments, updatedComment.id, (comment) => ({
+              ...comment,
+              body: updatedComment.body,
+              updated_at: updatedComment.updated_at,
+            })),
           }
-          return { ...old, comments: updateInTree(old.comments) }
         })
       }
     },
@@ -71,15 +114,7 @@ export function useTicketComments(ticketId: string, options?: { enabled?: boolea
       const deletedId = (payload.old as { id: string }).id
       queryClient.setQueryData<CommentsResponse>(getCommentsQueryKey(ticketId), (old) => {
         if (!old) return old
-        const removeFromTree = (comments: TicketComment[]): TicketComment[] => {
-          return comments
-            .filter((c) => c.id !== deletedId)
-            .map((c) => ({
-              ...c,
-              replies: c.replies ? removeFromTree(c.replies) : [],
-            }))
-        }
-        return { ...old, comments: removeFromTree(old.comments) }
+        return { ...old, comments: removeCommentFromTree(old.comments, deletedId) }
       })
     },
   })
@@ -163,8 +198,20 @@ export function useTicketComments(ticketId: string, options?: { enabled?: boolea
       }
       return res.json()
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: getCommentsQueryKey(ticketId) })
+    onSuccess: (data) => {
+      const updatedComment = data?.comment as TicketComment | undefined
+      if (!updatedComment) return
+      queryClient.setQueryData<CommentsResponse>(getCommentsQueryKey(ticketId), (old) => {
+        if (!old) return old
+        return {
+          ...old,
+          comments: updateCommentInTree(old.comments, updatedComment.id, (comment) => ({
+            ...comment,
+            body: updatedComment.body,
+            updated_at: updatedComment.updated_at,
+          })),
+        }
+      })
     },
   })
 
@@ -178,8 +225,11 @@ export function useTicketComments(ticketId: string, options?: { enabled?: boolea
         throw new Error(err.error || "Failed to delete comment")
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: getCommentsQueryKey(ticketId) })
+    onSuccess: (_, commentId) => {
+      queryClient.setQueryData<CommentsResponse>(getCommentsQueryKey(ticketId), (old) => {
+        if (!old) return old
+        return { ...old, comments: removeCommentFromTree(old.comments, commentId) }
+      })
     },
   })
 

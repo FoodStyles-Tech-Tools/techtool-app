@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "check:migrations": "node scripts/check-migration-order.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "node scripts/test-connection.js"

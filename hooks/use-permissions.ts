@@ -157,18 +157,31 @@ export function usePermissions() {
 
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/me", { cache: "no-store" })
-      if (!res.ok) {
-        setUser(null)
-        setFlags(computeFlags())
-        return
+      let nextUser: User | null = null
+      let nextFlags: PermissionFlags = computeFlags()
+      let cacheTs = Date.now()
+
+      const bootstrapRes = await fetch("/api/v2/bootstrap")
+      if (bootstrapRes.ok) {
+        const bootstrapData = await bootstrapRes.json()
+        nextUser = bootstrapData?.user ?? null
+        nextFlags = bootstrapData?.flags ?? computeFlags(nextUser?.permissions || [])
+        cacheTs = typeof bootstrapData?.ts === "number" ? bootstrapData.ts : Date.now()
+      } else {
+        const res = await fetch("/api/auth/me", { cache: "no-store" })
+        if (!res.ok) {
+          setUser(null)
+          setFlags(computeFlags())
+          return
+        }
+        const data = await res.json()
+        nextUser = data?.user ?? null
+        nextFlags = computeFlags(nextUser?.permissions || [])
       }
-      const data = await res.json()
-      const nextUser = data?.user ?? null
-      const nextFlags = computeFlags(nextUser?.permissions || [])
+
       setUser(nextUser)
       setFlags(nextFlags)
-      writePermissionsCache({ user: nextUser, flags: nextFlags, ts: Date.now() })
+      writePermissionsCache({ user: nextUser, flags: nextFlags, ts: cacheTs })
     } catch (error) {
       console.error("Failed to load permissions:", error)
       setUser(null)

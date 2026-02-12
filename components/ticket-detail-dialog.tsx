@@ -65,8 +65,8 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const NO_DEPARTMENT_VALUE = "no_department"
   const NO_PROJECT_VALUE = "no_project"
   const NO_EPIC_VALUE = "no_epic"
-  const { departments } = useDepartments()
-  const { data: projectsData } = useProjects()
+  const { departments } = useDepartments({ realtime: false })
+  const { data: projectsData } = useProjects({ realtime: false })
   const { flags } = usePermissions()
   const canEditTickets = flags?.canEditTickets ?? false
   const ensureCanEdit = () => {
@@ -80,7 +80,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const projects = projectsData || []
 
   const { data: ticketData, isLoading } = useTicket(ticketId || "", { enabled: !!ticketId && open })
-  const { data: usersData } = useUsers()
+  const { data: usersData } = useUsers({ realtime: false })
   const updateTicket = useUpdateTicket()
 
   const ticket = ticketData?.ticket || null

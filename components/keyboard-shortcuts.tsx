@@ -3,16 +3,33 @@
 import { useEffect, useState } from "react"
 import { useSession } from "@/lib/auth-client"
 import { usePathname } from "next/navigation"
-import { GlobalTicketDialog } from "./global-ticket-dialog"
-import { TicketSearchOverlay } from "./ticket-search-overlay"
-import { UserSearchOverlay } from "./user-search-overlay"
-import { TicketDetailDialog } from "./ticket-detail-dialog"
+import dynamic from "next/dynamic"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ProjectForm } from "@/components/forms/project-form"
 import { useUsers } from "@/hooks/use-users"
 import { useDepartments } from "@/hooks/use-departments"
 import { toast } from "@/components/ui/toast"
+
+const GlobalTicketDialog = dynamic(
+  () => import("./global-ticket-dialog").then((mod) => mod.GlobalTicketDialog),
+  { ssr: false }
+)
+const TicketSearchOverlay = dynamic(
+  () => import("./ticket-search-overlay").then((mod) => mod.TicketSearchOverlay),
+  { ssr: false }
+)
+const UserSearchOverlay = dynamic(
+  () => import("./user-search-overlay").then((mod) => mod.UserSearchOverlay),
+  { ssr: false }
+)
+const TicketDetailDialog = dynamic(
+  () => import("./ticket-detail-dialog").then((mod) => mod.TicketDetailDialog),
+  { ssr: false }
+)
+const ProjectForm = dynamic(
+  () => import("@/components/forms/project-form").then((mod) => mod.ProjectForm),
+  { ssr: false }
+)
 
 export function KeyboardShortcuts() {
   const { data: session, isPending } = useSession()
@@ -23,9 +40,16 @@ export function KeyboardShortcuts() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const { flags } = usePermissions()
-  const { data: usersData } = useUsers()
-  const { departments } = useDepartments()
   const canCreateProjects = flags?.canCreateProjects ?? false
+  const shouldLoadProjectDialogData = canCreateProjects && isProjectDialogOpen
+  const { data: usersData } = useUsers({
+    enabled: shouldLoadProjectDialogData,
+    realtime: false,
+  })
+  const { departments } = useDepartments({
+    enabled: shouldLoadProjectDialogData,
+    realtime: false,
+  })
   const isUsersPage = pathname === "/users"
 
   useEffect(() => {
@@ -168,43 +192,53 @@ export function KeyboardShortcuts() {
 
   return (
     <>
-      <GlobalTicketDialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen} />
-      <TicketSearchOverlay 
-        open={isSearchOverlayOpen} 
-        onOpenChange={setIsSearchOverlayOpen}
-        onSelectTicket={(ticketId) => {
-          setSelectedTicketId(ticketId)
-          setIsSearchOverlayOpen(false)
-        }}
-      />
-      <UserSearchOverlay
-        open={isUserSearchOverlayOpen}
-        onOpenChange={setIsUserSearchOverlayOpen}
-        onSelectUser={handleSelectUser}
-      />
-      <TicketDetailDialog
-        ticketId={selectedTicketId}
-        open={!!selectedTicketId}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedTicketId(null)
-          }
-        }}
-      />
+      {isTicketDialogOpen ? (
+        <GlobalTicketDialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen} />
+      ) : null}
+      {isSearchOverlayOpen ? (
+        <TicketSearchOverlay
+          open={isSearchOverlayOpen}
+          onOpenChange={setIsSearchOverlayOpen}
+          onSelectTicket={(ticketId) => {
+            setSelectedTicketId(ticketId)
+            setIsSearchOverlayOpen(false)
+          }}
+        />
+      ) : null}
+      {isUserSearchOverlayOpen ? (
+        <UserSearchOverlay
+          open={isUserSearchOverlayOpen}
+          onOpenChange={setIsUserSearchOverlayOpen}
+          onSelectUser={handleSelectUser}
+        />
+      ) : null}
+      {selectedTicketId ? (
+        <TicketDetailDialog
+          ticketId={selectedTicketId}
+          open={!!selectedTicketId}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedTicketId(null)
+            }
+          }}
+        />
+      ) : null}
       {canCreateProjects && (
         <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>Add Project</DialogTitle>
             </DialogHeader>
-            <ProjectForm
-              departments={departments}
-              users={usersData || []}
-              onSuccess={() => {
-                setIsProjectDialogOpen(false)
-                toast("Project created successfully")
-              }}
-            />
+            {isProjectDialogOpen ? (
+              <ProjectForm
+                departments={departments}
+                users={usersData || []}
+                onSuccess={() => {
+                  setIsProjectDialogOpen(false)
+                  toast("Project created successfully")
+                }}
+              />
+            ) : null}
           </DialogContent>
         </Dialog>
       )}

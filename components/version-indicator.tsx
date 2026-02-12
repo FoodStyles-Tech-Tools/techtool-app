@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { APP_VERSION } from "@/lib/version"
 import { cn } from "@/lib/utils"
 
-const POLL_INTERVAL = 60_000
+const POLL_INTERVAL = 5 * 60_000
 
 async function clearIndexedDB() {
   const getDatabases = (indexedDB as any)?.databases
@@ -67,15 +67,16 @@ async function clearPersistentStorage() {
 export function VersionIndicator({ className }: { className?: string }) {
   const initialVersion = useMemo(() => APP_VERSION || "0.0.0", [])
   const [latestVersion, setLatestVersion] = useState(initialVersion)
-  const [checking, setChecking] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   const updateAvailable = latestVersion !== initialVersion
 
   const checkVersion = useCallback(async () => {
-    setChecking(true)
+    if (document.hidden) {
+      return
+    }
     try {
-      const response = await fetch(`/api/version?ts=${Date.now()}`, {
+      const response = await fetch("/api/version", {
         cache: "no-store",
       })
       if (!response.ok) return
@@ -85,15 +86,24 @@ export function VersionIndicator({ className }: { className?: string }) {
       }
     } catch (error) {
       console.warn("Failed to check version", error)
-    } finally {
-      setChecking(false)
     }
   }, [])
 
   useEffect(() => {
     checkVersion()
     const interval = setInterval(checkVersion, POLL_INTERVAL)
-    return () => clearInterval(interval)
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void checkVersion()
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
   }, [checkVersion])
 
   const handleRefresh = useCallback(async () => {

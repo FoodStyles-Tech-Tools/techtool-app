@@ -20,7 +20,10 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
-  const { data: usersData, isLoading } = useUsers()
+  const { data: usersData, isLoading } = useUsers({
+    enabled: open,
+    realtime: false,
+  })
   const deferredQuery = useDeferredValue(searchQuery)
 
   const users = useMemo(() => usersData || [], [usersData])
@@ -80,11 +83,14 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
       if (e.key === "ArrowDown") {
         e.preventDefault()
         e.stopPropagation()
-        setSelectedIndex((prev) => Math.min(prev + 1, filteredUsers.length - 1))
+        setSelectedIndex((prev) => {
+          if (filteredUsers.length === 0) return 0
+          return Math.min(prev + 1, filteredUsers.length - 1)
+        })
       } else if (e.key === "ArrowUp") {
         e.preventDefault()
         e.stopPropagation()
-        setSelectedIndex((prev) => Math.max(prev - 1, 0))
+        setSelectedIndex((prev) => (filteredUsers.length === 0 ? 0 : Math.max(prev - 1, 0)))
       } else if (e.key === "Enter" && filteredUsers[selectedIndex]) {
         e.preventDefault()
         e.stopPropagation()
@@ -213,4 +219,3 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
     </>
   )
 }
-

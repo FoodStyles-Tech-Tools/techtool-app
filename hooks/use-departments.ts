@@ -10,15 +10,22 @@ export interface Department {
   name: string
 }
 
-export function useDepartments() {
+type UseDepartmentsOptions = {
+  enabled?: boolean
+  realtime?: boolean
+}
+
+export function useDepartments(options?: UseDepartmentsOptions) {
   const queryClient = useQueryClient()
   const supabase = useSupabaseClient()
   const userEmail = useUserEmail()
+  const enabled = options?.enabled !== false
+  const realtime = options?.realtime === true
 
   // Real-time subscription for departments
   useRealtimeSubscription({
     table: "departments",
-    enabled: true,
+    enabled: enabled && realtime,
     onInsert: (payload) => {
       const newDepartment = payload.new as Department
       // Update departments query
@@ -77,6 +84,7 @@ export function useDepartments() {
       if (error) throw error
       return departments || []
     },
+    enabled,
     staleTime: 5 * 60 * 1000, // 5 minutes - departments don't change often
   })
 
@@ -86,4 +94,3 @@ export function useDepartments() {
     refresh: refetch,
   }
 }
-

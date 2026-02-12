@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getCurrentUserWithSupabase } from "@/lib/current-user"
+import { getOrSetServerCache } from "@/lib/server/cache"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -7,21 +8,26 @@ export const dynamic = "force-dynamic"
 export async function GET() {
   try {
     const { supabase, user } = await getCurrentUserWithSupabase()
-    const { data, error } = await supabase
-      .from("tickets")
-      .select(`
-        id,
-        display_id,
-        title,
-        status,
-        priority,
-        created_at,
-        project:projects(id, name)
-      `)
-      .eq("assignee_id", user.id)
-      .not("status", "in", "(completed,cancelled)")
-      .order("created_at", { ascending: false })
-      .limit(20)
+    const { data, error } = await getOrSetServerCache(
+      `dashboard:api:my-tickets:${user.id}`,
+      30,
+      async () =>
+        supabase
+          .from("tickets")
+          .select(`
+            id,
+            display_id,
+            title,
+            status,
+            priority,
+            created_at,
+            project:projects(id, name)
+          `)
+          .eq("assignee_id", user.id)
+          .not("status", "in", "(completed,cancelled)")
+          .order("created_at", { ascending: false })
+          .limit(20)
+    )
 
     if (error) {
       console.error("Failed to load assigned tickets:", error)

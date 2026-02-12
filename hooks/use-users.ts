@@ -14,15 +14,22 @@ interface User {
   created_at?: string
 }
 
-export function useUsers() {
+type UseUsersOptions = {
+  enabled?: boolean
+  realtime?: boolean
+}
+
+export function useUsers(options?: UseUsersOptions) {
   const queryClient = useQueryClient()
   const supabase = useSupabaseClient()
   const userEmail = useUserEmail()
+  const enabled = options?.enabled !== false
+  const realtime = options?.realtime === true
 
   // Real-time subscription for users
   useRealtimeSubscription({
     table: "users",
-    enabled: true,
+    enabled: enabled && realtime,
     onInsert: async (payload) => {
       const newUser = payload.new as User
       // Update users query directly from payload
@@ -106,6 +113,7 @@ export function useUsers() {
       
       return usersWithImage
     },
+    enabled,
     staleTime: 2 * 60 * 1000, // 2 minutes - users don't change often
   })
 }
@@ -327,4 +335,3 @@ export function useUpdateUser() {
     },
   })
 }
-

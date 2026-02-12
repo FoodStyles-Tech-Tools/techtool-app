@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import type { PermissionsCache } from "@/hooks/use-permissions"
 
 const CACHE_KEY = "tt.permissions"
@@ -11,14 +12,14 @@ declare global {
 }
 
 export function PermissionsBootstrap({ payload }: { payload: PermissionsCache }) {
-  if (typeof window !== "undefined") {
+  useEffect(() => {
     window.__PERMISSIONS_CACHE__ = payload
     try {
       window.localStorage.setItem(CACHE_KEY, JSON.stringify(payload))
     } catch {
       // ignore cache write failures
     }
-  }
+  }, [payload])
 
   return null
 }

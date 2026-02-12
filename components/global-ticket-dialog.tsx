@@ -46,8 +46,15 @@ export function GlobalTicketDialog({ open, onOpenChange }: GlobalTicketDialogPro
   }, [open, projectId])
 
   // Fetch project data if we have a projectId
-  const { data: projectData } = useProject(projectId || "")
-  const { data: projectsData } = useProjects()
+  const shouldLoadProjectData = open
+  const { data: projectData } = useProject(projectId || "", {
+    enabled: shouldLoadProjectData && !!projectId,
+    realtime: false,
+  })
+  const { data: projectsData } = useProjects({
+    enabled: shouldLoadProjectData,
+    realtime: false,
+  })
 
   const projects = projectsData || []
   const canCreate = flags?.canCreateTickets ?? false
@@ -105,4 +112,3 @@ export function GlobalTicketDialog({ open, onOpenChange }: GlobalTicketDialogPro
     </Dialog>
   )
 }
-
