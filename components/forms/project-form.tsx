@@ -184,7 +184,7 @@ export function ProjectForm({
                   <div className="space-y-0.5">
                     <FieldLabel htmlFor="project-require-sqa">Require SQA</FieldLabel>
                     <p className="text-xs text-muted-foreground">
-                      Enforce SQA assignment before this project can be completed.
+                      Set this as true if project requires SQA review before deployment.
                     </p>
                   </div>
                   <FormControl>
