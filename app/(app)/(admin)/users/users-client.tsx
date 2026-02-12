@@ -128,13 +128,17 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
   return (
     <div className="space-y-6">
       {canCreateUsers && (
-        <div className="flex justify-end">
+        <div className="flex justify-end border-b pb-2">
           <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-              <Button onClick={handleAddUser}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add User
-              </Button>
+              <button
+                type="button"
+                onClick={handleAddUser}
+                className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create User</span>
+              </button>
             </DialogTrigger>
           <DialogContent>
             <DialogHeader>

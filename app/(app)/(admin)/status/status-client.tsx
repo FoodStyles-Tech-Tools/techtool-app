@@ -255,13 +255,17 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex justify-end border-b pb-2">
         <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
-            <Button onClick={openAddDialog}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Status
-            </Button>
+            <button
+              type="button"
+              onClick={openAddDialog}
+              className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Status</span>
+            </button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>

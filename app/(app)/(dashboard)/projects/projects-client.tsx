@@ -11,18 +11,25 @@ import {
   TableCell,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Circle } from "lucide-react"
+import { Plus, Circle, ListFilter, Search } from "lucide-react"
 import { BrandLinkIcon } from "@/components/brand-link-icon"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
 import { truncateText } from "@/lib/utils"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectForm } from "@/components/forms/project-form"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Switch } from "@/components/ui/switch"
 
 const ROWS_PER_PAGE = 20
 type ProjectTicketStats = { total: number; done: number; percentage: number }
@@ -168,6 +175,22 @@ export default function ProjectsClient({
     })
   }, [projects, deferredSearchQuery, departmentFilter, excludeDone, assignedToMeOnly, currentUserId])
   const hasProjectSearch = deferredSearchQuery.trim().length > 0
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (searchQuery.trim()) count += 1
+    if (departmentFilter !== "all") count += 1
+    if (!excludeDone) count += 1
+    if (!assignedToMeOnly) count += 1
+    return count
+  }, [searchQuery, departmentFilter, excludeDone, assignedToMeOnly])
+
+  const resetProjectFilters = useCallback(() => {
+    setSearchQuery("")
+    setDepartmentFilter("all")
+    setExcludeDone(true)
+    setAssignedToMeOnly(true)
+    setCurrentPage(1)
+  }, [])
 
   // Pagination
   const totalPages = Math.ceil(filteredProjects.length / ROWS_PER_PAGE)
@@ -228,69 +251,93 @@ export default function ProjectsClient({
 
   return (
     <div className="space-y-6">
-      {canCreateProjects && (
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            size="sm"
+      <div className="flex flex-wrap items-center justify-end gap-0.5 border-b pb-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+            >
+              <ListFilter className="h-4 w-4" />
+              Filter
+              {activeFilterCount > 0 ? (
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">
+                  {activeFilterCount}
+                </span>
+              ) : null}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuLabel>Filter Projects</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <div className="space-y-3 p-2" onClick={(event) => event.stopPropagation()}>
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground">Search</p>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search projects..."
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className="h-8 pl-8"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground">Department</p>
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Department" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Departments</SelectItem>
+                    <SelectItem value="no_department">No Department</SelectItem>
+                    {departments.map((department) => (
+                      <SelectItem key={department.id} value={department.id}>
+                        {department.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
+                <span className="text-sm">Assigned to me</span>
+                <Switch checked={assignedToMeOnly} onCheckedChange={setAssignedToMeOnly} />
+              </div>
+              <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
+                <span className="text-sm">Exclude Done</span>
+                <Switch checked={excludeDone} onCheckedChange={setExcludeDone} />
+              </div>
+              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={resetProjectFilters}>
+                Reset Filters
+              </Button>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {canCreateProjects && (
+          <button
+            type="button"
             onClick={() => setProjectFormOpen(true)}
-            className="h-9"
+            className="ml-1 inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Project
-          </Button>
-        </div>
-      )}
-
-      <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-        <Input
-          placeholder="Search projects..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-[256px] h-9 dark:bg-input"
-        />
-        <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-          <SelectTrigger className="w-[140px] h-9 dark:bg-input">
-            <SelectValue placeholder="Department" />
-          </SelectTrigger>
-          <SelectContent className="dark:bg-input">
-            <SelectItem value="all">All Departments</SelectItem>
-            <SelectItem value="no_department">No Department</SelectItem>
-            {departments.map((department) => (
-              <SelectItem key={department.id} value={department.id}>
-                {department.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="assigned-to-me"
-            checked={assignedToMeOnly}
-            onCheckedChange={(checked) => setAssignedToMeOnly(checked !== false)}
-            className="dark:bg-input"
-          />
-          <Label
-            htmlFor="assigned-to-me"
-            className="text-sm font-normal cursor-pointer whitespace-nowrap"
-          >
-            Assigned to me
-          </Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="exclude-done"
-            checked={excludeDone}
-            onCheckedChange={(checked) => setExcludeDone(checked === true)}
-            className="dark:bg-input"
-          />
-          <Label
-            htmlFor="exclude-done"
-            className="text-sm font-normal cursor-pointer whitespace-nowrap"
-          >
-            Exclude Done
-          </Label>
-        </div>
+            <Plus className="h-4 w-4" />
+            <span>Create Project</span>
+            <span className="hidden items-center gap-1 sm:inline-flex">
+              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                Alt
+              </kbd>
+              <span className="text-[10px] text-muted-foreground">/</span>
+              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                Cmd
+              </kbd>
+              <span className="text-[10px] text-muted-foreground">+</span>
+              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                P
+              </kbd>
+            </span>
+          </button>
+        )}
       </div>
 
       {loading ? (

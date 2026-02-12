@@ -7,12 +7,20 @@ import {
   TableCell,
   TableRow,
 } from "@/components/ui/table"
-import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
-import { Copy, Plus, Circle, LayoutGrid, Table2, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react"
+import {
+  Copy,
+  Plus,
+  Circle,
+  LayoutGrid,
+  Table2,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
+  Share2,
+  ListFilter,
+} from "lucide-react"
 import Link from "next/link"
 import { useDepartments } from "@/hooks/use-departments"
 import { useTickets, useUpdateTicket } from "@/hooks/use-tickets"
@@ -44,6 +52,20 @@ import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { cn } from "@/lib/utils"
 import { isDoneStatus, buildStatusChangeBody } from "@/lib/ticket-statuses"
 import type { Ticket, Department, User as BasicUser } from "@/lib/types"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Switch } from "@/components/ui/switch"
 import {
   ASSIGNEE_ALLOWED_ROLES,
   SQA_ALLOWED_ROLES,
@@ -306,6 +328,55 @@ export default function TicketsPage() {
     })
   }, [])
 
+  const resetToolbarFilters = useCallback(() => {
+    setSearchQuery("")
+    setStatusFilter("all")
+    setDepartmentFilter("all")
+    setRequestedByFilter("all")
+    setProjectFilter("all")
+    setAssigneeFilter("all")
+    setExcludeDone(true)
+    setCurrentPage(1)
+  }, [])
+
+  const selectedProjectLabel = useMemo(() => {
+    if (projectFilter === "all") {
+      return "All Projects"
+    }
+    return projects.find((project) => project.id === projectFilter)?.name || "Project"
+  }, [projectFilter, projects])
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (searchQuery.trim()) count += 1
+    if (statusFilter !== "all") count += 1
+    if (projectFilter !== "all") count += 1
+    if (departmentFilter !== "all") count += 1
+    if (requestedByFilter !== "all") count += 1
+    if (assigneeFilter !== "all") count += 1
+    if (!excludeDone) count += 1
+    return count
+  }, [
+    searchQuery,
+    statusFilter,
+    projectFilter,
+    departmentFilter,
+    requestedByFilter,
+    assigneeFilter,
+    excludeDone,
+  ])
+
+  const handleShareView = useCallback(() => {
+    if (!navigator?.clipboard?.writeText) {
+      toast("Clipboard not available", "error")
+      return
+    }
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => toast("Link copied"))
+      .catch(() => toast("Failed to copy link", "error"))
+  }, [])
+
   const renderSortableHeader = (column: SortColumn, label: string) => {
     const isActive = sortConfig.column === column
     const direction = sortConfig.direction
@@ -526,159 +597,141 @@ export default function TicketsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center border rounded-md">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 text-sm">
+                <Circle className="h-2.5 w-2.5 fill-blue-500 text-blue-500" />
+                <span className="max-w-[220px] truncate">{selectedProjectLabel}</span>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel>Project</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup value={projectFilter} onValueChange={setProjectFilter}>
+                <DropdownMenuRadioItem value="all">All Projects</DropdownMenuRadioItem>
+                {projects.map((project) => (
+                  <DropdownMenuRadioItem key={project.id} value={project.id}>
+                    {project.name}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <div className="flex items-center rounded-md border p-0.5">
             <Button
-              variant={view === "table" ? "default" : "ghost"}
-              size="sm"
+              variant={view === "table" ? "secondary" : "ghost"}
+              size="icon"
               onClick={() => {
                 if (view === "table") return
                 setView("table")
               }}
-              className="h-9 rounded-r-none"
+              className="h-7 w-7"
             >
-              <Table2 className="h-4 w-4 mr-2" />
-              Table
+              <Table2 className="h-4 w-4" />
+              <span className="sr-only">Table view</span>
             </Button>
             <Button
-              variant={view === "kanban" ? "default" : "ghost"}
-              size="sm"
+              variant={view === "kanban" ? "secondary" : "ghost"}
+              size="icon"
               onClick={() => {
                 if (view === "kanban") return
                 setView("kanban")
               }}
-              className="h-9 rounded-l-none"
+              className="h-7 w-7"
             >
-              <LayoutGrid className="h-4 w-4 mr-2" />
-              Kanban
+              <LayoutGrid className="h-4 w-4" />
+              <span className="sr-only">Kanban view</span>
             </Button>
           </div>
-          {canCreateTickets && (
-            <Button variant="outline" size="sm" onClick={() => setTicketDialogOpen(true)} className="h-9">
-              <Plus className="mr-2 h-4 w-4" />
-              Add Ticket
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex items-center space-x-2 flex-wrap gap-y-2">
-        <Input
-          placeholder="Search tickets..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="max-w-[256px] h-9 dark:bg-input"
-        />
-        <Button
-          variant={assigneeFilter === "all" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setAssigneeFilter("all")}
-          className="h-9"
-        >
-          All Tickets
-        </Button>
-        <Button
-          variant={assigneeFilter === user?.id ? "default" : "outline"}
-          size="sm"
-          onClick={() => setAssigneeFilter(user?.id || "all")}
-          className="h-9"
-          disabled={!user}
-        >
-          My Tickets
-        </Button>
-        <Button
-          variant={assigneeFilter === "unassigned" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setAssigneeFilter("unassigned")}
-          className="h-9"
-        >
-          Unassigned
-        </Button>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px] h-9 dark:bg-input">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent className="dark:bg-input">
-            <SelectItem value="all">All Statuses</SelectItem>
-            {ticketStatuses.map((status) => (
-              <SelectItem
-                key={status.key}
-                value={status.key}
-                disabled={excludeDone && isDoneStatus(status.key)}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Circle
-                    className="h-3 w-3"
-                    style={{ color: status.color, fill: status.color }}
-                  />
-                  {status.label}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={projectFilter} onValueChange={setProjectFilter}>
-          <SelectTrigger className="w-[140px] h-9 dark:bg-input">
-            <SelectValue placeholder="Project" />
-          </SelectTrigger>
-          <SelectContent className="dark:bg-input">
-            <SelectItem value="all">All Projects</SelectItem>
-            {projects.map((project) => (
-              <SelectItem key={project.id} value={project.id}>
-                {project.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-          <SelectTrigger className="w-[140px] h-9 dark:bg-input">
-            <SelectValue placeholder="Department" />
-          </SelectTrigger>
-          <SelectContent className="dark:bg-input">
-            <SelectItem value="all">All Departments</SelectItem>
-            <SelectItem value="no_department">No Department</SelectItem>
-            {departments.map((department) => (
-              <SelectItem key={department.id} value={department.id}>
-                {department.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={requestedByFilter} onValueChange={setRequestedByFilter}>
-          <SelectTrigger className="w-[140px] h-9 relative dark:bg-input">
-            {requestedByFilter !== "all" ? (
-              <div className="absolute left-2">
-                <UserSelectValue
-                  users={users}
-                  value={requestedByFilter}
-                  placeholder="Requested by"
-                />
-              </div>
-            ) : (
-              <SelectValue placeholder="Requested by" />
-            )}
-          </SelectTrigger>
-          <SelectContent className="dark:bg-input">
-            <SelectItem value="all">All Requesters</SelectItem>
-            {users.map((user) => (
-              <UserSelectItem key={user.id} user={user} value={user.id} />
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="exclude-done"
-            checked={excludeDone}
-            onCheckedChange={(checked) => setExcludeDone(checked === true)}
-            className="dark:bg-input"
-          />
-          <Label
-            htmlFor="exclude-done"
-            className="text-sm font-normal cursor-pointer whitespace-nowrap"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+            onClick={handleShareView}
           >
-            Exclude Done
-          </Label>
+            <Share2 className="h-4 w-4" />
+            Share
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-0.5">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              >
+                <ListFilter className="h-4 w-4" />
+                Filter
+                {activeFilterCount > 0 ? (
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Filter</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="justify-between gap-2"
+                onSelect={(event) => event.preventDefault()}
+              >
+                <span>Exclude Done</span>
+                <Switch
+                  checked={excludeDone}
+                  onCheckedChange={setExcludeDone}
+                  aria-label="Exclude Done"
+                />
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Show</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-44">
+                  <DropdownMenuItem onClick={() => setAssigneeFilter("all")}>
+                    All Tickets
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setAssigneeFilter(user?.id || "all")}
+                    disabled={!user}
+                  >
+                    My Tickets
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setAssigneeFilter("unassigned")}>
+                    Unassigned
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={resetToolbarFilters}>Reset Filters</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {canCreateTickets && (
+            <button
+              type="button"
+              onClick={() => setTicketDialogOpen(true)}
+              className="ml-1 inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Create Ticket</span>
+              <span className="hidden items-center gap-1 sm:inline-flex">
+                <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                  Alt
+                </kbd>
+                <span className="text-[10px] text-muted-foreground">/</span>
+                <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                  Cmd
+                </kbd>
+                <span className="text-[10px] text-muted-foreground">+</span>
+                <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+                  A
+                </kbd>
+              </span>
+            </button>
+          )}
         </div>
       </div>
 

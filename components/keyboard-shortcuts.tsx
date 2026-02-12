@@ -41,6 +41,7 @@ export function KeyboardShortcuts() {
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const { flags } = usePermissions()
+  const canCreateTickets = flags?.canCreateTickets ?? false
   const canCreateProjects = flags?.canCreateProjects ?? false
   const shouldLoadProjectDialogData = canCreateProjects && isProjectDialogOpen
   const { data: usersData } = useUsers({
@@ -190,6 +191,30 @@ export function KeyboardShortcuts() {
     const event = new CustomEvent("scrollToUser", { detail: { userId } })
     window.dispatchEvent(event)
   }
+
+  useEffect(() => {
+    const handleOpenTicketDialog = () => {
+      if (!canCreateTickets) return
+      setIsTicketDialogOpen(true)
+    }
+
+    window.addEventListener("open-ticket-dialog", handleOpenTicketDialog)
+    return () => {
+      window.removeEventListener("open-ticket-dialog", handleOpenTicketDialog)
+    }
+  }, [canCreateTickets])
+
+  useEffect(() => {
+    const handleOpenProjectDialog = () => {
+      if (!canCreateProjects) return
+      setIsProjectDialogOpen(true)
+    }
+
+    window.addEventListener("open-project-dialog", handleOpenProjectDialog)
+    return () => {
+      window.removeEventListener("open-project-dialog", handleOpenProjectDialog)
+    }
+  }, [canCreateProjects])
 
   return (
     <>

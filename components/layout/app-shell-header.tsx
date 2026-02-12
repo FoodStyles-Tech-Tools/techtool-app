@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { usePathname } from "next/navigation"
 import { PanelLeft } from "lucide-react"
 import {
@@ -24,19 +24,39 @@ const PAGE_LABELS: Record<string, string> = {
   status: "Status",
 }
 
-const ADMIN_SEGMENTS = new Set(["users", "roles", "status"])
-
 export function AppShellHeader() {
   const pathname = usePathname()
+  const [detailLabel, setDetailLabel] = useState<string | null>(null)
 
-  const { sectionLabel, pageLabel } = useMemo(() => {
-    const firstSegment = pathname.split("/").filter(Boolean)[0] || "dashboard"
-    const section = ADMIN_SEGMENTS.has(firstSegment) ? "Administration" : "Build Your Application"
-    return {
-      sectionLabel: section,
-      pageLabel: PAGE_LABELS[firstSegment] || "Overview",
+  useEffect(() => {
+    const handleDetail = (event: Event) => {
+      const customEvent = event as CustomEvent<{ label?: string | null }>
+      const label = customEvent.detail?.label?.trim()
+      setDetailLabel(label || null)
     }
+
+    window.addEventListener("app-shell-breadcrumb-detail", handleDetail as EventListener)
+    return () => {
+      window.removeEventListener("app-shell-breadcrumb-detail", handleDetail as EventListener)
+    }
+  }, [])
+
+  useEffect(() => {
+    setDetailLabel(null)
   }, [pathname])
+
+  const { baseLabel, baseHref, nestedLabel } = useMemo(() => {
+    const segments = pathname.split("/").filter(Boolean)
+    const firstSegment = segments[0] || "dashboard"
+    const secondSegment = segments[1]
+    const isProjectDetail = firstSegment === "projects" && Boolean(secondSegment)
+
+    return {
+      baseLabel: PAGE_LABELS[firstSegment] || "Overview",
+      baseHref: `/${firstSegment}`,
+      nestedLabel: isProjectDetail ? detailLabel || "Project" : null,
+    }
+  }, [pathname, detailLabel])
 
   return (
     <header className="flex h-16 shrink-0 items-center gap-2">
@@ -54,13 +74,19 @@ export function AppShellHeader() {
         />
         <Breadcrumb>
           <BreadcrumbList>
-            <BreadcrumbItem className="hidden md:block">
-              <BreadcrumbLink href="#">{sectionLabel}</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="hidden md:block" />
             <BreadcrumbItem>
-              <BreadcrumbPage>{pageLabel}</BreadcrumbPage>
+              {nestedLabel ? (
+                <BreadcrumbLink href={baseHref}>{baseLabel}</BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage>{baseLabel}</BreadcrumbPage>
+              )}
             </BreadcrumbItem>
+            {nestedLabel ? <BreadcrumbSeparator /> : null}
+            {nestedLabel ? (
+              <BreadcrumbItem>
+                <BreadcrumbPage>{nestedLabel}</BreadcrumbPage>
+              </BreadcrumbItem>
+            ) : null}
           </BreadcrumbList>
         </Breadcrumb>
       </div>
