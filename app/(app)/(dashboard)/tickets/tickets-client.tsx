@@ -1088,11 +1088,11 @@ export default function TicketsPage() {
           </div>
         </div>
       ) : (
-        <div className="rounded-md border">
+        <div className="rounded-md border border-border/35 bg-muted/10">
           <div className="max-h-[calc(100vh-220px)] overflow-y-auto relative">
             <table className="w-full caption-bottom text-sm">
-              <thead className="sticky top-0 z-20 bg-muted shadow-sm border-b [&_tr]:border-b">
-                <tr className="hover:bg-transparent border-b">
+              <thead className="sticky top-0 z-20 bg-muted/80 shadow-sm border-b border-border/35">
+                <tr className="hover:bg-transparent">
                   <th className="h-9 py-2 px-4 text-left align-middle">
                     {renderSortableHeader("id", "ID")}
                   </th>
@@ -1145,7 +1145,7 @@ export default function TicketsPage() {
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between border-t px-4 py-3">
+          <div className="flex items-center justify-between border-t border-border/35 px-4 py-3">
             <div className="text-sm text-muted-foreground">
               Showing {startIndex + 1} to {Math.min(endIndex, sortedTickets.length)} of {sortedTickets.length} tickets
             </div>
@@ -1298,7 +1298,7 @@ const TicketRow = memo(function TicketRow({
   const safeDueDateValue = dueDateValue && !Number.isNaN(dueDateValue.getTime()) ? dueDateValue : null
 
   return (
-    <TableRow className={cn(dueDateDisplay.highlightClassName)}>
+    <TableRow className={cn("border-b-0 even:bg-muted/15 hover:bg-muted/30", dueDateDisplay.highlightClassName)}>
       <TableCell className="py-2 text-xs font-mono text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <Button
@@ -1370,10 +1370,10 @@ const TicketRow = memo(function TicketRow({
           }
           disabled={!canEdit || !!updatingFields[`${ticket.id}-department_id`]}
         >
-          <SelectTrigger className="h-7 w-[140px] text-xs dark:bg-input">
+          <SelectTrigger className="h-7 w-[140px] text-xs">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="dark:bg-input">
+          <SelectContent>
             <SelectItem value={NO_DEPARTMENT_VALUE}>No Department</SelectItem>
             {departments.map((department) => (
               <SelectItem key={department.id} value={department.id}>
@@ -1404,7 +1404,7 @@ const TicketRow = memo(function TicketRow({
           onValueChange={(value) => updateTicketField(ticket.id, "requested_by_id", value)}
           disabled={!canEdit || !!updatingFields[`${ticket.id}-requested_by_id`]}
         >
-          <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-input overflow-hidden">
+          <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
             {requestedById ? (
               <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
                 <UserSelectValue users={users} value={requestedById} placeholder="Select user" />
@@ -1413,7 +1413,7 @@ const TicketRow = memo(function TicketRow({
               <SelectValue placeholder="Select user" />
             )}
           </SelectTrigger>
-          <SelectContent className="dark:bg-input">
+          <SelectContent>
             {users.map((user) => (
               <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
             ))}
@@ -1428,7 +1428,7 @@ const TicketRow = memo(function TicketRow({
           }
           disabled={!canEdit || !!updatingFields[`${ticket.id}-assignee_id`]}
         >
-          <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-input overflow-hidden">
+          <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
             {ticket.assignee?.id ? (
               <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
                 <UserSelectValue
@@ -1443,7 +1443,7 @@ const TicketRow = memo(function TicketRow({
               <SelectValue placeholder="Unassigned" />
             )}
           </SelectTrigger>
-          <SelectContent className="dark:bg-input">
+          <SelectContent>
             <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
             {assigneeEligibleUsers.map((user) => (
               <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
@@ -1459,7 +1459,7 @@ const TicketRow = memo(function TicketRow({
           }
           disabled={!canEdit || !!updatingFields[`${ticket.id}-sqa_assignee_id`]}
         >
-          <SelectTrigger className="h-7 w-[150px] text-xs relative dark:bg-input overflow-hidden">
+          <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
             {ticket.sqa_assignee?.id ? (
               <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
                 <UserSelectValue
@@ -1474,7 +1474,7 @@ const TicketRow = memo(function TicketRow({
               <SelectValue placeholder="Unassigned" />
             )}
           </SelectTrigger>
-          <SelectContent className="dark:bg-input">
+          <SelectContent>
             <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
             {sqaEligibleUsers.map((user) => (
               <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />

@@ -273,7 +273,7 @@ export function TicketForm({
           className={isReadOnly ? "space-y-4 opacity-70" : "space-y-4"}
         >
         {!isEditing && (
-          <div className="space-y-5 rounded-xl border border-border/70 bg-muted/20 p-4">
+          <div className="space-y-5 rounded-xl bg-muted/10 p-4 ring-1 ring-border/35">
             <FormField
               control={form.control}
               name="type"
@@ -296,8 +296,8 @@ export function TicketForm({
                             className={cn(
                               "rounded-xl border p-4 text-left transition-all",
                               isActive
-                                ? "border-primary/60 bg-primary/10 shadow-sm"
-                                : "border-border/80 bg-background hover:border-primary/40 hover:bg-muted/40"
+                                ? "border-primary/50 bg-primary/10 shadow-sm"
+                                : "border-border/45 bg-background/50 hover:border-border/70 hover:bg-muted/35"
                             )}
                           >
                             <Icon className={cn("mb-3 h-4 w-4", option.iconClassName)} />
@@ -322,7 +322,7 @@ export function TicketForm({
                     Priority
                   </FormLabel>
                   <FormControl>
-                    <div className="grid grid-cols-4 gap-1 rounded-xl border border-border/80 bg-background p-1">
+                    <div className="grid grid-cols-4 gap-1 rounded-xl bg-background/45 p-1 ring-1 ring-border/40">
                       {PRIORITY_OPTIONS.map((option) => {
                         const Icon = option.icon
                         const isActive = field.value === option.value
@@ -366,7 +366,7 @@ export function TicketForm({
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || NO_PROJECT_VALUE}>
                       <FormControl>
-                        <SelectTrigger className="h-10 bg-background">
+                        <SelectTrigger className="h-10 border-border/40 bg-background/55">
                           <SelectValue placeholder="No Project" />
                         </SelectTrigger>
                       </FormControl>
@@ -402,7 +402,7 @@ export function TicketForm({
             <FormItem>
               <FormLabel>Title</FormLabel>
               <FormControl>
-                <Input placeholder="Ticket title" {...field} />
+                <Input placeholder="Ticket title" className="border-border/40 bg-background/55" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -416,6 +416,7 @@ export function TicketForm({
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <Textarea
+                  className="border-border/40 bg-background/55"
                   placeholder="Ticket description"
                   {...field}
                   value={field.value || ""}
@@ -475,7 +476,7 @@ export function TicketForm({
                 value={field.value || "unassigned"}
               >
                 <FormControl>
-                  <SelectTrigger className="relative">
+                  <SelectTrigger className="relative border-border/40 bg-background/55">
                     {field.value && field.value !== "unassigned" ? (
                       <UserSelectValue
                         users={users.filter((user) => (user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false))}
@@ -534,7 +535,7 @@ export function TicketForm({
                   value={field.value || ""}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="border-border/40 bg-background/55">
                       <SelectValue placeholder="Select a department (optional)" />
                     </SelectTrigger>
                   </FormControl>

@@ -176,7 +176,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="h-full w-72 shrink-0 bg-muted/40 dark:bg-[#1a1a1a]">
+    <aside className="h-full w-72 shrink-0 bg-muted/40">
       <div className="flex h-full flex-col px-2 py-2">
         <div className="px-2 py-2">
           <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1">
