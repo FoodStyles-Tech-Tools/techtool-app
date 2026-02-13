@@ -3,6 +3,7 @@ import { requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
 
 export const runtime = 'nodejs'
+const PROJECT_STATUSES = new Set(["active", "inactive"])
 
 async function attachCollaboratorsToProjects(
   supabase: ReturnType<typeof createServerClient>,
@@ -138,6 +139,13 @@ export async function PATCH(
 
     const body = await request.json()
     const { name, description, status, department_id, collaborator_ids, require_sqa } = body
+
+    if (status !== undefined && !PROJECT_STATUSES.has(status)) {
+      return NextResponse.json(
+        { error: "Invalid status. Allowed values: active, inactive" },
+        { status: 400 }
+      )
+    }
 
     const updates: any = {}
     if (name !== undefined) updates.name = name

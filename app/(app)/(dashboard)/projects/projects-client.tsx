@@ -52,7 +52,7 @@ interface ProjectRowData {
   id: string
   name: string
   description: string | null
-  status: "open" | "in_progress" | "closed"
+  status: "active" | "inactive"
   require_sqa: boolean
   links?: string[] | null
   created_at: string
@@ -64,12 +64,10 @@ interface ProjectRowData {
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case "open":
-      return <Circle className="h-3 w-3 fill-gray-500 text-gray-500" />
-    case "in_progress":
-      return <Circle className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-    case "closed":
+    case "active":
       return <Circle className="h-3 w-3 fill-green-500 text-green-500" />
+    case "inactive":
+      return <Circle className="h-3 w-3 fill-red-500 text-red-500" />
     default:
       return null
   }
@@ -162,8 +160,7 @@ export default function ProjectsClient({
         if (departmentFilter !== "no_department" && project.department?.id !== departmentFilter) return false
       }
 
-      // Exclude done filter (exclude "closed" projects)
-      if (excludeDone && project.status === "closed") return false
+      if (excludeDone && project.status === "inactive") return false
 
       if (assignedToMeOnly && currentUserId) {
         const isOwner = project.owner?.id === currentUserId
@@ -306,7 +303,7 @@ export default function ProjectsClient({
                 <Switch checked={assignedToMeOnly} onCheckedChange={setAssignedToMeOnly} />
               </div>
               <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
-                <span className="text-sm">Exclude Done</span>
+                <span className="text-sm">Exclude Inactive</span>
                 <Switch checked={excludeDone} onCheckedChange={setExcludeDone} />
               </div>
               <Button variant="ghost" size="sm" className="h-8 px-2" onClick={resetProjectFilters}>
@@ -349,11 +346,11 @@ export default function ProjectsClient({
           </p>
         </div>
       ) : (
-        <div className="rounded-md border">
+        <div className="rounded-md border border-border/35 bg-muted/10">
           <div className="max-h-[calc(100vh-220px)] overflow-y-auto relative">
             <table className="w-full caption-bottom text-sm">
-              <thead className="sticky top-0 z-20 bg-muted shadow-sm border-b [&_tr]:border-b">
-                <tr className="hover:bg-transparent border-b">
+              <thead className="sticky top-0 z-20 bg-muted/80 shadow-sm border-b border-border/35">
+                <tr className="hover:bg-transparent">
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground w-[600px] min-w-[500px]">Project Name</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Progress</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Owner</th>
@@ -384,7 +381,7 @@ export default function ProjectsClient({
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between border-t px-4 py-3">
+          <div className="flex items-center justify-between border-t border-border/35 px-4 py-3">
             <div className="text-sm text-muted-foreground">
               Showing {startIndex + 1} to {Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} projects
             </div>
@@ -475,7 +472,7 @@ const ProjectRow = memo(function ProjectRow({
   const collaboratorIds = project.collaborators?.map((collab) => collab.id) || []
 
   return (
-    <TableRow className="hover:bg-muted/50">
+    <TableRow className="border-b-0 even:bg-muted/20 hover:bg-muted/35">
       <TableCell className="py-2 w-[600px] min-w-[500px]">
         <Link href={`/projects/${project.id}`} className="hover:underline flex flex-col">
           <span className="text-sm">{project.name}</span>
@@ -501,7 +498,7 @@ const ProjectRow = memo(function ProjectRow({
             onValueChange={(value) => updateProjectField(project.id, "owner_id", value)}
             disabled={isUpdatingOwner}
           >
-            <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden pr-6 dark:bg-input">
+            <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden pr-6 border-border/40 bg-background/55">
               {project.owner?.id ? (
                 <div className="absolute inset-y-0 left-2 right-6 flex items-center pointer-events-none">
                   <UserSelectValue
@@ -515,7 +512,7 @@ const ProjectRow = memo(function ProjectRow({
                 <SelectValue placeholder="Select owner" />
               )}
             </SelectTrigger>
-            <SelectContent className="dark:bg-input">
+            <SelectContent>
               {users.map((user) => (
                 <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" maxLength={24} />
               ))}
@@ -542,7 +539,7 @@ const ProjectRow = memo(function ProjectRow({
             value={collaboratorIds}
             onChange={(ids) => updateProjectField(project.id, "collaborator_ids", ids)}
             placeholder="Select collaborators"
-            buttonClassName="w-[180px] text-xs dark:bg-input"
+            buttonClassName="w-[180px] text-xs border-border/40 bg-background/55 hover:border-border/65"
             disabled={isUpdatingCollaborators}
           />
         ) : collaboratorIds.length ? (
@@ -574,10 +571,10 @@ const ProjectRow = memo(function ProjectRow({
             }
             disabled={isUpdatingDept}
           >
-            <SelectTrigger className="h-7 w-[140px] text-xs dark:bg-input">
+            <SelectTrigger className="h-7 w-[140px] text-xs border-border/40 bg-background/55">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="dark:bg-input">
+            <SelectContent>
               <SelectItem value="no_department">No Department</SelectItem>
               {departments.map((department) => (
                 <SelectItem key={department.id} value={department.id}>
@@ -599,7 +596,7 @@ const ProjectRow = memo(function ProjectRow({
             onValueChange={(value) => updateProjectField(project.id, "status", value)}
             disabled={isUpdatingStatus}
           >
-            <SelectTrigger className="h-7 w-[120px] text-xs relative dark:bg-input">
+            <SelectTrigger className="h-7 w-[120px] text-xs relative border-border/40 bg-background/55">
               {project.status ? (
                 <div className="absolute left-2 flex items-center gap-1.5">
                   {getStatusIcon(project.status)}
@@ -609,23 +606,17 @@ const ProjectRow = memo(function ProjectRow({
                 <SelectValue />
               )}
             </SelectTrigger>
-            <SelectContent className="dark:bg-input">
-              <SelectItem value="open">
-                <div className="flex items-center gap-1.5">
-                  <Circle className="h-3 w-3 fill-gray-500 text-gray-500" />
-                  Open
-                </div>
-              </SelectItem>
-              <SelectItem value="in_progress">
-                <div className="flex items-center gap-1.5">
-                  <Circle className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                  In Progress
-                </div>
-              </SelectItem>
-              <SelectItem value="closed">
+            <SelectContent>
+              <SelectItem value="active">
                 <div className="flex items-center gap-1.5">
                   <Circle className="h-3 w-3 fill-green-500 text-green-500" />
-                  Closed
+                  Active
+                </div>
+              </SelectItem>
+              <SelectItem value="inactive">
+                <div className="flex items-center gap-1.5">
+                  <Circle className="h-3 w-3 fill-red-500 text-red-500" />
+                  Inactive
                 </div>
               </SelectItem>
             </SelectContent>
@@ -633,7 +624,7 @@ const ProjectRow = memo(function ProjectRow({
         ) : (
           <div className="flex items-center gap-1.5">
             {getStatusIcon(project.status)}
-            <span className="text-xs capitalize">{project.status.replace("_", " ")}</span>
+            <span className="text-xs capitalize">{project.status}</span>
           </div>
         )}
       </TableCell>
@@ -643,7 +634,6 @@ const ProjectRow = memo(function ProjectRow({
             checked={project.require_sqa}
             onCheckedChange={(checked) => updateProjectField(project.id, "require_sqa", checked === true)}
             disabled={isUpdatingRequireSqa}
-            className="dark:bg-input"
           />
         ) : (
           <span className="text-xs text-muted-foreground">{project.require_sqa ? "Yes" : "No"}</span>

@@ -34,7 +34,7 @@ export function TicketTypeSelect({
 
   return (
     <Select value={value || "task"} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className={cn("h-7 w-[100px] text-xs relative dark:bg-input", triggerClassName)}>
+      <SelectTrigger className={cn("h-7 w-[100px] text-xs relative", triggerClassName)}>
         {value ? (
           <div className="absolute left-2 flex items-center gap-1.5">
             {getTypeIcon(value || "task")}
@@ -44,7 +44,7 @@ export function TicketTypeSelect({
           <SelectValue />
         )}
       </SelectTrigger>
-      <SelectContent className={cn("dark:bg-input", className)}>
+      <SelectContent className={className}>
         <SelectItem value="bug">
           <div className="flex items-center gap-1.5">
             <Bug className="h-3.5 w-3.5 text-red-500" />
@@ -80,5 +80,4 @@ export function TicketTypeIcon({ type, className }: { type: string; className?: 
       return null
   }
 }
-
 

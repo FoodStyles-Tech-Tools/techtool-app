@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -37,6 +37,7 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { useSprints } from "@/hooks/use-sprints"
 import { SprintSelect } from "@/components/sprint-select"
 import { cn } from "@/lib/utils"
+import { Switch } from "@/components/ui/switch"
 
 const NO_PROJECT_VALUE = "__no_project__"
 
@@ -82,7 +83,7 @@ type TicketFormValues = z.infer<typeof ticketSchema>
 
 interface TicketFormProps {
   projectId?: string
-  projectOptions?: Array<{ id: string; name: string }>
+  projectOptions?: Array<{ id: string; name: string; status?: string }>
   onSuccess?: () => void
   initialData?: Partial<TicketFormValues> & { id?: string }
   formId?: string
@@ -139,6 +140,7 @@ export function TicketForm({
   hideSubmitButton = false,
 }: TicketFormProps) {
   const [users, setUsers] = useState<User[]>([])
+  const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
   const { departments, refresh } = useDepartments()
   const { user, flags } = usePermissions()
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
@@ -181,6 +183,17 @@ export function TicketForm({
   const selectedProjectId = form.watch("project_id")
   const effectiveProjectId =
     projectId || (selectedProjectId && selectedProjectId !== NO_PROJECT_VALUE ? selectedProjectId : "")
+  const filteredProjectOptions = useMemo(() => {
+    const visibleProjects = includeInactiveProjects
+      ? projectOptions
+      : projectOptions.filter(
+      (project) =>
+        project.status?.toLowerCase() !== "inactive" || project.id === selectedProjectId
+    )
+    return [...visibleProjects].sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+    )
+  }, [projectOptions, includeInactiveProjects, selectedProjectId])
   const { epics } = useEpics(effectiveProjectId)
   const { sprints } = useSprints(effectiveProjectId)
 
@@ -260,7 +273,7 @@ export function TicketForm({
           className={isReadOnly ? "space-y-4 opacity-70" : "space-y-4"}
         >
         {!isEditing && (
-          <div className="space-y-5 rounded-xl border border-border/70 bg-muted/20 p-4">
+          <div className="space-y-5 rounded-xl bg-muted/10 p-4 ring-1 ring-border/35">
             <FormField
               control={form.control}
               name="type"
@@ -283,8 +296,8 @@ export function TicketForm({
                             className={cn(
                               "rounded-xl border p-4 text-left transition-all",
                               isActive
-                                ? "border-primary/60 bg-primary/10 shadow-sm"
-                                : "border-border/80 bg-background hover:border-primary/40 hover:bg-muted/40"
+                                ? "border-primary/50 bg-primary/10 shadow-sm"
+                                : "border-border/45 bg-background/50 hover:border-border/70 hover:bg-muted/35"
                             )}
                           >
                             <Icon className={cn("mb-3 h-4 w-4", option.iconClassName)} />
@@ -309,7 +322,7 @@ export function TicketForm({
                     Priority
                   </FormLabel>
                   <FormControl>
-                    <div className="grid grid-cols-4 gap-1 rounded-xl border border-border/80 bg-background p-1">
+                    <div className="grid grid-cols-4 gap-1 rounded-xl bg-background/45 p-1 ring-1 ring-border/40">
                       {PRIORITY_OPTIONS.map((option) => {
                         const Icon = option.icon
                         const isActive = field.value === option.value
@@ -353,19 +366,27 @@ export function TicketForm({
                     </FormLabel>
                     <Select onValueChange={field.onChange} value={field.value || NO_PROJECT_VALUE}>
                       <FormControl>
-                        <SelectTrigger className="h-10 bg-background">
+                        <SelectTrigger className="h-10 border-border/40 bg-background/55">
                           <SelectValue placeholder="No Project" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value={NO_PROJECT_VALUE}>No Project</SelectItem>
-                        {projectOptions.map((project) => (
+                        {filteredProjectOptions.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <div className="mt-2 flex items-center justify-end gap-2">
+                      <span className="text-xs text-muted-foreground">Include Inactive</span>
+                      <Switch
+                        checked={includeInactiveProjects}
+                        onCheckedChange={setIncludeInactiveProjects}
+                        aria-label="Include inactive projects"
+                      />
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -381,7 +402,7 @@ export function TicketForm({
             <FormItem>
               <FormLabel>Title</FormLabel>
               <FormControl>
-                <Input placeholder="Ticket title" {...field} />
+                <Input placeholder="Ticket title" className="border-border/40 bg-background/55" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -395,6 +416,7 @@ export function TicketForm({
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <Textarea
+                  className="border-border/40 bg-background/55"
                   placeholder="Ticket description"
                   {...field}
                   value={field.value || ""}
@@ -454,7 +476,7 @@ export function TicketForm({
                 value={field.value || "unassigned"}
               >
                 <FormControl>
-                  <SelectTrigger className="relative">
+                  <SelectTrigger className="relative border-border/40 bg-background/55">
                     {field.value && field.value !== "unassigned" ? (
                       <UserSelectValue
                         users={users.filter((user) => (user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false))}
@@ -513,7 +535,7 @@ export function TicketForm({
                   value={field.value || ""}
                 >
                   <FormControl>
-                    <SelectTrigger>
+                    <SelectTrigger className="border-border/40 bg-background/55">
                       <SelectValue placeholder="Select a department (optional)" />
                     </SelectTrigger>
                   </FormControl>

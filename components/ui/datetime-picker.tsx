@@ -156,7 +156,7 @@ export function DateTimePicker({
           )}
           disabled={disabled}
         >
-          {!hideIcon && <CalendarIcon className="mr-2 h-3 w-3 text-muted-foreground dark:text-white" />}
+          {!hideIcon && <CalendarIcon className="mr-2 h-3 w-3 text-muted-foreground" />}
           {renderTriggerContent
             ? renderTriggerContent(value)
             : value
@@ -177,7 +177,7 @@ export function DateTimePicker({
           </div>
           <div className="space-y-2">
             <label className="text-xs font-medium flex items-center gap-2">
-              <Clock className="h-3 w-3 text-muted-foreground dark:text-white" />
+              <Clock className="h-3 w-3 text-muted-foreground" />
               Time
             </label>
             <Input
@@ -209,4 +209,3 @@ export function DateTimePicker({
     </Popover>
   )
 }
-

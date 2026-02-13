@@ -262,6 +262,14 @@ Tests are not included in the MVP but can be added using:
 npm run lint
 ```
 
+### Dark Mode Contrast Audit
+
+```bash
+npm run audit:contrast
+```
+
+This is a non-blocking audit that checks dark-theme token contrast pairs and flags risky hardcoded dark-mode classes.
+
 ### Building for Production
 
 ```bash

@@ -20,6 +20,7 @@ import {
   Plus,
   X,
   Circle,
+  Link2,
   Pencil,
   Trash2,
   LayoutGrid,
@@ -47,6 +48,7 @@ import { EpicForm } from "@/components/forms/epic-form"
 import { useSprints, type Sprint } from "@/hooks/use-sprints"
 import { SprintForm } from "@/components/forms/sprint-form"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
+import { cn } from "@/lib/utils"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -143,6 +145,7 @@ export default function ProjectDetailClient() {
     top: number 
   } | null>(null)
   const [droppingTicketId, setDroppingTicketId] = useState<string | null>(null)
+  const [justDroppedTicketId, setJustDroppedTicketId] = useState<string | null>(null)
   const [optimisticStatusUpdates, setOptimisticStatusUpdates] = useState<Record<string, string>>({})
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [editingProjectLinkIndex, setEditingProjectLinkIndex] = useState<number | null>(null)
@@ -152,6 +155,13 @@ export default function ProjectDetailClient() {
   const [cancelReason, setCancelReason] = useState("")
   const [pendingDropTicketId, setPendingDropTicketId] = useState<string | null>(null)
   const [pendingDropUpdates, setPendingDropUpdates] = useState<any>(null)
+  const [sprintFilter, setSprintFilter] = useState<string>("all")
+  const [kanbanScrollTrackWidth, setKanbanScrollTrackWidth] = useState(0)
+  const kanbanScrollRef = useRef<HTMLDivElement>(null)
+  const kanbanTopScrollRef = useRef<HTMLDivElement>(null)
+  const kanbanSyncingRef = useRef<"top" | "board" | null>(null)
+  const autoScrollVelocityRef = useRef(0)
+  const autoScrollFrameRef = useRef<number | null>(null)
   
   // Set default filters based on user role
   useEffect(() => {
@@ -258,24 +268,32 @@ export default function ProjectDetailClient() {
         if (assigneeFilter !== "unassigned" && ticket.assignee?.id !== assigneeFilter) return false
       }
 
+      // Sprint filter
+      if (sprintFilter !== "all") {
+        if (sprintFilter === "no_sprint" && ticket.sprint?.id) return false
+        if (sprintFilter !== "no_sprint" && ticket.sprint?.id !== sprintFilter) return false
+      }
+
       return true
     })
-  }, [allTickets, searchQuery, excludeDone, requestedByFilter, assigneeFilter, optimisticStatusUpdates])
+  }, [allTickets, searchQuery, excludeDone, requestedByFilter, assigneeFilter, sprintFilter, optimisticStatusUpdates])
 
   const activeFilterCount = useMemo(() => {
     let count = 0
     if (searchQuery.trim()) count += 1
     if (requestedByFilter !== "all") count += 1
     if (assigneeFilter !== "all") count += 1
+    if (sprintFilter !== "all") count += 1
     if (!excludeDone) count += 1
     if (viewMode === "kanban" && groupByEpic) count += 1
     return count
-  }, [searchQuery, requestedByFilter, assigneeFilter, excludeDone, viewMode, groupByEpic])
+  }, [searchQuery, requestedByFilter, assigneeFilter, sprintFilter, excludeDone, viewMode, groupByEpic])
 
   const resetProjectTicketFilters = useCallback(() => {
     setSearchQuery("")
     setRequestedByFilter("all")
     setAssigneeFilter("all")
+    setSprintFilter("all")
     setExcludeDone(true)
     setGroupByEpic(false)
   }, [])
@@ -331,6 +349,151 @@ export default function ProjectDetailClient() {
     return epicGroups
   }, [filteredTickets, epics, statusKeys])
 
+  const triggerCardLanding = useCallback((ticketId: string) => {
+    setJustDroppedTicketId(ticketId)
+    window.setTimeout(() => {
+      setJustDroppedTicketId((prev) => (prev === ticketId ? null : prev))
+    }, 550)
+  }, [])
+
+  const syncKanbanScroll = useCallback((source: "top" | "board", scrollLeft: number) => {
+    if (kanbanSyncingRef.current && kanbanSyncingRef.current !== source) return
+    kanbanSyncingRef.current = source
+
+    if (source === "top") {
+      if (kanbanScrollRef.current) {
+        kanbanScrollRef.current.scrollLeft = scrollLeft
+      }
+    } else {
+      if (kanbanTopScrollRef.current) {
+        kanbanTopScrollRef.current.scrollLeft = scrollLeft
+      }
+    }
+
+    window.requestAnimationFrame(() => {
+      if (kanbanSyncingRef.current === source) {
+        kanbanSyncingRef.current = null
+      }
+    })
+  }, [])
+
+  const refreshKanbanTrackWidth = useCallback(() => {
+    const container = kanbanScrollRef.current
+    if (!container) return
+    setKanbanScrollTrackWidth(container.scrollWidth)
+  }, [])
+
+  const stopAutoScroll = useCallback(() => {
+    autoScrollVelocityRef.current = 0
+    if (autoScrollFrameRef.current !== null) {
+      window.cancelAnimationFrame(autoScrollFrameRef.current)
+      autoScrollFrameRef.current = null
+    }
+  }, [])
+
+  const runAutoScroll = useCallback(() => {
+    const container = kanbanScrollRef.current
+    if (!container || !draggedTicket || autoScrollVelocityRef.current === 0) {
+      autoScrollFrameRef.current = null
+      return
+    }
+    container.scrollLeft += autoScrollVelocityRef.current
+    autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
+  }, [draggedTicket])
+
+  const updateAutoScroll = useCallback((clientX: number) => {
+    const container = kanbanScrollRef.current
+    if (!container || !draggedTicket) {
+      stopAutoScroll()
+      return
+    }
+
+    const rect = container.getBoundingClientRect()
+    const edgeThreshold = Math.min(140, rect.width * 0.25)
+    const maxSpeed = 24
+    const minSpeed = 6
+    let velocity = 0
+
+    if (clientX < rect.left + edgeThreshold) {
+      const strength = Math.min(1, (rect.left + edgeThreshold - clientX) / edgeThreshold)
+      velocity = -(minSpeed + (maxSpeed - minSpeed) * strength)
+    } else if (clientX > rect.right - edgeThreshold) {
+      const strength = Math.min(1, (clientX - (rect.right - edgeThreshold)) / edgeThreshold)
+      velocity = minSpeed + (maxSpeed - minSpeed) * strength
+    }
+
+    autoScrollVelocityRef.current = velocity
+
+    if (velocity !== 0) {
+      if (autoScrollFrameRef.current === null) {
+        autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
+      }
+    } else {
+      stopAutoScroll()
+    }
+  }, [draggedTicket, runAutoScroll, stopAutoScroll])
+
+  useEffect(() => {
+    if (!draggedTicket) {
+      stopAutoScroll()
+    }
+    return () => stopAutoScroll()
+  }, [draggedTicket, stopAutoScroll])
+
+  useEffect(() => {
+    if (!draggedTicket) return
+
+    const handleGlobalDragOver = (event: DragEvent) => {
+      updateAutoScroll(event.clientX)
+    }
+
+    const handleGlobalDragStop = () => {
+      stopAutoScroll()
+    }
+
+    window.addEventListener("dragover", handleGlobalDragOver)
+    window.addEventListener("drop", handleGlobalDragStop)
+    window.addEventListener("dragend", handleGlobalDragStop)
+
+    return () => {
+      window.removeEventListener("dragover", handleGlobalDragOver)
+      window.removeEventListener("drop", handleGlobalDragStop)
+      window.removeEventListener("dragend", handleGlobalDragStop)
+    }
+  }, [draggedTicket, stopAutoScroll, updateAutoScroll])
+
+  useEffect(() => {
+    if (viewMode !== "kanban") return
+
+    refreshKanbanTrackWidth()
+    const container = kanbanScrollRef.current
+    if (!container) return
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => refreshKanbanTrackWidth()) : null
+
+    resizeObserver?.observe(container)
+    const firstChild = container.firstElementChild
+    if (firstChild) {
+      resizeObserver?.observe(firstChild)
+    }
+
+    const handleResize = () => refreshKanbanTrackWidth()
+    window.addEventListener("resize", handleResize)
+
+    return () => {
+      resizeObserver?.disconnect()
+      window.removeEventListener("resize", handleResize)
+    }
+  }, [
+    viewMode,
+    groupByEpic,
+    filteredTickets.length,
+    epics.length,
+    kanbanColumns.length,
+    refreshKanbanTrackWidth,
+  ])
+
   const handleDragStart = (e: React.DragEvent, ticketId: string) => {
     if (!canEditTickets) {
       e.preventDefault()
@@ -345,6 +508,8 @@ export default function ProjectDetailClient() {
     }
     
     setDraggedTicket(ticketId)
+    setDragOverColumn(null)
+    setDropIndicator(null)
     e.dataTransfer.effectAllowed = "move"
     e.dataTransfer.dropEffect = "move"
     
@@ -364,6 +529,7 @@ export default function ProjectDetailClient() {
   }
 
   const handleDragEnd = () => {
+    stopAutoScroll()
     // Only clear drag state if we're not in the middle of a drop operation
     if (!droppingTicketId) {
       setDraggedTicket(null)
@@ -376,6 +542,7 @@ export default function ProjectDetailClient() {
     if (!draggedTicket) return
     e.preventDefault()
     e.dataTransfer.dropEffect = "move"
+    updateAutoScroll(e.clientX)
     setDragOverColumn(columnId)
     
     // Calculate drop position based on mouse Y position
@@ -440,6 +607,7 @@ export default function ProjectDetailClient() {
     const relatedTarget = e.relatedTarget as HTMLElement
     const currentTarget = e.currentTarget as HTMLElement
     if (!currentTarget.contains(relatedTarget)) {
+      stopAutoScroll()
       setDragOverColumn(null)
       setDropIndicator(null)
     }
@@ -449,6 +617,7 @@ export default function ProjectDetailClient() {
     if (!draggedTicket) return
     e.preventDefault()
     e.dataTransfer.dropEffect = "move"
+    updateAutoScroll(e.clientX)
     
     // Calculate drop position based on mouse Y position within the status section
     const statusSection = e.currentTarget as HTMLElement
@@ -508,6 +677,7 @@ export default function ProjectDetailClient() {
     // Prevent drop if already updating or dropping
     const isUpdating = Object.keys(updatingFields).some(key => key.startsWith(`${ticketId}-`))
     if (isUpdating || droppingTicketId === ticketId) {
+      stopAutoScroll()
       setDraggedTicket(null)
       setDragOverColumn(null)
       setDropIndicator(null)
@@ -521,6 +691,7 @@ export default function ProjectDetailClient() {
 
     // Cancel move if dropping in the same epic and status
     if (previousEpicId === epicId && previousStatus === targetStatus) {
+      stopAutoScroll()
       setDraggedTicket(null)
       setDragOverColumn(null)
       setDropIndicator(null)
@@ -570,6 +741,7 @@ export default function ProjectDetailClient() {
         ...updates,
       })
       toast("Ticket updated")
+      triggerCardLanding(ticketId)
       
       setTimeout(() => {
         setOptimisticStatusUpdates(prev => {
@@ -605,11 +777,13 @@ export default function ProjectDetailClient() {
     setDraggedTicket(null)
     setDragOverColumn(null)
     setDropIndicator(null)
+    stopAutoScroll()
   }
 
   const handleDrop = async (e: React.DragEvent, targetStatus: string) => {
     e.preventDefault()
     if (!draggedTicket) return
+    stopAutoScroll()
 
     const ticketId = draggedTicket
 
@@ -706,6 +880,7 @@ export default function ProjectDetailClient() {
         ...updates,
       })
       toast("Ticket status updated")
+      triggerCardLanding(ticketId)
       
       // Clear optimistic update after a short delay to allow real-time update to take over
       setTimeout(() => {
@@ -925,8 +1100,10 @@ export default function ProjectDetailClient() {
     )
   }
 
+  const projectLinks = project.links || []
+
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)] gap-4">
+    <div className="flex flex-col h-[calc(100dvh-6.5rem)] gap-4 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2 flex-shrink-0">
         <div className="flex items-center gap-1">
           <div className="flex items-center rounded-md border p-0.5">
@@ -1007,6 +1184,23 @@ export default function ProjectDetailClient() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-1.5">
+                  <p className="text-xs text-muted-foreground">Sprint</p>
+                  <Select value={sprintFilter} onValueChange={setSprintFilter}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="All Sprints" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Sprints</SelectItem>
+                      <SelectItem value="no_sprint">No Sprint</SelectItem>
+                      {sprints.map((sprint) => (
+                        <SelectItem key={sprint.id} value={sprint.id}>
+                          {sprint.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>Show</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="w-44">
@@ -1037,6 +1231,195 @@ export default function ProjectDetailClient() {
                 <Button variant="ghost" size="sm" className="h-8 px-2" onClick={resetProjectTicketFilters}>
                   Reset Filters
                 </Button>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu
+            onOpenChange={(open) => {
+              if (!open) {
+                setIsAddingProjectLink(false)
+                setEditingProjectLinkIndex(null)
+                setNewProjectLinkUrl("")
+              }
+            }}
+          >
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              >
+                <Link2 className="h-4 w-4" />
+                <span>Links</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">
+                  {projectLinks.length}
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[440px]">
+              <DropdownMenuLabel className="flex items-center justify-between">
+                <span>Project Links</span>
+                <Badge variant="outline" className="text-xs">
+                  {projectLinks.length} link{projectLinks.length === 1 ? "" : "s"}
+                </Badge>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="space-y-2 p-2" onClick={(event) => event.stopPropagation()}>
+                {canEditProjects ? (
+                  isAddingProjectLink ? (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="https://example.com"
+                        value={newProjectLinkUrl}
+                        onChange={(e) => setNewProjectLinkUrl(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            handleAddProjectLink()
+                          } else if (e.key === "Escape") {
+                            setIsAddingProjectLink(false)
+                            setNewProjectLinkUrl("")
+                          }
+                        }}
+                        className="h-8 flex-1"
+                        autoFocus
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8"
+                        onClick={handleAddProjectLink}
+                        disabled={!newProjectLinkUrl.trim()}
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => {
+                          setIsAddingProjectLink(false)
+                          setNewProjectLinkUrl("")
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={() => {
+                        setIsAddingProjectLink(true)
+                        setEditingProjectLinkIndex(null)
+                        setNewProjectLinkUrl("")
+                      }}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Add URL
+                    </Button>
+                  )
+                ) : null}
+                {projectLinks.length ? (
+                  <div className="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                    {projectLinks.map((url, index) => (
+                      <div
+                        key={`${url}-${index}`}
+                        className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-sm"
+                      >
+                        {editingProjectLinkIndex === index ? (
+                          <div className="flex items-center gap-2 flex-1">
+                            <Input
+                              value={newProjectLinkUrl}
+                              onChange={(e) => setNewProjectLinkUrl(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  handleUpdateProjectLink(index)
+                                } else if (e.key === "Escape") {
+                                  setEditingProjectLinkIndex(null)
+                                  setNewProjectLinkUrl("")
+                                }
+                              }}
+                              className="h-8 flex-1"
+                              autoFocus
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => handleUpdateProjectLink(index)}
+                              disabled={!newProjectLinkUrl.trim()}
+                            >
+                              Save
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => {
+                                setEditingProjectLinkIndex(null)
+                                setNewProjectLinkUrl("")
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <>
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 min-w-0 flex-1"
+                            >
+                              <BrandLinkIcon url={url} className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate">{url}</p>
+                                <p className="text-[11px] text-muted-foreground truncate">{formatLinkLabel(url)}</p>
+                              </div>
+                              <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-1" />
+                            </a>
+                            {canEditProjects ? (
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0"
+                                  onClick={() => {
+                                    setIsAddingProjectLink(false)
+                                    setEditingProjectLinkIndex(index)
+                                    setNewProjectLinkUrl(url)
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                  onClick={() => handleRemoveProjectLink(index)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : null}
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  !isAddingProjectLink && (
+                    <p className="text-sm text-muted-foreground px-1 py-2">No links added yet.</p>
+                  )
+                )}
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1080,168 +1463,6 @@ export default function ProjectDetailClient() {
         </div>
       </div>
 
-      <Card className="p-4 flex-shrink-0">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-sm font-semibold">Project Links</h2>
-            <p className="text-xs text-muted-foreground">Attach design docs, specs, or shared folders.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {project.links?.length || 0} link{project.links?.length === 1 ? "" : "s"}
-            </Badge>
-            {canEditProjects && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setIsAddingProjectLink(true)
-                  setNewProjectLinkUrl("")
-                }}
-                className="h-7 px-2"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Add URL
-              </Button>
-            )}
-          </div>
-        </div>
-        {isAddingProjectLink && (
-          <div className="flex gap-2 mb-2">
-            <Input
-              placeholder="https://example.com"
-              value={newProjectLinkUrl}
-              onChange={(e) => setNewProjectLinkUrl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleAddProjectLink()
-                } else if (e.key === "Escape") {
-                  setIsAddingProjectLink(false)
-                  setNewProjectLinkUrl("")
-                }
-              }}
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddProjectLink}
-              disabled={!newProjectLinkUrl.trim()}
-            >
-              Add
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setIsAddingProjectLink(false)
-                setNewProjectLinkUrl("")
-              }}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-        {project.links?.length ? (
-          <div className="space-y-2">
-            {project.links.map((url, index) => (
-              <div
-                key={`${url}-${index}`}
-                className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm hover:bg-muted transition-colors"
-              >
-                {editingProjectLinkIndex === index ? (
-                  <div className="flex items-center gap-2 flex-1">
-                    <Input
-                      value={newProjectLinkUrl}
-                      onChange={(e) => setNewProjectLinkUrl(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleUpdateProjectLink(index)
-                        } else if (e.key === "Escape") {
-                          setEditingProjectLinkIndex(null)
-                          setNewProjectLinkUrl("")
-                        }
-                      }}
-                      className="flex-1"
-                      autoFocus
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleUpdateProjectLink(index)}
-                      disabled={!newProjectLinkUrl.trim()}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setEditingProjectLinkIndex(null)
-                        setNewProjectLinkUrl("")
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 min-w-0 flex-1"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <BrandLinkIcon url={url} className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate">{url}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{formatLinkLabel(url)}</p>
-                      </div>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
-                    </a>
-                    {canEditProjects && (
-                      <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditingProjectLinkIndex(index)
-                            setNewProjectLinkUrl(url)
-                          }}
-                          className="h-7 w-7 p-0"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveProjectLink(index)}
-                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-        ) : (
-          !isAddingProjectLink && (
-            <p className="text-sm text-muted-foreground">No links added yet.</p>
-          )
-        )}
-      </Card>
-
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
       ) : viewMode === "gantt" ? (
@@ -1271,8 +1492,25 @@ export default function ProjectDetailClient() {
         </div>
       ) : (
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div
+            ref={kanbanTopScrollRef}
+            className="horizontal-scroll mb-2 h-4 overflow-x-auto overflow-y-hidden flex-shrink-0"
+            onScroll={(e) => syncKanbanScroll("top", e.currentTarget.scrollLeft)}
+          >
+            <div style={{ width: Math.max(kanbanScrollTrackWidth, 1), height: 1 }} />
+          </div>
           {/* Kanban Board */}
-          <div className="flex gap-4 overflow-x-auto overflow-y-hidden flex-1">
+          <div
+            ref={kanbanScrollRef}
+            className={cn(
+              "no-scrollbar flex gap-4 overflow-x-auto overflow-y-hidden flex-1 min-h-0",
+              draggedTicket && "kanban-board-dragging"
+            )}
+            onScroll={(e) => {
+              syncKanbanScroll("board", e.currentTarget.scrollLeft)
+              refreshKanbanTrackWidth()
+            }}
+          >
             {groupByEpic ? (
               // Epic-based grouping
               (() => {
@@ -1287,16 +1525,22 @@ export default function ProjectDetailClient() {
                   return (
                     <div
                       key={epic.id}
-                      className="flex-shrink-0 w-80 flex flex-col"
+                      className={cn(
+                        "flex-shrink-0 w-80 flex flex-col rounded-lg transition-all duration-200",
+                        dropIndicator?.epicId === epic.id && !dropIndicator?.statusId && "kanban-drop-target"
+                      )}
                       onDragOver={(e) => {
                         if (!draggedTicket) return
                         e.preventDefault()
                         e.stopPropagation()
+                        updateAutoScroll(e.clientX)
+                        setDropIndicator({ epicId: epic.id, statusId: undefined, ticketId: null, top: 0 })
                       }}
                       onDragLeave={(e) => {
                         const relatedTarget = e.relatedTarget as HTMLElement
                         const currentTarget = e.currentTarget as HTMLElement
                         if (!currentTarget.contains(relatedTarget)) {
+                          stopAutoScroll()
                           if (dropIndicator?.epicId === epic.id) {
                             setDropIndicator(null)
                           }
@@ -1314,13 +1558,15 @@ export default function ProjectDetailClient() {
                         setDropIndicator(null)
                       }}
                     >
-                      <div className="bg-muted/30 rounded-lg p-3 flex flex-col h-full">
+                      <div className="bg-muted/55 border border-border/60 rounded-xl p-3 flex flex-col h-full">
                         <div 
                           className="flex items-center justify-between mb-3 flex-shrink-0"
                           onDragOver={(e) => {
                             if (!draggedTicket) return
                             e.preventDefault()
                             e.stopPropagation()
+                            updateAutoScroll(e.clientX)
+                            setDropIndicator({ epicId: epic.id, statusId: undefined, ticketId: null, top: 0 })
                           }}
                           onDrop={(e) => {
                             e.preventDefault()
@@ -1356,6 +1602,7 @@ export default function ProjectDetailClient() {
                                     e.preventDefault()
                                     e.stopPropagation()
                                     // Show drop indicator at the top of the status section
+                                    updateAutoScroll(e.clientX)
                                     setDropIndicator({ epicId: epic.id, statusId: statusColumn.id, ticketId: null, top: 0 })
                                   }}
                                   onDrop={(e) => {
@@ -1376,7 +1623,10 @@ export default function ProjectDetailClient() {
                                   </span>
                                 </div>
                                 <div 
-                                  className="space-y-2 relative"
+                                  className={cn(
+                                    "space-y-2 relative rounded-md transition-all duration-200",
+                                    dropIndicator?.epicId === epic.id && dropIndicator?.statusId === statusColumn.id && "kanban-drop-target"
+                                  )}
                                   onDragOver={(e) => {
                                     if (!draggedTicket) return
                                     e.preventDefault()
@@ -1387,6 +1637,7 @@ export default function ProjectDetailClient() {
                                     const relatedTarget = e.relatedTarget as HTMLElement
                                     const currentTarget = e.currentTarget as HTMLElement
                                     if (!currentTarget.contains(relatedTarget)) {
+                                      stopAutoScroll()
                                       if (dropIndicator?.epicId === epic.id && dropIndicator?.statusId === statusColumn.id) {
                                         setDropIndicator(null)
                                       }
@@ -1403,29 +1654,43 @@ export default function ProjectDetailClient() {
                                   {/* Drop indicator line for epic-grouped view */}
                                   {dropIndicator?.epicId === epic.id && dropIndicator?.statusId === statusColumn.id && (
                                     <div 
-                                      className="absolute left-0 right-0 h-1 bg-primary z-10 pointer-events-none rounded-full shadow-sm"
+                                      className="kanban-drop-indicator absolute left-0 right-0 h-1 z-10 pointer-events-none rounded-full"
                                       style={{
                                         top: `${dropIndicator.top}px`
                                       }}
                                     />
                                   )}
-                                  {statusTickets.map((ticket) => (
+                                  {statusTickets.map((ticket) => {
+                                    const isUpdating = Object.keys(updatingFields).some(key => key.startsWith(`${ticket.id}-`))
+                                    const isDroppingThis = droppingTicketId === ticket.id
+                                    const canDrag = canEditTickets && !isUpdating && !isDroppingThis
+                                    return (
                                     <Card
                                       key={ticket.id}
                                       data-ticket-id={ticket.id}
-                                      className="p-3 bg-background hover:bg-muted/50 cursor-pointer transition-colors border shadow-sm"
-                                      draggable={canEditTickets}
+                                      className={cn(
+                                        "kanban-card p-4 bg-background hover:bg-muted/50 border shadow-sm",
+                                        isUpdating || isDroppingThis
+                                          ? "cursor-not-allowed opacity-50"
+                                          : canDrag
+                                          ? "cursor-move"
+                                          : "cursor-default",
+                                        draggedTicket === ticket.id && "kanban-card-dragging",
+                                        draggedTicket && draggedTicket !== ticket.id && "kanban-card-dimmed",
+                                        justDroppedTicketId === ticket.id && "kanban-card-landed"
+                                      )}
+                                      draggable={canDrag}
                                       onDragStart={(e) => handleDragStart(e, ticket.id)}
+                                      onDragEnd={handleDragEnd}
                                       onClick={() => setSelectedTicketId(ticket.id)}
                                     >
-                                      <div className="space-y-2">
+                                      <div className="space-y-3">
                                         <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-1.5 mb-1">
                                     {ticket.display_id && (
                                       <span className="text-xs font-mono text-muted-foreground">
                                         {ticket.display_id}
-                                        {ticket.sprint && ` / Sprint: ${ticket.sprint.name}`}
                                       </span>
                                     )}
                                     <TicketTypeIcon type={ticket.type || "task"} />
@@ -1456,7 +1721,7 @@ export default function ProjectDetailClient() {
                                         )}
                                       </div>
                                     </Card>
-                                  ))}
+                                  )})}
                                 </div>
                               </div>
                             )
@@ -1475,12 +1740,15 @@ export default function ProjectDetailClient() {
               return (
                 <div
                   key={column.id}
-                  className="flex-shrink-0 w-80 flex flex-col"
+                  className={cn(
+                    "flex-shrink-0 w-80 flex flex-col rounded-lg transition-all duration-200",
+                    dragOverColumn === column.id && "kanban-drop-target"
+                  )}
                   onDragOver={(e) => handleDragOver(e, column.id)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, column.id)}
                 >
-                  <div className="bg-muted/30 rounded-lg p-3 flex flex-col h-full">
+                  <div className="bg-muted/55 border border-border/60 rounded-xl p-3 flex flex-col h-full">
                     <div className="flex items-center justify-between mb-3 flex-shrink-0">
                       <div className="flex items-center gap-2">
                         <Circle
@@ -1498,7 +1766,7 @@ export default function ProjectDetailClient() {
                       {/* Drop indicator line */}
                       {dropIndicator?.columnId === column.id && !dropIndicator.epicId && (
                         <div 
-                          className="absolute left-0 right-0 h-1 bg-primary z-10 pointer-events-none rounded-full shadow-sm"
+                          className="kanban-drop-indicator absolute left-0 right-0 h-1 z-10 pointer-events-none rounded-full"
                           style={{
                             top: `${dropIndicator.top}px`
                           }}
@@ -1520,6 +1788,7 @@ export default function ProjectDetailClient() {
                               if (!draggedTicket || draggedTicket === ticket.id) return
                               e.preventDefault()
                               e.stopPropagation()
+                              updateAutoScroll(e.clientX)
                               const card = e.currentTarget as HTMLElement
                               const container = card.closest('.space-y-2') as HTMLElement
                               if (!container) return
@@ -1555,22 +1824,26 @@ export default function ProjectDetailClient() {
                                 }
                               }
                             }}
-                            className={`p-3 ${
+                            className={`kanban-card p-4 bg-background hover:bg-muted/50 border shadow-sm ${
                               isUpdating || isDroppingThis
                                 ? "cursor-not-allowed opacity-50"
                                 : canDrag
                                 ? "cursor-move"
                                 : "cursor-default"
                             } ${
-                              draggedTicket === ticket.id 
-                                ? "opacity-30" 
+                              draggedTicket === ticket.id
+                                ? "kanban-card-dragging"
                                 : draggedTicket && draggedTicket !== ticket.id
-                                ? "opacity-60"
-                                : "opacity-100"
+                                ? "kanban-card-dimmed"
+                                : ""
+                            } ${
+                              justDroppedTicketId === ticket.id
+                                ? "kanban-card-landed"
+                                : ""
                             }`}
                           >
                           <div 
-                            className="space-y-2 cursor-pointer"
+                            className="space-y-3 cursor-pointer"
                             onClick={() => setSelectedTicketId(ticket.id)}
                           >
                               <div className="flex items-start justify-between gap-2">
@@ -1590,7 +1863,6 @@ export default function ProjectDetailClient() {
                                     </Button>
                                     <span className="text-xs font-mono text-muted-foreground">
                                       {ticket.display_id || ticket.id.slice(0, 8)}
-                                      {ticket.sprint && ` / Sprint: ${ticket.sprint.name}`}
                                     </span>
                                   </div>
                                   <h4 className="text-sm font-medium line-clamp-2">{ticket.title}</h4>

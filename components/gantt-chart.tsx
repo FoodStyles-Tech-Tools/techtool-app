@@ -68,7 +68,6 @@ const INDENT_PER_LEVEL = 20
 
 export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintClick }: GanttChartProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
-  const [scrollLeft, setScrollLeft] = useState(0)
   const timelineRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const { statusMap } = useTicketStatuses()
@@ -518,8 +517,13 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           <span className="text-sm font-semibold text-foreground">Task</span>
         </div>
         <div 
-          className="flex-1 overflow-x-auto overflow-y-hidden" 
+          className="horizontal-scroll flex-1 overflow-x-auto overflow-y-hidden" 
           ref={timelineRef}
+          onScroll={(e) => {
+            if (listRef.current) {
+              listRef.current.scrollLeft = e.currentTarget.scrollLeft
+            }
+          }}
           style={{ scrollbarWidth: 'thin' }}
         >
           <div className="flex" style={{ width: timelineWidth, minWidth: "100%" }}>
@@ -562,7 +566,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
 
           {/* Timeline side - scrollable horizontally and vertically */}
           <div
-            className="flex-1 overflow-auto bg-muted/20"
+            className="no-scrollbar flex-1 overflow-x-hidden overflow-y-auto bg-muted/20"
             ref={listRef}
             onScroll={(e) => {
               // Sync horizontal scroll with header

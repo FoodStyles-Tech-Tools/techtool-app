@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { format } from "date-fns"
 import { toast } from "@/components/ui/toast"
+import { Switch } from "@/components/ui/switch"
 import { useDepartments } from "@/hooks/use-departments"
 import { useProjects } from "@/hooks/use-projects"
 import { useEpics } from "@/hooks/use-epics"
@@ -61,6 +62,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
   const [pendingStatusChange, setPendingStatusChange] = useState<string | null>(null)
+  const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
   const UNASSIGNED_VALUE = "unassigned"
   const NO_DEPARTMENT_VALUE = "no_department"
   const NO_PROJECT_VALUE = "no_project"
@@ -84,6 +86,18 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const updateTicket = useUpdateTicket()
 
   const ticket = ticketData?.ticket || null
+  const projectOptions = useMemo(() => {
+    const selectedProjectId = ticket?.project?.id
+    const visibleProjects = includeInactiveProjects
+      ? projects
+      : projects.filter(
+      (project) =>
+        project.status?.toLowerCase() !== "inactive" || project.id === selectedProjectId
+    )
+    return [...visibleProjects].sort((a, b) =>
+      (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+    )
+  }, [projects, includeInactiveProjects, ticket?.project?.id])
   const projectId = ticket?.project?.id || null
   const { epics } = useEpics(projectId || "")
   const { sprints } = useSprints(projectId || "")
@@ -1044,13 +1058,21 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value={NO_PROJECT_VALUE}>No Project</SelectItem>
-                            {projects.map((project) => (
+                            {projectOptions.map((project) => (
                               <SelectItem key={project.id} value={project.id}>
                                 {project.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        <div className="mt-2 flex items-center justify-end gap-2">
+                          <span className="text-xs text-muted-foreground">Include Inactive</span>
+                          <Switch
+                            checked={includeInactiveProjects}
+                            onCheckedChange={setIncludeInactiveProjects}
+                            aria-label="Include inactive projects"
+                          />
+                        </div>
                       </div>
                     </div>
 

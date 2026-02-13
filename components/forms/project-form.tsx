@@ -32,7 +32,7 @@ import { CollaboratorSelector } from "@/components/collaborator-selector"
 const projectSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  status: z.enum(["open", "in_progress", "closed"]).default("open"),
+  status: z.enum(["active", "inactive"]).default("active"),
   require_sqa: z.boolean().default(false),
   department_id: z
     .union([
@@ -76,7 +76,7 @@ export function ProjectForm({
     defaultValues: {
       name: initialData?.name || "",
       description: initialData?.description || "",
-      status: initialData?.status || "open",
+      status: initialData?.status || "active",
       require_sqa: initialData?.require_sqa ?? false,
       department_id: initialData?.department_id || NO_DEPARTMENT_VALUE,
       collaborator_ids: initialData?.collaborator_ids || [],
@@ -165,9 +165,8 @@ export function ProjectForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
