@@ -38,6 +38,7 @@ import { useSprints } from "@/hooks/use-sprints"
 import { SprintSelect } from "@/components/sprint-select"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
+import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 
 const NO_PROJECT_VALUE = "__no_project__"
 
@@ -97,8 +98,6 @@ interface User {
   image?: string | null
   role?: string | null
 }
-
-const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
 
 const CREATE_TYPE_OPTIONS = [
   {

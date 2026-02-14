@@ -38,6 +38,8 @@ import { cn } from "@/lib/utils"
 interface TicketCommentsProps {
   ticketId: string
   displayId?: string | null
+  /** When provided (e.g. from ticket detail), comments are not fetched again and no loading state is shown. */
+  initialComments?: TicketComment[]
 }
 
 const CommentBody = memo(function CommentBody({
@@ -594,13 +596,18 @@ function CommentComposer({
   )
 }
 
-export function TicketComments({ ticketId, displayId }: TicketCommentsProps) {
+export function TicketComments({ ticketId, displayId, initialComments }: TicketCommentsProps) {
   const { data: session } = useSession()
   const { flags } = usePermissions()
   const { data: usersData } = useUsers()
   const users = usersData || []
   const currentUserId = users.find((u) => u.email === session?.user?.email)?.id ?? null
   const canEdit = flags?.canEditTickets ?? false
+
+  const initialData =
+    initialComments != null
+      ? { comments: initialComments, ticket: { id: ticketId, display_id: displayId ?? null } }
+      : undefined
 
   const {
     comments,
@@ -609,7 +616,7 @@ export function TicketComments({ ticketId, displayId }: TicketCommentsProps) {
     addComment,
     updateComment,
     deleteComment,
-  } = useTicketComments(ticketId, { enabled: !!ticketId })
+  } = useTicketComments(ticketId, { enabled: !!ticketId, initialData })
 
   const { markTicketRead } = useCommentNotifications()
 
