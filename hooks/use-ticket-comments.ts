@@ -27,7 +27,7 @@ export interface TicketComment {
   replies: TicketComment[]
 }
 
-interface CommentsResponse {
+export interface CommentsResponse {
   comments: TicketComment[]
   ticket: { id: string; display_id: string | null }
 }
@@ -77,7 +77,10 @@ function commentExistsInTree(comments: TicketComment[], commentId: string): bool
   return false
 }
 
-export function useTicketComments(ticketId: string, options?: { enabled?: boolean }) {
+export function useTicketComments(
+  ticketId: string,
+  options?: { enabled?: boolean; initialData?: CommentsResponse }
+) {
   const queryClient = useQueryClient()
   const enabled = !!ticketId && (options?.enabled !== false)
 
@@ -130,6 +133,7 @@ export function useTicketComments(ticketId: string, options?: { enabled?: boolea
       return res.json()
     },
     enabled,
+    initialData: options?.initialData,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
   })

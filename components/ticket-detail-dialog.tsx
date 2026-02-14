@@ -19,7 +19,8 @@ import { useEpics } from "@/hooks/use-epics"
 import { useSprints } from "@/hooks/use-sprints"
 import { Subtasks } from "@/components/subtasks"
 import { TicketComments } from "@/components/ticket-comments"
-import { useTicket, useUpdateTicket } from "@/hooks/use-tickets"
+import { useTicketDetail } from "@/hooks/use-ticket-detail"
+import { useUpdateTicket } from "@/hooks/use-tickets"
 import { useUsers } from "@/hooks/use-users"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
@@ -80,11 +81,11 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   
   const projects = projectsData || []
 
-  const { data: ticketData, isLoading } = useTicket(ticketId || "", { enabled: !!ticketId && open })
+  const { ticket, comments: detailComments, isLoading } = useTicketDetail(ticketId || "", {
+    enabled: !!ticketId && open,
+  })
   const { data: usersData } = useUsers({ realtime: false })
   const updateTicket = useUpdateTicket()
-
-  const ticket = ticketData?.ticket || null
   const projectOptions = useMemo(() => {
     const selectedProjectId = ticket?.project?.id
     const visibleProjects = includeInactiveProjects
@@ -110,7 +111,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const users = useMemo(() => usersData || [], [usersData])
-  const loading = !ticketData && isLoading
+  const loading = !ticket && isLoading
 
   useEffect(() => {
     if (ticket) {
@@ -882,7 +883,11 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                   </CardContent>
                 </Card>
 
-                <TicketComments ticketId={ticketId} displayId={ticket.display_id} />
+                <TicketComments
+                  ticketId={ticketId}
+                  displayId={ticket.display_id}
+                  initialComments={detailComments}
+                />
               </div>
 
               <div>
