@@ -1,36 +1,18 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback, memo, useDeferredValue, useRef } from "react"
+import { useState, useMemo, useCallback, memo } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
-import {
-  TableCell,
-  TableRow,
-} from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/toast"
-import {
-  Copy,
-  Plus,
-  Circle,
-  LayoutGrid,
-  Table2,
-  ArrowUpDown,
-  ChevronUp,
-  ChevronDown,
-  Share2,
-  ListFilter,
-} from "lucide-react"
 import Link from "next/link"
 import { useDepartments } from "@/hooks/use-departments"
 import { useTickets, useUpdateTicket } from "@/hooks/use-tickets"
 import { useProjects } from "@/hooks/use-projects"
 import { useUsers } from "@/hooks/use-users"
 import { usePermissions } from "@/hooks/use-permissions"
-import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
-import { TicketTypeSelect } from "@/components/ticket-type-select"
-import { TicketPrioritySelect } from "@/components/ticket-priority-select"
-import { TicketStatusSelect } from "@/components/ticket-status-select"
+import { useTicketsFilters } from "@/hooks/use-tickets-filters"
+import { useTicketsSort } from "@/hooks/use-tickets-sort"
+import { useKanbanDrag } from "@/hooks/use-kanban-drag"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
@@ -38,8 +20,6 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
-import { TicketTypeIcon } from "@/components/ticket-type-select"
-import { TicketPriorityIcon } from "@/components/ticket-priority-select"
 import {
   Dialog,
   DialogContent,
@@ -48,35 +28,17 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { DateTimePicker } from "@/components/ui/datetime-picker"
-import { cn } from "@/lib/utils"
-import { isDoneStatus, buildStatusChangeBody } from "@/lib/ticket-statuses"
-import type { Ticket, Department, User as BasicUser } from "@/lib/types"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Switch } from "@/components/ui/switch"
+import { buildStatusChangeBody } from "@/lib/ticket-statuses"
+import type { Ticket } from "@/lib/types"
 import {
   ASSIGNEE_ALLOWED_ROLES,
   SQA_ALLOWED_ROLES,
   ROWS_PER_PAGE,
-  UNASSIGNED_VALUE,
-  NO_DEPARTMENT_VALUE,
   FIELD_LABELS,
-  PRIORITY_ORDER,
-  type SortColumn,
 } from "@/lib/ticket-constants"
-import { formatRelativeDate, getDueDateDisplay, toUTCISOStringPreserveLocal } from "@/lib/format-dates"
+import { TicketsToolbar } from "@/components/tickets/tickets-toolbar"
+import { TicketsKanban } from "@/components/tickets/tickets-kanban"
+import { TicketsTable } from "@/components/tickets/tickets-table"
 
 const TicketDetailDialog = dynamic(
   () => import("@/components/ticket-detail-dialog").then((mod) => mod.TicketDetailDialog),
@@ -88,269 +50,169 @@ const GlobalTicketDialog = dynamic(
 )
 
 export default function TicketsPage() {
-  const [searchQuery, setSearchQuery] = useState("")
-  const deferredSearchQuery = useDeferredValue(searchQuery)
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [projectFilter, setProjectFilter] = useState<string>("all")
-  const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
-  const [departmentFilter, setDepartmentFilter] = useState<string>("all")
-  const [requestedByFilter, setRequestedByFilter] = useState<string>("all")
-  const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
-  const [excludeDone, setExcludeDone] = useState(true)
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
-  const [currentPage, setCurrentPage] = useState(1)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isTicketDialogOpen, setTicketDialogOpen] = useState(false)
   const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
-  const [pendingStatusChange, setPendingStatusChange] = useState<{ ticketId: string; newStatus: string; body: any } | null>(null)
-  
+  const [pendingStatusChange, setPendingStatusChange] = useState<{
+    ticketId: string
+    newStatus: string
+    body: Record<string, unknown>
+  } | null>(null)
+
   const { user, flags } = usePermissions()
   const { preferences } = useUserPreferences()
-  const [view, setView] = useState<"table" | "kanban">(preferences.tickets_view || "table")
-  const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
-  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
-  const [justDroppedTicketId, setJustDroppedTicketId] = useState<string | null>(null)
-  const [dropIndicator, setDropIndicator] = useState<{ columnId: string; ticketId: string | null; top: number } | null>(null)
-  const [sortConfig, setSortConfig] = useState<{ column: SortColumn; direction: "asc" | "desc" }>(
-    { column: "due_date", direction: "asc" }
-  )
-  const [kanbanScrollTrackWidth, setKanbanScrollTrackWidth] = useState(0)
-  const kanbanScrollRef = useRef<HTMLDivElement>(null)
-  const kanbanTopScrollRef = useRef<HTMLDivElement>(null)
-  const kanbanSyncingRef = useRef<"top" | "board" | null>(null)
-  const autoScrollVelocityRef = useRef(0)
-  const autoScrollFrameRef = useRef<number | null>(null)
+  const { data: projectsData } = useProjects()
+  const projects = useMemo(() => projectsData || [], [projectsData])
 
-  const stopAutoScroll = useCallback(() => {
-    autoScrollVelocityRef.current = 0
-    if (autoScrollFrameRef.current !== null) {
-      window.cancelAnimationFrame(autoScrollFrameRef.current)
-      autoScrollFrameRef.current = null
-    }
-  }, [])
+  const filters = useTicketsFilters({
+    user: user ?? null,
+    preferencesView: preferences.tickets_view ?? null,
+    projects: projects.map((p) => ({ id: p.id, name: p.name ?? "", status: p.status })),
+  })
 
-  const runAutoScroll = useCallback(() => {
-    const container = kanbanScrollRef.current
-    if (!container || !draggedTicket || autoScrollVelocityRef.current === 0) {
-      autoScrollFrameRef.current = null
-      return
-    }
-    container.scrollLeft += autoScrollVelocityRef.current
-    autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
-  }, [draggedTicket])
+  const {
+    searchQuery,
+    setSearchQuery,
+    deferredSearchQuery,
+    statusFilter,
+    setStatusFilter,
+    projectFilter,
+    setProjectFilter,
+    includeInactiveProjects,
+    setIncludeInactiveProjects,
+    departmentFilter,
+    setDepartmentFilter,
+    requestedByFilter,
+    setRequestedByFilter,
+    assigneeFilter,
+    setAssigneeFilter,
+    excludeDone,
+    setExcludeDone,
+    currentPage,
+    setCurrentPage,
+    view,
+    setView,
+    resetToolbarFilters,
+    activeFilterCount,
+    selectedProjectLabel,
+  } = filters
 
-  const updateAutoScroll = useCallback((clientX: number) => {
-    const container = kanbanScrollRef.current
-    if (!container || !draggedTicket) {
-      stopAutoScroll()
-      return
-    }
-
-    const rect = container.getBoundingClientRect()
-    const edgeThreshold = Math.min(140, rect.width * 0.25)
-    const maxSpeed = 24
-    const minSpeed = 6
-    let velocity = 0
-
-    if (clientX < rect.left + edgeThreshold) {
-      const strength = Math.min(1, (rect.left + edgeThreshold - clientX) / edgeThreshold)
-      velocity = -(minSpeed + (maxSpeed - minSpeed) * strength)
-    } else if (clientX > rect.right - edgeThreshold) {
-      const strength = Math.min(1, (clientX - (rect.right - edgeThreshold)) / edgeThreshold)
-      velocity = minSpeed + (maxSpeed - minSpeed) * strength
-    }
-
-    autoScrollVelocityRef.current = velocity
-    if (velocity !== 0) {
-      if (autoScrollFrameRef.current === null) {
-        autoScrollFrameRef.current = window.requestAnimationFrame(runAutoScroll)
-      }
-    } else {
-      stopAutoScroll()
-    }
-  }, [draggedTicket, runAutoScroll, stopAutoScroll])
-
-  const syncKanbanScroll = useCallback((source: "top" | "board", scrollLeft: number) => {
-    if (kanbanSyncingRef.current && kanbanSyncingRef.current !== source) return
-    kanbanSyncingRef.current = source
-
-    if (source === "top") {
-      if (kanbanScrollRef.current) {
-        kanbanScrollRef.current.scrollLeft = scrollLeft
-      }
-    } else {
-      if (kanbanTopScrollRef.current) {
-        kanbanTopScrollRef.current.scrollLeft = scrollLeft
-      }
-    }
-
-    window.requestAnimationFrame(() => {
-      if (kanbanSyncingRef.current === source) {
-        kanbanSyncingRef.current = null
-      }
-    })
-  }, [])
-
-  const refreshKanbanTrackWidth = useCallback(() => {
-    const container = kanbanScrollRef.current
-    if (!container) return
-    setKanbanScrollTrackWidth(container.scrollWidth)
-  }, [])
-  
-  // Set default view from preferences
-  useEffect(() => {
-    if (preferences.tickets_view) {
-      setView(preferences.tickets_view)
-    }
-  }, [preferences.tickets_view])
-  
-  // Set default filters based on user role
-  useEffect(() => {
-    if (user?.id && user?.role) {
-      const userRole = user.role.toLowerCase()
-      const isAdminOrMember = userRole === "admin" || userRole === "member"
-      
-      // If user is not Admin or Member, set defaults
-      if (!isAdminOrMember) {
-        if (assigneeFilter === "all") {
-          setAssigneeFilter("all")
-        }
-        if (requestedByFilter === "all") {
-          setRequestedByFilter(user.id)
-        }
-      } else {
-        // Admin/Member: default to "My Tickets"
-        if (assigneeFilter === "all") {
-          setAssigneeFilter(user.id)
-        }
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, user?.role])
-  
-  // Reset status filter if it's cancelled or completed when excludeDone is enabled
-  useEffect(() => {
-    if (excludeDone && statusFilter !== "all" && isDoneStatus(statusFilter)) {
-      setStatusFilter("all")
-    }
-  }, [excludeDone, statusFilter])
-
-  useEffect(() => {
-    if (!draggedTicket) {
-      stopAutoScroll()
-    }
-    return () => stopAutoScroll()
-  }, [draggedTicket, stopAutoScroll])
-
-  useEffect(() => {
-    if (view !== "kanban") return
-
-    refreshKanbanTrackWidth()
-    const container = kanbanScrollRef.current
-    if (!container) return
-
-    const resizeObserver =
-      typeof ResizeObserver !== "undefined" ? new ResizeObserver(() => refreshKanbanTrackWidth()) : null
-
-    resizeObserver?.observe(container)
-    const firstChild = container.firstElementChild
-    if (firstChild) {
-      resizeObserver?.observe(firstChild)
-    }
-
-    const handleResize = () => refreshKanbanTrackWidth()
-    window.addEventListener("resize", handleResize)
-
-    return () => {
-      resizeObserver?.disconnect()
-      window.removeEventListener("resize", handleResize)
-    }
-  }, [view, refreshKanbanTrackWidth])
-
-  useEffect(() => {
-    if (!draggedTicket) return
-
-    const handleGlobalDragOver = (event: DragEvent) => {
-      updateAutoScroll(event.clientX)
-    }
-
-    const handleGlobalDragStop = () => {
-      stopAutoScroll()
-    }
-
-    window.addEventListener("dragover", handleGlobalDragOver)
-    window.addEventListener("drop", handleGlobalDragStop)
-    window.addEventListener("dragend", handleGlobalDragStop)
-
-    return () => {
-      window.removeEventListener("dragover", handleGlobalDragOver)
-      window.removeEventListener("drop", handleGlobalDragStop)
-      window.removeEventListener("dragend", handleGlobalDragStop)
-    }
-  }, [draggedTicket, stopAutoScroll, updateAutoScroll])
-
-  // Fetch tickets with server-side filtering (except search which is client-side for now)
   const { data: ticketsData, isLoading: ticketsLoading } = useTickets({
     status: statusFilter !== "all" ? statusFilter : undefined,
     project_id: projectFilter !== "all" ? projectFilter : undefined,
-    department_id: departmentFilter !== "all" && departmentFilter !== "no_department" ? departmentFilter : departmentFilter === "no_department" ? "no_department" : undefined,
+    department_id:
+      departmentFilter !== "all" && departmentFilter !== "no_department"
+        ? departmentFilter
+        : departmentFilter === "no_department"
+          ? "no_department"
+          : undefined,
     assignee_id: assigneeFilter !== "all" ? assigneeFilter : undefined,
     requested_by_id: requestedByFilter !== "all" ? requestedByFilter : undefined,
     exclude_done: excludeDone,
     limit: ROWS_PER_PAGE,
     page: currentPage,
   })
-  const { data: projectsData } = useProjects()
+
   const { data: usersData } = useUsers()
   const { departments } = useDepartments()
   const updateTicket = useUpdateTicket()
   const { statuses: ticketStatuses } = useTicketStatuses()
 
-  // Reset page when filters change (but not search, which is client-side)
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [statusFilter, projectFilter, departmentFilter, requestedByFilter, assigneeFilter, excludeDone])
-
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
-  const projects = useMemo(() => projectsData || [], [projectsData])
+  const users = useMemo(() => usersData || [], [usersData])
   const projectOptions = useMemo(
     () => {
-      const visibleProjects = includeInactiveProjects
+      const visible = includeInactiveProjects
         ? projects
-        : projects.filter((project) => project.status?.toLowerCase() !== "inactive")
-      return [...visibleProjects].sort((a, b) =>
+        : projects.filter((p) => p.status?.toLowerCase() !== "inactive")
+      return [...visible].sort((a, b) =>
         (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
       )
     },
     [projects, includeInactiveProjects]
   )
-  const users = useMemo(() => usersData || [], [usersData])
   const kanbanColumns = useMemo(
     () =>
-      ticketStatuses.map((status) => ({
-        id: status.key,
-        label: status.label,
-        color: status.color,
-      })),
+      ticketStatuses.map((s) => ({ id: s.key, label: s.label, color: s.color })),
     [ticketStatuses]
   )
-  const statusKeys = useMemo(
-    () => kanbanColumns.map((column) => column.id),
-    [kanbanColumns]
-  )
-  // Only show loading if we have no data at all
+  const statusKeys = useMemo(() => kanbanColumns.map((c) => c.id), [kanbanColumns])
+
   const loading = !ticketsData && ticketsLoading
   const canCreateTickets = flags?.canCreateTickets ?? false
   const canEditTickets = flags?.canEditTickets ?? false
 
-  useEffect(() => {
-    if (includeInactiveProjects || projectFilter === "all") return
-    const selectedProject = projects.find((project) => project.id === projectFilter)
-    if (selectedProject?.status?.toLowerCase() === "inactive") {
-      setProjectFilter("all")
-    }
-  }, [includeInactiveProjects, projectFilter, projects])
+  const filteredTickets = useMemo(() => {
+    const q = deferredSearchQuery.trim().toLowerCase()
+    if (!q) return allTickets
+    return allTickets.filter(
+      (t) =>
+        t.title.toLowerCase().includes(q) ||
+        t.description?.toLowerCase().includes(q) ||
+        t.project?.name.toLowerCase().includes(q) ||
+        t.display_id?.toLowerCase().includes(q)
+    )
+  }, [allTickets, deferredSearchQuery])
+
+  const { sortConfig, handleSort, sortedTickets } = useTicketsSort(filteredTickets)
+
+  const handleKanbanDrop = useCallback(
+    async (ticketId: string, columnId: string): Promise<boolean> => {
+      const ticket = allTickets.find((t) => t.id === ticketId)
+      if (!ticket || ticket.status === columnId) return false
+      const previousStatus = ticket.status
+      const startedAt = (ticket as { started_at?: string | null }).started_at
+      if (columnId === "cancelled") {
+        const statusBody = buildStatusChangeBody(previousStatus, columnId, { startedAt })
+        setPendingStatusChange({
+          ticketId,
+          newStatus: columnId,
+          body: { status: columnId, ...statusBody },
+        })
+        setCancelReason("")
+        setShowCancelReasonDialog(true)
+        return false
+      }
+      const body = {
+        status: columnId,
+        ...buildStatusChangeBody(previousStatus, columnId, { startedAt }),
+      }
+      try {
+        await updateTicket.mutateAsync({ id: ticketId, ...body })
+        toast("Ticket status updated")
+        return true
+      } catch (err: unknown) {
+        toast((err as { message?: string })?.message ?? "Failed to update ticket", "error")
+        return false
+      }
+    },
+    [allTickets, updateTicket]
+  )
+
+  const kanban = useKanbanDrag({
+    view,
+    canEditTickets,
+    onDrop: handleKanbanDrop,
+  })
+
+  const {
+    draggedTicket,
+    dragOverColumn,
+    dropIndicator,
+    justDroppedTicketId,
+    kanbanScrollRef,
+    kanbanTopScrollRef,
+    kanbanScrollTrackWidth,
+    refreshKanbanTrackWidth,
+    syncKanbanScroll,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+  } = kanban
 
   const assigneeEligibleUsers = useMemo(
     () => users.filter((user) =>
@@ -359,170 +221,12 @@ export default function TicketsPage() {
     [users]
   )
   const sqaEligibleUsers = useMemo(
-    () => users.filter((user) =>
-      user.role ? SQA_ALLOWED_ROLES.has(user.role.toLowerCase()) : false
-    ),
+    () =>
+      users.filter((u) =>
+        u.role ? SQA_ALLOWED_ROLES.has(u.role.toLowerCase()) : false
+      ),
     [users]
   )
-
-  // Client-side search filtering only (other filters are server-side)
-  // Use debounced search to avoid filtering on every keystroke
-  const filteredTickets = useMemo(() => {
-    const normalizedQuery = deferredSearchQuery.trim().toLowerCase()
-    if (!normalizedQuery) {
-      return allTickets
-    }
-    
-    return allTickets.filter((ticket) => {
-      return (
-        ticket.title.toLowerCase().includes(normalizedQuery) ||
-        ticket.description?.toLowerCase().includes(normalizedQuery) ||
-        ticket.project?.name.toLowerCase().includes(normalizedQuery) ||
-        ticket.display_id?.toLowerCase().includes(normalizedQuery)
-      )
-    })
-  }, [allTickets, deferredSearchQuery])
-
-  const comparePriority = useCallback((a: Ticket, b: Ticket) => {
-    const weightA = PRIORITY_ORDER[(a.priority || "").toLowerCase()] || 5
-    const weightB = PRIORITY_ORDER[(b.priority || "").toLowerCase()] || 5
-    return weightA - weightB
-  }, [])
-
-  const compareDueDate = useCallback((a: Ticket, b: Ticket) => {
-    const getTime = (value?: string | null) => {
-      if (!value) return null
-      const date = new Date(value)
-      const time = date.getTime()
-      return Number.isNaN(time) ? null : time
-    }
-    const timeA = getTime(a.due_date)
-    const timeB = getTime(b.due_date)
-    if (timeA === null && timeB === null) return 0
-    if (timeA === null) return 1
-    if (timeB === null) return -1
-    return timeA - timeB
-  }, [])
-
-  const sortedTickets = useMemo(() => {
-    const tickets = [...filteredTickets]
-    tickets.sort((a, b) => {
-      let result = 0
-
-      switch (sortConfig.column) {
-        case "id":
-          result = (a.display_id || a.id).localeCompare(b.display_id || b.id, undefined, { numeric: true, sensitivity: "base" })
-          break
-        case "title":
-          result = a.title.localeCompare(b.title)
-          break
-        case "due_date":
-          result = compareDueDate(a, b)
-          if (result === 0) {
-            result = comparePriority(a, b)
-          }
-          break
-        case "type":
-          result = (a.type || "").localeCompare(b.type || "")
-          break
-        case "department":
-          result = (a.department?.name || "").localeCompare(b.department?.name || "")
-          break
-        case "status":
-          result = (a.status || "").localeCompare(b.status || "")
-          break
-        case "priority":
-          result = comparePriority(a, b)
-          break
-        case "requested_by":
-          result = (a.requested_by?.name || a.requested_by?.email || "").localeCompare(
-            b.requested_by?.name || b.requested_by?.email || ""
-          )
-          break
-        case "assignee":
-          result = (a.assignee?.name || a.assignee?.email || "").localeCompare(
-            b.assignee?.name || b.assignee?.email || ""
-          )
-          break
-        case "sqa_assignee":
-          result = (a.sqa_assignee?.name || a.sqa_assignee?.email || "").localeCompare(
-            b.sqa_assignee?.name || b.sqa_assignee?.email || ""
-          )
-          break
-        case "sqa_assigned_at": {
-          const aTime = a.sqa_assigned_at ? new Date(a.sqa_assigned_at).getTime() : null
-          const bTime = b.sqa_assigned_at ? new Date(b.sqa_assigned_at).getTime() : null
-          if (aTime === null && bTime === null) result = 0
-          else if (aTime === null) result = 1
-          else if (bTime === null) result = -1
-          else result = aTime - bTime
-          break
-        }
-        default:
-          result = 0
-      }
-
-      if (result === 0) {
-        const dueComparison = compareDueDate(a, b)
-        if (dueComparison !== 0) {
-          result = dueComparison
-        } else {
-          result = comparePriority(a, b)
-        }
-      }
-
-      return sortConfig.direction === "asc" ? result : -result
-    })
-
-    return tickets
-  }, [filteredTickets, sortConfig, compareDueDate, comparePriority])
-
-  const handleSort = useCallback((column: SortColumn) => {
-    setSortConfig((prev) => {
-      if (prev.column === column) {
-        return { column, direction: prev.direction === "asc" ? "desc" : "asc" }
-      }
-      return { column, direction: "asc" }
-    })
-  }, [])
-
-  const resetToolbarFilters = useCallback(() => {
-    setSearchQuery("")
-    setStatusFilter("all")
-    setDepartmentFilter("all")
-    setRequestedByFilter("all")
-    setProjectFilter("all")
-    setAssigneeFilter("all")
-    setExcludeDone(true)
-    setCurrentPage(1)
-  }, [])
-
-  const selectedProjectLabel = useMemo(() => {
-    if (projectFilter === "all") {
-      return "All Projects"
-    }
-    return projects.find((project) => project.id === projectFilter)?.name || "Project"
-  }, [projectFilter, projects])
-
-  const activeFilterCount = useMemo(() => {
-    let count = 0
-    if (searchQuery.trim()) count += 1
-    if (statusFilter !== "all") count += 1
-    if (projectFilter !== "all") count += 1
-    if (departmentFilter !== "all") count += 1
-    if (requestedByFilter !== "all") count += 1
-    if (assigneeFilter !== "all") count += 1
-    if (!excludeDone) count += 1
-    return count
-  }, [
-    searchQuery,
-    statusFilter,
-    projectFilter,
-    departmentFilter,
-    requestedByFilter,
-    assigneeFilter,
-    excludeDone,
-  ])
 
   const handleShareView = useCallback(() => {
     if (!navigator?.clipboard?.writeText) {
@@ -534,23 +238,6 @@ export default function TicketsPage() {
       .then(() => toast("Link copied"))
       .catch(() => toast("Failed to copy link", "error"))
   }, [])
-
-  const renderSortableHeader = (column: SortColumn, label: string) => {
-    const isActive = sortConfig.column === column
-    const direction = sortConfig.direction
-    const Icon = !isActive ? ArrowUpDown : direction === "asc" ? ChevronUp : ChevronDown
-
-    return (
-      <button
-        type="button"
-        onClick={() => handleSort(column)}
-        className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground"
-      >
-        <span>{label}</span>
-        <Icon className="h-3.5 w-3.5" />
-      </button>
-    )
-  }
 
   // Group tickets by status for kanban
   const ticketsByStatus = useMemo(() => {
@@ -666,104 +353,6 @@ export default function TicketsPage() {
     }
   }, [allTickets, updateTicket])
 
-  // Drag and drop handlers for kanban
-  const handleDragStart = useCallback((e: React.DragEvent, ticketId: string) => {
-    if (!canEditTickets) return
-    setDragOverColumn(null)
-    setDropIndicator(null)
-    setDraggedTicket(ticketId)
-    e.dataTransfer.effectAllowed = "move"
-  }, [canEditTickets])
-
-  const handleDragEnd = useCallback(() => {
-    stopAutoScroll()
-    setDraggedTicket(null)
-    setDragOverColumn(null)
-    setDropIndicator(null)
-  }, [stopAutoScroll])
-
-  const handleDragOver = useCallback((e: React.DragEvent, columnId: string) => {
-    if (!draggedTicket) return
-    e.preventDefault()
-    e.stopPropagation()
-    updateAutoScroll(e.clientX)
-    setDragOverColumn(columnId)
-    
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    const y = e.clientY - rect.top
-    setDropIndicator({ columnId, ticketId: null, top: y })
-  }, [draggedTicket, updateAutoScroll])
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    const relatedTarget = e.relatedTarget as Node | null
-    if (relatedTarget && e.currentTarget.contains(relatedTarget)) {
-      return
-    }
-    stopAutoScroll()
-    setDragOverColumn(null)
-    setDropIndicator(null)
-  }, [stopAutoScroll])
-
-  const handleDrop = useCallback(async (e: React.DragEvent, columnId: string) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!draggedTicket) return
-    stopAutoScroll()
-
-    const ticket = allTickets.find(t => t.id === draggedTicket)
-    if (!ticket || ticket.status === columnId) {
-      setDraggedTicket(null)
-      setDragOverColumn(null)
-      setDropIndicator(null)
-      return
-    }
-
-    const previousStatus = ticket.status
-    const newStatus = columnId
-
-    if (newStatus === "cancelled") {
-      const statusBody = buildStatusChangeBody(previousStatus, newStatus, {
-        startedAt: (ticket as { started_at?: string | null })?.started_at,
-      })
-      setPendingStatusChange({
-        ticketId: draggedTicket,
-        newStatus,
-        body: { status: newStatus, ...statusBody },
-      })
-      setCancelReason("")
-      setShowCancelReasonDialog(true)
-      setDraggedTicket(null)
-      setDragOverColumn(null)
-      setDropIndicator(null)
-      return
-    }
-
-    const body: any = {
-      status: newStatus,
-      ...buildStatusChangeBody(previousStatus, newStatus, {
-        startedAt: (ticket as { started_at?: string | null })?.started_at,
-      }),
-    }
-
-    try {
-      await updateTicket.mutateAsync({
-        id: draggedTicket,
-        ...body,
-      })
-      toast("Ticket status updated")
-      setJustDroppedTicketId(draggedTicket)
-      window.setTimeout(() => {
-        setJustDroppedTicketId((prev) => (prev === draggedTicket ? null : prev))
-      }, 550)
-    } catch (error: any) {
-      toast(error.message || "Failed to update ticket", "error")
-    } finally {
-      setDraggedTicket(null)
-      setDragOverColumn(null)
-      setDropIndicator(null)
-    }
-  }, [draggedTicket, allTickets, stopAutoScroll, updateTicket])
-
   const hasSearchQuery = deferredSearchQuery.trim().length > 0
 
   // Pagination - server-side pagination is handled by useTickets
@@ -780,155 +369,26 @@ export default function TicketsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-1">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 gap-2 px-2 text-sm">
-                <Circle className="h-2.5 w-2.5 fill-blue-500 text-blue-500" />
-                <span className="max-w-[220px] truncate">{selectedProjectLabel}</span>
-                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-64">
-              <DropdownMenuLabel>Project</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="justify-between gap-2"
-                onSelect={(event) => event.preventDefault()}
-              >
-                <span>Include Inactive</span>
-                <Switch
-                  checked={includeInactiveProjects}
-                  onCheckedChange={setIncludeInactiveProjects}
-                  aria-label="Include inactive projects"
-                />
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuRadioGroup value={projectFilter} onValueChange={setProjectFilter}>
-                <DropdownMenuRadioItem value="all">All Projects</DropdownMenuRadioItem>
-                {projectOptions.map((project) => (
-                  <DropdownMenuRadioItem key={project.id} value={project.id}>
-                    {project.name}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <div className="flex items-center rounded-md border p-0.5">
-            <Button
-              variant={view === "table" ? "secondary" : "ghost"}
-              size="icon"
-              onClick={() => {
-                if (view === "table") return
-                setView("table")
-              }}
-              className="h-7 w-7"
-            >
-              <Table2 className="h-4 w-4" />
-              <span className="sr-only">Table view</span>
-            </Button>
-            <Button
-              variant={view === "kanban" ? "secondary" : "ghost"}
-              size="icon"
-              onClick={() => {
-                if (view === "kanban") return
-                setView("kanban")
-              }}
-              className="h-7 w-7"
-            >
-              <LayoutGrid className="h-4 w-4" />
-              <span className="sr-only">Kanban view</span>
-            </Button>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
-            onClick={handleShareView}
-          >
-            <Share2 className="h-4 w-4" />
-            Share
-          </Button>
-        </div>
-        <div className="flex flex-wrap items-center gap-0.5">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
-              >
-                <ListFilter className="h-4 w-4" />
-                Filter
-                {activeFilterCount > 0 ? (
-                  <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">
-                    {activeFilterCount}
-                  </span>
-                ) : null}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>Filter</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="justify-between gap-2"
-                onSelect={(event) => event.preventDefault()}
-              >
-                <span>Exclude Done</span>
-                <Switch
-                  checked={excludeDone}
-                  onCheckedChange={setExcludeDone}
-                  aria-label="Exclude Done"
-                />
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>Show</DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-44">
-                  <DropdownMenuItem onClick={() => setAssigneeFilter("all")}>
-                    All Tickets
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setAssigneeFilter(user?.id || "all")}
-                    disabled={!user}
-                  >
-                    My Tickets
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setAssigneeFilter("unassigned")}>
-                    Unassigned
-                  </DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={resetToolbarFilters}>Reset Filters</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          {canCreateTickets && (
-            <button
-              type="button"
-              onClick={() => setTicketDialogOpen(true)}
-              className="ml-1 inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Create Ticket</span>
-              <span className="hidden items-center gap-1 sm:inline-flex">
-                <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
-                  Alt
-                </kbd>
-                <span className="text-[10px] text-muted-foreground">/</span>
-                <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
-                  Cmd
-                </kbd>
-                <span className="text-[10px] text-muted-foreground">+</span>
-                <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
-                  A
-                </kbd>
-              </span>
-            </button>
-          )}
-        </div>
-      </div>
+      <TicketsToolbar
+        selectedProjectLabel={selectedProjectLabel}
+        projectFilter={projectFilter}
+        setProjectFilter={setProjectFilter}
+        projectOptions={projectOptions}
+        includeInactiveProjects={includeInactiveProjects}
+        setIncludeInactiveProjects={setIncludeInactiveProjects}
+        view={view}
+        setView={setView}
+        onShareView={handleShareView}
+        activeFilterCount={activeFilterCount}
+        excludeDone={excludeDone}
+        setExcludeDone={setExcludeDone}
+        assigneeFilter={assigneeFilter}
+        setAssigneeFilter={setAssigneeFilter}
+        resetToolbarFilters={resetToolbarFilters}
+        canCreateTickets={canCreateTickets}
+        onOpenCreateTicket={() => setTicketDialogOpen(true)}
+        currentUserId={user?.id ?? null}
+      />
 
       {loading ? (
         <div className="rounded-md border">
@@ -951,231 +411,49 @@ export default function TicketsPage() {
           </p>
         </div>
       ) : view === "kanban" ? (
-        <div className="flex flex-col min-h-0">
-          <div
-            ref={kanbanTopScrollRef}
-            className="horizontal-scroll mb-2 h-4 overflow-x-auto overflow-y-hidden flex-shrink-0"
-            onScroll={(e) => syncKanbanScroll("top", e.currentTarget.scrollLeft)}
-          >
-            <div style={{ width: Math.max(kanbanScrollTrackWidth, 1), height: 1 }} />
-          </div>
-          <div
-            ref={kanbanScrollRef}
-            className={cn(
-              "horizontal-scroll flex gap-4 overflow-x-auto overflow-y-hidden pb-4 max-h-[70vh]",
-              draggedTicket && "kanban-board-dragging"
-            )}
-            onScroll={(e) => {
-              syncKanbanScroll("board", e.currentTarget.scrollLeft)
-              refreshKanbanTrackWidth()
-            }}
-          >
-            {kanbanColumns.map((column) => {
-            const columnTickets = ticketsByStatus[column.id] || []
-            
-            return (
-              <div
-                key={column.id}
-                className={cn(
-                  "flex-shrink-0 w-80 flex flex-col rounded-lg transition-all duration-200",
-                  dragOverColumn === column.id && "kanban-drop-target"
-                )}
-                onDragOver={(e) => handleDragOver(e, column.id)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, column.id)}
-              >
-                <div className="bg-muted/55 border border-border/60 rounded-xl p-3 flex flex-col h-full">
-                  <div className="flex items-center justify-between mb-3 flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                      <Circle
-                        className="h-3 w-3"
-                        style={{ color: column.color, fill: column.color }}
-                      />
-                      <h3 className="text-sm font-medium">{column.label}</h3>
-                      <Badge variant="secondary" className="text-xs">
-                        {columnTickets.length}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2 overflow-y-auto flex-1 min-h-0 relative">
-                    {/* Drop indicator line */}
-                    {dropIndicator?.columnId === column.id && (
-                      <div 
-                        className="kanban-drop-indicator absolute left-0 right-0 h-1 z-10 pointer-events-none rounded-full"
-                        style={{
-                          top: `${dropIndicator.top}px`
-                        }}
-                      />
-                    )}
-                    {columnTickets.map((ticket) => {
-                      const dueDateDisplay = getDueDateDisplay(ticket.due_date)
-                      return (
-                        <Card
-                          key={ticket.id}
-                          data-ticket-id={ticket.id}
-                          className={cn(
-                            "kanban-card p-4 cursor-pointer border shadow-sm",
-                            draggedTicket === ticket.id && "kanban-card-dragging",
-                            draggedTicket && draggedTicket !== ticket.id && "kanban-card-dimmed",
-                            justDroppedTicketId === ticket.id && "kanban-card-landed",
-                            dueDateDisplay.highlightClassName ?? "bg-background hover:bg-muted/50"
-                          )}
-                          draggable={canEditTickets}
-                          onDragStart={(e) => handleDragStart(e, ticket.id)}
-                          onDragEnd={handleDragEnd}
-                          onClick={() => {
-                            setSelectedTicketId(ticket.id)
-                          }}
-                        >
-                          <div className="space-y-3">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-1">
-                                  {ticket.display_id && (
-                                    <span className="text-xs font-mono text-muted-foreground">
-                                      {ticket.display_id}
-                                    </span>
-                                  )}
-                                  <TicketTypeIcon type={ticket.type || "task"} />
-                                  <TicketPriorityIcon priority={ticket.priority} />
-                                </div>
-                                <h4 className="text-sm font-medium line-clamp-2 leading-tight">
-                                  {ticket.title}
-                                </h4>
-                              </div>
-                            </div>
-                            <div>
-                              <Badge
-                                title={dueDateDisplay.title}
-                                className={`text-[11px] font-medium ${dueDateDisplay.className}`}
-                              >
-                                {dueDateDisplay.label}
-                              </Badge>
-                            </div>
-                            {ticket.assignee && (
-                              <div className="flex items-center gap-1.5">
-                                <Avatar className="h-5 w-5">
-                                  <AvatarImage src={ticket.assignee.image || undefined} />
-                                  <AvatarFallback className="text-[10px]">
-                                    {ticket.assignee.name?.[0]?.toUpperCase() || ticket.assignee.email[0].toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-xs text-muted-foreground truncate">
-                                  {ticket.assignee.name || ticket.assignee.email}
-                                </span>
-                              </div>
-                            )}
-                            {ticket.department && (
-                              <Badge variant="outline" className="text-xs">
-                                {ticket.department.name}
-                              </Badge>
-                            )}
-                            {ticket.project && (
-                              <Badge variant="outline" className="text-xs">
-                                {ticket.project.name}
-                              </Badge>
-                            )}
-                          </div>
-                        </Card>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-          </div>
-        </div>
+        <TicketsKanban
+          columns={kanbanColumns}
+          ticketsByStatus={ticketsByStatus}
+          draggedTicket={draggedTicket}
+          dragOverColumn={dragOverColumn}
+          dropIndicator={dropIndicator}
+          justDroppedTicketId={justDroppedTicketId}
+          canEditTickets={canEditTickets}
+          onSelectTicket={setSelectedTicketId}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          kanbanScrollRef={kanbanScrollRef}
+          kanbanTopScrollRef={kanbanTopScrollRef}
+          kanbanScrollTrackWidth={kanbanScrollTrackWidth}
+          onScrollBoard={(left) => syncKanbanScroll("board", left)}
+          onScrollTop={(left) => syncKanbanScroll("top", left)}
+          onRefreshTrackWidth={refreshKanbanTrackWidth}
+        />
       ) : (
-        <div className="rounded-md border border-border/35 bg-muted/10">
-          <div className="max-h-[calc(100vh-220px)] overflow-y-auto relative">
-            <table className="w-full caption-bottom text-sm">
-              <thead className="sticky top-0 z-20 bg-muted/80 shadow-sm border-b border-border/35">
-                <tr className="hover:bg-transparent">
-                  <th className="h-9 py-2 px-4 text-left align-middle">
-                    {renderSortableHeader("id", "ID")}
-                  </th>
-                  <th className="h-9 py-2 px-4 text-left align-middle w-[400px] min-w-[300px]">
-                    {renderSortableHeader("title", "Title")}
-                  </th>
-                  <th className="h-9 py-2 px-4 text-left align-middle">
-                    {renderSortableHeader("due_date", "Due Date")}
-                  </th>
-                  <th className="h-9 py-2 px-4 text-left align-middle">
-                    {renderSortableHeader("type", "Type")}
-                  </th>
-                  <th className="h-9 py-2 px-4 text-left align-middle">
-                    {renderSortableHeader("department", "Department")}
-                  </th>
-                  <th className="h-9 py-2 px-4 text-left align-middle">
-                    {renderSortableHeader("status", "Status")}
-                  </th>
-                  <th className="h-9 py-2 px-4 text-left align-middle">
-                    {renderSortableHeader("priority", "Priority")}
-                  </th>
-                  <th className="h-9 py-2 px-4 text-left align-middle">
-                    {renderSortableHeader("requested_by", "Requested By")}
-                  </th>
-                  <th className="h-9 py-2 px-4 text-left align-middle">
-                    {renderSortableHeader("assignee", "Assignee")}
-                  </th>
-                  <th className="h-9 py-2 px-4 text-left align-middle">
-                    {renderSortableHeader("sqa_assignee", "SQA Assignee")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="[&_tr:last-child]:border-0">
-              {paginatedTickets.map((ticket) => (
-                <TicketRow
-                  key={ticket.id}
-                  ticket={ticket}
-                  onCopy={handleCopyTicketLabel}
-                  onSelectTicket={setSelectedTicketId}
-                  departments={departments}
-                  users={users}
-                  assigneeEligibleUsers={assigneeEligibleUsers}
-                  sqaEligibleUsers={sqaEligibleUsers}
-                  updateTicketField={updateTicketField}
-                  updatingFields={updatingFields}
-                  excludeDone={excludeDone}
-                  canEdit={canEditTickets}
-                />
-              ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex items-center justify-between border-t border-border/35 px-4 py-3">
-            <div className="text-sm text-muted-foreground">
-              Showing {startIndex + 1} to {Math.min(endIndex, sortedTickets.length)} of {sortedTickets.length} tickets
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="flex items-center space-x-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="h-8"
-                >
-                  Previous
-                </Button>
-                <div className="text-sm text-muted-foreground px-2">
-                  Page {currentPage} of {totalPages || 1}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages || 1, p + 1))}
-                  disabled={currentPage >= totalPages}
-                  className="h-8"
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <TicketsTable
+          sortConfig={sortConfig}
+          onSort={handleSort}
+          tickets={paginatedTickets}
+          totalCount={sortedTickets.length}
+          currentPage={currentPage}
+          totalPages={totalPages || 1}
+          onPageChange={setCurrentPage}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          onCopyTicket={handleCopyTicketLabel}
+          onSelectTicket={setSelectedTicketId}
+          departments={departments}
+          users={users}
+          assigneeEligibleUsers={assigneeEligibleUsers}
+          sqaEligibleUsers={sqaEligibleUsers}
+          updateTicketField={updateTicketField}
+          updatingFields={updatingFields}
+          excludeDone={excludeDone}
+          canEdit={canEditTickets}
+        />
       )}
       
       <GlobalTicketDialog open={isTicketDialogOpen && canCreateTickets} onOpenChange={setTicketDialogOpen} />
@@ -1264,224 +542,3 @@ export default function TicketsPage() {
     </div>
   )
 }
-
-interface TicketRowProps {
-  ticket: Ticket
-  onCopy: (ticket: Ticket) => void
-  onSelectTicket: (ticketId: string) => void
-  departments: Department[]
-  users: BasicUser[]
-  assigneeEligibleUsers: BasicUser[]
-  sqaEligibleUsers: BasicUser[]
-  updateTicketField: (ticketId: string, field: string, value: string | null | undefined) => Promise<void> | void
-  updatingFields: Record<string, string>
-  excludeDone: boolean
-  canEdit: boolean
-}
-
-const TicketRow = memo(function TicketRow({
-  ticket,
-  onCopy,
-  onSelectTicket,
-  departments,
-  users,
-  assigneeEligibleUsers,
-  sqaEligibleUsers,
-  updateTicketField,
-  updatingFields,
-  excludeDone,
-  canEdit,
-}: TicketRowProps) {
-  const requestedById = ticket.requested_by?.id || (ticket as any).requested_by_id
-  const dueDateDisplay = getDueDateDisplay(ticket.due_date)
-  const dueDateValue = ticket.due_date ? new Date(ticket.due_date) : null
-  const safeDueDateValue = dueDateValue && !Number.isNaN(dueDateValue.getTime()) ? dueDateValue : null
-
-  return (
-    <TableRow className={cn("border-b-0 even:bg-muted/15 hover:bg-muted/30", dueDateDisplay.highlightClassName)}>
-      <TableCell className="py-2 text-xs font-mono text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-muted-foreground"
-            onClick={() => onCopy(ticket)}
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </Button>
-          <span>{ticket.display_id || ticket.id.slice(0, 8)}</span>
-        </div>
-      </TableCell>
-      <TableCell className="py-2 w-[400px] min-w-[300px]">
-        <div className="flex flex-col gap-2">
-          <div
-            className="bg-transparent rounded-md p-2 hover:underline flex flex-col cursor-pointer"
-            onClick={() => onSelectTicket(ticket.id)}
-          >
-            <span className="text-sm">{ticket.title}</span>
-            <span className="text-xs text-muted-foreground line-clamp-2">
-              {ticket.description || "No description"}
-            </span>
-          </div>
-          <div className="bg-muted/50 rounded-md p-2 flex flex-col gap-0.5">
-            <span className="text-xs text-muted-foreground">
-              Created {formatRelativeDate(ticket.created_at)}
-            </span>
-            {ticket.project?.name && (
-              <Link
-                href={`/projects/${ticket.project.id}`}
-                className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Project: {ticket.project.name}
-              </Link>
-            )}
-          </div>
-        </div>
-      </TableCell>
-      <TableCell className="py-2">
-        <div title={dueDateDisplay.title}>
-          <DateTimePicker
-            value={safeDueDateValue}
-            onChange={(date) => updateTicketField(ticket.id, "due_date", date ? toUTCISOStringPreserveLocal(date) : null)}
-            disabled={!canEdit || !!updatingFields[`${ticket.id}-due_date`]}
-            placeholder="No due date"
-            hideIcon
-            className={cn(
-              "h-auto w-auto px-2 py-1 text-xs font-medium rounded-full",
-              dueDateDisplay.className
-            )}
-            renderTriggerContent={() => <span>{dueDateDisplay.label}</span>}
-          />
-        </div>
-      </TableCell>
-      <TableCell className="py-2">
-        <TicketTypeSelect
-          value={ticket.type || "task"}
-          onValueChange={(value) => updateTicketField(ticket.id, "type", value)}
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-type`]}
-        />
-      </TableCell>
-      <TableCell className="py-2">
-        <Select
-          value={ticket.department?.id || NO_DEPARTMENT_VALUE}
-          onValueChange={(value) =>
-            updateTicketField(ticket.id, "department_id", value === NO_DEPARTMENT_VALUE ? null : value)
-          }
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-department_id`]}
-        >
-          <SelectTrigger className="h-7 w-[140px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NO_DEPARTMENT_VALUE}>No Department</SelectItem>
-            {departments.map((department) => (
-              <SelectItem key={department.id} value={department.id}>
-                {department.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="py-2">
-        <TicketStatusSelect
-          value={ticket.status}
-          onValueChange={(value) => updateTicketField(ticket.id, "status", value)}
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-status`]}
-          excludeDone={excludeDone}
-        />
-      </TableCell>
-      <TableCell className="py-2">
-        <TicketPrioritySelect
-          value={ticket.priority}
-          onValueChange={(value) => updateTicketField(ticket.id, "priority", value)}
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-priority`]}
-        />
-      </TableCell>
-      <TableCell className="py-2">
-        <Select
-          value={requestedById ?? undefined}
-          onValueChange={(value) => updateTicketField(ticket.id, "requested_by_id", value)}
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-requested_by_id`]}
-        >
-          <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
-            {requestedById ? (
-              <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
-                <UserSelectValue users={users} value={requestedById} placeholder="Select user" />
-              </div>
-            ) : (
-              <SelectValue placeholder="Select user" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            {users.map((user) => (
-              <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="py-2">
-        <Select
-          value={ticket.assignee?.id || UNASSIGNED_VALUE}
-          onValueChange={(value) =>
-            updateTicketField(ticket.id, "assignee_id", value === UNASSIGNED_VALUE ? null : value)
-          }
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-assignee_id`]}
-        >
-          <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
-            {ticket.assignee?.id ? (
-              <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
-                <UserSelectValue
-                  users={assigneeEligibleUsers}
-                  value={ticket.assignee.id}
-                  placeholder="Unassigned"
-                  unassignedValue={UNASSIGNED_VALUE}
-                  unassignedLabel="Unassigned"
-                />
-              </div>
-            ) : (
-              <SelectValue placeholder="Unassigned" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-            {assigneeEligibleUsers.map((user) => (
-              <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-      <TableCell className="py-2">
-        <Select
-          value={ticket.sqa_assignee?.id || UNASSIGNED_VALUE}
-          onValueChange={(value) =>
-            updateTicketField(ticket.id, "sqa_assignee_id", value === UNASSIGNED_VALUE ? null : value)
-          }
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-sqa_assignee_id`]}
-        >
-          <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
-            {ticket.sqa_assignee?.id ? (
-              <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
-                <UserSelectValue
-                  users={sqaEligibleUsers}
-                  value={ticket.sqa_assignee.id}
-                  placeholder="Unassigned"
-                  unassignedValue={UNASSIGNED_VALUE}
-                  unassignedLabel="Unassigned"
-                />
-              </div>
-            ) : (
-              <SelectValue placeholder="Unassigned" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-            {sqaEligibleUsers.map((user) => (
-              <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" />
-            ))}
-          </SelectContent>
-        </Select>
-      </TableCell>
-    </TableRow>
-  )
-})

@@ -37,8 +37,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-
-const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
+import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 
 interface TicketDetailDialogProps {
   ticketId: string | null

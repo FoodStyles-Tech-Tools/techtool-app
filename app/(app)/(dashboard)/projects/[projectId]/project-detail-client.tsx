@@ -72,36 +72,8 @@ const GanttChart = dynamic(
   { ssr: false }
 )
 import { isDoneStatus } from "@/lib/ticket-statuses"
-
-const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])
-
-type ProjectTicket = {
-  id: string
-  title: string
-  description: string | null
-  status: string
-  priority: string
-  type: string
-  created_at: string
-  started_at?: string | null
-  completed_at?: string | null
-  assigned_at?: string | null
-  reason?: {
-    cancelled?: {
-      reason: string
-      cancelledAt: string
-    }
-  } | null
-  department?: { id: string; name: string } | null
-  epic?: { id: string; name: string; color: string } | null
-  sprint?: { id: string; name: string; status: string } | null
-  project?: { id: string; name: string } | null
-  assignee?: { id: string; name: string | null; email: string; image: string | null } | null
-  requested_by?: { id: string; name: string | null; email: string } | null
-  display_id?: string | null
-  links?: string[]
-} & Record<string, any>
-
+import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
+import type { Ticket } from "@/lib/types"
 
 export default function ProjectDetailClient() {
   const params = useParams()
@@ -198,7 +170,7 @@ export default function ProjectDetailClient() {
 
   // Derive data values (must be before any hooks that use them)
   const project = projectData?.project || null
-  const allTickets = useMemo(() => (ticketsData || []) as ProjectTicket[], [ticketsData])
+  const allTickets = useMemo(() => (ticketsData || []) as Ticket[], [ticketsData])
   const users = usersData || []
   const loading = (!projectData && projectLoading) || (!ticketsData && ticketsLoading)
 
@@ -1469,7 +1441,7 @@ export default function ProjectDetailClient() {
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <GanttChart
             tickets={filteredTickets.filter(ticket => 
-              ticket.project?.id === projectId || (!ticket.project && ticket.project_id === projectId)
+              ticket.project?.id === projectId
             )}
             sprints={sprints.filter(sprint => sprint.project_id === projectId)}
             epics={epics.filter(epic => epic.project_id === projectId)}
