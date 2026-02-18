@@ -6,6 +6,7 @@ import { upsertSheetsData } from "@/lib/google-sheets"
 export const runtime = "nodejs"
 
 const BATCH_SIZE = 1000
+const CLOCKIFY_DEPARTMENT_CUSTOM_FIELD_ID = "64f739d670d77d39061e8b05"
 
 const CLOCKIFY_HEADERS = [
   "session_id",
@@ -80,6 +81,50 @@ async function fetchAllRows(
 function normalizeSheetValue(value: unknown) {
   if (value === null || value === undefined) return ""
   return value
+}
+
+function asTrimmedString(value: unknown) {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function readClockifyFieldValue(value: unknown) {
+  if (typeof value === "string") return value.trim()
+  if (!value || typeof value !== "object") return ""
+
+  const objectValue = value as Record<string, unknown>
+  return asTrimmedString(objectValue.value || objectValue.text || objectValue.name)
+}
+
+function getClockifyCustomFieldValue(entry: any, customFieldId: string) {
+  const customFields = [
+    ...(Array.isArray(entry?.customFields) ? entry.customFields : []),
+    ...(Array.isArray(entry?.customField) ? entry.customField : []),
+    ...(Array.isArray(entry?.customFieldValues) ? entry.customFieldValues : []),
+  ]
+
+  for (const field of customFields) {
+    const fieldId = asTrimmedString(field?.customFieldId || field?.id)
+    if (fieldId !== customFieldId) continue
+
+    const valueCandidates = [
+      field?.value,
+      field?.valueName,
+      field?.text,
+      field?.name,
+      field?.selectedOption?.name,
+      field?.selectedOption?.value,
+    ]
+    for (const candidate of valueCandidates) {
+      const normalized = readClockifyFieldValue(candidate)
+      if (normalized) return normalized
+    }
+  }
+
+  return ""
+}
+
+function getClockifyDepartment(entry: any) {
+  return getClockifyCustomFieldValue(entry, CLOCKIFY_DEPARTMENT_CUSTOM_FIELD_ID)
 }
 
 function toDateOnly(value: unknown) {
@@ -174,18 +219,6 @@ export async function POST() {
         .filter(Boolean)
     )
 
-    // Create lookup maps for tickets by UUID and display_id
-    const ticketByUuid = new Map<string, any>()
-    const ticketByDisplayId = new Map<string, any>()
-    tickets.forEach((ticket) => {
-      if (ticket?.id) {
-        ticketByUuid.set(ticket.id, ticket)
-      }
-      if (ticket?.display_id) {
-        ticketByDisplayId.set(String(ticket.display_id).toUpperCase(), ticket)
-      }
-    })
-
     const clockifyRows: unknown[][] = [CLOCKIFY_HEADERS]
 
     for (const item of sessions) {
@@ -219,25 +252,7 @@ export async function POST() {
             ? durationSeconds / 3600
             : ""
 
-        // Look up department from ticket
-        let departmentName = ""
-        if (mappedTicketUuid) {
-          const ticket = ticketByUuid.get(mappedTicketUuid)
-          if (ticket) {
-            const department = ticket?.department
-            departmentName = Array.isArray(department) 
-              ? (department[0]?.name || "")
-              : (department?.name || "")
-          }
-        } else if (mappedTicketId) {
-          const ticket = ticketByDisplayId.get(String(mappedTicketId).toUpperCase())
-          if (ticket) {
-            const department = ticket?.department
-            departmentName = Array.isArray(department)
-              ? (department[0]?.name || "")
-              : (department?.name || "")
-          }
-        }
+        const departmentName = getClockifyDepartment(entry)
 
         clockifyRows.push([
           item.id,
