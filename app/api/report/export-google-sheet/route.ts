@@ -26,6 +26,7 @@ const CLOCKIFY_HEADERS = [
   "ticket_id",
   "ticket_uuid",
   "reconcile_status",
+  "department",
 ]
 
 const TICKET_ID_TO_RELATION_MAP: Record<string, string> = {
@@ -173,6 +174,18 @@ export async function POST() {
         .filter(Boolean)
     )
 
+    // Create lookup maps for tickets by UUID and display_id
+    const ticketByUuid = new Map<string, any>()
+    const ticketByDisplayId = new Map<string, any>()
+    tickets.forEach((ticket) => {
+      if (ticket?.id) {
+        ticketByUuid.set(ticket.id, ticket)
+      }
+      if (ticket?.display_id) {
+        ticketByDisplayId.set(String(ticket.display_id).toUpperCase(), ticket)
+      }
+    })
+
     const clockifyRows: unknown[][] = [CLOCKIFY_HEADERS]
 
     for (const item of sessions) {
@@ -206,6 +219,26 @@ export async function POST() {
             ? durationSeconds / 3600
             : ""
 
+        // Look up department from ticket
+        let departmentName = ""
+        if (mappedTicketUuid) {
+          const ticket = ticketByUuid.get(mappedTicketUuid)
+          if (ticket) {
+            const department = ticket?.department
+            departmentName = Array.isArray(department) 
+              ? (department[0]?.name || "")
+              : (department?.name || "")
+          }
+        } else if (mappedTicketId) {
+          const ticket = ticketByDisplayId.get(String(mappedTicketId).toUpperCase())
+          if (ticket) {
+            const department = ticket?.department
+            departmentName = Array.isArray(department)
+              ? (department[0]?.name || "")
+              : (department?.name || "")
+          }
+        }
+
         clockifyRows.push([
           item.id,
           item.start_date,
@@ -225,6 +258,7 @@ export async function POST() {
           mappedTicketId,
           mappedTicketUuid,
           mappedStatus,
+          departmentName,
         ].map(normalizeSheetValue))
       }
     }
