@@ -5,8 +5,6 @@ import { createServerClient } from "@/lib/supabase"
 export const runtime = "nodejs"
 
 const CLOCKIFY_API_URL = "https://reports.api.clockify.me/v1"
-const CLOCKIFY_CUSTOM_FIELD_ID = "64f739d670d77d39061e8b05"
-const CLOCKIFY_CUSTOM_FIELD_VALUE = "TechTool"
 const CLOCKIFY_PAGE_SIZE = 1000
 const CLOCKIFY_MAX_PAGES = 200
 
@@ -52,20 +50,6 @@ const extractEntries = (reportData: any) => {
   if (Array.isArray(reportData?.timeentries)) return reportData.timeentries
   if (Array.isArray(reportData?.timeEntries)) return reportData.timeEntries
   return []
-}
-
-const matchesCustomField = (entry: any) => {
-  const customFields = entry?.customFields || entry?.customField || []
-  if (!Array.isArray(customFields)) return false
-  return customFields.some((field: any) => {
-    const fieldId = field?.customFieldId || field?.id
-    const fieldValue = field?.value || field?.text || field?.name
-    return (
-      fieldId === CLOCKIFY_CUSTOM_FIELD_ID &&
-      String(fieldValue || "").trim().toLowerCase() ===
-        CLOCKIFY_CUSTOM_FIELD_VALUE.toLowerCase()
-    )
-  })
 }
 
 const assignEntries = (reportData: any, entries: any[]) => {
@@ -226,8 +210,9 @@ export async function POST(request: NextRequest) {
       }
 
       if (status === "success") {
-        const filteredEntries = allEntries.filter(matchesCustomField)
-        reportData = assignEntries(baseReport, filteredEntries)
+        // Persist the full weekly dataset from Clockify.
+        // Filtering for TechTool is handled in the Clockify Report Session UI.
+        reportData = assignEntries(baseReport, allEntries)
       }
     } catch (error: any) {
       status = "failed"

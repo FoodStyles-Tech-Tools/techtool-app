@@ -10,6 +10,7 @@ import {
   Box,
   Command,
   Timer,
+  FileSpreadsheet,
   SlidersHorizontal,
   ClipboardList,
   ChevronDown,
@@ -59,6 +60,12 @@ const primaryNavItems: NavItem[] = [
     title: "Clockify",
     href: "/clockify",
     icon: Timer,
+    flag: "canViewClockify",
+  },
+  {
+    title: "Report",
+    href: "/report",
+    icon: FileSpreadsheet,
     flag: "canViewClockify",
   },
   {

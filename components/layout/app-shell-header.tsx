@@ -28,6 +28,7 @@ const PAGE_LABELS: Record<string, string> = {
   projects: "Projects",
   assets: "Assets",
   clockify: "Clockify",
+  report: "Report",
   tickets: "Tickets",
   users: "Users",
   roles: "Roles",

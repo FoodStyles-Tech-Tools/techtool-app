@@ -39,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ChevronLeft, ChevronRight, Eye, RefreshCw, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Eye, Loader2, RefreshCw, Trash2 } from "lucide-react"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useProjects } from "@/hooks/use-projects"
 import {
@@ -189,12 +189,15 @@ export default function ClockifyClient() {
       toast("Only admins can fetch Clockify reports.", "error")
       return
     }
+    setReportLoadingAction("fetch")
     try {
       await createSession.mutateAsync({ startDate, endDate })
       toast("Clockify report fetched.", "success")
     } catch (error) {
       console.error("Clockify fetch failed:", error)
       toast("Failed to fetch Clockify report.", "error")
+    } finally {
+      setReportLoadingAction(null)
     }
   }
 
@@ -384,6 +387,8 @@ export default function ClockifyClient() {
   }
 
   const performReupload = async () => {
+    setConfirmDialog(null)
+    setReportLoadingAction("reupload")
     try {
       await createSession.mutateAsync({ startDate, endDate, clearSessions: true })
       toast("Sessions re-uploaded.", "success")
@@ -391,7 +396,7 @@ export default function ClockifyClient() {
       console.error("Clockify re-upload failed:", error)
       toast("Failed to re-upload sessions.", "error")
     } finally {
-      setConfirmDialog(null)
+      setReportLoadingAction(null)
     }
   }
 
@@ -476,6 +481,7 @@ export default function ClockifyClient() {
     type: "delete" | "reupload"
     sessionId?: string
   } | null>(null)
+  const [reportLoadingAction, setReportLoadingAction] = useState<"fetch" | "reupload" | null>(null)
 
   useEffect(() => {
     reconcileMapRef.current = reconcileMap
@@ -1101,11 +1107,16 @@ export default function ClockifyClient() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setConfirmDialog(null)}>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDialog(null)}
+              disabled={createSession.isPending}
+            >
               Cancel
             </Button>
             <Button
               variant={confirmDialog?.type === "delete" ? "destructive" : "default"}
+              disabled={createSession.isPending}
               onClick={() => {
                 if (confirmDialog?.type === "delete" && confirmDialog.sessionId) {
                   performDeleteSession(confirmDialog.sessionId)
@@ -1114,8 +1125,24 @@ export default function ClockifyClient() {
                 }
               }}
             >
-              Confirm
+              {createSession.isPending ? "Processing..." : "Confirm"}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!reportLoadingAction} onOpenChange={() => {}}>
+        <DialogContent showCloseButton={false} className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {reportLoadingAction === "reupload" ? "Re-uploading sessions" : "Fetching report"}
+            </DialogTitle>
+            <DialogDescription>
+              This can take a while for full-week data. Please wait.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         </DialogContent>
       </Dialog>
