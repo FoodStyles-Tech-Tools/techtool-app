@@ -86,6 +86,9 @@ interface TicketFormProps {
   projectId?: string
   projectOptions?: Array<{ id: string; name: string; status?: string }>
   onSuccess?: () => void
+  onCreated?: (ticket: { id: string; display_id: string | null; title: string }) => void | Promise<void>
+  onSubmittingChange?: (isSubmitting: boolean) => void
+  createOverrides?: { created_at?: string | null }
   initialData?: Partial<TicketFormValues> & { id?: string }
   formId?: string
   hideSubmitButton?: boolean
@@ -134,12 +137,18 @@ export function TicketForm({
   projectId,
   projectOptions = [],
   onSuccess,
+  onCreated,
+  onSubmittingChange,
+  createOverrides,
   initialData,
   formId,
   hideSubmitButton = false,
 }: TicketFormProps) {
   const [users, setUsers] = useState<User[]>([])
   const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
+  const [projectSearch, setProjectSearch] = useState("")
+  const [assigneeSearch, setAssigneeSearch] = useState("")
+  const [departmentSearch, setDepartmentSearch] = useState("")
   const { departments, refresh } = useDepartments()
   const { user, flags } = usePermissions()
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
@@ -179,6 +188,7 @@ export function TicketForm({
       links: initialData?.links || [],
     },
   })
+  const isSubmitting = form.formState.isSubmitting || createTicket.isPending || updateTicket.isPending
   const selectedProjectId = form.watch("project_id")
   const effectiveProjectId =
     projectId || (selectedProjectId && selectedProjectId !== NO_PROJECT_VALUE ? selectedProjectId : "")
@@ -193,6 +203,31 @@ export function TicketForm({
       (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
     )
   }, [projectOptions, includeInactiveProjects, selectedProjectId])
+  const filteredProjectSearchOptions = useMemo(() => {
+    if (!projectSearch.trim()) return filteredProjectOptions
+    const search = projectSearch.trim().toLowerCase()
+    return filteredProjectOptions.filter((project) =>
+      (project.name || "").toLowerCase().includes(search)
+    )
+  }, [filteredProjectOptions, projectSearch])
+  const assigneeUsers = useMemo(
+    () => users.filter((u) => (u.role ? ASSIGNEE_ALLOWED_ROLES.has(u.role.toLowerCase()) : false)),
+    [users]
+  )
+  const filteredAssigneeUsers = useMemo(() => {
+    if (!assigneeSearch.trim()) return assigneeUsers
+    const search = assigneeSearch.trim().toLowerCase()
+    return assigneeUsers.filter((u) =>
+      (u.name || "").toLowerCase().includes(search) || u.email.toLowerCase().includes(search)
+    )
+  }, [assigneeSearch, assigneeUsers])
+  const filteredDepartments = useMemo(() => {
+    if (!departmentSearch.trim()) return departments
+    const search = departmentSearch.trim().toLowerCase()
+    return departments.filter((department) =>
+      (department.name || "").toLowerCase().includes(search)
+    )
+  }, [departmentSearch, departments])
   const { epics } = useEpics(effectiveProjectId)
   const { sprints } = useSprints(effectiveProjectId)
 
@@ -213,6 +248,16 @@ export function TicketForm({
     control: form.control,
     name: "links" as FieldArrayPath<TicketFormValues>,
   })
+
+  useEffect(() => {
+    onSubmittingChange?.(isSubmitting)
+  }, [isSubmitting, onSubmittingChange])
+
+  useEffect(() => {
+    return () => {
+      onSubmittingChange?.(false)
+    }
+  }, [onSubmittingChange])
 
   const onSubmit = async (values: TicketFormValues) => {
     try {
@@ -239,7 +284,17 @@ export function TicketForm({
         await updateTicket.mutateAsync({ id: initialData.id, ...payload })
         toast("Ticket updated successfully")
       } else {
-        await createTicket.mutateAsync(payload)
+        const created = await createTicket.mutateAsync({
+          ...payload,
+          created_at: createOverrides?.created_at || undefined,
+        })
+        if (created?.ticket?.id && created?.ticket?.title) {
+          await onCreated?.({
+            id: created.ticket.id,
+            display_id: created.ticket.display_id || null,
+            title: created.ticket.title,
+          })
+        }
         toast("Ticket created successfully")
       }
 
@@ -268,8 +323,8 @@ export function TicketForm({
     <Form {...form}>
       <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <fieldset
-          disabled={isReadOnly}
-          className={isReadOnly ? "space-y-4 opacity-70" : "space-y-4"}
+          disabled={isReadOnly || isSubmitting}
+          className={isReadOnly || isSubmitting ? "space-y-4 opacity-70" : "space-y-4"}
         >
         {!isEditing && (
           <div className="space-y-5 rounded-xl bg-muted/10 p-4 ring-1 ring-border/35">
@@ -363,19 +418,38 @@ export function TicketForm({
                     <FormLabel className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                       Project
                     </FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || NO_PROJECT_VALUE}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || NO_PROJECT_VALUE}
+                      onOpenChange={(open) => {
+                        if (!open) setProjectSearch("")
+                      }}
+                    >
                       <FormControl>
                         <SelectTrigger className="h-10 border-border/40 bg-background/55">
                           <SelectValue placeholder="No Project" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <div className="px-2 py-1.5">
+                          <Input
+                            value={projectSearch}
+                            onChange={(event) => setProjectSearch(event.target.value)}
+                            onKeyDown={(event) => event.stopPropagation()}
+                            placeholder="Search projects..."
+                            className="h-8"
+                            aria-label="Search projects"
+                          />
+                        </div>
                         <SelectItem value={NO_PROJECT_VALUE}>No Project</SelectItem>
-                        {filteredProjectOptions.map((project) => (
+                        {filteredProjectSearchOptions.map((project) => (
                           <SelectItem key={project.id} value={project.id}>
                             {project.name}
                           </SelectItem>
                         ))}
+                        {filteredProjectSearchOptions.length === 0 && (
+                          <div className="px-2 py-1.5 text-xs text-muted-foreground">No projects found.</div>
+                        )}
                       </SelectContent>
                     </Select>
                     <div className="mt-2 flex items-center justify-end gap-2">
@@ -473,12 +547,15 @@ export function TicketForm({
                   field.onChange(value === "unassigned" ? "" : value)
                 }}
                 value={field.value || "unassigned"}
+                onOpenChange={(open) => {
+                  if (!open) setAssigneeSearch("")
+                }}
               >
                 <FormControl>
                   <SelectTrigger className="relative border-border/40 bg-background/55">
                     {field.value && field.value !== "unassigned" ? (
                       <UserSelectValue
-                        users={users.filter((user) => (user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false))}
+                        users={assigneeUsers}
                         value={field.value || null}
                         placeholder="Select an assignee"
                         unassignedValue="unassigned"
@@ -490,12 +567,23 @@ export function TicketForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <div className="px-2 py-1.5">
+                    <Input
+                      value={assigneeSearch}
+                      onChange={(event) => setAssigneeSearch(event.target.value)}
+                      onKeyDown={(event) => event.stopPropagation()}
+                      placeholder="Search assignees..."
+                      className="h-8"
+                      aria-label="Search assignees"
+                    />
+                  </div>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {users
-                    .filter((user) => (user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false))
-                    .map((user) => (
+                  {filteredAssigneeUsers.map((user) => (
                       <UserSelectItem key={user.id} user={user} value={user.id} />
-                    ))}
+                  ))}
+                  {filteredAssigneeUsers.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No assignees found.</div>
+                  )}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -532,6 +620,9 @@ export function TicketForm({
                 <Select
                   onValueChange={field.onChange}
                   value={field.value || ""}
+                  onOpenChange={(open) => {
+                    if (!open) setDepartmentSearch("")
+                  }}
                 >
                   <FormControl>
                     <SelectTrigger className="border-border/40 bg-background/55">
@@ -539,11 +630,24 @@ export function TicketForm({
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {departments.map((department) => (
+                    <div className="px-2 py-1.5">
+                      <Input
+                        value={departmentSearch}
+                        onChange={(event) => setDepartmentSearch(event.target.value)}
+                        onKeyDown={(event) => event.stopPropagation()}
+                        placeholder="Search departments..."
+                        className="h-8"
+                        aria-label="Search departments"
+                      />
+                    </div>
+                    {filteredDepartments.map((department) => (
                       <SelectItem key={department.id} value={department.id}>
                         {department.name}
                       </SelectItem>
                     ))}
+                    {filteredDepartments.length === 0 && (
+                      <div className="px-2 py-1.5 text-xs text-muted-foreground">No departments found.</div>
+                    )}
                   </SelectContent>
                 </Select>
                 {field.value && (
@@ -646,9 +750,9 @@ export function TicketForm({
           <Button
             type="submit"
             className="w-full"
-            disabled={createTicket.isPending || updateTicket.isPending || !canSubmit}
+            disabled={isSubmitting || !canSubmit}
           >
-            {isEditing ? "Update Ticket" : "Create Ticket"}
+            {isEditing ? (isSubmitting ? "Updating..." : "Update Ticket") : (isSubmitting ? "Creating..." : "Create Ticket")}
           </Button>
         )}
         {isReadOnly && (
