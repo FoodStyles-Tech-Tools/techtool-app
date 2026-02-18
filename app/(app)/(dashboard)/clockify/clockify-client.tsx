@@ -26,9 +26,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { TicketForm } from "@/components/forms/ticket-form"
 import { toast } from "@/components/ui/toast"
 import {
   Select,
@@ -39,6 +41,7 @@ import {
 } from "@/components/ui/select"
 import { ChevronLeft, ChevronRight, Eye, RefreshCw, Trash2 } from "lucide-react"
 import { usePermissions } from "@/hooks/use-permissions"
+import { useProjects } from "@/hooks/use-projects"
 import {
   ClockifyReportSession,
   useClockifySessions,
@@ -141,11 +144,17 @@ const getEntryId = (entry: any) => {
   return entry?.id || entry?._id || entry?.timeEntryId || ""
 }
 
+const getEntryTitle = (entry: any) => {
+  const value = entry?.description || entry?.taskName || entry?.task?.name || "Untitled"
+  return String(value || "Untitled").trim() || "Untitled"
+}
+
 export default function ClockifyClient() {
   const queryClient = useQueryClient()
   const { flags, user: currentUser } = usePermissions()
   const isAdmin = currentUser?.role?.toLowerCase() === "admin"
   const canManageClockify = flags?.canManageClockify ?? false
+  const canCreateTickets = flags?.canCreateTickets ?? false
   const canManageSettings = canManageClockify
   const canManageSessions = canManageClockify
   const searchParams = useSearchParams()
@@ -161,6 +170,16 @@ export default function ClockifyClient() {
 
   const { data: sessions = [], isLoading } = useClockifySessions()
   const createSession = useCreateClockifySession()
+  const [createTicketDialog, setCreateTicketDialog] = useState<{
+    entryId: string
+    title: string
+    createdAt: string | null
+  } | null>(null)
+  const [isCreatingTicket, setIsCreatingTicket] = useState(false)
+  const { data: projectOptions = [] } = useProjects({
+    enabled: !!createTicketDialog,
+    realtime: false,
+  })
 
   const { data: settings, isLoading: settingsLoading } = useClockifySettings()
   const updateSettings = useUpdateClockifySettings()
@@ -216,15 +235,26 @@ export default function ClockifyClient() {
   const handleSmartReconcile = async () => {
     if (!reportEntriesRaw.length) return
     setIsReconciling(true)
-      const nextMap: Record<
-        string,
-        { ticketDisplayId: string; status: string; ticketId?: string }
-      > = {}
+    const currentMap = reconcileMapRef.current
+    const nextMap: Record<string, { ticketDisplayId: string; status: string; ticketId?: string }> = {}
     const displayIds: string[] = []
 
     reportEntriesRaw.forEach((entry: any) => {
       const entryId = getEntryId(entry)
       if (!entryId) return
+
+      const existingEntry = currentMap[entryId]
+      const existingDisplayId = normalizeTicketId(existingEntry?.ticketDisplayId || "")
+      if (existingDisplayId) {
+        displayIds.push(existingDisplayId)
+        nextMap[entryId] = {
+          ticketDisplayId: existingDisplayId,
+          status: existingEntry?.status || "pending",
+          ticketId: existingEntry?.ticketId,
+        }
+        return
+      }
+
       const inferredId = extractTicketIdFromEntry(entry)
       const normalizedId = inferredId ? normalizeTicketId(inferredId) : ""
       if (normalizedId) {
@@ -249,7 +279,7 @@ export default function ClockifyClient() {
     const normalizedValue = normalizeTicketId(displayId)
     const ticket = ticketLookup[normalizedValue]
     const nextMap = {
-      ...reconcileMap,
+      ...reconcileMapRef.current,
       [entryId]: {
         ticketDisplayId: normalizedValue,
         status: normalizedValue ? "pending" : "unlinked",
@@ -262,7 +292,75 @@ export default function ClockifyClient() {
     const displayIds = Object.values(nextMap)
       .map((entry) => entry.ticketDisplayId)
       .filter((id) => id.length > 0)
-    await resolveReconcileStatus(displayIds, nextMap)
+    const { updatedMap } = await resolveReconcileStatus(displayIds, nextMap)
+    return updatedMap || nextMap
+  }
+
+  const persistReconciliation = useCallback(async (
+    map: Record<string, { ticketDisplayId: string; status: string; ticketId?: string }>
+  ) => {
+    if (!selectedSession) {
+      throw new Error("No selected session")
+    }
+
+    const response = await fetch("/api/clockify/sessions", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sessionId: selectedSession.id,
+        reconciliation: map,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to save reconciliation")
+    }
+
+    const data = await response.json()
+    if (data?.session) {
+      setSelectedSession(data.session)
+    }
+    queryClient.invalidateQueries({ queryKey: ["clockify-sessions"] })
+    return data?.session || null
+  }, [queryClient, selectedSession])
+
+  const openCreateTicketDialog = (entryId: string, entry: any) => {
+    if (!canCreateTickets) {
+      toast("You do not have permission to create tickets.", "error")
+      return
+    }
+
+    setCreateTicketDialog({
+      entryId,
+      title: getEntryTitle(entry),
+      createdAt: entry?.timeInterval?.start || null,
+    })
+  }
+
+  const handleClockifyTicketCreated = async (ticket: {
+    id: string
+    display_id: string | null
+    title: string
+  }) => {
+    if (!createTicketDialog?.entryId) {
+      return
+    }
+
+    if (!ticket.display_id) {
+      toast("Ticket created but display ID is missing. Link it manually.", "error")
+      return
+    }
+
+    try {
+      const updatedMap = await handleTicketSelect(createTicketDialog.entryId, ticket.display_id)
+      await persistReconciliation(updatedMap)
+      toast("Ticket created and linked.", "success")
+    } catch (error) {
+      console.error("Automatic ticket link failed:", error)
+      toast("Ticket created, but auto-link failed. Please save reconciliation.", "error")
+    }
   }
 
   const handleSaveReconciliation = async () => {
@@ -275,26 +373,7 @@ export default function ClockifyClient() {
         .filter((value) => value.length > 0)
 
       const { updatedMap } = await resolveReconcileStatus(displayIds, reconcileMap)
-
-      const response = await fetch("/api/clockify/sessions", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sessionId: selectedSession.id,
-          reconciliation: updatedMap || reconcileMap,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to save reconciliation")
-      }
-
-      const data = await response.json()
-      if (data?.session) {
-        setSelectedSession(data.session)
-      }
+      await persistReconciliation(updatedMap || reconcileMap)
       toast("Reconciliation saved.", "success")
     } catch (error) {
       console.error("Reconciliation save failed:", error)
@@ -863,10 +942,13 @@ export default function ClockifyClient() {
                         <TableBody>
                           {reportEntries.map((entry: any, index: number) => {
                             const entryId = getEntryId(entry)
+                            const matchStatus = entryId
+                              ? (reconcileMap[entryId]?.status || "unlinked")
+                              : "unlinked"
                             return (
                             <TableRow key={entryId || index}>
                               <TableCell className="py-2 text-sm">
-                                {entry.description || entry.taskName || entry.task?.name || "Untitled"}
+                                {getEntryTitle(entry)}
                               </TableCell>
                               <TableCell className="py-2 text-sm">
                                 {entry.taskName || entry.task?.name || "-"}
@@ -935,19 +1017,28 @@ export default function ClockifyClient() {
                               </TableCell>
                               <TableCell className="py-2 text-xs">
                                 {entryId ? (
-                                  <span
-                                    className={
-                                      reconcileMap[entryId]?.status === "matched"
-                                        ? "text-emerald-600"
-                                        : reconcileMap[entryId]?.status === "unlinked"
-                                          ? "text-purple-600"
-                                          : reconcileMap[entryId]?.status === "not_found"
+                                  matchStatus === "unlinked" ? (
+                                    <button
+                                      type="button"
+                                      className="text-purple-600 underline underline-offset-2 disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
+                                      onClick={() => openCreateTicketDialog(entryId, entry)}
+                                      disabled={!canCreateTickets}
+                                    >
+                                      create
+                                    </button>
+                                  ) : (
+                                    <span
+                                      className={
+                                        matchStatus === "matched"
+                                          ? "text-emerald-600"
+                                          : matchStatus === "not_found"
                                             ? "text-red-600"
                                             : "text-muted-foreground"
-                                    }
-                                  >
-                                    {reconcileMap[entryId]?.status || "unlinked"}
-                                  </span>
+                                      }
+                                    >
+                                      {matchStatus}
+                                    </span>
+                                  )
                                 ) : (
                                   "-"
                                 )}
@@ -1026,6 +1117,54 @@ export default function ClockifyClient() {
               Confirm
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!createTicketDialog}
+        onOpenChange={(open) => {
+          if (isCreatingTicket) return
+          if (!open) setCreateTicketDialog(null)
+        }}
+      >
+        <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle>Create Ticket</DialogTitle>
+            <DialogDescription>
+              Ticket created_at will use the Clockify Start Date for this entry.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+            {createTicketDialog && (
+              <TicketForm
+                key={createTicketDialog.entryId}
+                formId="clockify-create-ticket-form"
+                hideSubmitButton={true}
+                projectOptions={projectOptions}
+                initialData={{ title: createTicketDialog.title }}
+                createOverrides={{ created_at: createTicketDialog.createdAt }}
+                onSubmittingChange={setIsCreatingTicket}
+                onCreated={handleClockifyTicketCreated}
+                onSuccess={() => {
+                  setIsCreatingTicket(false)
+                  setCreateTicketDialog(null)
+                }}
+              />
+            )}
+          </div>
+          <DialogFooter className="shrink-0 border-t bg-background px-6 py-4 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreateTicketDialog(null)}
+              disabled={isCreatingTicket}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" form="clockify-create-ticket-form" disabled={isCreatingTicket}>
+              {isCreatingTicket ? "Creating..." : "Create"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

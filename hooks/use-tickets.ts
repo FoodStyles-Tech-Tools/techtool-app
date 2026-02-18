@@ -488,6 +488,7 @@ export function useCreateTicket() {
       title: string
       description?: string
       due_date?: string
+      created_at?: string
       assignee_id?: string
       sqa_assignee_id?: string
       sqa_assigned_at?: string | null
