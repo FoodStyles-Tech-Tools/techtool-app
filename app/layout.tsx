@@ -5,8 +5,7 @@ import "./globals.css"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "TechTool - Ticket Management",
-  description: "A modern ticket management system for IT teams",
+  title: "TechTool - Ticket Management"
 }
 
 export default function RootLayout({

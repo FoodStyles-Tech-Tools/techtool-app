@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { EditorContent, useEditor } from "@tiptap/react"
 import { Extension, Mark, Node, mergeAttributes } from "@tiptap/core"
 import { Plugin, PluginKey } from "@tiptap/pm/state"
@@ -21,6 +21,7 @@ import {
   ListOrdered,
   Quote,
   Code,
+  SquareCode,
   Link as LinkIcon,
   Table as TableIcon,
   Palette,
@@ -242,6 +243,7 @@ interface RichTextEditorProps {
   onChange: (value: string) => void
   placeholder?: string
   className?: string
+  minHeight?: number | string
   compact?: boolean
   /** Hide toolbar until editor is focused/clicked. */
   showToolbarOnFocus?: boolean
@@ -251,6 +253,8 @@ interface RichTextEditorProps {
   footer?: ReactNode
   /** Optional inline panel rendered between toolbar and content (e.g. mentions menu). */
   inlinePanel?: ReactNode
+  /** Optional low-level keydown handler for editor content. Return true to stop handling. */
+  onContentKeyDown?: (event: KeyboardEvent) => boolean | void
   /** Enable inline ticket badge decoration while typing. */
   decorateMentions?: boolean
   /** Provides editor instance to parent for imperative commands. */
@@ -262,22 +266,32 @@ export function RichTextEditor({
   onChange,
   placeholder = "Write a description...",
   className,
+  minHeight,
   compact = false,
   showToolbarOnFocus = true,
   activateOnClick = false,
   footer,
   inlinePanel,
+  onContentKeyDown,
   decorateMentions = false,
   onEditorReady,
 }: RichTextEditorProps) {
   const [isFocused, setIsFocused] = useState(false)
   const [isActivated, setIsActivated] = useState(() => !activateOnClick || Boolean(value?.trim()))
+  const onContentKeyDownRef = useRef<RichTextEditorProps["onContentKeyDown"]>(onContentKeyDown)
+
+  useEffect(() => {
+    onContentKeyDownRef.current = onContentKeyDown
+  }, [onContentKeyDown])
+
+  const resolvedMinHeight =
+    minHeight == null ? undefined : typeof minHeight === "number" ? `${minHeight}px` : minHeight
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
-        codeBlock: false,
       }),
       Underline,
       TextColor,
@@ -302,11 +316,16 @@ export function RichTextEditor({
         class: compact ? "tiptap tiptap-compact" : "tiptap",
         "data-placeholder": placeholder,
       },
+      handleKeyDown: (_view, event) => {
+        const handler = onContentKeyDownRef.current
+        if (!handler) return false
+        return Boolean(handler(event))
+      },
     },
     onUpdate: ({ editor }) => {
       onChange(editor.getHTML())
     },
-  })
+  }, [])
 
   useEffect(() => {
     if (!editor) return
@@ -344,10 +363,19 @@ export function RichTextEditor({
     }
   }, [activateOnClick, isFocused, value])
 
+  const focusEditorSafely = (): boolean => {
+    if (!editor || editor.isDestroyed || !editor.view) return false
+    editor.chain().focus().run()
+    return true
+  }
+
   const activateEditor = () => {
     setIsActivated(true)
     requestAnimationFrame(() => {
-      editor?.chain().focus().run()
+      if (focusEditorSafely()) return
+      requestAnimationFrame(() => {
+        focusEditorSafely()
+      })
     })
   }
 
@@ -392,6 +420,7 @@ export function RichTextEditor({
       <button
         type="button"
         onClick={activateEditor}
+        style={resolvedMinHeight ? { minHeight: resolvedMinHeight } : undefined}
         className={cn(
           "w-full rounded-md border bg-background px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted/40",
           compact ? "min-h-[44px]" : "min-h-[56px]",
@@ -406,7 +435,7 @@ export function RichTextEditor({
   return (
     <div
       className={cn("rounded-md border bg-background", className)}
-      onClick={() => editor?.chain().focus().run()}
+      onClick={focusEditorSafely}
     >
       {showToolbar && (
       <div className="flex flex-wrap gap-1 border-b p-2">
@@ -539,6 +568,18 @@ export function RichTextEditor({
         >
           <Code className="h-3.5 w-3.5" />
         </button>
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          className={cn(
+            "rounded-md border border-transparent px-2 py-1 text-xs transition-colors",
+            editor?.isActive("codeBlock") ? "selected-ui" : "text-muted-foreground hover:bg-accent"
+          )}
+          onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+          title="Code block"
+        >
+          <SquareCode className="h-3.5 w-3.5" />
+        </button>
         <span className="mx-1 h-5 w-px bg-border" />
         <button
           type="button"
@@ -606,7 +647,7 @@ export function RichTextEditor({
       </div>
       )}
       {inlinePanel ? <div className="px-2 pt-1">{inlinePanel}</div> : null}
-      <EditorContent editor={editor} />
+      <EditorContent editor={editor} style={resolvedMinHeight ? { minHeight: resolvedMinHeight } : undefined} />
       {footer ? <div className="border-t px-3 py-2">{footer}</div> : null}
     </div>
   )

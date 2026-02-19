@@ -42,6 +42,7 @@ const projectSchema = z.object({
     ])
     .optional(),
   collaborator_ids: z.array(z.string().uuid()).default([]),
+  requester_ids: z.array(z.string().uuid()).default([]),
   links: z.array(z.string().url("Enter a valid URL")).default([]),
 })
 
@@ -80,6 +81,7 @@ export function ProjectForm({
       require_sqa: initialData?.require_sqa ?? false,
       department_id: initialData?.department_id || NO_DEPARTMENT_VALUE,
       collaborator_ids: initialData?.collaborator_ids || [],
+      requester_ids: initialData?.requester_ids || [],
       links: initialData?.links || [],
     },
   })
@@ -100,6 +102,7 @@ export function ProjectForm({
         department_id:
           values.department_id && values.department_id !== NO_DEPARTMENT_VALUE ? values.department_id : undefined,
         collaborator_ids: values.collaborator_ids || [],
+        requester_ids: values.requester_ids || [],
         links: sanitizedLinks,
       }
 
@@ -210,6 +213,22 @@ export function ProjectForm({
                 value={field.value || []}
                 onChange={field.onChange}
                 placeholder="Add collaborators"
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="requester_ids"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Project Requesters</FormLabel>
+              <CollaboratorSelector
+                users={users || []}
+                value={field.value || []}
+                onChange={field.onChange}
+                placeholder="Add requesters"
               />
               <FormMessage />
             </FormItem>

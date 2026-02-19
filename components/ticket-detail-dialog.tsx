@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Copy, AlertTriangle, ExternalLink, Pencil, Trash2, Plus, X, ChevronRight, ChevronDown } from "lucide-react"
+import { Copy, AlertTriangle, ExternalLink, Pencil, Trash2, Plus, X, ChevronRight, ChevronDown, Share2 } from "lucide-react"
 import { BrandLinkIcon } from "@/components/brand-link-icon"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -39,6 +39,12 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText, toDisplayHtml } from "@/lib/rich-text"
@@ -57,6 +63,8 @@ const RichTextEditor = dynamic(
 const toUTCISOStringPreserveLocal = (date: Date) => {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString()
 }
+
+const TICKET_SHARE_BASE_URL = "https://techtool-app.vercel.app/tickets"
 
 export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetailDialogProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
@@ -719,6 +727,41 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     }
   }
 
+  const getTicketShareUrl = () => {
+    if (!ticket) return null
+    const slug = String(ticket.display_id || ticket.id).toLowerCase()
+    return `${TICKET_SHARE_BASE_URL}/${slug}`
+  }
+
+  const handleCopyShareUrl = () => {
+    const shareUrl = getTicketShareUrl()
+    if (!shareUrl) return
+    if (!navigator?.clipboard?.writeText) {
+      toast("Clipboard not available", "error")
+      return
+    }
+    navigator.clipboard
+      .writeText(shareUrl)
+      .then(() => toast("Ticket URL copied"))
+      .catch(() => toast("Failed to copy ticket URL", "error"))
+  }
+
+  const handleCopyHyperlinkedUrl = () => {
+    if (!ticket) return
+    const shareUrl = getTicketShareUrl()
+    if (!shareUrl) return
+    const displayIdLabel = ticket.display_id || ticket.id.slice(0, 8).toUpperCase()
+    const hyperlink = `[[${displayIdLabel}] - ${ticket.title}](${shareUrl})`
+    if (!navigator?.clipboard?.writeText) {
+      toast("Clipboard not available", "error")
+      return
+    }
+    navigator.clipboard
+      .writeText(hyperlink)
+      .then(() => toast("Hyperlinked URL copied"))
+      .catch(() => toast("Failed to copy hyperlinked URL", "error"))
+  }
+
   if (!ticketId) return null
   const subtasksPanelId = `ticket-subtasks-panel-${ticketId}`
 
@@ -742,6 +785,26 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                 >
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      title="Share ticket"
+                    >
+                      <Share2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onClick={handleCopyShareUrl}>
+                      Share URL
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleCopyHyperlinkedUrl}>
+                      Hyperlinked URL
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <span className="text-sm font-mono text-muted-foreground bg-background px-2.5 py-1 rounded-md">
                   {ticket?.display_id || ticketId.slice(0, 8)}
                 </span>
@@ -804,6 +867,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           placeholder="Describe this ticket"
                           className="border-border/50"
                           activateOnClick
+                          onContentKeyDown={(event: KeyboardEvent) => {
+                            if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                              event.preventDefault()
+                              void handleDescriptionSave()
+                              return true
+                            }
+                            return false
+                          }}
                         />
                         <div className="flex items-center justify-end gap-2">
                           <Button size="sm" onClick={handleDescriptionSave}>
@@ -1286,6 +1357,10 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                                     ? ticket.reason?.rejected
                                     : ticket.reason?.cancelled
                                   if (!reasonData) return null
+                                  const reasonAt =
+                                    "rejectedAt" in reasonData
+                                      ? reasonData.rejectedAt
+                                      : reasonData.cancelledAt
                                   return (
                                     <>
                                       <p className="text-sm font-medium text-foreground mb-1">
@@ -1294,11 +1369,11 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                                       <p className="text-sm text-foreground whitespace-pre-wrap break-words">
                                         {reasonData.reason}
                                       </p>
-                                      {(reasonData.cancelledAt || reasonData.rejectedAt) && (
+                                      {reasonAt && (
                                         <p className="text-xs text-muted-foreground mt-2">
                                           {ticket.status === "rejected" ? "Rejected on " : "Cancelled on "}
                                           {format(
-                                            new Date(reasonData.rejectedAt || reasonData.cancelledAt),
+                                            new Date(reasonAt),
                                             "MMM d, yyyy 'at' h:mm a"
                                           )}
                                         </p>
@@ -1434,6 +1509,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
             placeholder={pendingStatusChange === "rejected" ? "Enter reject reason..." : "Enter cancellation reason..."}
             value={cancelReason}
             onChange={(e) => setCancelReason(e.target.value)}
+            onKeyDown={(event) => {
+              if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                event.preventDefault()
+                void handleCancelReasonSubmit()
+              }
+            }}
             rows={4}
             className="resize-none"
           />
@@ -1478,6 +1559,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
             onChange={setReturnedReason}
             placeholder="Explain what needs to be fixed before QA can continue..."
             minHeight={180}
+            onContentKeyDown={(event: KeyboardEvent) => {
+              if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                event.preventDefault()
+                void handleReturnedReasonSubmit()
+                return true
+              }
+              return false
+            }}
           />
         </div>
         <DialogFooter>

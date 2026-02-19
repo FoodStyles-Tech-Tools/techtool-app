@@ -4,6 +4,7 @@ import dynamic from "next/dynamic"
 import { ReactQueryProvider } from "@/lib/react-query"
 import { ThemeProvider } from "@/components/theme-provider"
 import { SignOutOverlayProvider } from "@/components/signout-overlay"
+import { RichTextActionsListener } from "@/components/layout/rich-text-actions-listener"
 import { Toaster } from "@/components/ui/toast"
 
 const KeyboardShortcuts = dynamic(
@@ -17,6 +18,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <ThemeProvider defaultTheme="system" storageKey="techtool-theme">
         <SignOutOverlayProvider>
           {children}
+          <RichTextActionsListener />
           <Toaster />
           <KeyboardShortcuts />
         </SignOutOverlayProvider>

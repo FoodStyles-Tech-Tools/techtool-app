@@ -12,25 +12,33 @@ async function attachCollaboratorsToProjects(
   if (!projects?.length) return projects
 
   const collaboratorIds = new Set<string>()
+  const requesterIds = new Set<string>()
   projects.forEach((project) => {
-    const ids: string[] = project.collaborator_ids || []
-    ids.forEach((id) => {
+    const collabIds: string[] = project.collaborator_ids || []
+    const reqIds: string[] = project.requester_ids || []
+    collabIds.forEach((id) => {
       if (id) collaboratorIds.add(id)
+    })
+    reqIds.forEach((id) => {
+      if (id) requesterIds.add(id)
     })
   })
 
-  if (collaboratorIds.size === 0) {
+  const userIds = Array.from(new Set([...collaboratorIds, ...requesterIds]))
+  if (userIds.length === 0) {
     return projects.map((project) => ({
       ...project,
       collaborator_ids: project.collaborator_ids || [],
       collaborators: [],
+      requester_ids: project.requester_ids || [],
+      requesters: [],
     }))
   }
 
   const { data: collaboratorUsers, error } = await supabase
     .from("users")
     .select("id, name, email")
-    .in("id", Array.from(collaboratorIds))
+    .in("id", userIds)
 
   if (error) {
     console.error("Error fetching collaborators:", error)
@@ -40,15 +48,21 @@ async function attachCollaboratorsToProjects(
   collaboratorUsers?.forEach((user) => collaboratorMap.set(user.id, user))
 
   return projects.map((project) => {
-    const ids: string[] = project.collaborator_ids || []
-    const collaborators = ids
+    const collaboratorIdList: string[] = project.collaborator_ids || []
+    const requesterIdList: string[] = project.requester_ids || []
+    const collaborators = collaboratorIdList
+      .map((id) => collaboratorMap.get(id))
+      .filter(Boolean)
+    const requesters = requesterIdList
       .map((id) => collaboratorMap.get(id))
       .filter(Boolean)
 
     return {
       ...project,
-      collaborator_ids: ids,
+      collaborator_ids: collaboratorIdList,
       collaborators,
+      requester_ids: requesterIdList,
+      requesters,
     }
   })
 }
@@ -86,6 +100,9 @@ export async function GET(
     projectWithCollaborators.collaborators?.forEach((collab: any) => {
       if (collab?.email) emails.add(collab.email)
     })
+    projectWithCollaborators.requesters?.forEach((requester: any) => {
+      if (requester?.email) emails.add(requester.email)
+    })
 
     const { data: authUsers } = emails.size
       ? await supabase
@@ -110,6 +127,10 @@ export async function GET(
       collaborators: (projectWithCollaborators.collaborators || []).map((collab: any) => ({
         ...collab,
         image: collab?.email ? imageMap.get(collab.email) || null : null,
+      })),
+      requesters: (projectWithCollaborators.requesters || []).map((requester: any) => ({
+        ...requester,
+        image: requester?.email ? imageMap.get(requester.email) || null : null,
       })),
     }
 
@@ -138,7 +159,7 @@ export async function PATCH(
     const supabase = createServerClient()
 
     const body = await request.json()
-    const { name, description, status, department_id, collaborator_ids, require_sqa } = body
+    const { name, description, status, department_id, collaborator_ids, requester_ids, require_sqa } = body
 
     if (status !== undefined && !PROJECT_STATUSES.has(status)) {
       return NextResponse.json(
@@ -155,6 +176,9 @@ export async function PATCH(
     if (require_sqa !== undefined) updates.require_sqa = require_sqa
     if (collaborator_ids !== undefined) {
       updates.collaborator_ids = Array.isArray(collaborator_ids) ? collaborator_ids : []
+    }
+    if (requester_ids !== undefined) {
+      updates.requester_ids = Array.isArray(requester_ids) ? requester_ids : []
     }
 
     const { data: project, error } = await supabase
@@ -190,6 +214,9 @@ export async function PATCH(
     projectWithCollaborators.collaborators?.forEach((collab: any) => {
       if (collab?.email) emails.add(collab.email)
     })
+    projectWithCollaborators.requesters?.forEach((requester: any) => {
+      if (requester?.email) emails.add(requester.email)
+    })
 
     const { data: authUsers } = emails.size
       ? await supabase
@@ -214,6 +241,10 @@ export async function PATCH(
       collaborators: (projectWithCollaborators.collaborators || []).map((collab: any) => ({
         ...collab,
         image: collab?.email ? imageMap.get(collab.email) || null : null,
+      })),
+      requesters: (projectWithCollaborators.requesters || []).map((requester: any) => ({
+        ...requester,
+        image: requester?.email ? imageMap.get(requester.email) || null : null,
       })),
     }
 

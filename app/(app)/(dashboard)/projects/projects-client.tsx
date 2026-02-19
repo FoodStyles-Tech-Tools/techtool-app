@@ -60,6 +60,8 @@ interface ProjectRowData {
   created_at: string
   department: Department | null
   owner?: BasicUser | null
+  requesters: BasicUser[]
+  requester_ids?: string[]
   collaborators: BasicUser[]
   collaborator_ids?: string[]
 }
@@ -170,8 +172,9 @@ export default function ProjectsClient({
 
       if (assignedToMeOnly && currentUserId) {
         const isOwner = project.owner?.id === currentUserId
+        const isRequester = project.requesters?.some((requester) => requester.id === currentUserId)
         const isCollaborator = project.collaborators?.some((collab) => collab.id === currentUserId)
-        if (!isOwner && !isCollaborator) return false
+        if (!isOwner && !isRequester && !isCollaborator) return false
       }
 
       return true
@@ -223,6 +226,8 @@ export default function ProjectsClient({
         updates.status = value
       } else if (field === "collaborator_ids") {
         updates.collaborator_ids = Array.isArray(value) ? value : []
+      } else if (field === "requester_ids") {
+        updates.requester_ids = Array.isArray(value) ? value : []
       } else if (field === "require_sqa") {
         updates.require_sqa = Boolean(value)
       }
@@ -240,6 +245,7 @@ export default function ProjectsClient({
       if (field === "owner_id") label = "Owner"
       else if (field === "department_id") label = "Department"
       else if (field === "collaborator_ids") label = "Collaborators"
+      else if (field === "requester_ids") label = "Project Requesters"
       else if (field === "require_sqa") label = "Require SQA"
       toast(`${label} updated`)
     } catch (error: any) {
@@ -413,6 +419,7 @@ export default function ProjectsClient({
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground w-[600px] min-w-[500px]">Project Name</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Progress</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Owner</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Requesters</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Collaborators</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Department</th>
                   <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Status</th>
@@ -523,6 +530,9 @@ export default function ProjectsClient({
                   require_sqa: editingProject.require_sqa,
                   department_id: editingProject.department?.id,
                   links: editingProject.links || [],
+                  requester_ids:
+                    editingProject.requester_ids ||
+                    editingProject.requesters.map((requester) => requester.id),
                   collaborator_ids:
                     editingProject.collaborator_ids ||
                     editingProject.collaborators.map((collaborator) => collaborator.id),
@@ -583,8 +593,10 @@ const ProjectRow = memo(function ProjectRow({
   const isUpdatingOwner = !!updatingFields[`${project.id}-owner_id`]
   const isUpdatingDept = !!updatingFields[`${project.id}-department_id`]
   const isUpdatingStatus = !!updatingFields[`${project.id}-status`]
+  const isUpdatingRequesters = !!updatingFields[`${project.id}-requester_ids`]
   const isUpdatingCollaborators = !!updatingFields[`${project.id}-collaborator_ids`]
   const isUpdatingRequireSqa = !!updatingFields[`${project.id}-require_sqa`]
+  const requesterIds = project.requesters?.map((requester) => requester.id) || []
   const collaboratorIds = project.collaborators?.map((collab) => collab.id) || []
 
   return (
@@ -709,6 +721,36 @@ const ProjectRow = memo(function ProjectRow({
               {truncateText(project.owner?.name || project.owner?.email || "Unassigned", 18)}
             </span>
           </div>
+        )}
+      </TableCell>
+      <TableCell className="py-2">
+        {canEditProjects ? (
+          <CollaboratorSelector
+            users={users}
+            value={requesterIds}
+            onChange={(ids) => updateProjectField(project.id, "requester_ids", ids)}
+            placeholder="Select requesters"
+            buttonClassName="w-[180px] text-xs border-border/40 bg-background/55 hover:border-border/65"
+            disabled={isUpdatingRequesters}
+          />
+        ) : requesterIds.length ? (
+          <div className="flex items-center gap-1.5">
+            <div className="flex -space-x-2">
+              {project.requesters.slice(0, 3).map((requester) => (
+                <Avatar key={requester.id} className="h-5 w-5 border border-background">
+                  <AvatarImage src={requester.image || undefined} alt={requester.name || requester.email} />
+                  <AvatarFallback className="text-[10px]">
+                    {requester.name?.[0]?.toUpperCase() || requester.email[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
+            </div>
+            {project.requesters.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">+{project.requesters.length - 3}</span>
+            )}
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">No requesters</span>
         )}
       </TableCell>
       <TableCell className="py-2">

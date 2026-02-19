@@ -13,46 +13,99 @@ const DANGEROUS_TAGS = ["script", "style", "iframe", "object", "embed", "form", 
 const TICKET_URL_PATTERN = /https?:\/\/techtool-app\.vercel\.app\/tickets\/([a-z]{2,}-\d+)\b/gi
 const HAS_TICKET_URL_PATTERN = /https?:\/\/techtool-app\.vercel\.app\/tickets\/([a-z]{2,}-\d+)\b/i
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-}
-
-function renderTicketBadge(slugRaw: string): string {
-  const slug = String(slugRaw || "").toLowerCase()
-  const displayId = slug.toUpperCase()
-  const safeSlug = escapeHtml(slug)
-  const safeDisplayId = escapeHtml(displayId)
-  return `<a data-mention-badge="true" data-mention-type="ticket" data-mention-label="${safeDisplayId}" class="mention-pill mention-ticket" href="/tickets/${safeSlug}"><span class="mention-ticket-label">${safeDisplayId}</span></a>`
-}
-
 function convertTicketUrlsToBadges(html: string): string {
   if (!html || !HAS_TICKET_URL_PATTERN.test(html)) return html
 
-  const linkedTicketRegex =
-    /<a\b[^>]*href=(["'])https?:\/\/techtool-app\.vercel\.app\/tickets\/([a-z]{2,}-\d+)\1[^>]*>[\s\S]*?<\/a>/gi
+  try {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, "text/html")
 
-  let converted = html.replace(linkedTicketRegex, (fullMatch, _quote, slug: string) => {
-    if (!slug) return fullMatch
-    return renderTicketBadge(slug)
-  })
+    const createTicketBadgeNode = (slugRaw: string) => {
+      const slug = String(slugRaw || "").toLowerCase()
+      const displayId = slug.toUpperCase()
+      const anchor = doc.createElement("a")
+      anchor.setAttribute("data-mention-badge", "true")
+      anchor.setAttribute("data-mention-type", "ticket")
+      anchor.setAttribute("data-mention-label", displayId)
+      anchor.setAttribute("class", "mention-pill mention-ticket")
+      anchor.setAttribute("href", `/tickets/${slug}`)
+      const label = doc.createElement("span")
+      label.setAttribute("class", "mention-ticket-label")
+      label.textContent = displayId
+      anchor.appendChild(label)
+      return anchor
+    }
 
-  converted = converted
-    .split(/(<[^>]+>)/g)
-    .map((part) => {
-      if (!part || part.startsWith("<")) return part
-      return part.replace(TICKET_URL_PATTERN, (fullMatch, slug: string) => {
-        if (!slug) return fullMatch
-        return renderTicketBadge(slug)
-      })
+    doc.querySelectorAll("a[href]").forEach((anchor) => {
+      const href = anchor.getAttribute("href") || ""
+      const match = href.match(/^https?:\/\/techtool-app\.vercel\.app\/tickets\/([a-z]{2,}-\d+)\/?$/i)
+      if (!match?.[1]) return
+      anchor.replaceWith(createTicketBadgeNode(match[1]))
     })
-    .join("")
 
-  return converted
+    const textNodes: Text[] = []
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT)
+    let currentNode = walker.nextNode()
+    while (currentNode) {
+      textNodes.push(currentNode as Text)
+      currentNode = walker.nextNode()
+    }
+
+    textNodes.forEach((textNode) => {
+      const parentElement = textNode.parentElement
+      if (!parentElement) return
+      if (parentElement.closest("a, pre, code, [data-mention-badge='true']")) return
+
+      const textContent = textNode.nodeValue || ""
+      if (!HAS_TICKET_URL_PATTERN.test(textContent)) return
+
+      const fragment = doc.createDocumentFragment()
+      let cursor = 0
+      const regex = new RegExp(TICKET_URL_PATTERN.source, TICKET_URL_PATTERN.flags)
+      let match: RegExpExecArray | null
+
+      while ((match = regex.exec(textContent)) !== null) {
+        const start = match.index
+        const end = start + match[0].length
+        const slug = match[1]
+        if (!slug) continue
+
+        if (start > cursor) {
+          fragment.appendChild(doc.createTextNode(textContent.slice(cursor, start)))
+        }
+        fragment.appendChild(createTicketBadgeNode(slug))
+        cursor = end
+      }
+
+      if (cursor < textContent.length) {
+        fragment.appendChild(doc.createTextNode(textContent.slice(cursor)))
+      }
+
+      textNode.parentNode?.replaceChild(fragment, textNode)
+    })
+
+    return doc.body.innerHTML.trim()
+  } catch {
+    return html
+  }
+}
+
+function enhanceCodeBlocks(doc: Document) {
+  doc.querySelectorAll("pre").forEach((pre) => {
+    const codeNode = pre.querySelector("code")
+    const codeText = (codeNode?.textContent || pre.textContent || "").trimEnd()
+    if (!codeText) return
+
+    pre.classList.add("rich-code-block")
+
+    const copyButton = doc.createElement("button")
+    copyButton.setAttribute("type", "button")
+    copyButton.setAttribute("data-code-copy", "true")
+    copyButton.setAttribute("data-code-value", codeText)
+    copyButton.className = "code-copy-button"
+    copyButton.textContent = "Copy"
+    pre.insertBefore(copyButton, pre.firstChild)
+  })
 }
 
 /**
@@ -76,6 +129,8 @@ export function sanitizeHtml(html: string | null | undefined): string | null {
         "[onclick], [onload], [onerror], [onmouseenter], [onfocus], a[href^='javascript:'], img[src^='javascript:']"
       )
       .forEach((el) => el.remove())
+
+    enhanceCodeBlocks(doc)
 
     const out = doc.body.innerHTML.trim()
     return out || doc.body.textContent?.trim() || null

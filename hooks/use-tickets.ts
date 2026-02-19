@@ -38,7 +38,7 @@ function ticketMatchesFilter(
 
 type TicketUpdateVariables = {
   title?: string
-  description?: string
+  description?: string | null
   status?: string
   returned_to_dev_reason?: string | null
   priority?: string
@@ -487,7 +487,7 @@ export function useCreateTicket() {
     mutationFn: async (data: {
       project_id?: string | null
       title: string
-      description?: string
+      description?: string | null
       due_date?: string
       created_at?: string
       assignee_id?: string
@@ -617,7 +617,7 @@ export function useUpdateTicket() {
     }: {
       id: string
       title?: string
-      description?: string
+      description?: string | null
       due_date?: string | null
       status?: string
       priority?: string

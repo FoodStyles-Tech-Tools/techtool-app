@@ -20,10 +20,12 @@ export type ServerProject = {
   created_at: string
   owner_id: string | null
   collaborator_ids: string[]
+  requester_ids: string[]
   department_id?: string | null
   department: { id: string; name: string } | null
   owner: { id: string; name: string | null; email: string; image: string | null } | null
   collaborators: Array<{ id: string; name: string | null; email: string; image: string | null }>
+  requesters: Array<{ id: string; name: string | null; email: string; image: string | null }>
 }
 
 export async function getProjectsPageData(): Promise<{
@@ -40,7 +42,7 @@ export async function getProjectsPageData(): Promise<{
     supabase
       .from("projects")
       .select(
-        "id, name, description, status, require_sqa, links, created_at, owner_id, collaborator_ids, department_id, department:departments(id, name)"
+        "id, name, description, status, require_sqa, links, created_at, owner_id, collaborator_ids, requester_ids, department_id, department:departments(id, name)"
       )
       .order("name", { ascending: true }),
   ])
@@ -62,7 +64,19 @@ export async function getProjectsPageData(): Promise<{
     const collaboratorIds = Array.isArray(project.collaborator_ids)
       ? project.collaborator_ids
       : []
+    const requesterIds = Array.isArray(project.requester_ids)
+      ? project.requester_ids
+      : []
     const collaborators = collaboratorIds
+      .map((id: string) => userMap.get(id))
+      .filter((user: ServerUser | undefined): user is ServerUser => Boolean(user))
+      .map((user: ServerUser) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+      }))
+    const requesters = requesterIds
       .map((id: string) => userMap.get(id))
       .filter((user: ServerUser | undefined): user is ServerUser => Boolean(user))
       .map((user: ServerUser) => ({
@@ -78,10 +92,12 @@ export async function getProjectsPageData(): Promise<{
       ...project,
       links: sanitizeLinkArray(project.links),
       collaborator_ids: collaboratorIds,
+      requester_ids: requesterIds,
       owner: owner
         ? { id: owner.id, name: owner.name, email: owner.email, image: owner.image }
         : null,
       collaborators,
+      requesters,
     }
   })
 

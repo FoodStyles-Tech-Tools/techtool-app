@@ -66,4 +66,12 @@ describe("getSanitizedHtmlProps", () => {
     expect(props!.__html).toContain('href="/tickets/hrb-2001"')
     expect(props!.__html).toContain("HRB-2001")
   })
+
+  it("injects copy button for code blocks", () => {
+    const props = getSanitizedHtmlProps("<pre><code>const x = 1;</code></pre>")
+    expect(props).toBeTruthy()
+    expect(props!.__html).toContain('class="rich-code-block"')
+    expect(props!.__html).toContain('data-code-copy="true"')
+    expect(props!.__html).toContain("const x = 1;")
+  })
 })

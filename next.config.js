@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  eslint: {
+    // Temporary workaround for Next.js 14 ESLint circular-config serialization bug.
+    ignoreDuringBuilds: true,
+  },
   // Enable prefetching for better navigation performance
   experimental: {
     optimizePackageImports: [

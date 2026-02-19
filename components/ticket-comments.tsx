@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo, memo } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react"
 import type { Editor } from "@tiptap/core"
 import dynamic from "next/dynamic"
 import { formatDistanceToNow } from "date-fns"
@@ -367,6 +367,11 @@ function CommentComposer({
 
   const bodyText = richTextToPlainText(body)
 
+  const handleEditorReady = useCallback((instance: unknown | null) => {
+    const nextEditor = (instance as Editor | null) ?? null
+    setEditor((prev) => (prev === nextEditor ? prev : nextEditor))
+  }, [])
+
   useEffect(() => {
     const mentionUserMatch = bodyText.match(/(?:^|\s)@([a-z0-9._-]*)$/i)
     if (mentionUserMatch) {
@@ -699,6 +704,17 @@ function CommentComposer({
     }
   }
 
+  const handleComposerKeyDown = (event: KeyboardEvent) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault()
+      if (!submitting && !isRichTextEmpty(body)) {
+        void handleSubmit()
+      }
+      return true
+    }
+    return false
+  }
+
   const hasText = !isRichTextEmpty(body)
   const showSend = hasText || submitting
   const showActions = Boolean(onCancel) || showSend
@@ -761,7 +777,8 @@ function CommentComposer({
         compact
         activateOnClick
         inlinePanel={mentionInlinePanel}
-        onEditorReady={(instance) => setEditor((instance as Editor | null) ?? null)}
+        onContentKeyDown={handleComposerKeyDown}
+        onEditorReady={handleEditorReady}
       />
       {showActions && (
         <div className="flex items-center justify-end gap-2 flex-wrap">

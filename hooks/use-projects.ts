@@ -15,25 +15,33 @@ async function attachCollaboratorsToProjects(
   }
 
   const collaboratorIds = new Set<string>()
+  const requesterIds = new Set<string>()
   projects.forEach((project) => {
-    const ids: string[] = project.collaborator_ids || []
-    ids.forEach((id) => {
+    const collabIds: string[] = project.collaborator_ids || []
+    const reqIds: string[] = project.requester_ids || []
+    collabIds.forEach((id) => {
       if (id) collaboratorIds.add(id)
+    })
+    reqIds.forEach((id) => {
+      if (id) requesterIds.add(id)
     })
   })
 
-  if (collaboratorIds.size === 0) {
+  const userIds = Array.from(new Set([...collaboratorIds, ...requesterIds]))
+  if (userIds.length === 0) {
     return projects.map((project) => ({
       ...project,
       collaborator_ids: project.collaborator_ids || [],
       collaborators: [],
+      requester_ids: project.requester_ids || [],
+      requesters: [],
     }))
   }
 
   const { data: collaboratorUsers, error } = await supabase
     .from("users")
     .select("id, name, email")
-    .in("id", Array.from(collaboratorIds))
+    .in("id", userIds)
 
   if (error) {
     console.error("Error fetching collaborators:", error)
@@ -43,15 +51,21 @@ async function attachCollaboratorsToProjects(
   collaboratorUsers?.forEach((user) => collaboratorMap.set(user.id, user))
 
   return projects.map((project) => {
-    const ids: string[] = project.collaborator_ids || []
-    const collaborators = ids
+    const collaboratorIdList: string[] = project.collaborator_ids || []
+    const requesterIdList: string[] = project.requester_ids || []
+    const collaborators = collaboratorIdList
+      .map((id) => collaboratorMap.get(id))
+      .filter(Boolean)
+    const requesters = requesterIdList
       .map((id) => collaboratorMap.get(id))
       .filter(Boolean)
 
     return {
       ...project,
-      collaborator_ids: ids,
+      collaborator_ids: collaboratorIdList,
       collaborators,
+      requester_ids: requesterIdList,
+      requesters,
     }
   })
 }
@@ -82,6 +96,8 @@ interface Project {
   } | null
   collaborator_ids: string[]
   collaborators: ProjectCollaborator[]
+  requester_ids: string[]
+  requesters: ProjectCollaborator[]
   created_at: string
 }
 
@@ -117,6 +133,9 @@ async function enrichProjectsWithImages(
     project.collaborators?.forEach((collab: any) => {
       if (collab?.email) emails.add(collab.email)
     })
+    project.requesters?.forEach((requester: any) => {
+      if (requester?.email) emails.add(requester.email)
+    })
   })
   
   if (emails.size === 0) return projects as Project[]
@@ -137,7 +156,8 @@ async function enrichProjectsWithImages(
   return projects.map(project => ({
     ...project,
     links: sanitizeLinkArray(project.links),
-     collaborator_ids: Array.isArray(project.collaborator_ids) ? project.collaborator_ids : [],
+    collaborator_ids: Array.isArray(project.collaborator_ids) ? project.collaborator_ids : [],
+    requester_ids: Array.isArray(project.requester_ids) ? project.requester_ids : [],
     owner: project.owner ? {
       ...project.owner,
       image: imageMap.get(project.owner.email) || null,
@@ -145,6 +165,10 @@ async function enrichProjectsWithImages(
     collaborators: (project.collaborators || []).map((collab: any) => ({
       ...collab,
       image: collab?.email ? imageMap.get(collab.email) || null : null,
+    })),
+    requesters: (project.requesters || []).map((requester: any) => ({
+      ...requester,
+      image: requester?.email ? imageMap.get(requester.email) || null : null,
     })),
   })) as Project[]
 }
@@ -409,6 +433,7 @@ export function useCreateProject() {
       require_sqa?: boolean
       links?: string[]
       collaborator_ids?: string[]
+      requester_ids?: string[]
     }) => {
       if (!userEmail) throw new Error("Not authenticated")
       
@@ -428,6 +453,7 @@ export function useCreateProject() {
         status: data.status || "active",
         links: prepareLinkPayload(data.links),
         collaborator_ids: Array.isArray(data.collaborator_ids) ? data.collaborator_ids : [],
+        requester_ids: Array.isArray(data.requester_ids) ? data.requester_ids : [],
         require_sqa: data.require_sqa ?? false,
       }
 
@@ -478,18 +504,22 @@ export function useUpdateProject() {
       owner_id?: string | null
       links?: string[]
       collaborator_ids?: string[]
+      requester_ids?: string[]
     }) => {
       if (!userEmail) throw new Error("Not authenticated")
       
       await ensureUserContext(supabase, userEmail)
 
-      const { links, collaborator_ids, ...rest } = data
+      const { links, collaborator_ids, requester_ids, ...rest } = data
       const updatePayload: Record<string, any> = { ...rest }
       if (links !== undefined) {
         updatePayload.links = prepareLinkPayload(links)
       }
       if (collaborator_ids !== undefined) {
         updatePayload.collaborator_ids = Array.isArray(collaborator_ids) ? collaborator_ids : []
+      }
+      if (requester_ids !== undefined) {
+        updatePayload.requester_ids = Array.isArray(requester_ids) ? requester_ids : []
       }
 
       const { data: project, error } = await supabase
