@@ -43,6 +43,7 @@ type TicketUpdateVariables = {
   returned_to_dev_reason?: string | null
   priority?: string
   type?: string
+  project_id?: string | null
   links?: string[]
   sqa_assigned_at?: string | null
   assignee_id?: string | null
@@ -622,6 +623,7 @@ export function useUpdateTicket() {
       status?: string
       priority?: string
       type?: string
+      project_id?: string | null
       assignee_id?: string | null
       sqa_assignee_id?: string | null
       requested_by_id?: string

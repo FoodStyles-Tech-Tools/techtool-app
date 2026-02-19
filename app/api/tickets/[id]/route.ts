@@ -299,6 +299,7 @@ export async function PATCH(
       priority,
       type,
       due_date,
+      project_id,
       links,
       department_id,
       epic_id,
@@ -426,6 +427,7 @@ export async function PATCH(
     if (priority !== undefined) updates.priority = priority
     if (type !== undefined) updates.type = type
     if (due_date !== undefined) updates.due_date = due_date || null
+    if (project_id !== undefined) updates.project_id = project_id || null
     if (links !== undefined) updates.links = prepareLinkPayload(Array.isArray(links) ? links : [])
     if (department_id !== undefined) updates.department_id = department_id || null
     if (epic_id !== undefined) updates.epic_id = epic_id || null
