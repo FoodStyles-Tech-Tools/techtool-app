@@ -12,7 +12,7 @@ import {
   TableCell,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Circle, ListFilter, Search, Pin } from "lucide-react"
+import { Plus, Circle, ListFilter, Search, Pin, MoreHorizontal, Pencil, Archive } from "lucide-react"
 import { BrandLinkIcon } from "@/components/brand-link-icon"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -26,6 +26,7 @@ import { ProjectForm } from "@/components/forms/project-form"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -107,6 +108,7 @@ export default function ProjectsClient({
   const [excludeDone, setExcludeDone] = useState(true)
   const [assignedToMeOnly, setAssignedToMeOnly] = useState(true)
   const [isProjectFormOpen, setProjectFormOpen] = useState(false)
+  const [editingProject, setEditingProject] = useState<ProjectRowData | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
   const deferredSearchQuery = useDeferredValue(searchQuery)
@@ -265,6 +267,21 @@ export default function ProjectsClient({
     }
   }, [pinnedProjectIds, updatePreferences])
 
+  const handleEditProject = useCallback((project: ProjectRowData) => {
+    setEditingProject(project)
+  }, [])
+
+  const handleArchiveProject = useCallback(
+    async (project: ProjectRowData) => {
+      if (project.status === "inactive") {
+        toast("Project is already inactive")
+        return
+      }
+      await updateProjectField(project.id, "status", "inactive")
+    },
+    [updateProjectField]
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-0.5 border-b pb-2">
@@ -420,6 +437,8 @@ export default function ProjectsClient({
                     isPinned={pinnedProjectIdSet.has(project.id)}
                     pinDisabled={isUpdatingPreferences}
                     onTogglePin={togglePinProject}
+                    onEditProject={handleEditProject}
+                    onArchiveProject={handleArchiveProject}
                   />
                 )
               })}
@@ -486,6 +505,48 @@ export default function ProjectsClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
+        <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
+          <DialogHeader className="border-b px-6 py-4">
+            <DialogTitle>Edit Project</DialogTitle>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+            {editingProject ? (
+              <ProjectForm
+                departments={departments}
+                users={users}
+                initialData={{
+                  id: editingProject.id,
+                  name: editingProject.name,
+                  description: editingProject.description || "",
+                  status: editingProject.status,
+                  require_sqa: editingProject.require_sqa,
+                  department_id: editingProject.department?.id,
+                  links: editingProject.links || [],
+                  collaborator_ids:
+                    editingProject.collaborator_ids ||
+                    editingProject.collaborators.map((collaborator) => collaborator.id),
+                }}
+                formId="edit-project-form"
+                hideSubmitButton={true}
+                onSuccess={() => {
+                  setEditingProject(null)
+                  toast("Project updated successfully")
+                  router.refresh()
+                }}
+              />
+            ) : null}
+          </div>
+          <DialogFooter className="shrink-0 border-t bg-background px-6 py-4 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => setEditingProject(null)}>
+              Cancel
+            </Button>
+            <Button type="submit" form="edit-project-form">
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -501,6 +562,8 @@ interface ProjectRowProps {
   isPinned: boolean
   pinDisabled: boolean
   onTogglePin: (projectId: string) => void
+  onEditProject: (project: ProjectRowData) => void
+  onArchiveProject: (project: ProjectRowData) => Promise<void> | void
 }
 
 const ProjectRow = memo(function ProjectRow({
@@ -514,6 +577,8 @@ const ProjectRow = memo(function ProjectRow({
   isPinned,
   pinDisabled,
   onTogglePin,
+  onEditProject,
+  onArchiveProject,
 }: ProjectRowProps) {
   const isUpdatingOwner = !!updatingFields[`${project.id}-owner_id`]
   const isUpdatingDept = !!updatingFields[`${project.id}-department_id`]
@@ -551,6 +616,48 @@ const ProjectRow = memo(function ProjectRow({
           >
             <Pin className={cn("h-3.5 w-3.5", isPinned ? "fill-current" : "")} />
           </Button>
+          {canEditProjects ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                  }}
+                  aria-label="Project actions"
+                >
+                  <MoreHorizontal className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    onEditProject(project)
+                  }}
+                >
+                  <Pencil className="h-3.5 w-3.5 mr-2" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={(event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    void onArchiveProject(project)
+                  }}
+                  disabled={project.status === "inactive"}
+                >
+                  <Archive className="h-3.5 w-3.5 mr-2" />
+                  Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       </TableCell>
       <TableCell className="py-2">

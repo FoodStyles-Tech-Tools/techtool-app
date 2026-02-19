@@ -355,7 +355,7 @@ export function TicketForm({
                             className={cn(
                               "rounded-xl border p-4 text-left transition-all",
                               isActive
-                                ? "border-primary/50 bg-primary/10 shadow-sm"
+                                ? "selected-ui text-foreground shadow-none"
                                 : "border-border/45 bg-background/50 hover:border-border/70 hover:bg-muted/35"
                             )}
                           >
@@ -392,16 +392,16 @@ export function TicketForm({
                             type="button"
                             onClick={() => field.onChange(option.value)}
                             className={cn(
-                              "flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors",
+                              "flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-3 py-2 text-sm transition-colors",
                               isActive
-                                ? "bg-primary text-primary-foreground shadow-sm"
+                                ? "selected-ui text-foreground shadow-none"
                                 : "text-muted-foreground hover:bg-muted hover:text-foreground"
                             )}
                           >
                             <Icon
                               className={cn(
                                 "h-3.5 w-3.5",
-                                isActive ? "text-primary-foreground" : option.iconClassName
+                                option.iconClassName
                               )}
                             />
                             <span>{option.label}</span>
