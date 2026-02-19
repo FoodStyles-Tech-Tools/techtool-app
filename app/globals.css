@@ -75,6 +75,10 @@
 }
 
 @layer utilities {
+  .selected-ui {
+    @apply border border-blue-500/60 bg-blue-500/10 text-blue-700 dark:text-blue-300;
+  }
+
   @keyframes highlight-update {
     0% {
       background-color: hsl(var(--primary) / 0.15);

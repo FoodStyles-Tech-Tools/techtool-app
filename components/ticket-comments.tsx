@@ -490,8 +490,8 @@ function CommentComposer({
                     type="button"
                     data-mention-index={i}
                     className={cn(
-                      "w-full px-3 py-2 text-left text-sm flex items-center gap-2",
-                      i === mentionHighlightIndex ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+                      "w-full border border-transparent px-3 py-2 text-left text-sm flex items-center gap-2",
+                      i === mentionHighlightIndex ? "selected-ui" : "hover:bg-muted"
                     )}
                     onClick={() => addMention(user, true)}
                     onMouseEnter={() => setMentionHighlightIndex(i)}

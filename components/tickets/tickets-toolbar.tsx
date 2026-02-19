@@ -101,7 +101,7 @@ export function TicketsToolbar({
         </DropdownMenu>
         <div className="flex items-center rounded-md border p-0.5">
           <Button
-            variant={view === "table" ? "secondary" : "ghost"}
+            variant={view === "table" ? "selected" : "ghost"}
             size="icon"
             onClick={() => view !== "table" && setView("table")}
             className="h-7 w-7"
@@ -110,7 +110,7 @@ export function TicketsToolbar({
             <span className="sr-only">Table view</span>
           </Button>
           <Button
-            variant={view === "kanban" ? "secondary" : "ghost"}
+            variant={view === "kanban" ? "selected" : "ghost"}
             size="icon"
             onClick={() => view !== "kanban" && setView("kanban")}
             className="h-7 w-7"

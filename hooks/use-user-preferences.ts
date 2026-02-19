@@ -6,6 +6,7 @@ export interface UserPreferences {
   user_id: string
   group_by_epic: boolean
   tickets_view: "table" | "kanban"
+  pinned_project_ids: string[]
 }
 
 export function useUserPreferences() {
@@ -24,7 +25,9 @@ export function useUserPreferences() {
   })
 
   const updatePreferences = useMutation({
-    mutationFn: async (updates: Partial<Pick<UserPreferences, "group_by_epic" | "tickets_view">>) => {
+    mutationFn: async (
+      updates: Partial<Pick<UserPreferences, "group_by_epic" | "tickets_view" | "pinned_project_ids">>
+    ) => {
       const response = await fetch("/api/user-preferences", {
         method: "PATCH",
         headers: {
@@ -44,11 +47,15 @@ export function useUserPreferences() {
   })
 
   return {
-    preferences: data?.preferences || { user_id: "", group_by_epic: false, tickets_view: "table" as const },
+    preferences: data?.preferences || {
+      user_id: "",
+      group_by_epic: false,
+      tickets_view: "table" as const,
+      pinned_project_ids: [],
+    },
     loading: isLoading,
     updatePreferences: updatePreferences.mutateAsync,
     isUpdating: updatePreferences.isPending,
     refresh: refetch,
   }
 }
-

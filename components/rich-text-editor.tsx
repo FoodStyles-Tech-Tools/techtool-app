@@ -94,8 +94,8 @@ export function RichTextEditor({
         <button
           type="button"
           className={cn(
-            "rounded-md px-2 py-1 text-xs transition-colors",
-            editor?.isActive("bold") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent"
+            "rounded-md border border-transparent px-2 py-1 text-xs transition-colors",
+            editor?.isActive("bold") ? "selected-ui" : "text-muted-foreground hover:bg-accent"
           )}
           onClick={() => editor?.chain().focus().toggleBold().run()}
         >
@@ -104,8 +104,8 @@ export function RichTextEditor({
         <button
           type="button"
           className={cn(
-            "rounded-md px-2 py-1 text-xs transition-colors",
-            editor?.isActive("italic") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent"
+            "rounded-md border border-transparent px-2 py-1 text-xs transition-colors",
+            editor?.isActive("italic") ? "selected-ui" : "text-muted-foreground hover:bg-accent"
           )}
           onClick={() => editor?.chain().focus().toggleItalic().run()}
         >
@@ -114,8 +114,8 @@ export function RichTextEditor({
         <button
           type="button"
           className={cn(
-            "rounded-md px-2 py-1 text-xs transition-colors",
-            editor?.isActive("underline") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent"
+            "rounded-md border border-transparent px-2 py-1 text-xs transition-colors",
+            editor?.isActive("underline") ? "selected-ui" : "text-muted-foreground hover:bg-accent"
           )}
           onClick={() => editor?.chain().focus().toggleUnderline().run()}
         >
@@ -124,8 +124,8 @@ export function RichTextEditor({
         <button
           type="button"
           className={cn(
-            "rounded-md px-2 py-1 text-xs transition-colors",
-            editor?.isActive("strike") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent"
+            "rounded-md border border-transparent px-2 py-1 text-xs transition-colors",
+            editor?.isActive("strike") ? "selected-ui" : "text-muted-foreground hover:bg-accent"
           )}
           onClick={() => editor?.chain().focus().toggleStrike().run()}
         >
@@ -135,8 +135,8 @@ export function RichTextEditor({
         <button
           type="button"
           className={cn(
-            "rounded-md px-2 py-1 text-xs transition-colors",
-            editor?.isActive("bulletList") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent"
+            "rounded-md border border-transparent px-2 py-1 text-xs transition-colors",
+            editor?.isActive("bulletList") ? "selected-ui" : "text-muted-foreground hover:bg-accent"
           )}
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
         >
@@ -145,8 +145,8 @@ export function RichTextEditor({
         <button
           type="button"
           className={cn(
-            "rounded-md px-2 py-1 text-xs transition-colors",
-            editor?.isActive("orderedList") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent"
+            "rounded-md border border-transparent px-2 py-1 text-xs transition-colors",
+            editor?.isActive("orderedList") ? "selected-ui" : "text-muted-foreground hover:bg-accent"
           )}
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
         >
@@ -155,8 +155,8 @@ export function RichTextEditor({
         <button
           type="button"
           className={cn(
-            "rounded-md px-2 py-1 text-xs transition-colors",
-            editor?.isActive("blockquote") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent"
+            "rounded-md border border-transparent px-2 py-1 text-xs transition-colors",
+            editor?.isActive("blockquote") ? "selected-ui" : "text-muted-foreground hover:bg-accent"
           )}
           onClick={() => editor?.chain().focus().toggleBlockquote().run()}
         >
@@ -165,8 +165,8 @@ export function RichTextEditor({
         <button
           type="button"
           className={cn(
-            "rounded-md px-2 py-1 text-xs transition-colors",
-            editor?.isActive("code") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent"
+            "rounded-md border border-transparent px-2 py-1 text-xs transition-colors",
+            editor?.isActive("code") ? "selected-ui" : "text-muted-foreground hover:bg-accent"
           )}
           onClick={() => editor?.chain().focus().toggleCode().run()}
         >
@@ -176,8 +176,8 @@ export function RichTextEditor({
         <button
           type="button"
           className={cn(
-            "rounded-md px-2 py-1 text-xs transition-colors",
-            editor?.isActive("link") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent"
+            "rounded-md border border-transparent px-2 py-1 text-xs transition-colors",
+            editor?.isActive("link") ? "selected-ui" : "text-muted-foreground hover:bg-accent"
           )}
           onClick={toggleLink}
         >

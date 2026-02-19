@@ -42,7 +42,7 @@ export async function getProjectsPageData(): Promise<{
       .select(
         "id, name, description, status, require_sqa, links, created_at, owner_id, collaborator_ids, department_id, department:departments(id, name)"
       )
-      .order("created_at", { ascending: false }),
+      .order("name", { ascending: true }),
   ])
 
   if (projectsResult.error) {

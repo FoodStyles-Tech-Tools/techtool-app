@@ -191,7 +191,7 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
 export function TicketActivity({ ticketId, displayId, initialComments }: TicketActivityProps) {
   const panelId = useId()
   const [isCollapsed, setIsCollapsed] = useState(false)
-  const [activeTab, setActiveTab] = useState<ActivityTab>("all")
+  const [activeTab, setActiveTab] = useState<ActivityTab>("comments")
   const { data, isLoading, error } = useTicketActivity(ticketId, {
     enabled: !!ticketId && !isCollapsed && activeTab !== "comments",
   })
@@ -226,7 +226,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
         <CardContent id={panelId} className="px-4 pb-4 pt-0">
           <div className="mb-3 inline-flex items-center rounded-md border border-border/60 bg-muted/30 p-0.5">
             <Button
-              variant={activeTab === "all" ? "secondary" : "ghost"}
+              variant={activeTab === "all" ? "selected" : "ghost"}
               size="sm"
               className={cn("h-7 text-xs px-3", activeTab === "all" ? "shadow-none" : "")}
               onClick={() => setActiveTab("all")}
@@ -234,7 +234,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
               All
             </Button>
             <Button
-              variant={activeTab === "comments" ? "secondary" : "ghost"}
+              variant={activeTab === "comments" ? "selected" : "ghost"}
               size="sm"
               className={cn("h-7 text-xs px-3", activeTab === "comments" ? "shadow-none" : "")}
               onClick={() => setActiveTab("comments")}
@@ -242,7 +242,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
               Comments
             </Button>
             <Button
-              variant={activeTab === "history" ? "secondary" : "ghost"}
+              variant={activeTab === "history" ? "selected" : "ghost"}
               size="sm"
               className={cn("h-7 text-xs px-3", activeTab === "history" ? "shadow-none" : "")}
               onClick={() => setActiveTab("history")}

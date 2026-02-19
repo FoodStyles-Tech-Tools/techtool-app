@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   ClipboardList,
   ChevronDown,
+  Pin,
   type LucideIcon,
 } from "lucide-react"
 import { CommentNotificationsDropdown } from "@/components/comment-notifications-dropdown"
@@ -24,6 +25,10 @@ import { KeyboardShortcutDialog } from "@/components/keyboard-shortcut-dialog"
 import { VersionIndicator } from "@/components/version-indicator"
 import { useSignOutOverlay } from "@/components/signout-overlay"
 import { NavUser } from "@/components/layout/nav-user"
+import { usePinnedProjects } from "@/hooks/use-pinned-projects"
+
+const SIDEBAR_ACTIVE_ITEM_CLASS =
+  "border border-blue-500/60 bg-blue-500/10 text-blue-700 dark:text-blue-300"
 
 type NavItem = {
   title: string
@@ -102,6 +107,14 @@ export function Sidebar() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const { flags } = usePermissions()
   const canOpenPreferences = flags?.canAccessSettings ?? false
+  const canViewProjects = flags?.canViewProjects ?? false
+  const { pinnedProjectIds, pinnedProjects, loading: pinnedProjectsLoading } = usePinnedProjects({
+    enabled: canViewProjects,
+  })
+  const pinnedSectionActive = pinnedProjects.some((project) => {
+    const href = `/projects/${project.id}`
+    return pathname === href || pathname.startsWith(`${href}/`)
+  })
   const isVisible = (item: { flag?: keyof PermissionFlags }) =>
     item.flag ? Boolean(flags[item.flag]) : true
   const visibleSettingsItems = settingsItems.filter(isVisible)
@@ -114,6 +127,7 @@ export function Sidebar() {
     pathname === "/status" ||
     pathname.startsWith("/status/")
   const [settingsExpanded, setSettingsExpanded] = useState(settingsSectionActive)
+  const [pinnedExpanded, setPinnedExpanded] = useState(true)
   const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()
 
   const handleSignOut = async () => {
@@ -133,6 +147,12 @@ export function Sidebar() {
       setSettingsExpanded(true)
     }
   }, [settingsSectionActive])
+
+  useEffect(() => {
+    if (pinnedSectionActive) {
+      setPinnedExpanded(true)
+    }
+  }, [pinnedSectionActive])
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -162,7 +182,10 @@ export function Sidebar() {
 
   const renderNavLink = (item: NavItem) => {
     const Icon = item.icon
-    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+    const isProjectsRootItem = item.href === "/projects"
+    const isActive = isProjectsRootItem
+      ? pathname === item.href
+      : pathname === item.href || pathname.startsWith(`${item.href}/`)
 
     return (
       <Link
@@ -170,9 +193,9 @@ export function Sidebar() {
         href={item.href}
         prefetch={true}
         className={cn(
-          "flex h-8 items-center gap-2 rounded-md px-2 text-sm transition-colors",
+          "flex h-8 items-center gap-2 rounded-md border border-transparent px-2 text-sm transition-colors",
           isActive
-            ? "bg-accent text-accent-foreground"
+            ? SIDEBAR_ACTIVE_ITEM_CLASS
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
         )}
       >
@@ -208,6 +231,59 @@ export function Sidebar() {
             {primaryNavItems.filter(isVisible).map(renderNavLink)}
           </div>
 
+          {canViewProjects && (
+            <div className="mt-4 space-y-1">
+              <button
+                type="button"
+                onClick={() => setPinnedExpanded((current) => !current)}
+                className={cn(
+                  "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm transition-colors",
+                  "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <Pin className="h-4 w-4 stroke-[1.75]" />
+                <span>Pinned Projects</span>
+                <ChevronDown
+                  className={cn(
+                    "ml-auto h-4 w-4 transition-transform",
+                    pinnedExpanded ? "rotate-0" : "-rotate-90"
+                  )}
+                />
+              </button>
+              {pinnedExpanded && (
+                <>
+                  {pinnedProjectsLoading ? (
+                    <p className="ml-2 px-2 py-1 text-xs text-muted-foreground">Loading...</p>
+                  ) : pinnedProjectIds.length === 0 ? (
+                    <p className="ml-2 px-2 py-1 text-xs text-muted-foreground">No pinned projects</p>
+                  ) : (
+                    <div className="ml-2 space-y-0.5 border-l pl-2">
+                      {pinnedProjects.map((project) => {
+                        const href = `/projects/${project.id}`
+                        const isActive = pathname === href || pathname.startsWith(`${href}/`)
+                        return (
+                          <Link
+                            key={project.id}
+                            href={href}
+                            prefetch={true}
+                            className={cn(
+                              "flex h-8 items-center rounded-md border border-transparent px-2 text-sm transition-colors",
+                              isActive
+                                ? SIDEBAR_ACTIVE_ITEM_CLASS
+                                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                            )}
+                          >
+                            <span className="truncate">{project.name}</span>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
           <div className="mt-4 space-y-1">
             <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
               Admin
@@ -218,9 +294,9 @@ export function Sidebar() {
                   type="button"
                   onClick={() => setSettingsExpanded((current) => !current)}
                   className={cn(
-                    "flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition-colors",
+                    "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm transition-colors",
                     settingsSectionActive
-                      ? "bg-accent text-accent-foreground"
+                      ? SIDEBAR_ACTIVE_ITEM_CLASS
                       : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
@@ -243,9 +319,9 @@ export function Sidebar() {
                           href={item.href}
                           prefetch={true}
                           className={cn(
-                            "block h-8 rounded-md px-2 py-1.5 text-sm leading-5 transition-colors",
+                            "block h-8 rounded-md border border-transparent px-2 py-1.5 text-sm leading-5 transition-colors",
                             isActive
-                              ? "bg-accent text-accent-foreground"
+                              ? SIDEBAR_ACTIVE_ITEM_CLASS
                               : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                           )}
                         >

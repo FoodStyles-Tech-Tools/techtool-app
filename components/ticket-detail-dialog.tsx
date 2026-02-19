@@ -38,7 +38,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
+import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@/lib/ticket-constants"
 
 interface TicketDetailDialogProps {
   ticketId: string | null
@@ -137,6 +137,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const assigneeEligibleUsers = useMemo(
     () => users.filter((user) =>
       user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false
+    ),
+    [users]
+  )
+  const sqaEligibleUsers = useMemo(
+    () => users.filter((user) =>
+      user.role ? SQA_ALLOWED_ROLES.has(user.role.toLowerCase()) : false
     ),
     [users]
   )
@@ -408,6 +414,22 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       return
     }
     updateTicketWithToast({ requested_by_id: newRequestedById }, "Requested by updated", "requested_by_id")
+  }
+
+  const handleSqaAssigneeChange = async (newSqaAssigneeId: string | null) => {
+    if (!ensureCanEdit()) return
+    if (!ticket) return
+
+    const previousSqaAssigneeId = (ticket as any).sqa_assignee_id || ticket.sqa_assignee?.id || null
+    const updates: any = { sqa_assignee_id: newSqaAssigneeId }
+
+    if (!newSqaAssigneeId) {
+      updates.sqa_assigned_at = null
+    } else if (!previousSqaAssigneeId || previousSqaAssigneeId !== newSqaAssigneeId) {
+      updates.sqa_assigned_at = new Date().toISOString()
+    }
+
+    await updateTicketWithToast(updates, "SQA assignee updated", "sqa_assignee_id")
   }
 
   const handleTitleSave = async () => {
@@ -982,6 +1004,41 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           </SelectTrigger>
                           <SelectContent>
                             {users.map((user) => (
+                              <UserSelectItem key={user.id} user={user} value={user.id} />
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">SQA</label>
+                      <div className="flex-1">
+                        <Select
+                          value={ticket.sqa_assignee?.id || UNASSIGNED_VALUE}
+                          onValueChange={(value) =>
+                            handleSqaAssigneeChange(value === UNASSIGNED_VALUE ? null : value)
+                          }
+                          disabled={!canEditTickets || updatingFields["sqa_assignee_id"]}
+                        >
+                          <SelectTrigger className="h-8 w-full relative overflow-hidden">
+                            {ticket.sqa_assignee?.id ? (
+                              <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
+                                <UserSelectValue
+                                  users={sqaEligibleUsers}
+                                  value={ticket.sqa_assignee?.id || null}
+                                  placeholder="Unassigned"
+                                  unassignedValue={UNASSIGNED_VALUE}
+                                  unassignedLabel="Unassigned"
+                                />
+                              </div>
+                            ) : (
+                              <SelectValue placeholder="Unassigned" />
+                            )}
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+                            {sqaEligibleUsers.map((user) => (
                               <UserSelectItem key={user.id} user={user} value={user.id} />
                             ))}
                           </SelectContent>

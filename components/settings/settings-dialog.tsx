@@ -86,9 +86,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               </div>
               <button
                 onClick={() => setActiveSection("preferences")}
-                className={`w-full px-3 py-2 rounded-md text-sm text-left transition-colors ${
+                className={`w-full border border-transparent px-3 py-2 rounded-md text-sm text-left transition-colors ${
                   activeSection === "preferences"
-                    ? "bg-accent text-accent-foreground"
+                    ? "selected-ui"
                     : "hover:bg-accent/50"
                 }`}
               >
@@ -97,9 +97,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               {canManageSettings && (
                 <button
                   onClick={() => setActiveSection("settings")}
-                  className={`w-full px-3 py-2 rounded-md text-sm text-left transition-colors ${
+                  className={`w-full border border-transparent px-3 py-2 rounded-md text-sm text-left transition-colors ${
                     activeSection === "settings"
-                      ? "bg-accent text-accent-foreground"
+                      ? "selected-ui"
                       : "hover:bg-accent/50"
                   }`}
                 >

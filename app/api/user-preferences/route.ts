@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth } from "@/lib/auth-helpers"
 import { getCurrentUserWithSupabase } from "@/lib/current-user"
 
 export const runtime = 'nodejs'
 export const dynamic = "force-dynamic"
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export async function GET() {
   try {
@@ -24,14 +26,22 @@ export async function GET() {
       )
     }
 
+    const normalizedPreferences = preferences
+      ? {
+          ...preferences,
+          pinned_project_ids: Array.isArray((preferences as any).pinned_project_ids)
+            ? (preferences as any).pinned_project_ids
+            : [],
+        }
+      : {
+          user_id: user.id,
+          group_by_epic: false,
+          tickets_view: "table",
+          pinned_project_ids: [],
+        }
+
     // Return preferences or defaults
-    return NextResponse.json({
-      preferences: preferences || {
-        user_id: user.id,
-        group_by_epic: false,
-        tickets_view: "table",
-      },
-    })
+    return NextResponse.json({ preferences: normalizedPreferences })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -48,7 +58,16 @@ export async function PATCH(request: NextRequest) {
   try {
     const { supabase, user } = await getCurrentUserWithSupabase()
     const body = await request.json()
-    const { group_by_epic, tickets_view } = body
+    const { group_by_epic, tickets_view, pinned_project_ids } = body
+    const normalizedPinnedProjectIds =
+      pinned_project_ids === undefined
+        ? undefined
+        : Array.from(
+            new Set(
+              (Array.isArray(pinned_project_ids) ? pinned_project_ids : [])
+                .filter((id): id is string => typeof id === "string" && UUID_PATTERN.test(id))
+            )
+          )
 
     // Check if preferences exist
     const { data: existing } = await supabase
@@ -63,6 +82,9 @@ export async function PATCH(request: NextRequest) {
       const updates: any = {}
       if (group_by_epic !== undefined) updates.group_by_epic = group_by_epic
       if (tickets_view !== undefined) updates.tickets_view = tickets_view
+      if (normalizedPinnedProjectIds !== undefined) {
+        updates.pinned_project_ids = normalizedPinnedProjectIds
+      }
 
       const { data, error } = await supabase
         .from("user_preferences")
@@ -87,6 +109,7 @@ export async function PATCH(request: NextRequest) {
           user_id: user.id,
           group_by_epic: group_by_epic ?? false,
           tickets_view: tickets_view ?? "table",
+          pinned_project_ids: normalizedPinnedProjectIds ?? [],
         })
         .select()
         .single()
@@ -113,4 +136,3 @@ export async function PATCH(request: NextRequest) {
     )
   }
 }
-

@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useUpdateProject } from "@/hooks/use-projects"
+import { useUserPreferences } from "@/hooks/use-user-preferences"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { CollaboratorSelector } from "@/components/collaborator-selector"
 import {
   TableCell,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Circle, ListFilter, Search } from "lucide-react"
+import { Plus, Circle, ListFilter, Search, Pin } from "lucide-react"
 import { BrandLinkIcon } from "@/components/brand-link-icon"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -19,7 +20,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/components/ui/toast"
-import { truncateText } from "@/lib/utils"
+import { cn, truncateText } from "@/lib/utils"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectForm } from "@/components/forms/project-form"
 import {
@@ -99,6 +100,7 @@ export default function ProjectsClient({
   // All hooks must be called before any conditional returns
   const { flags, user: currentUser } = usePermissions()
   const updateProject = useUpdateProject()
+  const { preferences, updatePreferences, isUpdating: isUpdatingPreferences } = useUserPreferences()
   
   const [searchQuery, setSearchQuery] = useState("")
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
@@ -132,6 +134,8 @@ export default function ProjectsClient({
   const loading = false
   const canCreateProjects = flags?.canCreateProjects ?? false
   const canEditProjects = flags?.canEditProjects ?? false
+  const pinnedProjectIds = preferences.pinned_project_ids || []
+  const pinnedProjectIdSet = useMemo(() => new Set(pinnedProjectIds), [pinnedProjectIds])
 
   // Calculate ticket stats per project
   const projectStats = projectTicketStats
@@ -145,7 +149,7 @@ export default function ProjectsClient({
 
   const filteredProjects = useMemo(() => {
     const normalizedQuery = deferredSearchQuery.trim().toLowerCase()
-    return projects.filter((project) => {
+    const filtered = projects.filter((project) => {
       // Search filter
       const matchesSearch = 
         !normalizedQuery ||
@@ -170,19 +174,20 @@ export default function ProjectsClient({
 
       return true
     })
+    return filtered.sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    )
   }, [projects, deferredSearchQuery, departmentFilter, excludeDone, assignedToMeOnly, currentUserId])
   const hasProjectSearch = deferredSearchQuery.trim().length > 0
   const activeFilterCount = useMemo(() => {
     let count = 0
-    if (searchQuery.trim()) count += 1
     if (departmentFilter !== "all") count += 1
     if (!excludeDone) count += 1
     if (!assignedToMeOnly) count += 1
     return count
-  }, [searchQuery, departmentFilter, excludeDone, assignedToMeOnly])
+  }, [departmentFilter, excludeDone, assignedToMeOnly])
 
   const resetProjectFilters = useCallback(() => {
-    setSearchQuery("")
     setDepartmentFilter("all")
     setExcludeDone(true)
     setAssignedToMeOnly(true)
@@ -246,9 +251,58 @@ export default function ProjectsClient({
     }
   }, [updateProject])
 
+  const togglePinProject = useCallback(async (projectId: string) => {
+    const isPinned = pinnedProjectIds.includes(projectId)
+    const nextPinnedProjectIds = isPinned
+      ? pinnedProjectIds.filter((id) => id !== projectId)
+      : [...pinnedProjectIds, projectId]
+
+    try {
+      await updatePreferences({ pinned_project_ids: nextPinnedProjectIds })
+      toast(isPinned ? "Project unpinned" : "Project pinned")
+    } catch (error: any) {
+      toast(error.message || "Failed to update pinned projects", "error")
+    }
+  }, [pinnedProjectIds, updatePreferences])
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-0.5 border-b pb-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+            >
+              <Search className="h-4 w-4" />
+              Search
+              {searchQuery.trim() ? (
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">1</span>
+              ) : null}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-80">
+            <DropdownMenuLabel>Search Projects</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <div className="space-y-2 p-2" onClick={(event) => event.stopPropagation()}>
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  className="h-8 pl-8"
+                />
+              </div>
+              {searchQuery.trim() ? (
+                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => setSearchQuery("")}>
+                  Clear Search
+                </Button>
+              ) : null}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -269,18 +323,6 @@ export default function ProjectsClient({
             <DropdownMenuLabel>Filter Projects</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <div className="space-y-3 p-2" onClick={(event) => event.stopPropagation()}>
-              <div className="space-y-1.5">
-                <p className="text-xs text-muted-foreground">Search</p>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search projects..."
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    className="h-8 pl-8"
-                  />
-                </div>
-              </div>
               <div className="space-y-1.5">
                 <p className="text-xs text-muted-foreground">Department</p>
                 <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
@@ -375,6 +417,9 @@ export default function ProjectsClient({
                     canEditProjects={canEditProjects}
                     updateProjectField={updateProjectField}
                     updatingFields={updatingFields}
+                    isPinned={pinnedProjectIdSet.has(project.id)}
+                    pinDisabled={isUpdatingPreferences}
+                    onTogglePin={togglePinProject}
                   />
                 )
               })}
@@ -453,6 +498,9 @@ interface ProjectRowProps {
   canEditProjects: boolean
   updateProjectField: (projectId: string, field: string, value: string | null | undefined | string[] | boolean) => Promise<void> | void
   updatingFields: Record<string, string>
+  isPinned: boolean
+  pinDisabled: boolean
+  onTogglePin: (projectId: string) => void
 }
 
 const ProjectRow = memo(function ProjectRow({
@@ -463,6 +511,9 @@ const ProjectRow = memo(function ProjectRow({
   canEditProjects,
   updateProjectField,
   updatingFields,
+  isPinned,
+  pinDisabled,
+  onTogglePin,
 }: ProjectRowProps) {
   const isUpdatingOwner = !!updatingFields[`${project.id}-owner_id`]
   const isUpdatingDept = !!updatingFields[`${project.id}-department_id`]
@@ -474,12 +525,33 @@ const ProjectRow = memo(function ProjectRow({
   return (
     <TableRow className="border-b-0 even:bg-muted/20 hover:bg-muted/35">
       <TableCell className="py-2 w-[600px] min-w-[500px]">
-        <Link href={`/projects/${project.id}`} className="hover:underline flex flex-col">
-          <span className="text-sm">{project.name}</span>
-          <span className="text-xs text-muted-foreground line-clamp-2">
-            {project.description || "No description"}
-          </span>
-        </Link>
+        <div className="flex items-start gap-2">
+          <Link href={`/projects/${project.id}`} className="hover:underline flex min-w-0 flex-1 flex-col">
+            <span className="text-sm">{project.name}</span>
+            <span className="text-xs text-muted-foreground line-clamp-2">
+              {project.description || "No description"}
+            </span>
+          </Link>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-7 w-7 shrink-0",
+              isPinned ? "text-amber-500 hover:text-amber-500" : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              onTogglePin(project.id)
+            }}
+            disabled={pinDisabled}
+            title={isPinned ? "Unpin project" : "Pin project"}
+            aria-label={isPinned ? "Unpin project" : "Pin project"}
+          >
+            <Pin className={cn("h-3.5 w-3.5", isPinned ? "fill-current" : "")} />
+          </Button>
+        </div>
       </TableCell>
       <TableCell className="py-2">
         <div className="flex flex-col gap-0.5">

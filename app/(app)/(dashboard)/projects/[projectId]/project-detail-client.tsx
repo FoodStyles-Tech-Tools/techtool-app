@@ -23,6 +23,7 @@ import {
   Link2,
   Pencil,
   Trash2,
+  Pin,
   LayoutGrid,
   BarChart3,
   ListFilter,
@@ -93,7 +94,7 @@ export default function ProjectDetailClient() {
   const canCreateTickets = flags?.canCreateTickets ?? false
   const canEditTickets = flags?.canEditTickets ?? false
   const canEditProjects = flags?.canEditProjects ?? false
-  const { preferences } = useUserPreferences()
+  const { preferences, updatePreferences, isUpdating: isUpdatingPreferences } = useUserPreferences()
   const { statuses: ticketStatuses } = useTicketStatuses()
   const groupByEpicInitialized = useRef(false)
   
@@ -1073,6 +1074,21 @@ export default function ProjectDetailClient() {
   }
 
   const projectLinks = project.links || []
+  const pinnedProjectIds = preferences.pinned_project_ids || []
+  const isProjectPinned = pinnedProjectIds.includes(project.id)
+
+  const handleToggleProjectPin = async () => {
+    const nextPinnedProjectIds = isProjectPinned
+      ? pinnedProjectIds.filter((id) => id !== project.id)
+      : [...pinnedProjectIds, project.id]
+
+    try {
+      await updatePreferences({ pinned_project_ids: nextPinnedProjectIds })
+      toast(isProjectPinned ? "Project unpinned" : "Project pinned")
+    } catch (error: any) {
+      toast(error.message || "Failed to update pinned projects", "error")
+    }
+  }
 
   return (
     <div className="flex flex-col h-[calc(100dvh-6.5rem)] gap-4 overflow-hidden">
@@ -1080,7 +1096,7 @@ export default function ProjectDetailClient() {
         <div className="flex items-center gap-1">
           <div className="flex items-center rounded-md border p-0.5">
             <Button
-              variant={viewMode === "kanban" ? "secondary" : "ghost"}
+              variant={viewMode === "kanban" ? "selected" : "ghost"}
               size="icon"
               onClick={() => setViewMode("kanban")}
               className="h-7 w-7"
@@ -1089,7 +1105,7 @@ export default function ProjectDetailClient() {
               <span className="sr-only">Kanban view</span>
             </Button>
             <Button
-              variant={viewMode === "gantt" ? "secondary" : "ghost"}
+              variant={viewMode === "gantt" ? "selected" : "ghost"}
               size="icon"
               onClick={() => setViewMode("gantt")}
               className="h-7 w-7"
@@ -1395,6 +1411,19 @@ export default function ProjectDetailClient() {
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground",
+              isProjectPinned ? "text-amber-500 hover:text-amber-500" : ""
+            )}
+            onClick={handleToggleProjectPin}
+            disabled={isUpdatingPreferences}
+          >
+            <Pin className={cn("h-4 w-4", isProjectPinned ? "fill-current" : "")} />
+            <span>{isProjectPinned ? "Pinned" : "Pin"}</span>
+          </Button>
           {canCreateTickets || canEditProjects ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
