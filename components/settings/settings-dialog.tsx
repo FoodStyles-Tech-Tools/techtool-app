@@ -40,20 +40,19 @@ type CombinedUser = {
   role?: string | null
 }
 
-type SettingsSection = "preferences" | "settings"
+type SettingsSection = "account" | "preferences"
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { data: session } = useSession()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
-  const { user: permissionsUser, flags } = usePermissions()
+  const { user: permissionsUser } = usePermissions()
   const { preferences, updatePreferences, isUpdating } = useUserPreferences()
   const user = useMemo<CombinedUser | null>(
     () => permissionsUser || (session?.user as CombinedUser) || null,
     [permissionsUser, session?.user]
   )
   const [signingOut, setSigningOut] = useState(false)
-  const canManageSettings = flags?.canManageSettings ?? false
   const [activeSection, setActiveSection] = useState<SettingsSection>("preferences")
   const { show, hide } = useSignOutOverlay()
 
@@ -85,6 +84,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 Account
               </div>
               <button
+                onClick={() => setActiveSection("account")}
+                className={`w-full border border-transparent px-3 py-2 rounded-md text-sm text-left transition-colors ${
+                  activeSection === "account"
+                    ? "selected-ui"
+                    : "hover:bg-accent/50"
+                }`}
+              >
+                Account
+              </button>
+              <button
                 onClick={() => setActiveSection("preferences")}
                 className={`w-full border border-transparent px-3 py-2 rounded-md text-sm text-left transition-colors ${
                   activeSection === "preferences"
@@ -94,25 +103,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               >
                 Preferences
               </button>
-              {canManageSettings && (
-                <button
-                  onClick={() => setActiveSection("settings")}
-                  className={`w-full border border-transparent px-3 py-2 rounded-md text-sm text-left transition-colors ${
-                    activeSection === "settings"
-                      ? "selected-ui"
-                      : "hover:bg-accent/50"
-                  }`}
-                >
-                  Settings
-                </button>
-              )}
             </div>
           </div>
 
           {/* Right Content Pane */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-6 space-y-6">
-              {activeSection === "preferences" && (
+              {activeSection === "account" && (
                 <>
                   {/* Account Section */}
                   <div className="space-y-3">
@@ -191,7 +188,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 </>
               )}
 
-              {activeSection === "settings" && (
+              {activeSection === "preferences" && (
                 <>
                   {/* Settings Section */}
                   <div className="space-y-3">

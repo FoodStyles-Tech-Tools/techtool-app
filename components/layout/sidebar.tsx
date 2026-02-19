@@ -106,7 +106,6 @@ export function Sidebar() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const { flags } = usePermissions()
-  const canOpenPreferences = flags?.canAccessSettings ?? false
   const canViewProjects = flags?.canViewProjects ?? false
   const { pinnedProjectIds, pinnedProjects, loading: pinnedProjectsLoading } = usePinnedProjects({
     enabled: canViewProjects,
@@ -367,12 +366,11 @@ export function Sidebar() {
               email: user?.email || "",
               avatar: user?.image || "",
             }}
-            canOpenPreferences={canOpenPreferences}
             onOpenPreferences={() => setSettingsOpen(true)}
             onSignOut={handleSignOut}
           />
         </div>
-        {canOpenPreferences && <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />}
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
         <KeyboardShortcutDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       </div>
     </aside>

@@ -21,14 +21,12 @@ type NavUserProps = {
     email: string
     avatar: string
   }
-  canOpenPreferences: boolean
   onOpenPreferences: () => void
   onSignOut: () => void
 }
 
 export function NavUser({
   user,
-  canOpenPreferences,
   onOpenPreferences,
   onSignOut,
 }: NavUserProps) {
@@ -70,15 +68,11 @@ export function NavUser({
             </div>
           </div>
         </DropdownMenuLabel>
-        {canOpenPreferences && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onOpenPreferences}>
-              <BadgeCheck />
-              Preference
-            </DropdownMenuItem>
-          </>
-        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onOpenPreferences}>
+          <BadgeCheck />
+          Preference
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={onSignOut}>
           <LogOut />

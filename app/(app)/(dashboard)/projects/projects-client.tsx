@@ -108,7 +108,7 @@ export default function ProjectsClient({
   const [searchQuery, setSearchQuery] = useState("")
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [excludeDone, setExcludeDone] = useState(true)
-  const [assignedToMeOnly, setAssignedToMeOnly] = useState(true)
+  const [assignedToMeOnly, setAssignedToMeOnly] = useState(false)
   const [isProjectFormOpen, setProjectFormOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<ProjectRowData | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
@@ -188,14 +188,14 @@ export default function ProjectsClient({
     let count = 0
     if (departmentFilter !== "all") count += 1
     if (!excludeDone) count += 1
-    if (!assignedToMeOnly) count += 1
+    if (assignedToMeOnly) count += 1
     return count
   }, [departmentFilter, excludeDone, assignedToMeOnly])
 
   const resetProjectFilters = useCallback(() => {
     setDepartmentFilter("all")
     setExcludeDone(true)
-    setAssignedToMeOnly(true)
+    setAssignedToMeOnly(false)
     setCurrentPage(1)
   }, [])
 
