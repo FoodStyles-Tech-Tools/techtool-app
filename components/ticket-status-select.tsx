@@ -5,7 +5,13 @@ import { Circle } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
-import { formatStatusLabel, isDoneStatus, normalizeStatusKey, type TicketStatus } from "@/lib/ticket-statuses"
+import {
+  filterStatusesBySqaRequirement,
+  formatStatusLabel,
+  isDoneStatus,
+  normalizeStatusKey,
+  type TicketStatus,
+} from "@/lib/ticket-statuses"
 
 interface TicketStatusSelectProps {
   value: string
@@ -14,6 +20,7 @@ interface TicketStatusSelectProps {
   className?: string
   triggerClassName?: string
   excludeDone?: boolean
+  allowSqaStatuses?: boolean
 }
 
 export function TicketStatusSelect({ 
@@ -22,12 +29,16 @@ export function TicketStatusSelect({
   disabled,
   className,
   triggerClassName,
-  excludeDone = false
+  excludeDone = false,
+  allowSqaStatuses = true,
 }: TicketStatusSelectProps) {
   const { statuses, statusMap } = useTicketStatuses({ realtime: false })
   const selectableStatuses = useMemo(
-    () => (excludeDone ? statuses.filter((status) => !isDoneStatus(status.key)) : statuses),
-    [excludeDone, statuses]
+    () => {
+      const visible = filterStatusesBySqaRequirement(statuses, allowSqaStatuses)
+      return excludeDone ? visible.filter((status) => !isDoneStatus(status.key)) : visible
+    },
+    [allowSqaStatuses, excludeDone, statuses]
   )
   const normalizedValue = useMemo(() => normalizeStatusKey(value || ""), [value])
   const currentStatus = statusMap.get(normalizedValue) || statusMap.get(value)

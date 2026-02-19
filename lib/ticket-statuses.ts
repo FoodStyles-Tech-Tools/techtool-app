@@ -15,6 +15,12 @@ export const DEFAULT_TICKET_STATUSES: TicketStatus[] = [
   { key: "cancelled", label: "Cancelled", sort_order: 7, color: "#ef4444" },
 ]
 
+export const SQA_ONLY_STATUS_KEYS = new Set([
+  "returned_to_dev",
+  "for_qa",
+  "qa_pass",
+])
+
 export const normalizeStatusKey = (value: string) =>
   value
     .trim()
@@ -36,6 +42,14 @@ export const formatStatusLabel = (key: string) =>
 
 export const isDoneStatus = (key: string) =>
   key === "completed" || key === "cancelled"
+
+export const isSqaOnlyStatus = (key: string) =>
+  SQA_ONLY_STATUS_KEYS.has(normalizeStatusKey(key))
+
+export const filterStatusesBySqaRequirement = (
+  statuses: TicketStatus[],
+  requireSqa: boolean
+) => (requireSqa ? statuses : statuses.filter((status) => !isSqaOnlyStatus(status.key)))
 
 /** Build API body for a status change (started_at, completed_at, reason). Caller adds status and optional reason. */
 export function buildStatusChangeBody(

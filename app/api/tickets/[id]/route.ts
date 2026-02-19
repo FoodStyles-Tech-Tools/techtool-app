@@ -17,7 +17,7 @@ export async function GET(
       .from("tickets")
       .select(`
         *,
-        project:projects(id, name, description),
+        project:projects(id, name, description, require_sqa),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
         sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
@@ -354,7 +354,7 @@ export async function PATCH(
       .eq("id", params.id)
       .select(`
         *,
-        project:projects(id, name),
+        project:projects(id, name, require_sqa),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
         sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),

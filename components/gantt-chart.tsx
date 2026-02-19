@@ -1,8 +1,7 @@
 "use client"
 
 import { useMemo, useState, useRef, useEffect } from "react"
-import { format, startOfWeek, endOfWeek, addDays, differenceInDays, parseISO } from "date-fns"
-import { Card } from "@/components/ui/card"
+import { format, startOfWeek, endOfWeek, addDays, differenceInDays, parseISO, startOfDay } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import { ChevronRight, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -62,9 +61,13 @@ const SPRINT_STATUS_COLORS: Record<string, string> = {
   cancelled: "#ef4444",
 }
 
-const DAY_WIDTH = 20 // pixels per day
-const ROW_HEIGHT = 36
+const DAY_WIDTH = 18 // pixels per day
+const ROW_HEIGHT = 32
 const INDENT_PER_LEVEL = 20
+const LEFT_COLUMN_WIDTH = 300
+const HEADER_HEIGHT = 48
+const MIN_CHART_HEIGHT = 260
+const MAX_CHART_HEIGHT = 640
 
 export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintClick }: GanttChartProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
@@ -288,6 +291,11 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
 
   const totalDays = differenceInDays(timelineRange.maxDate, timelineRange.minDate) + 1
   const timelineWidth = totalDays * DAY_WIDTH
+  const todayPosition = useMemo(() => {
+    const today = startOfDay(new Date())
+    if (today < timelineRange.minDate || today > timelineRange.maxDate) return null
+    return differenceInDays(today, timelineRange.minDate) * DAY_WIDTH + DAY_WIDTH / 2
+  }, [timelineRange])
 
   const toggleExpand = (id: string) => {
     setExpandedItems((prev) => {
@@ -330,6 +338,29 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
     }
     return formatStatusLabel(status)
   }
+
+  const visibleRowCount = useMemo(() => {
+    let count = 0
+    const traverse = (items: GanttItem[]) => {
+      items.forEach((item) => {
+        count += 1
+        if (item.children && expandedItems.has(item.id)) {
+          traverse(item.children)
+        }
+      })
+    }
+    traverse(ganttData)
+    return count
+  }, [ganttData, expandedItems])
+
+  const chartHeight = useMemo(
+    () =>
+      Math.min(
+        MAX_CHART_HEIGHT,
+        Math.max(MIN_CHART_HEIGHT, visibleRowCount * ROW_HEIGHT + HEADER_HEIGHT)
+      ),
+    [visibleRowCount]
+  )
 
   const renderListRow = (item: GanttItem): JSX.Element => {
     const isExpanded = expandedItems.has(item.id)
@@ -379,13 +410,14 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           <span
             className={cn(
               "truncate flex-1",
-              item.type === "sprint" && "text-lg font-semibold",
-              item.type === "epic" && "text-base font-medium",
-              item.type === "ticket" && "text-sm",
+              item.type === "sprint" && "text-base font-semibold",
+              item.type === "epic" && "text-sm font-medium",
+              item.type === "ticket" && "text-xs",
               (item.type === "ticket" && onTicketClick) || (item.type === "sprint" && onSprintClick)
                 ? "cursor-pointer hover:text-primary transition-colors"
                 : "cursor-default"
             )}
+            title={`${item.displayId ? `${item.displayId} ` : ""}${item.name}`}
             onClick={(e) => {
               e.stopPropagation()
               e.preventDefault()
@@ -398,20 +430,19 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           >
             {item.displayId && (
               <span className={cn(
-                "font-mono text-muted-foreground mr-1.5",
-                item.type === "sprint" ? "text-xs" : "text-xs"
+                "font-mono text-muted-foreground mr-1.5 text-[10px]"
               )}>
                 {item.displayId}
               </span>
             )}
             {item.name}
           </span>
-          {item.status && (
+          {item.status && item.type === "sprint" && (
             <Badge
               variant="outline"
               className={cn(
-                "text-xs ml-2 flex-shrink-0 border-0 text-white",
-                item.type === "sprint" && "font-medium"
+                "h-5 text-[10px] ml-2 flex-shrink-0 border-0 text-white",
+                "font-medium"
               )}
               style={{ backgroundColor: getStatusColor(item.status, item.type) }}
             >
@@ -430,6 +461,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
     const barPosition = item.startDate && item.endDate 
       ? getBarPosition(item.startDate, item.endDate)
       : { left: 0, width: 0 }
+    const barHeight = item.type === "sprint" ? 18 : item.type === "epic" ? 16 : 14
 
     return (
       <div key={item.id}>
@@ -448,8 +480,8 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           {barPosition.width > 0 && (
             <div
               className={cn(
-                "absolute h-6 rounded-md top-1/2 -translate-y-1/2 flex items-center px-2 text-xs text-white font-medium transition-all",
-                item.type === "sprint" && "opacity-70 hover:opacity-90 shadow-sm",
+                "absolute rounded-md top-1/2 -translate-y-1/2 flex items-center px-2 text-[11px] text-white font-medium transition-all border border-white/20",
+                item.type === "sprint" && "opacity-80 hover:opacity-95 shadow-sm",
                 item.type === "epic" && "opacity-85 hover:opacity-100 shadow-sm",
                 item.type === "ticket" && "hover:shadow-md",
                 (item.type === "ticket" && onTicketClick) || (item.type === "sprint" && onSprintClick)
@@ -459,14 +491,16 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
               style={{
                 left: `${barPosition.left}px`,
                 width: `${barPosition.width}px`,
+                height: `${barHeight}px`,
                 backgroundColor: item.type === "epic" && item.color 
                   ? item.color 
                   : item.type === "sprint"
-                  ? "#6366f1"
+                  ? getStatusColor(item.status, "sprint")
                   : item.type === "ticket"
                   ? getStatusColor(item.status, "ticket")
                   : undefined,
               }}
+              title={`${item.displayId ? `${item.displayId} ` : ""}${item.name}`}
               onClick={(e) => {
                 e.stopPropagation()
                 if (item.type === "ticket" && onTicketClick) {
@@ -476,8 +510,11 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
                 }
               }}
             >
-              {barPosition.width > 60 && (
-                <span className="truncate font-medium">{item.name}</span>
+              {barPosition.width > 90 && (
+                <span className="truncate font-medium max-w-full">
+                  {item.displayId ? `${item.displayId} ` : ""}
+                  {item.name}
+                </span>
               )}
             </div>
           )}
@@ -510,14 +547,17 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
   }, [ganttData])
 
   return (
-    <div className="flex flex-col h-full border rounded-lg overflow-hidden bg-background shadow-sm">
+    <div
+      className="flex flex-col border rounded-lg overflow-hidden bg-background shadow-sm self-start w-full"
+      style={{ height: chartHeight, maxHeight: "100%" }}
+    >
       {/* Header */}
       <div className="flex border-b border-border bg-muted/40 flex-shrink-0">
-        <div className="w-[320px] flex-shrink-0 border-r border-border px-4 py-2.5">
+        <div className="flex-shrink-0 border-r border-border px-3 py-2.5" style={{ width: LEFT_COLUMN_WIDTH }}>
           <span className="text-sm font-semibold text-foreground">Task</span>
         </div>
         <div 
-          className="horizontal-scroll flex-1 overflow-x-auto overflow-y-hidden" 
+          className="horizontal-scroll flex-1 overflow-x-auto overflow-y-hidden relative" 
           ref={timelineRef}
           onScroll={(e) => {
             if (listRef.current) {
@@ -530,29 +570,37 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
             {dateHeaders.map((date, index) => {
               const isWeekStart = date.getDay() === 1
               const isMonthStart = date.getDate() === 1
+              const isWeekend = date.getDay() === 0 || date.getDay() === 6
               
               return (
                 <div
                   key={index}
                   className={cn(
-                    "flex-shrink-0 border-r border-border/40 text-center text-xs py-2",
-                    isWeekStart && "bg-muted/30",
-                    isMonthStart && "bg-muted/50 font-semibold"
+                    "flex-shrink-0 border-r border-border/30 text-center py-1",
+                    isWeekend && "bg-muted/20",
+                    isWeekStart && "bg-muted/20",
+                    isMonthStart && "bg-muted/35"
                   )}
                   style={{ width: DAY_WIDTH }}
                 >
-                  {isWeekStart || isMonthStart ? (
+                  {isMonthStart ? (
                     <div>
-                      <div className="font-medium text-foreground">{format(date, "MMM")}</div>
-                      <div className="text-[10px] text-muted-foreground mt-0.5">{format(date, "d")}</div>
+                      <div className="font-semibold text-foreground text-[10px] leading-tight">{format(date, "MMM")}</div>
+                      <div className="text-[10px] text-muted-foreground leading-tight">{format(date, "d")}</div>
                     </div>
                   ) : (
-                    <div className="text-[10px] text-muted-foreground">{format(date, "d")}</div>
+                    <div className="text-[10px] text-muted-foreground leading-tight">{format(date, "d")}</div>
                   )}
                 </div>
               )
             })}
           </div>
+          {todayPosition !== null ? (
+            <div
+              className="pointer-events-none absolute top-0 bottom-0 w-px bg-red-500/80"
+              style={{ left: todayPosition }}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -560,13 +608,13 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
       <div className="flex-1 overflow-hidden bg-background">
         <div className="flex h-full">
           {/* List side - fixed width, scrollable vertically */}
-          <div className="w-[320px] flex-shrink-0 border-r border-border/50 overflow-y-auto bg-background">
+          <div className="flex-shrink-0 border-r border-border/50 overflow-y-auto bg-background" style={{ width: LEFT_COLUMN_WIDTH }}>
             {ganttData.map((item) => renderListRow(item))}
           </div>
 
           {/* Timeline side - scrollable horizontally and vertically */}
           <div
-            className="no-scrollbar flex-1 overflow-x-hidden overflow-y-auto bg-muted/20"
+            className="no-scrollbar flex-1 overflow-x-hidden overflow-y-auto bg-muted/10"
             ref={listRef}
             onScroll={(e) => {
               // Sync horizontal scroll with header
@@ -576,7 +624,22 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
             }}
             style={{ scrollbarWidth: 'thin' }}
           >
-            <div style={{ width: timelineWidth, minWidth: "100%" }}>
+            <div
+              className="relative"
+              style={{
+                width: timelineWidth,
+                minWidth: "100%",
+                backgroundImage:
+                  `repeating-linear-gradient(to right, rgba(148,163,184,0.12) 0, rgba(148,163,184,0.12) 1px, transparent 1px, transparent ${DAY_WIDTH}px),` +
+                  `repeating-linear-gradient(to right, rgba(148,163,184,0.18) 0, rgba(148,163,184,0.18) 1px, transparent 1px, transparent ${DAY_WIDTH * 7}px)`,
+              }}
+            >
+              {todayPosition !== null ? (
+                <div
+                  className="pointer-events-none absolute top-0 bottom-0 w-px bg-red-500/80 z-10"
+                  style={{ left: todayPosition }}
+                />
+              ) : null}
               {ganttData.map((item) => renderTimelineRow(item))}
             </div>
           </div>

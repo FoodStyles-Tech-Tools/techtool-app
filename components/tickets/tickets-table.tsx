@@ -215,6 +215,7 @@ const TicketRow = memo(function TicketRow({
           onValueChange={(value) => updateTicketField(ticket.id, "status", value)}
           disabled={!canEdit || !!updatingFields[`${ticket.id}-status`]}
           excludeDone={excludeDone}
+          allowSqaStatuses={ticket.project?.require_sqa === true}
         />
       </TableCell>
       <TableCell className="py-2">

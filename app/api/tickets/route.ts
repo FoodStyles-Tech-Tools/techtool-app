@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         completed_at,
         created_at,
         updated_at,
-        project:projects(id, name),
+        project:projects(id, name, require_sqa),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
         sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),
@@ -272,7 +272,7 @@ export async function POST(request: NextRequest) {
       })
       .select(`
         *,
-        project:projects(id, name),
+        project:projects(id, name, require_sqa),
         assignee:users!tickets_assignee_id_fkey(id, name, email),
         sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
         requested_by:users!tickets_requested_by_id_fkey(id, name, email),

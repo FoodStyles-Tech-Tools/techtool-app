@@ -295,9 +295,7 @@ export function Sidebar() {
                   onClick={() => setSettingsExpanded((current) => !current)}
                   className={cn(
                     "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm transition-colors",
-                    settingsSectionActive
-                      ? SIDEBAR_ACTIVE_ITEM_CLASS
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
                   <SlidersHorizontal className="h-4 w-4 stroke-[1.75]" />

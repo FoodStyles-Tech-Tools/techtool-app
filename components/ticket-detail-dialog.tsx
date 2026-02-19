@@ -669,6 +669,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                   value={ticket.status}
                   onValueChange={handleStatusChange}
                   disabled={!canEditTickets || updatingFields["status"]}
+                  allowSqaStatuses={ticket.project?.require_sqa === true}
                   triggerClassName="h-7 text-xs"
                 />
               )}

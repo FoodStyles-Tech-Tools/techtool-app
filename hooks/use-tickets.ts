@@ -183,7 +183,7 @@ export function useTickets(options?: {
           .select(`
             *,
             department:departments(id, name),
-            project:projects(id, name),
+            project:projects(id, name, require_sqa),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
             sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
@@ -230,7 +230,7 @@ export function useTickets(options?: {
           .select(`
             *,
             department:departments(id, name),
-            project:projects(id, name),
+            project:projects(id, name, require_sqa),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
             sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
@@ -310,7 +310,7 @@ export function useTickets(options?: {
         .select(`
           *,
           department:departments(id, name),
-          project:projects(id, name),
+          project:projects(id, name, require_sqa),
           assignee:users!tickets_assignee_id_fkey(id, name, email),
           requested_by:users!tickets_requested_by_id_fkey(id, name, email),
           epic:epics(id, name, color),
@@ -396,7 +396,7 @@ export function useTicket(ticketId: string, options?: { enabled?: boolean; realt
           .select(`
             *,
             department:departments(id, name),
-            project:projects(id, name),
+            project:projects(id, name, require_sqa),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
             sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
@@ -455,7 +455,7 @@ export function useTicket(ticketId: string, options?: { enabled?: boolean; realt
           .select(`
             *,
             department:departments(id, name),
-            project:projects(id, name),
+            project:projects(id, name, require_sqa),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
             sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
@@ -557,7 +557,7 @@ export function useCreateTicket() {
           .select(`
             *,
             department:departments(id, name),
-            project:projects(id, name),
+            project:projects(id, name, require_sqa),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
             sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
@@ -661,7 +661,7 @@ export function useUpdateTicket() {
         .select(`
           *,
           department:departments(id, name),
-          project:projects(id, name),
+          project:projects(id, name, require_sqa),
           assignee:users!tickets_assignee_id_fkey(id, name, email),
           sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
           requested_by:users!tickets_requested_by_id_fkey(id, name, email),

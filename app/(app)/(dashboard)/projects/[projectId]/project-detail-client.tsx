@@ -72,7 +72,7 @@ const GanttChart = dynamic(
   () => import("@/components/gantt-chart").then((mod) => mod.GanttChart),
   { ssr: false }
 )
-import { isDoneStatus } from "@/lib/ticket-statuses"
+import { filterStatusesBySqaRequirement, isDoneStatus } from "@/lib/ticket-statuses"
 import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import type { Ticket } from "@/lib/types"
 import { richTextToPlainText } from "@/lib/rich-text"
@@ -192,14 +192,18 @@ export default function ProjectDetailClient() {
     assignee_id: "Assignee",
     department_id: "Department",
   }
+  const visibleTicketStatuses = useMemo(
+    () => filterStatusesBySqaRequirement(ticketStatuses, project?.require_sqa === true),
+    [project?.require_sqa, ticketStatuses]
+  )
   const kanbanColumns = useMemo(
     () =>
-      ticketStatuses.map((status) => ({
+      visibleTicketStatuses.map((status) => ({
         id: status.key,
         label: status.label,
         color: status.color,
       })),
-    [ticketStatuses]
+    [visibleTicketStatuses]
   )
   const statusKeys = useMemo(
     () => kanbanColumns.map((column) => column.id),

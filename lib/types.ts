@@ -40,6 +40,7 @@ export interface Department {
 export interface TicketProject {
   id: string
   name: string
+  require_sqa?: boolean
 }
 
 /** Ticket relation: assignee / sqa_assignee / requested_by */
