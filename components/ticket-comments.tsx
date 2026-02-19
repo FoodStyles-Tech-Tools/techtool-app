@@ -1,19 +1,10 @@
 "use client"
 
-import { useState, useRef, useEffect, useLayoutEffect, memo } from "react"
-import { createPortal } from "react-dom"
-
-function useIsMac() {
-  const [isMac, setIsMac] = useState(false)
-  useEffect(() => {
-    setIsMac(typeof navigator !== "undefined" && /Mac|iPad|iPhone/i.test(navigator.platform))
-  }, [])
-  return isMac
-}
+import { useState, useEffect, memo } from "react"
+import dynamic from "next/dynamic"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -29,6 +20,13 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { toast } from "@/components/ui/toast"
 import { MessageSquare, Reply, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
+import { isRichTextEmpty, toDisplayHtml } from "@/lib/rich-text"
+
+const RichTextEditor = dynamic(
+  () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
+  { ssr: false }
+)
 
 interface TicketCommentsProps {
   ticketId: string
@@ -44,65 +42,31 @@ interface TicketCommentsProps {
 const CommentBody = memo(function CommentBody({
   body,
   mentions,
-  users,
 }: {
   body: string
   mentions: { user_id: string; user?: { id: string; name: string | null; email: string } }[]
-  users: { id: string; name: string | null; email: string }[]
 }) {
-  if (!mentions.length) {
-    return <span className="whitespace-pre-wrap break-words">{body}</span>
-  }
-  const mentionIds = new Set(mentions.map((m) => m.user_id))
-  const getUserName = (id: string) => {
-    const m = mentions.find((x) => x.user_id === id)
-    if (m?.user?.name) return m.user.name
-    if (m?.user?.email) return m.user.email
-    return users.find((u) => u.id === id)?.name || users.find((u) => u.id === id)?.email || "User"
-  }
-  const parts: { type: "text" | "mention"; value: string; userId?: string }[] = []
-  let remaining = body
-  const regex = /@(\S+)/g
-  let match
-  let lastIndex = 0
-  while ((match = regex.exec(body)) !== null) {
-    const possibleId = match[1]
-    const possibleName = match[1]
-    const byId = mentionIds.has(possibleId) ? possibleId : null
-    const byName = Array.from(mentionIds).find((id) => {
-      const name = getUserName(id)
-      return name && name.toLowerCase().includes(possibleName.toLowerCase())
-    })
-    const userId = byId || byName
-    if (userId) {
-      if (match.index > lastIndex) {
-        parts.push({ type: "text", value: body.slice(lastIndex, match.index) })
-      }
-      parts.push({ type: "mention", value: `@${getUserName(userId)}`, userId })
-      lastIndex = regex.lastIndex
-    }
-  }
-  if (lastIndex < body.length) {
-    parts.push({ type: "text", value: body.slice(lastIndex) })
-  }
-  if (parts.length === 0) {
-    return <span className="whitespace-pre-wrap break-words">{body}</span>
-  }
+  const mentionLabelMap = new Map<string, string>()
+  mentions.forEach((mention) => {
+    const label = mention.user?.name || mention.user?.email
+    if (label) mentionLabelMap.set(mention.user_id, label)
+  })
+
+  let html = toDisplayHtml(body) ?? ""
+  mentionLabelMap.forEach((label) => {
+    const safeLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    const mentionRegex = new RegExp(`@${safeLabel}`, "gi")
+    html = html.replace(
+      mentionRegex,
+      `<span class="inline-flex rounded bg-primary/10 px-1 font-medium text-primary">@${label}</span>`
+    )
+  })
+
   return (
-    <span className="whitespace-pre-wrap break-words">
-      {parts.map((p, i) =>
-        p.type === "mention" ? (
-          <span
-            key={i}
-            className="font-medium text-primary bg-primary/10 px-1 rounded"
-          >
-            {p.value}
-          </span>
-        ) : (
-          <span key={i}>{p.value}</span>
-        )
-      )}
-    </span>
+    <div
+      className="rich-text-content text-sm text-foreground"
+      dangerouslySetInnerHTML={getSanitizedHtmlProps(html) ?? { __html: "" }}
+    />
   )
 })
 
@@ -252,7 +216,6 @@ const CommentRow = memo(function CommentRow({
           <CommentBody
             body={comment.body}
             mentions={comment.mentions}
-            users={users}
           />
         </div>
         {canReply && (
@@ -308,216 +271,46 @@ function CommentComposer({
   placeholder = "Add a comment...",
   onSubmit,
   onCancel,
-  users,
   initialBody = "",
   initialMentionIds = [],
 }: {
   placeholder?: string
   onSubmit: (body: string, mentionUserIds: string[]) => Promise<{ body: string; parent_id?: string; mention_user_ids?: string[] }>
   onCancel?: () => void
-  users: { id: string; name: string | null; email: string }[]
   initialBody?: string
   initialMentionIds?: string[]
 }) {
   const [body, setBody] = useState(initialBody)
-  const [mentionUserIds, setMentionUserIds] = useState<string[]>(initialMentionIds)
+  const [mentionUserIds] = useState<string[]>(initialMentionIds)
   const [submitting, setSubmitting] = useState(false)
-  const [inlineMention, setInlineMention] = useState<{ query: string; start: number; cursor: number } | null>(null)
-  const [mentionHighlightIndex, setMentionHighlightIndex] = useState(0)
-  const [mentionListPosition, setMentionListPosition] = useState<{ top: number; left: number; width: number; openUp: boolean } | null>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const mentionListRef = useRef<HTMLDivElement>(null)
-  const isMac = useIsMac()
-  const sendShortcut = isMac ? "⌘+Enter" : "Ctrl+Enter"
-  const sendShortcutKbd = isMac ? "⌘↵" : "Ctrl+↵"
-  const DROPDOWN_MAX_HEIGHT = 280
-  const DROPDOWN_WIDTH = 280
-
-  useLayoutEffect(() => {
-    if (!inlineMention || !textareaRef.current) {
-      setMentionListPosition(null)
-      return
-    }
-    const el = textareaRef.current
-    const rect = el.getBoundingClientRect()
-    const spaceBelow = window.innerHeight - rect.bottom
-    const openUp = spaceBelow < Math.min(DROPDOWN_MAX_HEIGHT + 8, 200) && rect.top > spaceBelow
-    setMentionListPosition({
-      top: openUp ? rect.top : rect.bottom + 4,
-      left: rect.left,
-      width: Math.min(Math.max(rect.width, 200), DROPDOWN_WIDTH),
-      openUp,
-    })
-  }, [inlineMention])
-
-  const getFilteredUsers = (query: string) => {
-    const q = query.trim().toLowerCase()
-    return users
-      .filter((u) => !mentionUserIds.includes(u.id))
-      .filter((u) => {
-        if (!q) return true
-        const name = (u.name || "").toLowerCase()
-        const email = (u.email || "").toLowerCase()
-        return name.includes(q) || email.includes(q)
-      })
-  }
-
-  const addMention = (user: { id: string; name: string | null; email: string }, replaceInline = false) => {
-    if (mentionUserIds.includes(user.id) && !replaceInline) return
-    const name = user.name || user.email
-    if (replaceInline && inlineMention) {
-      const before = body.slice(0, inlineMention.start)
-      const after = body.slice(inlineMention.cursor)
-      const newBody = before + `@${name} ` + after
-      setBody(newBody)
-      setMentionUserIds((prev) => (prev.includes(user.id) ? prev : [...prev, user.id]))
-      setInlineMention(null)
-      setMentionHighlightIndex(0)
-      setTimeout(() => {
-        textareaRef.current?.focus()
-        const pos = inlineMention.start + name.length + 2
-        textareaRef.current?.setSelectionRange(pos, pos)
-      }, 0)
-    } else {
-      setMentionUserIds((prev) => (prev.includes(user.id) ? prev : [...prev, user.id]))
-      setBody((prev) => prev + `@${name} `)
-      textareaRef.current?.focus()
-    }
-  }
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value
-    const cursor = e.target.selectionStart ?? value.length
-    setBody(value)
-    const textBeforeCursor = value.slice(0, cursor)
-    const lastAt = textBeforeCursor.lastIndexOf("@")
-    if (lastAt >= 0) {
-      const query = textBeforeCursor.slice(lastAt + 1)
-      if (!query.includes(" ")) {
-        setInlineMention({ query, start: lastAt, cursor })
-        setMentionHighlightIndex(0)
-      } else {
-        setInlineMention(null)
-      }
-    } else {
-      setInlineMention(null)
-    }
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault()
-      handleSubmit()
-      return
-    }
-    const filtered = inlineMention ? getFilteredUsers(inlineMention.query) : []
-    if (inlineMention && filtered.length > 0) {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        setInlineMention(null)
-        return
-      }
-      if (e.key === "ArrowDown") {
-        e.preventDefault()
-        setMentionHighlightIndex((i) => (i + 1) % filtered.length)
-        return
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault()
-        setMentionHighlightIndex((i) => (i - 1 + filtered.length) % filtered.length)
-        return
-      }
-      if (e.key === "Enter" || e.key === "Tab") {
-        e.preventDefault()
-        addMention(filtered[mentionHighlightIndex], true)
-        return
-      }
-    }
-  }
 
   const handleSubmit = async () => {
-    const trimmed = body.trim()
-    if (!trimmed) return
+    if (isRichTextEmpty(body)) return
     setSubmitting(true)
-    setInlineMention(null)
     try {
-      await onSubmit(trimmed, mentionUserIds)
+      const value = body.trim()
+      await onSubmit(value, mentionUserIds)
       setBody("")
-      setMentionUserIds([])
       onCancel?.()
     } finally {
       setSubmitting(false)
     }
   }
 
-  const filteredInlineUsers = inlineMention ? getFilteredUsers(inlineMention.query) : []
-  const hasText = body.trim().length > 0
+  const hasText = !isRichTextEmpty(body)
   const showSend = hasText || submitting
   const showActions = Boolean(onCancel) || showSend
 
-  useEffect(() => {
-    if (!mentionListRef.current || filteredInlineUsers.length === 0) return
-    const highlighted = mentionListRef.current.querySelector(`[data-mention-index="${mentionHighlightIndex}"]`)
-    highlighted?.scrollIntoView({ block: "nearest", behavior: "smooth" })
-  }, [mentionHighlightIndex, filteredInlineUsers.length])
-
-  const mentionDropdown =
-    typeof document !== "undefined" &&
-    inlineMention != null &&
-    mentionListPosition != null
-      ? createPortal(
-          <div
-            ref={mentionListRef}
-            className="rounded-md border bg-popover text-popover-foreground shadow-lg overflow-hidden"
-            style={{
-              position: "fixed",
-              left: mentionListPosition.left,
-              width: mentionListPosition.width,
-              ...(mentionListPosition.openUp
-                ? { bottom: window.innerHeight - mentionListPosition.top + 4 }
-                : { top: mentionListPosition.top }),
-              zIndex: 9999,
-              maxHeight: DROPDOWN_MAX_HEIGHT,
-            }}
-          >
-            <div className="overflow-y-auto py-1" style={{ maxHeight: DROPDOWN_MAX_HEIGHT - 8 }}>
-              {filteredInlineUsers.length === 0 ? (
-                <p className="px-3 py-2 text-sm text-muted-foreground">No matching users</p>
-              ) : (
-                filteredInlineUsers.map((user, i) => (
-                  <button
-                    key={user.id}
-                    type="button"
-                    data-mention-index={i}
-                    className={cn(
-                      "w-full border border-transparent px-3 py-2 text-left text-sm flex items-center gap-2",
-                      i === mentionHighlightIndex ? "selected-ui" : "hover:bg-muted"
-                    )}
-                    onClick={() => addMention(user, true)}
-                    onMouseEnter={() => setMentionHighlightIndex(i)}
-                  >
-                    <span className="font-medium truncate">{user.name || user.email}</span>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>,
-          document.body
-        )
-      : null
-
   return (
     <div className="space-y-2 mt-1.5 relative">
-      <Textarea
-        ref={textareaRef}
-        placeholder={placeholder}
+      <RichTextEditor
         value={body}
-        onChange={handleInputChange}
-        onKeyDown={handleKeyDown}
-        className="min-h-[72px] resize-none"
-        disabled={submitting}
+        onChange={setBody}
+        placeholder={placeholder}
+        className="border-border/50"
+        compact
+        activateOnClick
       />
-      {mentionDropdown}
       {showActions && (
         <div className="flex items-center justify-end gap-2 flex-wrap">
           <div className="flex gap-2">
@@ -531,13 +324,9 @@ function CommentComposer({
                 size="sm"
                 onClick={handleSubmit}
                 disabled={submitting}
-                title={`Send (${sendShortcut})`}
                 className="gap-1.5"
               >
                 <span>{submitting ? "Sending..." : "Send"}</span>
-                <kbd className="ml-0.5 hidden sm:inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border border-border/60 bg-muted/80 px-1 font-mono text-[10px] text-muted-foreground">
-                  {sendShortcutKbd}
-                </kbd>
               </Button>
             )}
           </div>
@@ -638,6 +427,10 @@ export function TicketComments({
 
   const handleSaveEdit = async () => {
     if (!editingComment) return
+    if (isRichTextEmpty(editBody)) {
+      toast("Comment cannot be empty", "error")
+      return
+    }
     try {
       await updateComment.mutateAsync({
         commentId: editingComment.id,
@@ -672,7 +465,6 @@ export function TicketComments({
           })
           return { body, mention_user_ids: mentionUserIds }
         }}
-        users={users}
       />
     </div>
   ) : null
@@ -716,13 +508,15 @@ export function TicketComments({
                   <div key={comment.id}>
                     {editingComment?.id === comment.id ? (
                       <div className="space-y-2">
-                        <Textarea
+                        <RichTextEditor
                           value={editBody}
-                          onChange={(e) => setEditBody(e.target.value)}
-                          className="min-h-[72px]"
+                          onChange={setEditBody}
+                          placeholder="Edit comment"
+                          className="border-border/50"
+                          compact
                         />
                         <div className="flex gap-2">
-                          <Button size="sm" onClick={handleSaveEdit}>
+                          <Button size="sm" onClick={handleSaveEdit} disabled={isRichTextEmpty(editBody)}>
                             Save
                           </Button>
                           <Button
@@ -759,7 +553,6 @@ export function TicketComments({
                             setReplyingToId(null)
                             setReplyPrefill(null)
                           }}
-                          users={users}
                           initialBody={replyPrefill?.mentionLabel ? `@${replyPrefill.mentionLabel} ` : ""}
                           initialMentionIds={replyPrefill?.mentionUserId ? [replyPrefill.mentionUserId] : []}
                         />

@@ -22,6 +22,7 @@ import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
+import { richTextToPlainText } from "@/lib/rich-text"
 
 interface TicketsTableProps {
   sortConfig: { column: SortColumn; direction: "asc" | "desc" }
@@ -105,6 +106,7 @@ const TicketRow = memo(function TicketRow({
   const dueDateValue = ticket.due_date ? new Date(ticket.due_date) : null
   const safeDueDateValue =
     dueDateValue && !Number.isNaN(dueDateValue.getTime()) ? dueDateValue : null
+  const descriptionSnippet = richTextToPlainText(ticket.description)
 
   return (
     <TableRow
@@ -134,7 +136,7 @@ const TicketRow = memo(function TicketRow({
           >
             <span className="text-sm">{ticket.title}</span>
             <span className="text-xs text-muted-foreground line-clamp-2">
-              {ticket.description || "No description"}
+              {descriptionSnippet || "No description"}
             </span>
           </div>
           <div className="bg-muted/50 rounded-md p-2 flex flex-col gap-0.5">

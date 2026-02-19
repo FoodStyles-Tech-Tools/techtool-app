@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseWithUserContext, requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
+import { normalizeRichTextInput } from "@/lib/rich-text"
 
 export const runtime = 'nodejs'
 
@@ -157,7 +158,7 @@ export async function PATCH(
 
     const updates: any = {}
     if (title !== undefined) updates.title = title
-    if (description !== undefined) updates.description = description
+    if (description !== undefined) updates.description = normalizeRichTextInput(description)
     if (assignee_id !== undefined) {
       const previousAssigneeId = currentTicket?.assignee_id
       updates.assignee_id = assignee_id || null

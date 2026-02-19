@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requirePermission, getSupabaseWithUserContext } from "@/lib/auth-helpers"
+import { isRichTextEmpty } from "@/lib/rich-text"
 
 export const runtime = "nodejs"
 
@@ -28,7 +29,7 @@ export async function PATCH(
 
     const body = await request.json()
     const { body: text } = body as { body?: string }
-    if (text === undefined || typeof text !== "string") {
+    if (text === undefined || typeof text !== "string" || isRichTextEmpty(text)) {
       return NextResponse.json(
         { error: "Comment body is required" },
         { status: 400 }

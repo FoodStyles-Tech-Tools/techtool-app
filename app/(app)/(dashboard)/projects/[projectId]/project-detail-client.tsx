@@ -75,6 +75,7 @@ const GanttChart = dynamic(
 import { isDoneStatus } from "@/lib/ticket-statuses"
 import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import type { Ticket } from "@/lib/types"
+import { richTextToPlainText } from "@/lib/rich-text"
 
 export default function ProjectDetailClient() {
   const params = useParams()
@@ -220,9 +221,10 @@ export default function ProjectDetailClient() {
       return ticket
     }).filter((ticket) => {
       // Search filter
+      const descriptionText = richTextToPlainText(ticket.description)
       const matchesSearch = 
         ticket.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        ticket.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        descriptionText.toLowerCase().includes(searchQuery.toLowerCase()) ||
         ticket.display_id?.toLowerCase().includes(searchQuery.toLowerCase())
       
       if (!matchesSearch) return false
@@ -1777,6 +1779,7 @@ export default function ProjectDetailClient() {
                         const isUpdating = Object.keys(updatingFields).some(key => key.startsWith(`${ticket.id}-`))
                         const isDroppingThis = droppingTicketId === ticket.id
                         const canDrag = canEditTickets && !isUpdating && !isDroppingThis
+                        const descriptionSnippet = richTextToPlainText(ticket.description)
                         
                         return (
                           <Card
@@ -1867,9 +1870,9 @@ export default function ProjectDetailClient() {
                                     </span>
                                   </div>
                                   <h4 className="text-sm font-medium line-clamp-2">{ticket.title}</h4>
-                                  {ticket.description && (
+                                  {descriptionSnippet && (
                                     <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
-                                      {ticket.description}
+                                      {descriptionSnippet}
                                     </p>
                                   )}
                                   {ticket.links?.length ? (

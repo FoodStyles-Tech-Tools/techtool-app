@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
+import dynamic from "next/dynamic"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -14,7 +15,6 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -39,8 +39,13 @@ import { SprintSelect } from "@/components/sprint-select"
 import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
 import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
+import { normalizeRichTextInput } from "@/lib/rich-text"
 
 const NO_PROJECT_VALUE = "__no_project__"
+const RichTextEditor = dynamic(
+  () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
+  { ssr: false }
+)
 
 const ticketSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -268,7 +273,7 @@ export function TicketForm({
       const sanitizedLinks = (values.links || []).map((link) => link.trim()).filter(Boolean)
       const payload = {
         title: values.title,
-        description: values.description,
+        description: normalizeRichTextInput(values.description),
         priority: values.priority,
         type: values.type,
         project_id:
@@ -488,11 +493,12 @@ export function TicketForm({
             <FormItem>
               <FormLabel>Description</FormLabel>
               <FormControl>
-                <Textarea
+                <RichTextEditor
                   className="border-border/40 bg-background/55"
                   placeholder="Ticket description"
-                  {...field}
                   value={field.value || ""}
+                  onChange={field.onChange}
+                  activateOnClick
                 />
               </FormControl>
               <FormMessage />

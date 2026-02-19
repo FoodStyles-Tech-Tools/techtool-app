@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSupabaseWithUserContext, requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
 import { timeQuery } from "@/lib/query-timing"
+import { normalizeRichTextInput } from "@/lib/rich-text"
 
 export const runtime = 'nodejs'
 
@@ -217,6 +218,7 @@ export async function POST(request: NextRequest) {
       epic_id,
       sprint_id,
     } = body
+    const normalizedDescription = normalizeRichTextInput(description)
 
     if (!title) {
       return NextResponse.json(
@@ -252,7 +254,7 @@ export async function POST(request: NextRequest) {
       .insert({
         project_id: project_id || null,
         title,
-        description,
+        description: normalizedDescription,
         assignee_id: assignee_id || null,
         sqa_assignee_id: sqa_assignee_id || null,
         sqa_assigned_at: sqaAssignedAt,

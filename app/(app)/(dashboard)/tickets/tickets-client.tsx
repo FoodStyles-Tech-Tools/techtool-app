@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dialog"
 import { buildStatusChangeBody } from "@/lib/ticket-statuses"
 import type { Ticket } from "@/lib/types"
+import { richTextToPlainText } from "@/lib/rich-text"
 import {
   ASSIGNEE_ALLOWED_ROLES,
   SQA_ALLOWED_ROLES,
@@ -150,7 +151,7 @@ export default function TicketsPage() {
     return allTickets.filter(
       (t) =>
         t.title.toLowerCase().includes(q) ||
-        t.description?.toLowerCase().includes(q) ||
+        richTextToPlainText(t.description).toLowerCase().includes(q) ||
         t.project?.name.toLowerCase().includes(q) ||
         t.display_id?.toLowerCase().includes(q)
     )

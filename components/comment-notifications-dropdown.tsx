@@ -12,6 +12,7 @@ import { useCommentNotifications, type CommentNotification } from "@/hooks/use-c
 import { Bell, MessageSquare, AtSign, CheckCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { richTextToPlainText } from "@/lib/rich-text"
 
 function NotificationItem({
   notification,
@@ -26,9 +27,8 @@ function NotificationItem({
   const displayId = notification.ticket?.display_id || notification.ticket_id?.slice(0, 8)
   const authorName = notification.comment?.author?.name || notification.comment?.author?.email || "Someone"
   const typeLabel = notification.type === "mention" ? "mentioned you" : "replied"
-  const bodySnippet = notification.comment?.body
-    ? notification.comment.body.slice(0, 80) + (notification.comment.body.length > 80 ? "…" : "")
-    : ""
+  const bodyText = richTextToPlainText(notification.comment?.body)
+  const bodySnippet = bodyText ? bodyText.slice(0, 80) + (bodyText.length > 80 ? "…" : "") : ""
 
   const handleClick = () => {
     if (isUnread) onMarkRead(notification.id)

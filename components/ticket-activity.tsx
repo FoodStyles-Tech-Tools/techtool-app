@@ -12,6 +12,7 @@ import type { TicketComment } from "@/hooks/use-ticket-comments"
 import { TicketPriorityIcon } from "@/components/ticket-priority-select"
 import { formatStatusLabel } from "@/lib/ticket-statuses"
 import { cn } from "@/lib/utils"
+import { richTextToPlainText } from "@/lib/rich-text"
 
 interface TicketActivityProps {
   ticketId: string
@@ -121,7 +122,8 @@ function formatHistoryValueText(fieldName: string | null, value: unknown): strin
   if (isEmptyValue(value)) return "None"
 
   if (typeof value === "string") {
-    const trimmed = value.trim()
+    const normalized = fieldName === "description" ? richTextToPlainText(value) : value
+    const trimmed = normalized.trim()
 
     if (fieldName === "status") {
       return formatStatusLabel(trimmed).toUpperCase()

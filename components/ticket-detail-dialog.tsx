@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
+import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,12 +40,19 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@/lib/ticket-constants"
+import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
+import { isRichTextEmpty, normalizeRichTextInput, toDisplayHtml } from "@/lib/rich-text"
 
 interface TicketDetailDialogProps {
   ticketId: string | null
   open: boolean
   onOpenChange: (open: boolean) => void
 }
+
+const RichTextEditor = dynamic(
+  () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
+  { ssr: false }
+)
 
 const toUTCISOStringPreserveLocal = (date: Date) => {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString()
@@ -452,11 +460,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       return
     }
     if (!ticket) return
-    if (descriptionValue === (ticket.description || "")) {
+    const normalizedDescription = normalizeRichTextInput(descriptionValue)
+    const currentDescription = normalizeRichTextInput(ticket.description)
+    if (normalizedDescription === currentDescription) {
       setIsEditingDescription(false)
       return
     }
-    await updateTicketWithToast({ description: descriptionValue }, "Description updated")
+    await updateTicketWithToast({ description: normalizedDescription }, "Description updated")
     setIsEditingDescription(false)
   }
 
@@ -467,13 +477,6 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     } else if (e.key === "Escape") {
       setTitleValue(ticket?.title || "")
       setIsEditingTitle(false)
-    }
-  }
-
-  const handleDescriptionKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Escape") {
-      setDescriptionValue(ticket?.description || "")
-      setIsEditingDescription(false)
     }
   }
 
@@ -712,15 +715,28 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                     {isEditingDescription ? (
                       <div className="space-y-2 mt-3">
                         <label className="text-sm font-semibold text-foreground">Description</label>
-                        <Textarea
+                        <RichTextEditor
                           value={descriptionValue}
-                          onChange={(e) => setDescriptionValue(e.target.value)}
-                          onBlur={handleDescriptionSave}
-                          onKeyDown={handleDescriptionKeyDown}
-                          className="min-h-[140px] text-sm border-2"
-                          disabled={!canEditTickets}
-                          autoFocus
+                          onChange={setDescriptionValue}
+                          placeholder="Describe this ticket"
+                          className="border-border/50"
+                          activateOnClick
                         />
+                        <div className="flex items-center justify-end gap-2">
+                          <Button size="sm" onClick={handleDescriptionSave}>
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setDescriptionValue(ticket.description || "")
+                              setIsEditingDescription(false)
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <div
@@ -735,11 +751,20 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         }}
                       >
                         <label className="text-sm font-semibold text-foreground">Description</label>
-                        <p className="text-sm text-muted-foreground min-h-[140px] whitespace-pre-wrap leading-relaxed">
-                          {ticket.description || (
-                            <span className="italic text-muted-foreground/70">No description provided. Click to add one.</span>
-                          )}
-                        </p>
+                        {isRichTextEmpty(ticket.description) ? (
+                          <p className="text-sm text-muted-foreground min-h-[140px] leading-relaxed">
+                            <span className="italic text-muted-foreground/70">
+                              No description provided. Click to add one.
+                            </span>
+                          </p>
+                        ) : (
+                          <div
+                            className="rich-text-content min-h-[140px] text-sm text-foreground leading-relaxed"
+                            dangerouslySetInnerHTML={
+                              getSanitizedHtmlProps(toDisplayHtml(ticket.description)) ?? { __html: "" }
+                            }
+                          />
+                        )}
                       </div>
                     )}
                     

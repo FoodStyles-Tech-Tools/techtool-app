@@ -26,8 +26,12 @@ export function sanitizeHtml(html: string | null | undefined): string | null {
 
     doc.querySelectorAll(DANGEROUS_TAGS.join(",")).forEach((el) => el.remove())
 
-    // Optional: strip any element with event handlers or javascript: in href
-    doc.querySelectorAll("[onclick], [onload], [onerror], a[href^='javascript:']").forEach((el) => el.remove())
+    // Strip obvious executable vectors.
+    doc
+      .querySelectorAll(
+        "[onclick], [onload], [onerror], [onmouseenter], [onfocus], a[href^='javascript:'], img[src^='javascript:']"
+      )
+      .forEach((el) => el.remove())
 
     const out = doc.body.innerHTML.trim()
     return out || doc.body.textContent?.trim() || null

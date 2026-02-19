@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requirePermission, getSupabaseWithUserContext } from "@/lib/auth-helpers"
 import { startTiming, endTiming } from "@/lib/query-timing"
+import { isRichTextEmpty } from "@/lib/rich-text"
 
 export const runtime = "nodejs"
 
@@ -183,7 +184,7 @@ export async function POST(
       mention_user_ids?: string[]
     }
 
-    if (!text || typeof text !== "string" || !text.trim()) {
+    if (!text || typeof text !== "string" || isRichTextEmpty(text)) {
       return NextResponse.json(
         { error: "Comment body is required" },
         { status: 400 }
