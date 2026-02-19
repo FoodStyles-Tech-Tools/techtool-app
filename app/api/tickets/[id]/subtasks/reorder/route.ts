@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requirePermission } from "@/lib/auth-helpers"
-import { createServerClient } from "@/lib/supabase"
+import { getSupabaseWithUserContext, requirePermission } from "@/lib/auth-helpers"
 
 export const runtime = 'nodejs'
 
@@ -10,7 +9,7 @@ export async function PATCH(
 ) {
   try {
     await requirePermission("tickets", "edit")
-    const supabase = createServerClient()
+    const { supabase } = await getSupabaseWithUserContext()
 
     const body = await request.json()
     const { positions } = body
@@ -57,5 +56,3 @@ export async function PATCH(
     )
   }
 }
-
-

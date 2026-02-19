@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth, requirePermission } from "@/lib/auth-helpers"
+import { getSupabaseWithUserContext, requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
 import { timeQuery } from "@/lib/query-timing"
 
@@ -198,8 +198,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await requirePermission("tickets", "create")
-    const supabase = createServerClient()
+    await requirePermission("tickets", "create")
+    const { supabase, userId } = await getSupabaseWithUserContext()
 
     const body = await request.json()
     const {
@@ -225,30 +225,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user ID from users table
-    const { data: user, error: userError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", session.user.email)
-      .maybeSingle()
-
-    if (userError) {
-      console.error("Error fetching user:", userError)
-      return NextResponse.json(
-        { error: "Failed to fetch user" },
-        { status: 500 }
-      )
-    }
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      )
-    }
-
     // Use provided requested_by_id or default to current user
-    const finalRequestedById = requested_by_id || user.id
+    const finalRequestedById = requested_by_id || userId
 
     // Set timestamps based on assignee and status
     const now = new Date().toISOString()
@@ -285,6 +263,7 @@ export async function POST(request: NextRequest) {
         priority,
         type,
         status,
+        activity_actor_id: userId,
         department_id: department_id || null,
         epic_id: epic_id || null,
         sprint_id: sprint_id || null,

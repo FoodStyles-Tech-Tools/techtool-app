@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requirePermission } from "@/lib/auth-helpers"
-import { createServerClient } from "@/lib/supabase"
+import { getSupabaseWithUserContext, requirePermission } from "@/lib/auth-helpers"
 
 export const runtime = 'nodejs'
 
@@ -10,7 +9,7 @@ export async function PATCH(
 ) {
   try {
     await requirePermission("tickets", "edit")
-    const supabase = createServerClient()
+    const { supabase, userId } = await getSupabaseWithUserContext()
 
     const body = await request.json()
     const { title, completed } = body
@@ -28,6 +27,7 @@ export async function PATCH(
     if (completed !== undefined) {
       updates.completed = completed
     }
+    updates.activity_actor_id = userId
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json(
@@ -80,7 +80,13 @@ export async function DELETE(
 ) {
   try {
     await requirePermission("tickets", "edit")
-    const supabase = createServerClient()
+    const { supabase, userId } = await getSupabaseWithUserContext()
+
+    await supabase
+      .from("subtasks")
+      .update({ activity_actor_id: userId })
+      .eq("id", params.subtaskId)
+      .eq("ticket_id", params.id)
 
     const { error } = await supabase
       .from("subtasks")
@@ -111,5 +117,3 @@ export async function DELETE(
     )
   }
 }
-
-

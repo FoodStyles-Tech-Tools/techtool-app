@@ -7,6 +7,8 @@ export interface CommentAuthor {
   id: string
   name: string | null
   email: string
+  avatar_url?: string | null
+  image?: string | null
 }
 
 export interface CommentMention {

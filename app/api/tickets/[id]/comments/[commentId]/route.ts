@@ -48,7 +48,7 @@ export async function PATCH(
         body,
         created_at,
         updated_at,
-        author:users!ticket_comments_author_id_fkey(id, name, email)
+        author:users!ticket_comments_author_id_fkey(id, name, email, avatar_url)
       `
       )
       .single()
@@ -61,7 +61,8 @@ export async function PATCH(
       )
     }
 
-    return NextResponse.json({ comment })
+    const normalizedAuthor = Array.isArray(comment.author) ? comment.author[0] : comment.author
+    return NextResponse.json({ comment: { ...comment, author: normalizedAuthor } })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

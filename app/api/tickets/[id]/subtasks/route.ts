@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requirePermission } from "@/lib/auth-helpers"
+import { getSupabaseWithUserContext, requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
 
 export const runtime = 'nodejs'
@@ -49,7 +49,7 @@ export async function POST(
 ) {
   try {
     await requirePermission("tickets", "edit")
-    const supabase = createServerClient()
+    const { supabase, userId } = await getSupabaseWithUserContext()
 
     const body = await request.json()
     const { title } = body
@@ -77,6 +77,7 @@ export async function POST(
         ticket_id: params.id,
         title: title.trim(),
         position: nextPosition,
+        activity_actor_id: userId,
       })
       .select()
       .single()
@@ -104,5 +105,3 @@ export async function POST(
     )
   }
 }
-
-

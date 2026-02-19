@@ -32,6 +32,7 @@ interface SubtasksProps {
 export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
   const [subtasks, setSubtasks] = useState<Subtask[]>([])
   const [loading, setLoading] = useState(true)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValue, setEditValue] = useState("")
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("")
@@ -43,6 +44,26 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
   const canEditTickets = flags?.canEditTickets ?? false
   const supabase = useSupabaseClient()
   const userEmail = useUserEmail()
+
+  const ensureCurrentUserId = async () => {
+    if (currentUserId) return currentUserId
+    if (!userEmail) return null
+
+    await ensureUserContext(supabase, userEmail)
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("id")
+      .eq("email", userEmail)
+      .single()
+
+    if (error || !user?.id) {
+      console.error("Error resolving current user id for subtasks:", error)
+      return null
+    }
+
+    setCurrentUserId(user.id)
+    return user.id
+  }
 
   const fetchSubtasks = async () => {
     try {
@@ -123,7 +144,8 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
         .from("subtasks")
         .update({ 
           completed: !subtask.completed,
-          completed_at: !subtask.completed ? new Date().toISOString() : null
+          completed_at: !subtask.completed ? new Date().toISOString() : null,
+          activity_actor_id: await ensureCurrentUserId(),
         })
         .eq("id", subtask.id)
         .eq("ticket_id", ticketId)
@@ -177,7 +199,10 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
 
       const { error } = await supabase
         .from("subtasks")
-        .update({ title: editValue.trim() })
+        .update({
+          title: editValue.trim(),
+          activity_actor_id: await ensureCurrentUserId(),
+        })
         .eq("id", subtaskId)
         .eq("ticket_id", ticketId)
 
@@ -212,6 +237,15 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
       // Set user context for RLS
       if (userEmail) {
         await ensureUserContext(supabase, userEmail)
+      }
+
+      const actorId = await ensureCurrentUserId()
+      if (actorId) {
+        await supabase
+          .from("subtasks")
+          .update({ activity_actor_id: actorId })
+          .eq("id", subtaskId)
+          .eq("ticket_id", ticketId)
       }
 
       const { error } = await supabase
@@ -267,6 +301,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
           ticket_id: ticketId,
           title: title,
           position: nextPosition,
+          activity_actor_id: await ensureCurrentUserId(),
         })
         .select()
         .single()
@@ -406,7 +441,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
   const canEdit = canEditTickets
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div className="space-y-2">
         {subtasks.map((subtask) => (
           <div
@@ -417,7 +452,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, subtask.id)}
             onDragEnd={handleDragEnd}
-            className={`flex items-center gap-2 group hover:bg-muted/50 rounded-md p-2 -mx-2 transition-colors ${
+            className={`flex items-center gap-2 group hover:bg-muted/50 rounded-md p-1.5 -mx-1 transition-colors ${
               draggedId === subtask.id ? "opacity-50" : ""
             } ${
               dragOverId === subtask.id ? "border-t-2 border-primary" : ""
@@ -470,7 +505,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="h-6 w-6"
                 onClick={(e) => {
                   e.stopPropagation()
                   handleCopySubtask(subtask)
@@ -484,7 +519,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-6 w-6"
                   onClick={(e) => {
                     e.stopPropagation()
                     handleDelete(subtask.id)
@@ -521,7 +556,7 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start text-muted-foreground"
+              className="h-7 w-full justify-start text-muted-foreground text-xs"
               onClick={() => setIsAdding(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -532,11 +567,10 @@ export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
       </div>
 
       {subtasks.length === 0 && !isAdding && (
-        <p className="text-sm text-muted-foreground text-center py-4">
+        <p className="text-sm text-muted-foreground text-center py-2">
           No subtasks yet. {canEdit && "Click 'Add subtask' to create one."}
         </p>
       )}
     </div>
   )
 }
-

@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Copy, AlertTriangle, ExternalLink, Pencil, Trash2, Plus, X } from "lucide-react"
+import { Copy, AlertTriangle, ExternalLink, Pencil, Trash2, Plus, X, ChevronRight, ChevronDown } from "lucide-react"
 import { BrandLinkIcon } from "@/components/brand-link-icon"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -18,7 +18,7 @@ import { useProjects } from "@/hooks/use-projects"
 import { useEpics } from "@/hooks/use-epics"
 import { useSprints } from "@/hooks/use-sprints"
 import { Subtasks } from "@/components/subtasks"
-import { TicketComments } from "@/components/ticket-comments"
+import { TicketActivity } from "@/components/ticket-activity"
 import { useTicketDetail } from "@/hooks/use-ticket-detail"
 import { useUpdateTicket } from "@/hooks/use-tickets"
 import { useUsers } from "@/hooks/use-users"
@@ -62,6 +62,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
   const [pendingStatusChange, setPendingStatusChange] = useState<string | null>(null)
+  const [isSubtasksCollapsed, setIsSubtasksCollapsed] = useState(true)
   const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
   const UNASSIGNED_VALUE = "unassigned"
   const NO_DEPARTMENT_VALUE = "no_department"
@@ -126,6 +127,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       setIsEditingDescription(false)
     }
   }, [open])
+
+  useEffect(() => {
+    if (open) {
+      setIsSubtasksCollapsed(true)
+    }
+  }, [open, ticketId])
 
   const assigneeEligibleUsers = useMemo(
     () => users.filter((user) =>
@@ -448,7 +455,10 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     }
   }
 
-  const handleTimestampChange = async (field: "created_at" | "assigned_at" | "started_at" | "completed_at", value: Date | null) => {
+  const handleTimestampChange = async (
+    field: "created_at" | "assigned_at" | "sqa_assigned_at" | "started_at" | "completed_at",
+    value: Date | null
+  ) => {
     if (!ensureCanEdit()) return
     if (!ticket || !ticketId) return
     
@@ -464,6 +474,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     const timestampMap: Record<string, string | null> = {
       created_at: field === "created_at" ? dateValue : (ticket.created_at || null),
       assigned_at: field === "assigned_at" ? dateValue : ((ticket as any).assigned_at || null),
+      sqa_assigned_at: field === "sqa_assigned_at" ? dateValue : ((ticket as any).sqa_assigned_at || null),
       started_at: field === "started_at" ? dateValue : ((ticket as any).started_at || null),
       completed_at: effectiveCompletedAt,
     }
@@ -602,12 +613,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   if (!ticketId) return null
+  const subtasksPanelId = `ticket-subtasks-panel-${ticketId}`
 
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 border-0">
-        <DialogHeader className="px-6 pt-6 pb-4 bg-muted/30">
+      <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 border-0">
+        <DialogHeader className="px-4 pt-4 pb-3 bg-muted/30">
           <DialogTitle className="sr-only">
             {ticket ? `Ticket ${ticket.display_id || ticketId.slice(0, 8)}: ${ticket.title}` : `Ticket ${ticketId.slice(0, 8)}`}
           </DialogTitle>
@@ -639,30 +651,30 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div className="flex-1 overflow-y-auto px-4 py-4">
           {loading ? (
             <p className="text-sm text-muted-foreground">Loading...</p>
           ) : !ticket ? (
             <p className="text-sm text-muted-foreground">Ticket not found</p>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-              <div className="space-y-6 min-w-0">
-                <Card>
-                  <CardContent className="pt-6">
+            <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+              <div className="space-y-4 min-w-0">
+                <Card className="border-0 shadow-none">
+                  <CardContent className="p-4 pt-4">
                     {isEditingTitle ? (
                       <Input
                         value={titleValue}
                         onChange={(e) => setTitleValue(e.target.value)}
                         onBlur={handleTitleSave}
                         onKeyDown={handleTitleKeyDown}
-                        className="text-2xl font-semibold border-2"
+                        className="h-10 text-xl font-semibold border-2"
                         disabled={!canEditTickets}
                         autoFocus
                       />
                     ) : (
                       <h1
                         className={[
-                          "text-3xl font-bold -mx-3 px-3 py-2.5 rounded-md transition-colors leading-tight",
+                          "text-2xl font-semibold -mx-2 px-2 py-2 rounded-md transition-colors leading-tight",
                           canEditTickets ? "cursor-pointer hover:bg-muted/50" : ""
                         ].join(" ")}
                         onClick={() => {
@@ -676,14 +688,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                     )}
                     
                     {isEditingDescription ? (
-                      <div className="space-y-2.5 mt-4">
+                      <div className="space-y-2 mt-3">
                         <label className="text-sm font-semibold text-foreground">Description</label>
                         <Textarea
                           value={descriptionValue}
                           onChange={(e) => setDescriptionValue(e.target.value)}
                           onBlur={handleDescriptionSave}
                           onKeyDown={handleDescriptionKeyDown}
-                          className="min-h-[180px] text-sm border-2"
+                          className="min-h-[140px] text-sm border-2"
                           disabled={!canEditTickets}
                           autoFocus
                         />
@@ -691,7 +703,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                     ) : (
                       <div
                         className={[
-                          "space-y-2.5 -mx-3 px-3 py-3 rounded-md transition-colors mt-4",
+                          "space-y-2 -mx-2 px-2 py-2 rounded-md transition-colors mt-3",
                           canEditTickets ? "cursor-pointer hover:bg-muted/50" : ""
                         ].join(" ")}
                         onClick={() => {
@@ -701,7 +713,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                         }}
                       >
                         <label className="text-sm font-semibold text-foreground">Description</label>
-                        <p className="text-sm text-muted-foreground min-h-[180px] whitespace-pre-wrap leading-relaxed">
+                        <p className="text-sm text-muted-foreground min-h-[140px] whitespace-pre-wrap leading-relaxed">
                           {ticket.description || (
                             <span className="italic text-muted-foreground/70">No description provided. Click to add one.</span>
                           )}
@@ -709,7 +721,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     )}
                     
-                    <div className="mt-6">
+                    <div className="mt-4">
                       <div className="flex items-center justify-between mb-2">
                         <label className="text-sm font-semibold text-foreground">Links</label>
                         <div className="flex items-center gap-2">
@@ -727,7 +739,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                                 setIsAddingLink(true)
                                 setNewLinkUrl("")
                               }}
-                              className="h-7 px-2"
+                              className="h-6 px-2 text-xs"
                             >
                               <Plus className="h-3 w-3 mr-1" />
                               Add URL
@@ -778,7 +790,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           {ticket.links.map((url, index) => (
                             <div
                               key={`${url}-${index}`}
-                              className="flex items-center justify-between gap-3 rounded-md border px-3 py-2 text-sm hover:bg-muted transition-colors"
+                              className="flex items-center justify-between gap-3 rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
                             >
                               {editingLinkIndex === index ? (
                                 <div className="flex items-center gap-2 flex-1">
@@ -874,16 +886,31 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Subtasks</CardTitle>
+                <Card className="border-0 shadow-none">
+                  <CardHeader className="px-4 pt-4 pb-2">
+                    <button
+                      type="button"
+                      className="flex w-full items-center gap-2 text-left"
+                      onClick={() => setIsSubtasksCollapsed((prev) => !prev)}
+                      aria-expanded={!isSubtasksCollapsed}
+                      aria-controls={subtasksPanelId}
+                    >
+                      {isSubtasksCollapsed ? (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      )}
+                      <CardTitle className="text-base">Subtasks</CardTitle>
+                    </button>
                   </CardHeader>
-                  <CardContent>
-                    <Subtasks ticketId={ticketId} projectName={ticket.project?.name || null} displayId={ticket.display_id} />
-                  </CardContent>
+                  {!isSubtasksCollapsed && (
+                    <CardContent id={subtasksPanelId} className="px-4 pb-4 pt-0">
+                      <Subtasks ticketId={ticketId} projectName={ticket.project?.name || null} displayId={ticket.display_id} />
+                    </CardContent>
+                  )}
                 </Card>
 
-                <TicketComments
+                <TicketActivity
                   ticketId={ticketId}
                   displayId={ticket.display_id}
                   initialComments={detailComments}
@@ -892,12 +919,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
 
               <div>
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Details</CardTitle>
+                  <CardHeader className="px-4 pt-4 pb-2">
+                    <CardTitle className="text-base">Details</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                  <div className="space-y-5">
-                    <div className="flex items-start gap-3">
+                  <CardContent className="px-4 pb-4 pt-0">
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Assignee</label>
                       <div className="flex-1">
                         <Select
@@ -907,7 +934,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           }
                           disabled={!canEditTickets || updatingFields["assignee_id"]}
                         >
-                          <SelectTrigger className="h-9 w-full relative overflow-hidden">
+                          <SelectTrigger className="h-8 w-full relative overflow-hidden">
                             {ticket.assignee?.id ? (
                               <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
                                 <UserSelectValue
@@ -932,7 +959,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Reporter</label>
                       <div className="flex-1">
                         <Select
@@ -940,7 +967,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onValueChange={handleRequestedByChange}
                           disabled={!canEditTickets || updatingFields["requested_by_id"]}
                         >
-                          <SelectTrigger className="h-9 w-full relative overflow-hidden">
+                          <SelectTrigger className="h-8 w-full relative overflow-hidden">
                             {ticket.requested_by?.id ? (
                               <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
                                 <UserSelectValue
@@ -962,31 +989,31 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Type</label>
                       <div className="flex-1">
                         <TicketTypeSelect
                           value={ticket.type || "task"}
                           onValueChange={handleTypeChange}
                           disabled={!canEditTickets || updatingFields["type"]}
-                          triggerClassName="h-9 w-full"
+                          triggerClassName="h-8 w-full"
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Priority</label>
                       <div className="flex-1">
                         <TicketPrioritySelect
                           value={ticket.priority}
                           onValueChange={handlePriorityChange}
                           disabled={!canEditTickets || updatingFields["priority"]}
-                          triggerClassName="h-9 w-full"
+                          triggerClassName="h-8 w-full"
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Due Date</label>
                       <div className="flex-1">
                         <DateTimePicker
@@ -994,13 +1021,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onChange={handleDueDateChange}
                           disabled={!canEditTickets || updatingFields["due_date"]}
                           placeholder="No due date"
-                          className="w-full h-9"
+                          className="w-full h-8"
                           hideIcon
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Department</label>
                       <div className="flex-1">
                         <Select
@@ -1008,7 +1035,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onValueChange={handleDepartmentChange}
                           disabled={!canEditTickets || updatingFields["department_id"]}
                         >
-                          <SelectTrigger className="h-9 w-full">
+                          <SelectTrigger className="h-8 w-full">
                             <SelectValue placeholder="No Department" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1023,7 +1050,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Epic</label>
                       <div className="flex-1">
                         <EpicSelect
@@ -1031,12 +1058,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onValueChange={handleEpicChange}
                           epics={epics}
                           disabled={!canEditTickets || updatingFields["epic_id"] || !projectId}
-                          triggerClassName="h-9 w-full"
+                          triggerClassName="h-8 w-full"
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Sprint</label>
                       <div className="flex-1">
                         <SprintSelect
@@ -1044,12 +1071,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onValueChange={handleSprintChange}
                           sprints={sprints}
                           disabled={!canEditTickets || updatingFields["sprint_id"] || !projectId}
-                          triggerClassName="h-9 w-full"
+                          triggerClassName="h-8 w-full"
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Project</label>
                       <div className="flex-1">
                         <Select
@@ -1057,7 +1084,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onValueChange={handleProjectChange}
                           disabled={!canEditTickets || updatingFields["project_id"]}
                         >
-                          <SelectTrigger className="h-9 w-full">
+                          <SelectTrigger className="h-8 w-full">
                             <SelectValue placeholder="No Project" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1081,7 +1108,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                     </div>
 
                     {ticket.status === "cancelled" && ticket.reason?.cancelled && (
-                      <div className="flex items-start gap-3">
+                      <div className="flex items-start gap-2">
                         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Reason</label>
                         <div className="flex-1">
                           <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
@@ -1103,12 +1130,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     )}
 
-                    <Separator className="my-4" />
+                    <Separator className="my-3" />
 
                     <div>
-                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Timestamps</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-start gap-3">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Timestamps</h3>
+                      <div className="space-y-2.5">
+                        <div className="flex items-start gap-2">
                           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Created</label>
                           <div className="flex-1">
                             <DateTimePicker
@@ -1116,13 +1143,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                               onChange={(date) => handleTimestampChange("created_at", date)}
                               disabled={!canEditTickets || updatingFields["created_at"]}
                               placeholder="Not set"
-                              className="w-full h-9"
+                              className="w-full h-8"
                               hideIcon
                             />
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-2">
                           <div className="flex items-center gap-2 flex-shrink-0 w-24">
                             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Assigned</label>
                             {!(ticket as any).assigned_at && timestampValidation.assigned_at && (
@@ -1137,13 +1164,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                               onChange={(date) => handleTimestampChange("assigned_at", date)}
                               disabled={!canEditTickets || !ticket.assignee || updatingFields["assigned_at"]}
                               placeholder="Not set"
-                              className="w-full h-9"
+                              className="w-full h-8"
                               hideIcon
                             />
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-2">
                           <div className="flex items-center gap-2 flex-shrink-0 w-24">
                             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Started</label>
                             {!(ticket as any).started_at && timestampValidation.started_at && (
@@ -1158,13 +1185,29 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                               onChange={(date) => handleTimestampChange("started_at", date)}
                               disabled={!canEditTickets || ticket.status === "open" || updatingFields["started_at"]}
                               placeholder="Not set"
-                              className="w-full h-9"
+                              className="w-full h-8"
                               hideIcon
                             />
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-3">
+                        <div className="flex items-start gap-2">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">
+                            SQA Assigned
+                          </label>
+                          <div className="flex-1">
+                            <DateTimePicker
+                              value={parseTimestamp((ticket as any).sqa_assigned_at)}
+                              onChange={(date) => handleTimestampChange("sqa_assigned_at", date)}
+                              disabled={!canEditTickets || updatingFields["sqa_assigned_at"]}
+                              placeholder="Not set"
+                              className="w-full h-8"
+                              hideIcon
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex items-start gap-2">
                           <div className="flex items-center gap-2 flex-shrink-0 w-24">
                             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Completed</label>
                             {!(ticket as any).completed_at && timestampValidation.completed_at && (
@@ -1179,7 +1222,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                               onChange={(date) => handleTimestampChange("completed_at", date)}
                               disabled={!canEditTickets || (ticket.status !== "completed" && ticket.status !== "cancelled") || updatingFields["completed_at"]}
                               placeholder="Not set"
-                              className="w-full h-9"
+                              className="w-full h-8"
                               hideIcon
                             />
                           </div>

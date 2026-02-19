@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect, useLayoutEffect, memo, useMemo } from "react"
+import { useState, useRef, useEffect, useLayoutEffect, memo } from "react"
 import { createPortal } from "react-dom"
 
 function useIsMac() {
@@ -16,11 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -32,7 +27,7 @@ import { useUsers } from "@/hooks/use-users"
 import { useSession } from "@/lib/auth-client"
 import { usePermissions } from "@/hooks/use-permissions"
 import { toast } from "@/components/ui/toast"
-import { MessageSquare, Reply, Pencil, Trash2, AtSign, Send, X, MoreHorizontal } from "lucide-react"
+import { MessageSquare, Reply, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface TicketCommentsProps {
@@ -40,6 +35,10 @@ interface TicketCommentsProps {
   displayId?: string | null
   /** When provided (e.g. from ticket detail), comments are not fetched again and no loading state is shown. */
   initialComments?: TicketComment[]
+  /** Hide title/count when rendered inside Activity tab. */
+  showHeader?: boolean
+  /** Place root comment composer before list. */
+  composerFirst?: boolean
 }
 
 const CommentBody = memo(function CommentBody({
@@ -109,6 +108,7 @@ const CommentBody = memo(function CommentBody({
 
 const RepliesBlock = memo(function RepliesBlock({
   replies,
+  rootCommentId,
   users,
   currentUserId,
   canEdit,
@@ -118,10 +118,11 @@ const RepliesBlock = memo(function RepliesBlock({
   onHoverChange,
 }: {
   replies: TicketComment[]
+  rootCommentId: string
   users: { id: string; name: string | null; email: string }[]
   currentUserId: string | null
   canEdit: boolean
-  onReply: (parentId: string) => void
+  onReply: (comment: TicketComment, replyTargetId?: string) => void
   onStartEdit: (comment: TicketComment) => void
   onDelete: (comment: TicketComment) => void
   onHoverChange?: (commentId: string | null) => void
@@ -130,7 +131,7 @@ const RepliesBlock = memo(function RepliesBlock({
   const count = replies.length
   if (count === 0) return null
   return (
-    <div className="mt-3">
+    <div className="mt-3 pl-4">
       {!expanded ? (
         <button
           type="button"
@@ -157,6 +158,7 @@ const RepliesBlock = memo(function RepliesBlock({
                 currentUserId={currentUserId}
                 canEdit={canEdit}
                 onReply={onReply}
+                replyTargetId={rootCommentId}
                 onStartEdit={onStartEdit}
                 onDelete={onDelete}
                 isReply
@@ -176,6 +178,7 @@ const CommentRow = memo(function CommentRow({
   currentUserId,
   canEdit,
   onReply,
+  replyTargetId,
   onStartEdit,
   onDelete,
   isReply,
@@ -186,7 +189,8 @@ const CommentRow = memo(function CommentRow({
   users: { id: string; name: string | null; email: string }[]
   currentUserId: string | null
   canEdit: boolean
-  onReply: (parentId: string) => void
+  onReply: (comment: TicketComment, replyTargetId?: string) => void
+  replyTargetId?: string
   onStartEdit: (comment: TicketComment) => void
   onDelete: (comment: TicketComment) => void
   isReply?: boolean
@@ -196,12 +200,13 @@ const CommentRow = memo(function CommentRow({
   const isOwn = currentUserId === comment.author_id
   const displayName = comment.author?.name || comment.author?.email || "Unknown"
   const initials = displayName.slice(0, 2).toUpperCase()
-  const canReply = canEdit && !isReply
+  const canReply = canEdit
+  const canHotkeyReply = canEdit && !isReply
 
   const content = (
-    <div className={cn("flex gap-3", isReply && "ml-8 mt-3")}>
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarImage src={(comment.author as any)?.image} />
+    <div className={cn("flex gap-2.5", isReply && "mt-2.5")}>
+      <Avatar className="h-7 w-7 shrink-0">
+        <AvatarImage src={comment.author?.avatar_url || comment.author?.image || undefined} />
         <AvatarFallback className="text-xs">{initials}</AvatarFallback>
       </Avatar>
       <div className="flex-1 min-w-0">
@@ -250,13 +255,13 @@ const CommentRow = memo(function CommentRow({
             users={users}
           />
         </div>
-        {canEdit && !isReply && (
-          <div className="flex items-center gap-1 mt-2">
+        {canReply && (
+          <div className={cn("flex items-center gap-1 mt-1.5", isReply && "-ml-4")}>
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 text-xs"
-              onClick={() => onReply(comment.id)}
+              className="h-6 text-xs"
+              onClick={() => onReply(comment, replyTargetId)}
             >
               <Reply className="h-3 w-3 mr-1" />
               Reply
@@ -266,6 +271,7 @@ const CommentRow = memo(function CommentRow({
         {comment.replies && comment.replies.length > 0 && (
           <RepliesBlock
             replies={comment.replies}
+            rootCommentId={replyTargetId ?? comment.id}
             users={users}
             currentUserId={currentUserId}
             canEdit={canEdit}
@@ -279,11 +285,11 @@ const CommentRow = memo(function CommentRow({
     </div>
   )
 
-  if (canReply && onHoverChange) {
+  if (canHotkeyReply && onHoverChange) {
     return (
       <div
         className={cn(
-          "rounded-lg transition-colors -mx-2 px-2 py-1 -my-0.5",
+          "rounded-lg transition-colors -mx-1.5 px-1.5 py-1 -my-0.5",
           isHovered && "bg-muted/60 ring-1 ring-border/50"
         )}
         onMouseEnter={() => onHoverChange(comment.id)}
@@ -303,17 +309,18 @@ function CommentComposer({
   onSubmit,
   onCancel,
   users,
+  initialBody = "",
   initialMentionIds = [],
 }: {
   placeholder?: string
   onSubmit: (body: string, mentionUserIds: string[]) => Promise<{ body: string; parent_id?: string; mention_user_ids?: string[] }>
   onCancel?: () => void
   users: { id: string; name: string | null; email: string }[]
+  initialBody?: string
   initialMentionIds?: string[]
 }) {
-  const [body, setBody] = useState("")
+  const [body, setBody] = useState(initialBody)
   const [mentionUserIds, setMentionUserIds] = useState<string[]>(initialMentionIds)
-  const [mentionOpen, setMentionOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [inlineMention, setInlineMention] = useState<{ query: string; start: number; cursor: number } | null>(null)
   const [mentionHighlightIndex, setMentionHighlightIndex] = useState(0)
@@ -374,13 +381,8 @@ function CommentComposer({
     } else {
       setMentionUserIds((prev) => (prev.includes(user.id) ? prev : [...prev, user.id]))
       setBody((prev) => prev + `@${name} `)
-      setMentionOpen(false)
       textareaRef.current?.focus()
     }
-  }
-
-  const removeMention = (userId: string) => {
-    setMentionUserIds((prev) => prev.filter((id) => id !== userId))
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -439,7 +441,7 @@ function CommentComposer({
     setSubmitting(true)
     setInlineMention(null)
     try {
-      const payload = await onSubmit(trimmed, mentionUserIds)
+      await onSubmit(trimmed, mentionUserIds)
       setBody("")
       setMentionUserIds([])
       onCancel?.()
@@ -449,6 +451,9 @@ function CommentComposer({
   }
 
   const filteredInlineUsers = inlineMention ? getFilteredUsers(inlineMention.query) : []
+  const hasText = body.trim().length > 0
+  const showSend = hasText || submitting
+  const showActions = Boolean(onCancel) || showSend
 
   useEffect(() => {
     if (!mentionListRef.current || filteredInlineUsers.length === 0) return
@@ -502,101 +507,53 @@ function CommentComposer({
       : null
 
   return (
-    <div className="space-y-2 mt-2 relative">
+    <div className="space-y-2 mt-1.5 relative">
       <Textarea
         ref={textareaRef}
         placeholder={placeholder}
         value={body}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
-        className="min-h-[80px] resize-none"
+        className="min-h-[72px] resize-none"
         disabled={submitting}
       />
       {mentionDropdown}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Popover open={mentionOpen} onOpenChange={setMentionOpen}>
-            <PopoverTrigger asChild>
-              <Button type="button" variant="outline" size="sm" className="h-8">
-                <AtSign className="h-3.5 w-3.5 mr-1" />
-                Mention
+      {showActions && (
+        <div className="flex items-center justify-end gap-2 flex-wrap">
+          <div className="flex gap-2">
+            {onCancel && (
+              <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+                Cancel
               </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-0" align="start">
-              <div className="max-h-56 overflow-y-auto">
-                {users
-                  .filter((u) => !mentionUserIds.includes(u.id))
-                  .map((user) => (
-                    <button
-                      key={user.id}
-                      type="button"
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-muted flex items-center gap-2"
-                      onClick={() => addMention(user)}
-                    >
-                      <span className="font-medium">
-                        {user.name || user.email}
-                      </span>
-                    </button>
-                  ))}
-                {users.filter((u) => !mentionUserIds.includes(u.id)).length === 0 && (
-                  <p className="px-3 py-2 text-sm text-muted-foreground">
-                    All members mentioned
-                  </p>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-          {mentionUserIds.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {mentionUserIds.map((id) => {
-                const u = users.find((x) => x.id === id)
-                if (!u) return null
-                return (
-                  <span
-                    key={id}
-                    className="inline-flex items-center gap-1 rounded bg-muted px-2 py-0.5 text-xs"
-                  >
-                    {u.name || u.email}
-                    <button
-                      type="button"
-                      className="hover:bg-muted-foreground/20 rounded p-0.5"
-                      onClick={() => removeMention(id)}
-                      aria-label="Remove mention"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                )
-              })}
-            </div>
-          )}
+            )}
+            {showSend && (
+              <Button
+                size="sm"
+                onClick={handleSubmit}
+                disabled={submitting}
+                title={`Send (${sendShortcut})`}
+                className="gap-1.5"
+              >
+                <span>{submitting ? "Sending..." : "Send"}</span>
+                <kbd className="ml-0.5 hidden sm:inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border border-border/60 bg-muted/80 px-1 font-mono text-[10px] text-muted-foreground">
+                  {sendShortcutKbd}
+                </kbd>
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2">
-          {onCancel && (
-            <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-              Cancel
-            </Button>
-          )}
-          <Button
-            size="sm"
-            onClick={handleSubmit}
-            disabled={!body.trim() || submitting}
-            title={`Send (${sendShortcut})`}
-            className="gap-1.5"
-          >
-            <Send className="h-3.5 w-3.5" />
-            <span>{submitting ? "Sending..." : "Send"}</span>
-            <kbd className="ml-0.5 hidden sm:inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded border border-border/60 bg-muted/80 px-1 font-mono text-[10px] text-muted-foreground">
-              {sendShortcutKbd}
-            </kbd>
-          </Button>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
 
-export function TicketComments({ ticketId, displayId, initialComments }: TicketCommentsProps) {
+export function TicketComments({
+  ticketId,
+  displayId,
+  initialComments,
+  showHeader = true,
+  composerFirst = false,
+}: TicketCommentsProps) {
   const { data: session } = useSession()
   const { flags } = usePermissions()
   const { data: usersData } = useUsers()
@@ -626,9 +583,20 @@ export function TicketComments({ ticketId, displayId, initialComments }: TicketC
   }, [ticketId]) // markTicketRead is stable from React Query, no need to include
 
   const [replyingToId, setReplyingToId] = useState<string | null>(null)
+  const [replyPrefill, setReplyPrefill] = useState<{ mentionUserId: string; mentionLabel: string } | null>(null)
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null)
   const [editingComment, setEditingComment] = useState<TicketComment | null>(null)
   const [editBody, setEditBody] = useState("")
+
+  const getReplyMentionSeed = (comment: TicketComment | undefined) => {
+    if (!comment?.author_id) return null
+    return {
+      mentionUserId: comment.author_id,
+      mentionLabel: comment.author?.name || comment.author?.email || "User",
+    }
+  }
+
+  const findRootCommentById = (commentId: string) => comments.find((comment) => comment.id === commentId)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -639,13 +607,15 @@ export function TicketComments({ ticketId, displayId, initialComments }: TicketC
       if (!hoveredCommentId) return
       e.preventDefault()
       setReplyingToId(hoveredCommentId)
+      setReplyPrefill(getReplyMentionSeed(findRootCommentById(hoveredCommentId)))
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [hoveredCommentId])
+  }, [hoveredCommentId, comments])
 
-  const handleReply = (parentId: string) => {
-    setReplyingToId(parentId)
+  const handleReply = (comment: TicketComment, replyTargetId?: string) => {
+    setReplyingToId(replyTargetId ?? comment.id)
+    setReplyPrefill(getReplyMentionSeed(comment))
   }
 
   const handleSubmitReply = (parentId: string) => {
@@ -656,6 +626,7 @@ export function TicketComments({ ticketId, displayId, initialComments }: TicketC
         mention_user_ids: mentionUserIds,
       })
       setReplyingToId(null)
+      setReplyPrefill(null)
       return { body, parent_id: parentId, mention_user_ids: mentionUserIds }
     }
   }
@@ -690,10 +661,26 @@ export function TicketComments({ ticketId, displayId, initialComments }: TicketC
     }
   }
 
+  const rootComposer = canEdit ? (
+    <div className={cn(composerFirst ? "pb-2" : "pt-2 border-t")}>
+      <CommentComposer
+        placeholder="Add a comment..."
+        onSubmit={async (body, mentionUserIds) => {
+          await addComment.mutateAsync({
+            body,
+            mention_user_ids: mentionUserIds,
+          })
+          return { body, mention_user_ids: mentionUserIds }
+        }}
+        users={users}
+      />
+    </div>
+  ) : null
+
   if (error) {
     return (
-      <Card>
-        <CardContent className="pt-6">
+      <Card className="border-0 shadow-none">
+        <CardContent className="px-4 pb-4 pt-4">
           <p className="text-sm text-destructive">Failed to load comments.</p>
         </CardContent>
       </Card>
@@ -701,27 +688,30 @@ export function TicketComments({ ticketId, displayId, initialComments }: TicketC
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          Comments
-          {comments.length > 0 && (
-            <span className="text-muted-foreground font-normal text-sm">
-              ({comments.length} root)
-            </span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <Card className="border-0 shadow-none">
+      {showHeader && (
+        <CardHeader className="px-4 pt-4 pb-1.5">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Comments
+            {comments.length > 0 && (
+              <span className="text-muted-foreground font-normal text-sm">
+                ({comments.length} root)
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+      )}
+      <CardContent className={cn("px-4 pb-4 space-y-3", showHeader ? "pt-0" : "pt-1")}>
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Loading comments...</p>
         ) : (
           <>
-            {comments.length === 0 && !replyingToId ? (
+            {composerFirst && rootComposer}
+            {comments.length === 0 ? (
               <p className="text-sm text-muted-foreground">No comments yet. Be the first to comment.</p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {comments.map((comment) => (
                   <div key={comment.id}>
                     {editingComment?.id === comment.id ? (
@@ -729,7 +719,7 @@ export function TicketComments({ ticketId, displayId, initialComments }: TicketC
                         <Textarea
                           value={editBody}
                           onChange={(e) => setEditBody(e.target.value)}
-                          className="min-h-[80px]"
+                          className="min-h-[72px]"
                         />
                         <div className="flex gap-2">
                           <Button size="sm" onClick={handleSaveEdit}>
@@ -761,12 +751,17 @@ export function TicketComments({ ticketId, displayId, initialComments }: TicketC
                       />
                     )}
                     {replyingToId === comment.id && (
-                      <div className="ml-8 mt-2">
+                      <div className="ml-[38px] pl-4 mt-1.5">
                         <CommentComposer
                           placeholder="Write a reply..."
                           onSubmit={handleSubmitReply(comment.id)}
-                          onCancel={() => setReplyingToId(null)}
+                          onCancel={() => {
+                            setReplyingToId(null)
+                            setReplyPrefill(null)
+                          }}
                           users={users}
+                          initialBody={replyPrefill?.mentionLabel ? `@${replyPrefill.mentionLabel} ` : ""}
+                          initialMentionIds={replyPrefill?.mentionUserId ? [replyPrefill.mentionUserId] : []}
                         />
                       </div>
                     )}
@@ -774,22 +769,7 @@ export function TicketComments({ ticketId, displayId, initialComments }: TicketC
                 ))}
               </div>
             )}
-
-            {canEdit && (
-              <div className="pt-2 border-t">
-                <CommentComposer
-                  placeholder="Add a comment..."
-                  onSubmit={async (body, mentionUserIds) => {
-                    await addComment.mutateAsync({
-                      body,
-                      mention_user_ids: mentionUserIds,
-                    })
-                    return { body, mention_user_ids: mentionUserIds }
-                  }}
-                  users={users}
-                />
-              </div>
-            )}
+            {!composerFirst && rootComposer}
           </>
         )}
       </CardContent>

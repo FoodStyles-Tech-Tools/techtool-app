@@ -551,6 +551,7 @@ export function useCreateTicket() {
             status: finalStatus,
             priority: data.priority || "medium",
             type: data.type || "task",
+            activity_actor_id: user.id,
             links: prepareLinkPayload(data.links),
           })
           .select(`
@@ -638,12 +639,20 @@ export function useUpdateTicket() {
       if (!userEmail) throw new Error("Not authenticated")
       
       await ensureUserContext(supabase, userEmail)
+      const { data: user } = await supabase
+        .from("users")
+        .select("id")
+        .eq("email", userEmail)
+        .single()
+
+      if (!user) throw new Error("User not found")
 
       const { links, ...rest } = data
       const updatePayload: Record<string, any> = { ...rest }
       if (links !== undefined) {
         updatePayload.links = prepareLinkPayload(links)
       }
+      updatePayload.activity_actor_id = user.id
 
       const { data: ticket, error } = await supabase
         .from("tickets")

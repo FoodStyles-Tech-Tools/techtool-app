@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth, requirePermission } from "@/lib/auth-helpers"
+import { getSupabaseWithUserContext, requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
 
 export const runtime = 'nodejs'
@@ -105,7 +105,7 @@ export async function PATCH(
 ) {
   try {
     await requirePermission("tickets", "edit")
-    const supabase = createServerClient()
+    const { supabase, userId } = await getSupabaseWithUserContext()
 
     const body = await request.json()
     const {
@@ -242,6 +242,7 @@ export async function PATCH(
     if (epic_id !== undefined) updates.epic_id = epic_id || null
     if (sprint_id !== undefined) updates.sprint_id = sprint_id || null
     if (reason !== undefined) updates.reason = reason
+    updates.activity_actor_id = userId
     
     // Timestamp validation: Check ordering constraints before applying updates
     // Rules:
@@ -433,4 +434,3 @@ export async function PATCH(
     )
   }
 }
-

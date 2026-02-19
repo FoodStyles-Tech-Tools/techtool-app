@@ -91,10 +91,10 @@ export async function GET(
             body,
             created_at,
             updated_at,
-            author:users!ticket_comments_author_id_fkey(id, name, email),
+            author:users!ticket_comments_author_id_fkey(id, name, email, avatar_url),
             mentions:comment_mentions(
               user_id,
-              user:users!comment_mentions_user_id_fkey(id, name, email)
+              user:users!comment_mentions_user_id_fkey(id, name, email, avatar_url)
             )
           `
           )
@@ -114,8 +114,8 @@ export async function GET(
           body: string
           created_at: string
           updated_at: string
-          author: { id: string; name: string | null; email: string }
-          mentions: { user_id: string; user: { id: string; name: string | null; email: string } }[]
+          author: { id: string; name: string | null; email: string; avatar_url?: string | null }
+          mentions: { user_id: string; user: { id: string; name: string | null; email: string; avatar_url?: string | null } }[]
         }
 
         const normalizedComments: CommentWithAuthor[] = (comments || []).map((c: any) => {
@@ -125,7 +125,7 @@ export async function GET(
             .map((m: any) => ({
               user_id: m.user_id as string,
               user: (Array.isArray(m.user) ? m.user[0] : m.user) as
-                | { id: string; name: string | null; email: string }
+                | { id: string; name: string | null; email: string; avatar_url?: string | null }
                 | null,
             }))
             .filter((m: any) => m.user)
@@ -141,7 +141,7 @@ export async function GET(
             author,
             mentions: mentions as {
               user_id: string
-              user: { id: string; name: string | null; email: string }
+              user: { id: string; name: string | null; email: string; avatar_url?: string | null }
             }[],
           }
         })

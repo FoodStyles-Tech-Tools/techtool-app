@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
         ticket_id,
         created_at,
         read_at,
-        comment:ticket_comments(id, body, author_id, parent_id, created_at, author:users!ticket_comments_author_id_fkey(id, name, email)),
+        comment:ticket_comments(id, body, author_id, parent_id, created_at, author:users!ticket_comments_author_id_fkey(id, name, email, avatar_url)),
         ticket:tickets(id, display_id, title)
       `
       )
