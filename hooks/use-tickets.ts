@@ -40,6 +40,7 @@ type TicketUpdateVariables = {
   title?: string
   description?: string
   status?: string
+  returned_to_dev_reason?: string | null
   priority?: string
   type?: string
   links?: string[]
@@ -608,8 +609,6 @@ export function useCreateTicket() {
 
 export function useUpdateTicket() {
   const queryClient = useQueryClient()
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
   
   return useMutation({
     mutationFn: async ({
@@ -634,48 +633,31 @@ export function useUpdateTicket() {
       started_at?: string | null
       completed_at?: string | null
       created_at?: string | null
+      returned_to_dev_reason?: string | null
       links?: string[]
     }) => {
-      if (!userEmail) throw new Error("Not authenticated")
-      
-      await ensureUserContext(supabase, userEmail)
-      const { data: user } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", userEmail)
-        .single()
-
-      if (!user) throw new Error("User not found")
-
       const { links, ...rest } = data
       const updatePayload: Record<string, any> = { ...rest }
       if (links !== undefined) {
         updatePayload.links = prepareLinkPayload(links)
       }
-      updatePayload.activity_actor_id = user.id
 
-      const { data: ticket, error } = await supabase
-        .from("tickets")
-        .update(updatePayload)
-        .eq("id", id)
-        .select(`
-          *,
-          department:departments(id, name),
-          project:projects(id, name, require_sqa),
-          assignee:users!tickets_assignee_id_fkey(id, name, email),
-          sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
-          requested_by:users!tickets_requested_by_id_fkey(id, name, email),
-          epic:epics(id, name, color),
-          sprint:sprints(id, name, status)
-        `)
-        .single()
+      const response = await fetch(`/api/tickets/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updatePayload),
+      })
 
-      if (error) throw error
-      if (!ticket) throw new Error("Ticket not found")
-      
-      // Enrich ticket with images
-      const enrichedTickets = await enrichTicketsWithImages(supabase, [ticket])
-      return { ticket: enrichedTickets[0] }
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to update ticket")
+      }
+
+      if (!payload?.ticket) {
+        throw new Error("Ticket not found")
+      }
+
+      return { ticket: payload.ticket as Ticket }
     },
     onMutate: async (variables) => {
       // Cancel any outgoing refetches to avoid overwriting optimistic update

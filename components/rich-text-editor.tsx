@@ -1,8 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { EditorContent, useEditor } from "@tiptap/react"
-import { Mark, Node, mergeAttributes } from "@tiptap/core"
+import { Extension, Mark, Node, mergeAttributes } from "@tiptap/core"
+import { Plugin, PluginKey } from "@tiptap/pm/state"
+import { Decoration, DecorationSet } from "@tiptap/pm/view"
 import StarterKit from "@tiptap/starter-kit"
 import Underline from "@tiptap/extension-underline"
 import Link from "@tiptap/extension-link"
@@ -35,6 +37,14 @@ declare module "@tiptap/core" {
     }
     imageBlock: {
       setImageBlock: (options: { src: string; alt?: string; title?: string }) => ReturnType
+    }
+    mentionBadge: {
+      insertMentionBadge: (options: {
+        mentionType: "user" | "ticket"
+        label: string
+        href?: string | null
+        ticketStatus?: string | null
+      }) => ReturnType
     }
   }
 }
@@ -103,6 +113,130 @@ const ImageBlock = Node.create({
   },
 })
 
+const MentionBadge = Node.create({
+  name: "mentionBadge",
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: false,
+  addAttributes() {
+    return {
+      mentionType: {
+        default: "user",
+        parseHTML: (element) => element.getAttribute("data-mention-type") || "user",
+        renderHTML: (attributes) => ({
+          "data-mention-type": attributes.mentionType || "user",
+        }),
+      },
+      label: {
+        default: "",
+        parseHTML: (element) => element.getAttribute("data-mention-label") || element.textContent || "",
+        renderHTML: (attributes) =>
+          attributes.label ? { "data-mention-label": attributes.label } : {},
+      },
+      href: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("href"),
+        renderHTML: (attributes) =>
+          attributes.mentionType === "ticket" && attributes.href
+            ? { href: attributes.href }
+            : {},
+      },
+      ticketStatus: {
+        default: null,
+        parseHTML: (element) => element.getAttribute("data-ticket-status"),
+        renderHTML: (attributes) =>
+          attributes.mentionType === "ticket" && attributes.ticketStatus
+            ? { "data-ticket-status": attributes.ticketStatus }
+            : {},
+      },
+    }
+  },
+  parseHTML() {
+    return [{ tag: "span[data-mention-badge]" }, { tag: "a[data-mention-badge]" }]
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    const mentionType = node.attrs.mentionType === "ticket" ? "ticket" : "user"
+    const className = mentionType === "ticket" ? "mention-pill mention-ticket" : "mention-pill"
+    const statusLabel =
+      mentionType === "ticket" && typeof node.attrs.ticketStatus === "string"
+        ? node.attrs.ticketStatus
+            .replace(/_/g, " ")
+            .replace(/\s+/g, " ")
+            .trim()
+            .toUpperCase()
+        : ""
+    const attrs = mergeAttributes(
+      {
+        "data-mention-badge": "true",
+        class: className,
+      },
+      HTMLAttributes
+    )
+
+    if (mentionType === "ticket" && node.attrs.href) {
+      return [
+        "a",
+        attrs,
+        ["span", { class: "mention-ticket-label" }, node.attrs.label || ""],
+        ...(statusLabel ? [["span", { class: "mention-ticket-status" }, statusLabel]] : []),
+      ]
+    }
+    return ["span", attrs, node.attrs.label || ""]
+  },
+  renderText({ node }) {
+    return node.attrs.label || ""
+  },
+  addCommands() {
+    return {
+      insertMentionBadge:
+        (options) =>
+        ({ commands }) =>
+          commands.insertContent({
+            type: this.name,
+            attrs: {
+              mentionType: options.mentionType,
+              label: options.label,
+              href: options.href ?? null,
+              ticketStatus: options.ticketStatus ?? null,
+            },
+          }),
+    }
+  },
+})
+
+const MentionDecoration = Extension.create({
+  name: "mentionDecorationHelper",
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey("mention-decoration-helper"),
+        props: {
+          decorations: (state) => {
+            const decorations: Decoration[] = []
+            state.doc.descendants((node, pos) => {
+              if (!node.isText || !node.text) return
+              const text = node.text
+              const ticketRegex = /\b([A-Z]{2,}-\d+)\b/g
+              let match: RegExpExecArray | null
+              while ((match = ticketRegex.exec(text)) !== null) {
+                const from = pos + match.index
+                const to = from + match[0].length
+                decorations.push(
+                  Decoration.inline(from, to, {
+                    class: "mention-pill mention-ticket",
+                  })
+                )
+              }
+            })
+            return decorations.length > 0 ? DecorationSet.create(state.doc, decorations) : null
+          },
+        },
+      }),
+    ]
+  },
+})
+
 interface RichTextEditorProps {
   value: string
   onChange: (value: string) => void
@@ -113,6 +247,14 @@ interface RichTextEditorProps {
   showToolbarOnFocus?: boolean
   /** Show only a placeholder box until clicked. */
   activateOnClick?: boolean
+  /** Optional footer rendered inside the editor box (below content). */
+  footer?: ReactNode
+  /** Optional inline panel rendered between toolbar and content (e.g. mentions menu). */
+  inlinePanel?: ReactNode
+  /** Enable inline ticket badge decoration while typing. */
+  decorateMentions?: boolean
+  /** Provides editor instance to parent for imperative commands. */
+  onEditorReady?: (editor: unknown | null) => void
 }
 
 export function RichTextEditor({
@@ -123,6 +265,10 @@ export function RichTextEditor({
   compact = false,
   showToolbarOnFocus = true,
   activateOnClick = false,
+  footer,
+  inlinePanel,
+  decorateMentions = false,
+  onEditorReady,
 }: RichTextEditorProps) {
   const [isFocused, setIsFocused] = useState(false)
   const [isActivated, setIsActivated] = useState(() => !activateOnClick || Boolean(value?.trim()))
@@ -147,6 +293,8 @@ export function RichTextEditor({
       TableHeader,
       TableCell,
       ImageBlock,
+      MentionBadge,
+      ...(decorateMentions ? [MentionDecoration] : []),
     ],
     content: value || "",
     editorProps: {
@@ -179,6 +327,12 @@ export function RichTextEditor({
       editor.off("blur", onBlur)
     }
   }, [editor])
+
+  useEffect(() => {
+    if (!onEditorReady) return
+    onEditorReady(editor)
+    return () => onEditorReady(null)
+  }, [editor, onEditorReady])
 
   useEffect(() => {
     if (!activateOnClick) return
@@ -451,7 +605,9 @@ export function RichTextEditor({
         </button>
       </div>
       )}
+      {inlinePanel ? <div className="px-2 pt-1">{inlinePanel}</div> : null}
       <EditorContent editor={editor} />
+      {footer ? <div className="border-t px-3 py-2">{footer}</div> : null}
     </div>
   )
 }

@@ -72,10 +72,14 @@ const GanttChart = dynamic(
   () => import("@/components/gantt-chart").then((mod) => mod.GanttChart),
   { ssr: false }
 )
+const RichTextEditor = dynamic(
+  () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
+  { ssr: false }
+)
 import { filterStatusesBySqaRequirement, isDoneStatus } from "@/lib/ticket-statuses"
 import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import type { Ticket } from "@/lib/types"
-import { richTextToPlainText } from "@/lib/rich-text"
+import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@/lib/rich-text"
 
 export default function ProjectDetailClient() {
   const params = useParams()
@@ -127,8 +131,12 @@ export default function ProjectDetailClient() {
   const [isAddingProjectLink, setIsAddingProjectLink] = useState(false)
   const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
+  const [showReturnedReasonDialog, setShowReturnedReasonDialog] = useState(false)
+  const [returnedReason, setReturnedReason] = useState("")
   const [pendingDropTicketId, setPendingDropTicketId] = useState<string | null>(null)
   const [pendingDropUpdates, setPendingDropUpdates] = useState<any>(null)
+  const [pendingReturnedDropTicketId, setPendingReturnedDropTicketId] = useState<string | null>(null)
+  const [pendingReturnedDropUpdates, setPendingReturnedDropUpdates] = useState<any>(null)
   const [sprintFilter, setSprintFilter] = useState<string>("all")
   const [kanbanScrollTrackWidth, setKanbanScrollTrackWidth] = useState(0)
   const kanbanScrollRef = useRef<HTMLDivElement>(null)
@@ -693,14 +701,19 @@ export default function ProjectDetailClient() {
       updates.started_at = new Date().toISOString()
     }
     
-    if (targetStatus === "completed" || targetStatus === "cancelled") {
+    if (targetStatus === "completed" || targetStatus === "cancelled" || targetStatus === "rejected") {
       updates.completed_at = new Date().toISOString()
       if (!currentTicket?.started_at) {
         updates.started_at = new Date().toISOString()
       }
     }
     
-    if ((previousStatus === "completed" || previousStatus === "cancelled") && targetStatus !== "completed" && targetStatus !== "cancelled") {
+    if (
+      (previousStatus === "completed" || previousStatus === "cancelled" || previousStatus === "rejected") &&
+      targetStatus !== "completed" &&
+      targetStatus !== "cancelled" &&
+      targetStatus !== "rejected"
+    ) {
       updates.completed_at = null
       updates.reason = null
     }
@@ -712,6 +725,32 @@ export default function ProjectDetailClient() {
     if (targetStatus === "open") {
       updates.started_at = null
       updates.completed_at = null
+    }
+
+    // If dropping to cancelled/rejected, prompt for reason first
+    if ((targetStatus === "cancelled" || targetStatus === "rejected") && previousStatus !== targetStatus) {
+      setPendingDropTicketId(ticketId)
+      setPendingDropUpdates(updates)
+      setCancelReason("")
+      setShowCancelReasonDialog(true)
+      // Revert optimistic update
+      setOptimisticStatusUpdates(prev => {
+        const newState = { ...prev }
+        delete newState[ticketId]
+        return newState
+      })
+      setDroppingTicketId(null)
+      setUpdatingFields(prev => {
+        const newState = { ...prev }
+        delete newState[`${ticketId}-status`]
+        delete newState[`${ticketId}-epic_id`]
+        return newState
+      })
+      stopAutoScroll()
+      setDraggedTicket(null)
+      setDragOverColumn(null)
+      setDropIndicator(null)
+      return
     }
 
     try {
@@ -805,8 +844,8 @@ export default function ProjectDetailClient() {
       updates.started_at = new Date().toISOString()
     }
     
-    // Condition 3: When any status changed to Cancelled or Completed then update completed_at timestamp
-    if (targetStatus === "completed" || targetStatus === "cancelled") {
+    // Condition 3: When any status changed to Completed/Cancelled/Rejected then update completed_at timestamp
+    if (targetStatus === "completed" || targetStatus === "cancelled" || targetStatus === "rejected") {
       updates.completed_at = new Date().toISOString()
       // Also ensure started_at is set if not already
       if (!currentTicket?.started_at) {
@@ -814,10 +853,15 @@ export default function ProjectDetailClient() {
       }
     }
     
-    // Condition 4: If status changed from Completed/Cancelled to other status then remove timestamp completed_at
-    if ((previousStatus === "completed" || previousStatus === "cancelled") && targetStatus !== "completed" && targetStatus !== "cancelled") {
+    // Condition 4: If status changed from Completed/Cancelled/Rejected to other status then remove timestamp completed_at
+    if (
+      (previousStatus === "completed" || previousStatus === "cancelled" || previousStatus === "rejected") &&
+      targetStatus !== "completed" &&
+      targetStatus !== "cancelled" &&
+      targetStatus !== "rejected"
+    ) {
       updates.completed_at = null
-      // Clear reason when moving away from cancelled
+      // Clear reason when moving away from cancelled/rejected
       updates.reason = null
     }
     
@@ -832,12 +876,33 @@ export default function ProjectDetailClient() {
       updates.completed_at = null
     }
 
-    // If dropping to cancelled, prompt for reason first
-    if (targetStatus === "cancelled" && previousStatus !== "cancelled") {
+    // If dropping to cancelled/rejected, prompt for reason first
+    if ((targetStatus === "cancelled" || targetStatus === "rejected") && previousStatus !== targetStatus) {
       setPendingDropTicketId(ticketId)
       setPendingDropUpdates(updates)
       setCancelReason("")
       setShowCancelReasonDialog(true)
+      // Revert optimistic update
+      setOptimisticStatusUpdates(prev => {
+        const newState = { ...prev }
+        delete newState[ticketId]
+        return newState
+      })
+      setDroppingTicketId(null)
+      setUpdatingFields(prev => {
+        const newState = { ...prev }
+        delete newState[`${ticketId}-status`]
+        return newState
+      })
+      return
+    }
+
+    // If dropping to returned_to_dev, prompt for reason first
+    if (targetStatus === "returned_to_dev" && previousStatus !== "returned_to_dev") {
+      setPendingReturnedDropTicketId(ticketId)
+      setPendingReturnedDropUpdates(updates)
+      setReturnedReason("")
+      setShowReturnedReasonDialog(true)
       // Revert optimistic update
       setOptimisticStatusUpdates(prev => {
         const newState = { ...prev }
@@ -2002,14 +2067,16 @@ export default function ProjectDetailClient() {
       <Dialog open={showCancelReasonDialog} onOpenChange={setShowCancelReasonDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Ticket</DialogTitle>
+            <DialogTitle>
+              {pendingDropUpdates?.status === "rejected" ? "Reject Ticket" : "Cancel Ticket"}
+            </DialogTitle>
             <DialogDescription>
-              Please provide a reason for cancelling this ticket.
+              Please provide a reason for {pendingDropUpdates?.status === "rejected" ? "rejecting" : "cancelling"} this ticket.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <Textarea
-              placeholder="Enter cancellation reason..."
+              placeholder={pendingDropUpdates?.status === "rejected" ? "Enter reject reason..." : "Enter cancellation reason..."}
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
               rows={4}
@@ -2031,28 +2098,48 @@ export default function ProjectDetailClient() {
             <Button
               onClick={async () => {
                 if (!cancelReason.trim()) {
-                  toast("Please provide a reason for cancellation", "error")
+                  toast("Please provide a reason", "error")
                   return
                 }
                 
                 if (!pendingDropTicketId || !pendingDropUpdates) return
                 
                 const ticketId = pendingDropTicketId
+                const reasonStatus = pendingDropUpdates.status === "rejected" ? "rejected" : "cancelled"
+                const normalizedReason = normalizeRichTextInput(cancelReason.trim())
+                if (!normalizedReason) {
+                  toast("Please provide a reason", "error")
+                  return
+                }
+                const reasonTimestampKey = reasonStatus === "rejected" ? "rejectedAt" : "cancelledAt"
+                const reasonHeading = reasonStatus === "rejected" ? "Reject Reason" : "Cancelled Reason"
                 const updates = {
                   ...pendingDropUpdates,
-                  reason: { cancelled: { reason: cancelReason.trim(), cancelledAt: new Date().toISOString() } }
+                  reason: { [reasonStatus]: { reason: cancelReason.trim(), [reasonTimestampKey]: new Date().toISOString() } }
                 }
+                const commentBody = `<p><strong>${reasonHeading}</strong></p>${normalizedReason}`
                 
                 setShowCancelReasonDialog(false)
                 setPendingDropTicketId(null)
                 setPendingDropUpdates(null)
                 
                 // Re-apply optimistic update
-                setOptimisticStatusUpdates(prev => ({ ...prev, [ticketId]: "cancelled" }))
+                setOptimisticStatusUpdates(prev => ({ ...prev, [ticketId]: reasonStatus }))
                 setDroppingTicketId(ticketId)
                 setUpdatingFields(prev => ({ ...prev, [`${ticketId}-status`]: "status" }))
                 
                 try {
+                  const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ body: commentBody }),
+                  })
+
+                  if (!commentResponse.ok) {
+                    const errorPayload = await commentResponse.json().catch(() => ({}))
+                    throw new Error(errorPayload?.error || "Failed to save reason comment")
+                  }
+
                   await updateTicket.mutateAsync({
                     id: ticketId,
                     ...updates,
@@ -2091,7 +2178,129 @@ export default function ProjectDetailClient() {
                 setCancelReason("")
               }}
             >
-              Confirm Cancellation
+              {pendingDropUpdates?.status === "rejected" ? "Confirm Rejection" : "Confirm Cancellation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={showReturnedReasonDialog}
+        onOpenChange={(open) => {
+          setShowReturnedReasonDialog(open)
+          if (!open) {
+            setPendingReturnedDropTicketId(null)
+            setPendingReturnedDropUpdates(null)
+            setReturnedReason("")
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Returned to Dev Reason</DialogTitle>
+            <DialogDescription>
+              Add the reason before moving this ticket to Returned to Dev.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <RichTextEditor
+              value={returnedReason}
+              onChange={setReturnedReason}
+              placeholder="Explain what should be fixed before QA can continue..."
+              minHeight={180}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowReturnedReasonDialog(false)
+                setPendingReturnedDropTicketId(null)
+                setPendingReturnedDropUpdates(null)
+                setReturnedReason("")
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (isRichTextEmpty(returnedReason)) {
+                  toast("Please provide a reason for returning to development", "error")
+                  return
+                }
+
+                if (!pendingReturnedDropTicketId || !pendingReturnedDropUpdates) return
+                const normalizedReason = normalizeRichTextInput(returnedReason)
+                if (!normalizedReason) {
+                  toast("Please provide a reason for returning to development", "error")
+                  return
+                }
+
+                const ticketId = pendingReturnedDropTicketId
+                const updates = {
+                  ...pendingReturnedDropUpdates,
+                  returned_to_dev_reason: richTextToPlainText(normalizedReason),
+                }
+                const commentBody = `<p><strong>Returned to Dev Reason</strong></p>${normalizedReason}`
+
+                setShowReturnedReasonDialog(false)
+                setPendingReturnedDropTicketId(null)
+                setPendingReturnedDropUpdates(null)
+
+                setOptimisticStatusUpdates(prev => ({ ...prev, [ticketId]: "returned_to_dev" }))
+                setDroppingTicketId(ticketId)
+                setUpdatingFields(prev => ({ ...prev, [`${ticketId}-status`]: "status" }))
+
+                try {
+                  const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ body: commentBody }),
+                  })
+
+                  if (!commentResponse.ok) {
+                    const errorPayload = await commentResponse.json().catch(() => ({}))
+                    throw new Error(errorPayload?.error || "Failed to save returned reason comment")
+                  }
+
+                  await updateTicket.mutateAsync({
+                    id: ticketId,
+                    ...updates,
+                  })
+                  toast("Ticket status updated")
+
+                  setTimeout(() => {
+                    setOptimisticStatusUpdates(prev => {
+                      const newState = { ...prev }
+                      delete newState[ticketId]
+                      return newState
+                    })
+                  }, 500)
+
+                  setDroppingTicketId(null)
+                  setUpdatingFields(prev => {
+                    const newState = { ...prev }
+                    delete newState[`${ticketId}-status`]
+                    return newState
+                  })
+                } catch (error: any) {
+                  toast(error.message || "Failed to update ticket", "error")
+                  setOptimisticStatusUpdates(prev => {
+                    const newState = { ...prev }
+                    delete newState[ticketId]
+                    return newState
+                  })
+                  setDroppingTicketId(null)
+                  setUpdatingFields(prev => {
+                    const newState = { ...prev }
+                    delete newState[`${ticketId}-status`]
+                    return newState
+                  })
+                }
+
+                setReturnedReason("")
+              }}
+            >
+              Confirm Return
             </Button>
           </DialogFooter>
         </DialogContent>

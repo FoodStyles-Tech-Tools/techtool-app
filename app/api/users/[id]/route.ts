@@ -4,6 +4,14 @@ import { createServerClient } from "@/lib/supabase"
 
 export const runtime = 'nodejs'
 
+function normalizeDiscordId(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const mentionMatch = trimmed.match(/^<@!?(\d+)>$/)
+  return mentionMatch ? mentionMatch[1] : trimmed
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -13,7 +21,7 @@ export async function PATCH(
     const supabase = createServerClient()
 
     const body = await request.json()
-    const { name, role, email } = body
+    const { name, role, email, discord_id } = body
 
     const updates: any = {}
     if (name !== undefined) updates.name = name
@@ -34,6 +42,7 @@ export async function PATCH(
       updates.role = role
     }
     if (email !== undefined) updates.email = email
+    if (discord_id !== undefined) updates.discord_id = normalizeDiscordId(discord_id)
 
     const { data: user, error } = await supabase
       .from("users")
@@ -102,4 +111,3 @@ export async function DELETE(
     )
   }
 }
-

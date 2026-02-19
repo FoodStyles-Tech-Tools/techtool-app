@@ -4,6 +4,15 @@ import { createServerClient } from "@/lib/supabase"
 
 export const runtime = 'nodejs'
 
+function normalizeDiscordId(value: unknown): string | null {
+  if (typeof value !== "string") return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  // Support pasting mentions like <@123...> or <@!123...>
+  const mentionMatch = trimmed.match(/^<@!?(\d+)>$/)
+  return mentionMatch ? mentionMatch[1] : trimmed
+}
+
 export async function GET() {
   try {
     await requirePermission("users", "view")
@@ -11,7 +20,7 @@ export async function GET() {
 
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, name, email, role, created_at")
+      .select("id, name, email, discord_id, role, created_at")
       .order("created_at", { ascending: false })
 
     if (error) {
@@ -67,7 +76,7 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient()
 
     const body = await request.json()
-    const { email, name, role = "member" } = body
+    const { email, name, role = "member", discord_id } = body
 
     if (!email) {
       return NextResponse.json(
@@ -110,6 +119,7 @@ export async function POST(request: NextRequest) {
       .insert({
         email,
         name: name || null,
+        discord_id: normalizeDiscordId(discord_id),
         role,
       })
       .select()

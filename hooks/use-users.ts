@@ -10,6 +10,7 @@ interface User {
   name: string | null
   email: string
   image: string | null
+  discord_id?: string | null
   role?: string | null
   created_at?: string
 }
@@ -201,6 +202,7 @@ export function useCreateUser() {
     mutationFn: async (data: {
       email: string
       name?: string
+      discord_id?: string
       role?: string
     }) => {
       if (!userEmail) throw new Error("Not authenticated")
@@ -253,6 +255,7 @@ export function useUpdateUser() {
     }: {
       id: string
       name?: string
+      discord_id?: string
       role?: string
     }) => {
       if (!userEmail) throw new Error("Not authenticated")

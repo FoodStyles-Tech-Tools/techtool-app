@@ -8,6 +8,7 @@ export type ServerUser = {
   name: string | null
   email: string
   image: string | null
+  discord_id?: string | null
   role?: string | null
   created_at?: string
 }
@@ -20,7 +21,7 @@ export async function getUsersWithImages(): Promise<ServerUser[]> {
 export async function fetchUsersWithImages(supabase: SupabaseClient): Promise<ServerUser[]> {
   const { data: users, error } = await supabase
     .from("users")
-    .select("id, name, email, role, created_at")
+    .select("id, name, email, discord_id, role, created_at")
     .order("name", { ascending: true, nullsFirst: false })
 
   if (error || !users?.length) {

@@ -41,7 +41,7 @@ export const formatStatusLabel = (key: string) =>
     .replace(/\b\w/g, (char) => char.toUpperCase())
 
 export const isDoneStatus = (key: string) =>
-  key === "completed" || key === "cancelled"
+  key === "completed" || key === "cancelled" || key === "rejected"
 
 export const isSqaOnlyStatus = (key: string) =>
   SQA_ONLY_STATUS_KEYS.has(normalizeStatusKey(key))
@@ -63,11 +63,16 @@ export function buildStatusChangeBody(
   if ((previousStatus === "open" || previousStatus === "blocked") && newStatus !== "open" && newStatus !== "blocked") {
     body.started_at = now
   }
-  if (newStatus === "completed" || newStatus === "cancelled") {
+  if (newStatus === "completed" || newStatus === "cancelled" || newStatus === "rejected") {
     body.completed_at = now
     if (!options?.startedAt) body.started_at = now
   }
-  if ((previousStatus === "completed" || previousStatus === "cancelled") && newStatus !== "completed" && newStatus !== "cancelled") {
+  if (
+    (previousStatus === "completed" || previousStatus === "cancelled" || previousStatus === "rejected") &&
+    newStatus !== "completed" &&
+    newStatus !== "cancelled" &&
+    newStatus !== "rejected"
+  ) {
     body.completed_at = null
     body.reason = null
   }

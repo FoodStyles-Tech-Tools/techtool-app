@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog"
 import { buildStatusChangeBody } from "@/lib/ticket-statuses"
 import type { Ticket } from "@/lib/types"
-import { richTextToPlainText } from "@/lib/rich-text"
+import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@/lib/rich-text"
 import {
   ASSIGNEE_ALLOWED_ROLES,
   SQA_ALLOWED_ROLES,
@@ -49,6 +49,10 @@ const GlobalTicketDialog = dynamic(
   () => import("@/components/global-ticket-dialog").then((mod) => mod.GlobalTicketDialog),
   { ssr: false }
 )
+const RichTextEditor = dynamic(
+  () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
+  { ssr: false }
+)
 
 export default function TicketsPage() {
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
@@ -56,7 +60,14 @@ export default function TicketsPage() {
   const [isTicketDialogOpen, setTicketDialogOpen] = useState(false)
   const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
+  const [showReturnedReasonDialog, setShowReturnedReasonDialog] = useState(false)
+  const [returnedReason, setReturnedReason] = useState("")
   const [pendingStatusChange, setPendingStatusChange] = useState<{
+    ticketId: string
+    newStatus: string
+    body: Record<string, unknown>
+  } | null>(null)
+  const [pendingReturnedStatusChange, setPendingReturnedStatusChange] = useState<{
     ticketId: string
     newStatus: string
     body: Record<string, unknown>
@@ -165,7 +176,7 @@ export default function TicketsPage() {
       if (!ticket || ticket.status === columnId) return false
       const previousStatus = ticket.status
       const startedAt = (ticket as { started_at?: string | null }).started_at
-      if (columnId === "cancelled") {
+      if (columnId === "cancelled" || columnId === "rejected") {
         const statusBody = buildStatusChangeBody(previousStatus, columnId, { startedAt })
         setPendingStatusChange({
           ticketId,
@@ -174,6 +185,17 @@ export default function TicketsPage() {
         })
         setCancelReason("")
         setShowCancelReasonDialog(true)
+        return false
+      }
+      if (columnId === "returned_to_dev" && previousStatus !== "returned_to_dev") {
+        const statusBody = buildStatusChangeBody(previousStatus, columnId, { startedAt })
+        setPendingReturnedStatusChange({
+          ticketId,
+          newStatus: columnId,
+          body: { status: columnId, ...statusBody },
+        })
+        setReturnedReason("")
+        setShowReturnedReasonDialog(true)
         return false
       }
       const body = {
@@ -312,7 +334,7 @@ export default function TicketsPage() {
       const previousStatus = currentTicket?.status ?? "open"
       const newStatus = value as string
 
-      if (newStatus === "cancelled" && previousStatus !== "cancelled") {
+      if ((newStatus === "cancelled" || newStatus === "rejected") && previousStatus !== newStatus) {
         const statusBody = buildStatusChangeBody(previousStatus, newStatus, {
           startedAt: (currentTicket as { started_at?: string | null })?.started_at,
         })
@@ -321,6 +343,17 @@ export default function TicketsPage() {
         setPendingStatusChange({ ticketId, newStatus, body })
         setCancelReason("")
         setShowCancelReasonDialog(true)
+        return
+      }
+      if (newStatus === "returned_to_dev" && previousStatus !== "returned_to_dev") {
+        const statusBody = buildStatusChangeBody(previousStatus, newStatus, {
+          startedAt: (currentTicket as { started_at?: string | null })?.started_at,
+        })
+        Object.assign(body, statusBody)
+        body[field] = newStatus
+        setPendingReturnedStatusChange({ ticketId, newStatus, body })
+        setReturnedReason("")
+        setShowReturnedReasonDialog(true)
         return
       }
 
@@ -470,14 +503,14 @@ export default function TicketsPage() {
       <Dialog open={showCancelReasonDialog} onOpenChange={setShowCancelReasonDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel Ticket</DialogTitle>
+            <DialogTitle>{pendingStatusChange?.newStatus === "rejected" ? "Reject Ticket" : "Cancel Ticket"}</DialogTitle>
             <DialogDescription>
-              Please provide a reason for cancelling this ticket.
+              Please provide a reason for {pendingStatusChange?.newStatus === "rejected" ? "rejecting" : "cancelling"} this ticket.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <Textarea
-              placeholder="Enter cancellation reason..."
+              placeholder={pendingStatusChange?.newStatus === "rejected" ? "Enter reject reason..." : "Enter cancellation reason..."}
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
               rows={4}
@@ -498,17 +531,26 @@ export default function TicketsPage() {
             <Button
               onClick={async () => {
                 if (!cancelReason.trim()) {
-                  toast("Please provide a reason for cancellation", "error")
+                  toast("Please provide a reason", "error")
                   return
                 }
                 
                 if (!pendingStatusChange) return
                 
-                const { ticketId, body } = pendingStatusChange
+                const { ticketId, body, newStatus } = pendingStatusChange
+                const normalizedReason = normalizeRichTextInput(cancelReason.trim())
+                if (!normalizedReason) {
+                  toast("Please provide a reason", "error")
+                  return
+                }
+                const reasonKey = newStatus === "rejected" ? "rejected" : "cancelled"
+                const reasonTimestampKey = newStatus === "rejected" ? "rejectedAt" : "cancelledAt"
+                const reasonHeading = newStatus === "rejected" ? "Reject Reason" : "Cancelled Reason"
                 const finalBody = {
                   ...body,
-                  reason: { cancelled: { reason: cancelReason.trim(), cancelledAt: new Date().toISOString() } }
+                  reason: { [reasonKey]: { reason: cancelReason.trim(), [reasonTimestampKey]: new Date().toISOString() } }
                 }
+                const commentBody = `<p><strong>${reasonHeading}</strong></p>${normalizedReason}`
                 
                 setShowCancelReasonDialog(false)
                 setPendingStatusChange(null)
@@ -517,6 +559,17 @@ export default function TicketsPage() {
                 setUpdatingFields(prev => ({ ...prev, [cellKey]: "status" }))
                 
                 try {
+                  const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ body: commentBody }),
+                  })
+
+                  if (!commentResponse.ok) {
+                    const errorPayload = await commentResponse.json().catch(() => ({}))
+                    throw new Error(errorPayload?.error || "Failed to save reason comment")
+                  }
+
                   await updateTicket.mutateAsync({
                     id: ticketId,
                     ...finalBody,
@@ -535,7 +588,102 @@ export default function TicketsPage() {
                 setCancelReason("")
               }}
             >
-              Confirm Cancellation
+              {pendingStatusChange?.newStatus === "rejected" ? "Confirm Rejection" : "Confirm Cancellation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={showReturnedReasonDialog}
+        onOpenChange={(open) => {
+          setShowReturnedReasonDialog(open)
+          if (!open) {
+            setPendingReturnedStatusChange(null)
+            setReturnedReason("")
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Returned to Dev Reason</DialogTitle>
+            <DialogDescription>
+              Add the reason before moving this ticket to Returned to Dev.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <RichTextEditor
+              value={returnedReason}
+              onChange={setReturnedReason}
+              placeholder="Explain what should be fixed before QA can continue..."
+              minHeight={180}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowReturnedReasonDialog(false)
+                setPendingReturnedStatusChange(null)
+                setReturnedReason("")
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (isRichTextEmpty(returnedReason)) {
+                  toast("Please provide a reason for returning to development", "error")
+                  return
+                }
+
+                if (!pendingReturnedStatusChange) return
+                const normalizedReason = normalizeRichTextInput(returnedReason)
+                if (!normalizedReason) {
+                  toast("Please provide a reason for returning to development", "error")
+                  return
+                }
+
+                const { ticketId, body } = pendingReturnedStatusChange
+                const commentBody = `<p><strong>Returned to Dev Reason</strong></p>${normalizedReason}`
+
+                setShowReturnedReasonDialog(false)
+                setPendingReturnedStatusChange(null)
+
+                const cellKey = `${ticketId}-status`
+                setUpdatingFields(prev => ({ ...prev, [cellKey]: "status" }))
+
+                try {
+                  const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ body: commentBody }),
+                  })
+
+                  if (!commentResponse.ok) {
+                    const errorPayload = await commentResponse.json().catch(() => ({}))
+                    throw new Error(errorPayload?.error || "Failed to save returned reason comment")
+                  }
+
+                  await updateTicket.mutateAsync({
+                    id: ticketId,
+                    ...body,
+                    returned_to_dev_reason: richTextToPlainText(normalizedReason),
+                  })
+                  toast("Status updated")
+                } catch (error: any) {
+                  toast(error.message || "Failed to update ticket", "error")
+                } finally {
+                  setUpdatingFields(prev => {
+                    const newState = { ...prev }
+                    delete newState[cellKey]
+                    return newState
+                  })
+                }
+
+                setReturnedReason("")
+              }}
+            >
+              Confirm Return
             </Button>
           </DialogFooter>
         </DialogContent>

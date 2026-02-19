@@ -29,6 +29,7 @@ interface User {
   id: string
   email: string
   name: string | null
+  discord_id?: string | null
   role?: string | null
   image: string | null
   created_at?: string
@@ -157,6 +158,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
                   ? {
                       id: editingUser.id,
                       email: editingUser.email,
+                      discord_id: editingUser.discord_id ?? undefined,
                       role: editingUser.role ?? "member",
                       name: editingUser.name ?? undefined,
                     }
@@ -187,6 +189,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
               <TableRow className="hover:bg-transparent">
                 <TableHead className="h-9 py-2 text-xs">User</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Email</TableHead>
+                <TableHead className="h-9 py-2 text-xs">Discord ID</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Role</TableHead>
                 <TableHead className="h-9 py-2 text-xs">Created</TableHead>
                 <TableHead className="h-9 py-2 text-xs text-right">Actions</TableHead>
@@ -216,6 +219,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
                     </div>
                   </TableCell>
                   <TableCell className="py-2 text-sm">{user.email}</TableCell>
+                  <TableCell className="py-2 text-sm">{user.discord_id || "-"}</TableCell>
                   <TableCell className="py-2">
                     <Badge variant={getRoleColor(user.role || "member") as any} className="text-xs">
                       {user.role || "member"}

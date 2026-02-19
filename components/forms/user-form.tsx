@@ -24,6 +24,7 @@ import {
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().optional(),
+  discord_id: z.string().optional(),
   role: z.string().min(1, "Role is required"),
 })
 
@@ -46,6 +47,7 @@ export function UserForm({ onSuccess, initialData, roles }: UserFormProps) {
     defaultValues: {
       email: initialData?.email || "",
       name: initialData?.name || "",
+      discord_id: initialData?.discord_id || "",
       role: initialData?.role || "member",
     },
   })
@@ -102,6 +104,19 @@ export function UserForm({ onSuccess, initialData, roles }: UserFormProps) {
               <FormLabel>Name (Optional)</FormLabel>
               <FormControl>
                 <Input placeholder="User name" {...field} value={field.value || ""} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="discord_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Discord ID (Optional)</FormLabel>
+              <FormControl>
+                <Input placeholder="123456789012345678" {...field} value={field.value || ""} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -244,6 +244,20 @@ export async function POST(
       )
     }
 
+    let mentionUsersById = new Map<string, { id: string; name: string | null; email: string; avatar_url?: string | null }>()
+    if (uniqueMentions.length > 0) {
+      const { data: mentionUsers } = await supabase
+        .from("users")
+        .select("id, name, email, avatar_url")
+        .in("id", uniqueMentions)
+
+      if (Array.isArray(mentionUsers)) {
+        mentionUsersById = new Map(
+          mentionUsers.map((user) => [user.id, user as { id: string; name: string | null; email: string; avatar_url?: string | null }])
+        )
+      }
+    }
+
     const notificationsToInsert: { user_id: string; type: "reply" | "mention"; comment_id: string; ticket_id: string }[] = []
     const notifiedUserIds = new Set<string>()
 
@@ -305,7 +319,10 @@ export async function POST(
       comment: {
         ...comment,
         author: normalizedAuthor,
-        mentions: uniqueMentions.map((user_id) => ({ user_id })),
+        mentions: uniqueMentions.map((user_id) => ({
+          user_id,
+          user: mentionUsersById.get(user_id),
+        })),
         replies: [],
       },
     })

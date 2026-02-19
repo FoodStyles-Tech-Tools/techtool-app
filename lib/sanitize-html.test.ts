@@ -48,4 +48,22 @@ describe("getSanitizedHtmlProps", () => {
     expect(props).toEqual({ __html: expect.any(String) })
     expect(props!.__html).toContain("Safe")
   })
+
+  it("converts plain ticket url text to mention badge link", () => {
+    const props = getSanitizedHtmlProps("<p>https://techtool-app.vercel.app/tickets/hrb-1377</p>")
+    expect(props).toBeTruthy()
+    expect(props!.__html).toContain('data-mention-badge="true"')
+    expect(props!.__html).toContain('href="/tickets/hrb-1377"')
+    expect(props!.__html).toContain("HRB-1377")
+  })
+
+  it("converts ticket anchor url to mention badge link", () => {
+    const props = getSanitizedHtmlProps(
+      '<p><a href="https://techtool-app.vercel.app/tickets/hrb-2001">Ticket link</a></p>'
+    )
+    expect(props).toBeTruthy()
+    expect(props!.__html).toContain('data-mention-badge="true"')
+    expect(props!.__html).toContain('href="/tickets/hrb-2001"')
+    expect(props!.__html).toContain("HRB-2001")
+  })
 })

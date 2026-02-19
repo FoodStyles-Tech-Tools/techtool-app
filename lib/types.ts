@@ -9,6 +9,7 @@ export interface User {
   name: string | null
   email: string
   image: string | null
+  discord_id?: string | null
   role?: string | null
   created_at?: string
 }
@@ -76,6 +77,10 @@ export interface TicketCancelledReason {
   cancelled?: {
     reason: string
     cancelledAt: string
+  }
+  rejected?: {
+    reason: string
+    rejectedAt: string
   }
 }
 
