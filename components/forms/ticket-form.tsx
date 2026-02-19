@@ -61,6 +61,7 @@ const ticketSchema = z.object({
     ])
     .optional(),
   assignee_id: z.string().optional(),
+  requested_by_id: z.string().optional(),
   department_id: z
     .union([
       z.string().uuid(),
@@ -153,6 +154,7 @@ export function TicketForm({
   const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
   const [projectSearch, setProjectSearch] = useState("")
   const [assigneeSearch, setAssigneeSearch] = useState("")
+  const [reporterSearch, setReporterSearch] = useState("")
   const [departmentSearch, setDepartmentSearch] = useState("")
   const { departments, refresh } = useDepartments()
   const { user, flags } = usePermissions()
@@ -187,6 +189,7 @@ export function TicketForm({
       type: initialData?.type || "task",
       project_id: initialData?.project_id || projectId || NO_PROJECT_VALUE,
       assignee_id: initialData?.assignee_id || (isEditing ? "" : (user?.id || "")),
+      requested_by_id: initialData?.requested_by_id || (isEditing ? "" : (user?.id || "")),
       department_id: initialData?.department_id || "",
       epic_id: initialData?.epic_id || "",
       sprint_id: initialData?.sprint_id || "",
@@ -226,6 +229,13 @@ export function TicketForm({
       (u.name || "").toLowerCase().includes(search) || u.email.toLowerCase().includes(search)
     )
   }, [assigneeSearch, assigneeUsers])
+  const filteredReporterUsers = useMemo(() => {
+    if (!reporterSearch.trim()) return users
+    const search = reporterSearch.trim().toLowerCase()
+    return users.filter((u) =>
+      (u.name || "").toLowerCase().includes(search) || u.email.toLowerCase().includes(search)
+    )
+  }, [reporterSearch, users])
   const filteredDepartments = useMemo(() => {
     if (!departmentSearch.trim()) return departments
     const search = departmentSearch.trim().toLowerCase()
@@ -246,6 +256,13 @@ export function TicketForm({
   useEffect(() => {
     if (!isEditing && user?.id && !form.getValues("assignee_id")) {
       form.setValue("assignee_id", user.id)
+    }
+  }, [user?.id, isEditing, form])
+
+  // Set default reporter to current user when creating a new ticket
+  useEffect(() => {
+    if (!isEditing && user?.id && !form.getValues("requested_by_id")) {
+      form.setValue("requested_by_id", user.id)
     }
   }, [user?.id, isEditing, form])
 
@@ -279,6 +296,7 @@ export function TicketForm({
         project_id:
           projectId || (values.project_id && values.project_id !== NO_PROJECT_VALUE ? values.project_id : null),
         assignee_id: values.assignee_id || undefined,
+        requested_by_id: values.requested_by_id || undefined,
         department_id: values.department_id || undefined,
         epic_id: values.epic_id || undefined,
         sprint_id: values.sprint_id || undefined,
@@ -589,6 +607,55 @@ export function TicketForm({
                   ))}
                   {filteredAssigneeUsers.length === 0 && (
                     <div className="px-2 py-1.5 text-xs text-muted-foreground">No assignees found.</div>
+                  )}
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="requested_by_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Reporter</FormLabel>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value || ""}
+                onOpenChange={(open) => {
+                  if (!open) setReporterSearch("")
+                }}
+              >
+                <FormControl>
+                  <SelectTrigger className="relative border-border/40 bg-background/55">
+                    {field.value ? (
+                      <UserSelectValue
+                        users={users}
+                        value={field.value || null}
+                        placeholder="Select reporter"
+                      />
+                    ) : (
+                      <SelectValue placeholder="Select reporter" />
+                    )}
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <div className="px-2 py-1.5">
+                    <Input
+                      value={reporterSearch}
+                      onChange={(event) => setReporterSearch(event.target.value)}
+                      onKeyDown={(event) => event.stopPropagation()}
+                      placeholder="Search reporters..."
+                      className="h-8"
+                      aria-label="Search reporters"
+                    />
+                  </div>
+                  {filteredReporterUsers.map((user) => (
+                    <UserSelectItem key={user.id} user={user} value={user.id} />
+                  ))}
+                  {filteredReporterUsers.length === 0 && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No reporters found.</div>
                   )}
                 </SelectContent>
               </Select>
