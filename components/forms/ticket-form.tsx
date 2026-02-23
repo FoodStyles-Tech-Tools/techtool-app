@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Bug, CheckSquare, ChevronDown, ChevronUp, ChevronsUp, Minus, Sparkles, X } from "lucide-react"
+import { Bug, CheckSquare, ChevronDown, ChevronUp, ChevronsUp, GitBranch, Minus, Sparkles, X } from "lucide-react"
 import { DepartmentForm } from "@/components/forms/department-form"
 import { useDepartments } from "@/hooks/use-departments"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
@@ -51,7 +51,7 @@ const ticketSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
-  type: z.enum(["bug", "request", "task"]).default("task"),
+  type: z.enum(["bug", "request", "task", "subtask"]).default("task"),
   project_id: z
     .union([
       z.string().uuid(),
@@ -129,6 +129,13 @@ const CREATE_TYPE_OPTIONS = [
     description: "Track a deliverable",
     icon: CheckSquare,
     iconClassName: "text-emerald-500",
+  },
+  {
+    value: "subtask",
+    label: "Subtask",
+    description: "Link work under another ticket",
+    icon: GitBranch,
+    iconClassName: "text-teal-500",
   },
 ] as const
 

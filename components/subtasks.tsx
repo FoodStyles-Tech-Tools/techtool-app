@@ -1,576 +1,255 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Checkbox } from "@/components/ui/checkbox"
+import { useMemo, useState } from "react"
+import Link from "next/link"
+import { Plus } from "lucide-react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Trash2, Plus, GripVertical, Copy } from "lucide-react"
-import { toast } from "@/components/ui/toast"
-import { format } from "date-fns"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { usePermissions } from "@/hooks/use-permissions"
+import { useCreateTicket, useUpdateTicket } from "@/hooks/use-tickets"
 import { useRealtimeSubscription } from "@/hooks/use-realtime"
+import { useUsers } from "@/hooks/use-users"
+import { toast } from "@/components/ui/toast"
+import { TicketPrioritySelect } from "@/components/ticket-priority-select"
+import { TicketStatusSelect } from "@/components/ticket-status-select"
+import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
+import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
+import { isDoneStatus } from "@/lib/ticket-statuses"
 import { useSupabaseClient } from "@/lib/supabase-client"
 import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
-
-interface Subtask {
-  id: string
-  ticket_id: string
-  title: string
-  completed: boolean
-  completed_at: string | null
-  created_at: string
-  updated_at: string
-  position: number
-}
 
 interface SubtasksProps {
   ticketId: string
   projectName?: string | null
   displayId?: string | null
+  projectId?: string | null
+  allowSqaStatuses?: boolean
+  allowCreate?: boolean
 }
 
-export function Subtasks({ ticketId, projectName, displayId }: SubtasksProps) {
-  const [subtasks, setSubtasks] = useState<Subtask[]>([])
-  const [loading, setLoading] = useState(true)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editValue, setEditValue] = useState("")
+const UNASSIGNED_VALUE = "unassigned"
+
+export function Subtasks({
+  ticketId,
+  projectName,
+  displayId,
+  projectId,
+  allowSqaStatuses = true,
+  allowCreate = true,
+}: SubtasksProps) {
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("")
-  const [isAdding, setIsAdding] = useState(false)
-  const [draggedId, setDraggedId] = useState<string | null>(null)
-  const [dragOverId, setDragOverId] = useState<string | null>(null)
-  const [dragStartElement, setDragStartElement] = useState<HTMLElement | null>(null)
+  const [creating, setCreating] = useState(false)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
   const { flags } = usePermissions()
   const canEditTickets = flags?.canEditTickets ?? false
   const supabase = useSupabaseClient()
   const userEmail = useUserEmail()
+  const queryClient = useQueryClient()
+  const { data: usersData } = useUsers({ realtime: false })
+  const createTicket = useCreateTicket()
+  const updateTicket = useUpdateTicket()
 
-  const ensureCurrentUserId = async () => {
-    if (currentUserId) return currentUserId
-    if (!userEmail) return null
-
-    await ensureUserContext(supabase, userEmail)
-    const { data: user, error } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", userEmail)
-      .single()
-
-    if (error || !user?.id) {
-      console.error("Error resolving current user id for subtasks:", error)
-      return null
-    }
-
-    setCurrentUserId(user.id)
-    return user.id
-  }
-
-  const fetchSubtasks = async () => {
-    try {
-      // Set user context for RLS (cached, only called once per session)
-      await ensureUserContext(supabase, userEmail)
-
-      const { data: subtasksData, error } = await supabase
-        .from("subtasks")
-        .select("*")
-        .eq("ticket_id", ticketId)
-        .order("position", { ascending: true })
-        .order("created_at", { ascending: true })
-
-      if (error) {
-        console.error("Error fetching subtasks:", error)
-      } else {
-        setSubtasks(subtasksData || [])
-      }
-    } catch (error) {
-      console.error("Error fetching subtasks:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (ticketId) {
-      fetchSubtasks()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticketId, userEmail])
-
-  // Real-time subscription for subtasks
   useRealtimeSubscription({
-    table: "subtasks",
-    filter: `ticket_id=eq.${ticketId}`,
+    table: "tickets",
+    filter: `parent_ticket_id=eq.${ticketId}`,
     enabled: !!ticketId,
-    onInsert: (payload) => {
-      const newSubtask = payload.new as Subtask
-      // Only add if not already in the list (avoid duplicates from optimistic updates)
-      setSubtasks((prev) => {
-        if (prev.some(s => s.id === newSubtask.id)) {
-          return prev
-        }
-        return [...prev, newSubtask].sort((a, b) => a.position - b.position)
-      })
+    onInsert: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket-subtasks", ticketId] })
     },
-    onUpdate: (payload) => {
-      const updatedSubtask = payload.new as Subtask
-      setSubtasks((prev) =>
-        prev.map((s) => (s.id === updatedSubtask.id ? updatedSubtask : s))
-      )
+    onUpdate: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket-subtasks", ticketId] })
     },
-    onDelete: (payload) => {
-      const deletedId = (payload.old as Subtask).id
-      setSubtasks((prev) => prev.filter((s) => s.id !== deletedId))
+    onDelete: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket-subtasks", ticketId] })
     },
   })
 
-  const handleToggleComplete = async (subtask: Subtask) => {
-    if (!canEditTickets) return
+  const { data: subtasksData = [], isLoading } = useQuery({
+    queryKey: ["ticket-subtasks", ticketId],
+    enabled: !!ticketId,
+    queryFn: async () => {
+      await ensureUserContext(supabase, userEmail)
+      const { data, error } = await supabase
+        .from("tickets")
+        .select(`
+          id,
+          display_id,
+          title,
+          status,
+          priority,
+          type,
+          created_at,
+          assignee:users!tickets_assignee_id_fkey(id, name, email)
+        `)
+        .eq("parent_ticket_id", ticketId)
+        .eq("type", "subtask")
+        .order("created_at", { ascending: true })
 
-    const previousCompleted = subtask.completed
-    const optimisticSubtasks = subtasks.map((s) =>
-      s.id === subtask.id
-        ? { ...s, completed: !s.completed, completed_at: !s.completed ? new Date().toISOString() : null }
-        : s
-    )
-    setSubtasks(optimisticSubtasks)
+      if (error) throw error
+      return (data || []).map((row: any) => ({
+        ...row,
+        assignee: Array.isArray(row.assignee) ? row.assignee[0] || null : row.assignee || null,
+      }))
+    },
+    staleTime: 30 * 1000,
+  })
 
-    try {
-      // Set user context for RLS
-      if (userEmail) {
-        await ensureUserContext(supabase, userEmail)
-      }
+  const users = useMemo(() => usersData || [], [usersData])
+  const assigneeEligibleUsers = useMemo(
+    () => users.filter((user) => (user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false)),
+    [users]
+  )
 
-      const { error } = await supabase
-        .from("subtasks")
-        .update({ 
-          completed: !subtask.completed,
-          completed_at: !subtask.completed ? new Date().toISOString() : null,
-          activity_actor_id: await ensureCurrentUserId(),
-        })
-        .eq("id", subtask.id)
-        .eq("ticket_id", ticketId)
+  const subtasks = useMemo(() => subtasksData, [subtasksData])
 
-      if (error) {
-        setSubtasks((prev) =>
-          prev.map((s) => (s.id === subtask.id ? { ...s, completed: previousCompleted } : s))
-        )
-        toast("Failed to update subtask", "error")
-      }
-      // Realtime subscription will handle the update, so we don't need to manually update state
-    } catch (error) {
-      console.error("Error updating subtask:", error)
-      setSubtasks((prev) =>
-        prev.map((s) => (s.id === subtask.id ? { ...s, completed: previousCompleted } : s))
-      )
-      toast("Failed to update subtask", "error")
-    }
-  }
+  const doneCount = subtasks.filter((ticket) => isDoneStatus(ticket.status)).length
+  const donePercent = subtasks.length ? Math.round((doneCount / subtasks.length) * 100) : 0
 
-  const handleStartEdit = (subtask: Subtask) => {
-    if (!canEditTickets) return
-    setEditingId(subtask.id)
-    setEditValue(subtask.title)
-  }
-
-  const handleSaveEdit = async (subtaskId: string) => {
-    if (!editValue.trim()) {
-      toast("Subtask title cannot be empty", "error")
-      return
-    }
-
-    const subtask = subtasks.find((s) => s.id === subtaskId)
-    if (!subtask || subtask.title === editValue.trim()) {
-      setEditingId(null)
-      return
-    }
-
-    const previousTitle = subtask.title
-    const optimisticSubtasks = subtasks.map((s) =>
-      s.id === subtaskId ? { ...s, title: editValue.trim() } : s
-    )
-    setSubtasks(optimisticSubtasks)
-    setEditingId(null)
-
-    try {
-      // Set user context for RLS
-      if (userEmail) {
-        await ensureUserContext(supabase, userEmail)
-      }
-
-      const { error } = await supabase
-        .from("subtasks")
-        .update({
-          title: editValue.trim(),
-          activity_actor_id: await ensureCurrentUserId(),
-        })
-        .eq("id", subtaskId)
-        .eq("ticket_id", ticketId)
-
-      if (error) {
-        setSubtasks((prev) =>
-          prev.map((s) => (s.id === subtaskId ? { ...s, title: previousTitle } : s))
-        )
-        toast("Failed to update subtask", "error")
-      }
-      // Realtime subscription will handle the update, so we don't need to manually update state
-    } catch (error) {
-      console.error("Error updating subtask:", error)
-      setSubtasks((prev) =>
-        prev.map((s) => (s.id === subtaskId ? { ...s, title: previousTitle } : s))
-      )
-      toast("Failed to update subtask", "error")
-    }
-  }
-
-  const handleCancelEdit = () => {
-    setEditingId(null)
-    setEditValue("")
-  }
-
-  const handleDelete = async (subtaskId: string) => {
-    if (!canEditTickets) return
-
-    const previousSubtasks = subtasks
-    setSubtasks((prev) => prev.filter((s) => s.id !== subtaskId))
-
-    try {
-      // Set user context for RLS
-      if (userEmail) {
-        await ensureUserContext(supabase, userEmail)
-      }
-
-      const actorId = await ensureCurrentUserId()
-      if (actorId) {
-        await supabase
-          .from("subtasks")
-          .update({ activity_actor_id: actorId })
-          .eq("id", subtaskId)
-          .eq("ticket_id", ticketId)
-      }
-
-      const { error } = await supabase
-        .from("subtasks")
-        .delete()
-        .eq("id", subtaskId)
-        .eq("ticket_id", ticketId)
-
-      if (error) {
-        setSubtasks(previousSubtasks)
-        toast("Failed to delete subtask", "error")
-      }
-      // Realtime subscription will handle the delete, so we don't need to manually update state
-    } catch (error) {
-      console.error("Error deleting subtask:", error)
-      setSubtasks(previousSubtasks)
-      toast("Failed to delete subtask", "error")
-    }
-  }
-
-  const handleAddSubtask = async () => {
-    if (!newSubtaskTitle.trim() || !canEditTickets) {
-      // If no text, just close the input
-      setIsAdding(false)
-      setNewSubtaskTitle("")
-      return
-    }
-
+  const handleCreateSubtask = async () => {
+    if (!canEditTickets || creating || !allowCreate) return
     const title = newSubtaskTitle.trim()
-    setNewSubtaskTitle("")
-    setIsAdding(false)
+    if (!title) return
 
+    setCreating(true)
     try {
-      // Set user context for RLS
-      if (userEmail) {
-        await ensureUserContext(supabase, userEmail)
-      }
-
-      // Get the highest position for this ticket
-      const { data: lastSubtask } = await supabase
-        .from("subtasks")
-        .select("position")
-        .eq("ticket_id", ticketId)
-        .order("position", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-
-      const nextPosition = lastSubtask ? (lastSubtask.position || 0) + 1 : 0
-
-      const { data: subtask, error } = await supabase
-        .from("subtasks")
-        .insert({
-          ticket_id: ticketId,
-          title: title,
-          position: nextPosition,
-          activity_actor_id: await ensureCurrentUserId(),
-        })
-        .select()
-        .single()
-
-      if (error) {
-        console.error("Error creating subtask:", error)
-        toast("Failed to create subtask", "error")
-      }
-      // Realtime subscription will handle the insert, so we don't need to manually update state
-    } catch (error) {
-      console.error("Error creating subtask:", error)
-      toast("Failed to create subtask", "error")
+      await createTicket.mutateAsync({
+        title,
+        type: "subtask",
+        status: "open",
+        priority: "medium",
+        parent_ticket_id: ticketId,
+        project_id: projectId || undefined,
+      })
+      setNewSubtaskTitle("")
+      toast("Subtask ticket created")
+    } catch (error: any) {
+      toast(error?.message || "Failed to create subtask ticket", "error")
+    } finally {
+      setCreating(false)
     }
   }
 
-  const handleCancelAdd = () => {
-    setIsAdding(false)
-    setNewSubtaskTitle("")
-  }
-
-  const handleDragStart = (e: React.DragEvent, subtaskId: string) => {
-    if (!canEditTickets) {
-      e.preventDefault()
-      return
-    }
-    // Only allow drag if starting from the grip handle or the row itself (not interactive elements)
-    const target = e.target as HTMLElement
-    const isInteractive = target.closest('button, input, [role="checkbox"]')
-    if (isInteractive && !target.closest('[data-drag-handle]')) {
-      e.preventDefault()
-      return
-    }
-    setDraggedId(subtaskId)
-    setDragStartElement(target)
-    e.dataTransfer.effectAllowed = "move"
-    e.dataTransfer.setData("text/html", subtaskId)
-  }
-
-  const handleDragOver = (e: React.DragEvent, subtaskId: string) => {
-    if (!draggedId || draggedId === subtaskId) return
-    e.preventDefault()
-    e.dataTransfer.dropEffect = "move"
-    setDragOverId(subtaskId)
-  }
-
-  const handleDragLeave = () => {
-    setDragOverId(null)
-  }
-
-  const handleDrop = async (e: React.DragEvent, targetId: string) => {
-    e.preventDefault()
-    setDragOverId(null)
-
-    if (!draggedId || draggedId === targetId || !canEditTickets) {
-      setDraggedId(null)
-      return
-    }
-
-    const draggedIndex = subtasks.findIndex((s) => s.id === draggedId)
-    const targetIndex = subtasks.findIndex((s) => s.id === targetId)
-
-    if (draggedIndex === -1 || targetIndex === -1) {
-      setDraggedId(null)
-      return
-    }
-
-    // Reorder subtasks optimistically
-    const newSubtasks = [...subtasks]
-    const [draggedItem] = newSubtasks.splice(draggedIndex, 1)
-    newSubtasks.splice(targetIndex, 0, draggedItem)
-
-    // Update positions
-    const updatedSubtasks = newSubtasks.map((subtask, index) => ({
-      ...subtask,
-      position: index,
-    }))
-
-    setSubtasks(updatedSubtasks)
-    setDraggedId(null)
-
-    // Save new positions to server
+  const handleUpdateField = async (subtaskId: string, field: "priority" | "status" | "assignee_id", value: string | null) => {
+    if (!canEditTickets) return
+    setUpdatingId(subtaskId)
     try {
-      // Set user context for RLS
-      if (userEmail) {
-        await ensureUserContext(supabase, userEmail)
-      }
-
-      // Update all positions
-      const updates = updatedSubtasks.map((subtask) =>
-        supabase
-          .from("subtasks")
-          .update({ position: subtask.position })
-          .eq("id", subtask.id)
-          .eq("ticket_id", ticketId)
-      )
-
-      const results = await Promise.all(updates)
-      const errors = results.filter((result) => result.error)
-
-      if (errors.length > 0) {
-        console.error("Error updating subtask positions:", errors)
-        // Revert on error
-        fetchSubtasks()
-        toast("Failed to reorder subtasks", "error")
-      }
-      // Realtime subscription will handle the updates, so we don't need to manually update state
-    } catch (error) {
-      console.error("Error reordering subtasks:", error)
-      fetchSubtasks()
-      toast("Failed to reorder subtasks", "error")
+      const body: Record<string, any> = { [field]: value }
+      await updateTicket.mutateAsync({ id: subtaskId, ...body })
+      toast("Subtask updated")
+    } catch (error: any) {
+      toast(error?.message || "Failed to update subtask", "error")
+    } finally {
+      setUpdatingId(null)
     }
   }
 
-  const handleDragEnd = () => {
-    setDraggedId(null)
-    setDragOverId(null)
-  }
-
-  const handleCopySubtask = (subtask: Subtask) => {
-    const project = projectName || "No Project"
-    const ticketDisplayId = displayId || ticketId.slice(0, 8)
-    const label = `[${project}] ${ticketDisplayId} Sub: ${subtask.title}`
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard
-        .writeText(label)
-        .then(() => toast("Copied subtask info"))
-        .catch(() => toast("Failed to copy subtask info", "error"))
-    } else {
-      toast("Clipboard not available", "error")
-    }
-  }
-
-  if (loading) {
+  if (isLoading) {
     return <div className="text-sm text-muted-foreground">Loading subtasks...</div>
   }
 
-  const canEdit = canEditTickets
-
   return (
-    <div className="space-y-2">
-      <div className="space-y-2">
-        {subtasks.map((subtask) => (
-          <div
-            key={subtask.id}
-            draggable={canEdit}
-            onDragStart={(e) => handleDragStart(e, subtask.id)}
-            onDragOver={(e) => handleDragOver(e, subtask.id)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, subtask.id)}
-            onDragEnd={handleDragEnd}
-            className={`flex items-center gap-2 group hover:bg-muted/50 rounded-md p-1.5 -mx-1 transition-colors ${
-              draggedId === subtask.id ? "opacity-50" : ""
-            } ${
-              dragOverId === subtask.id ? "border-t-2 border-primary" : ""
-            } ${canEdit ? "cursor-move" : ""}`}
-          >
-            {canEdit && (
-              <div 
-                data-drag-handle
-                className="cursor-grab active:cursor-grabbing text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <GripVertical className="h-4 w-4" />
-              </div>
-            )}
-            <Checkbox
-              checked={subtask.completed}
-              onCheckedChange={() => handleToggleComplete(subtask)}
-              disabled={!canEdit}
-            />
-            {editingId === subtask.id ? (
-              <Input
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={() => handleSaveEdit(subtask.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleSaveEdit(subtask.id)
-                  } else if (e.key === "Escape") {
-                    handleCancelEdit()
-                  }
-                }}
-                className="flex-1 h-8 text-sm"
-                autoFocus
-              />
-            ) : (
-              <div
-                className={`flex-1 flex items-center gap-2 text-sm ${
-                  subtask.completed ? "line-through text-muted-foreground" : ""
-                }`}
-                onDoubleClick={() => handleStartEdit(subtask)}
-              >
-                <span className="cursor-text">{subtask.title}</span>
-                {subtask.completed_at && (
-                  <span className="text-xs text-muted-foreground">
-                    ({format(new Date(subtask.completed_at), "MMM d, yyyy HH:mm")})
-                  </span>
-                )}
-              </div>
-            )}
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleCopySubtask(subtask)
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-                title="Copy subtask info"
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
-              {canEdit && editingId !== subtask.id && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleDelete(subtask.id)
-                  }}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-        ))}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {(displayId || "").toUpperCase()} {projectName ? `• ${projectName}` : ""}
+        </p>
+        <p className="text-xs text-muted-foreground">{donePercent}% Done</p>
+      </div>
 
-        {isAdding ? (
-          <div className="flex items-center gap-2">
-            <Input
-              value={newSubtaskTitle}
-              onChange={(e) => setNewSubtaskTitle(e.target.value)}
-              onBlur={handleAddSubtask}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleAddSubtask()
-                } else if (e.key === "Escape") {
-                  handleCancelAdd()
-                }
-              }}
-              placeholder="Enter subtask title..."
-              className="flex-1 h-8 text-sm"
-              autoFocus
-            />
-          </div>
+      <div className="overflow-hidden rounded-md border">
+        <div className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
+          <div>Work</div>
+          <div>Priority</div>
+          <div>Assignee</div>
+          <div>Status</div>
+        </div>
+
+        {subtasks.length === 0 ? (
+          <div className="px-3 py-3 text-sm text-muted-foreground">No subtask tickets yet.</div>
         ) : (
-          canEdit && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-full justify-start text-muted-foreground text-xs"
-              onClick={() => setIsAdding(true)}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Add subtask
-            </Button>
-          )
+          <div className="divide-y">
+            {subtasks.map((subtask) => (
+              <div key={subtask.id} className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] items-center gap-2 px-3 py-2">
+                <Link
+                  href={`/tickets/${String(subtask.display_id || subtask.id).toLowerCase()}`}
+                  className="min-w-0 truncate text-sm hover:underline"
+                >
+                  {(subtask.display_id || subtask.id.slice(0, 8)).toUpperCase()} {subtask.title}
+                </Link>
+                <TicketPrioritySelect
+                  value={subtask.priority}
+                  onValueChange={(value) => handleUpdateField(subtask.id, "priority", value)}
+                  disabled={!canEditTickets || updatingId === subtask.id}
+                  triggerClassName="h-7 w-full"
+                />
+                <Select
+                  value={subtask.assignee?.id || UNASSIGNED_VALUE}
+                  onValueChange={(value) =>
+                    handleUpdateField(subtask.id, "assignee_id", value === UNASSIGNED_VALUE ? null : value)
+                  }
+                  disabled={!canEditTickets || updatingId === subtask.id}
+                >
+                  <SelectTrigger className="h-7 w-full relative overflow-hidden">
+                    {subtask.assignee?.id ? (
+                      <div className="absolute left-3 right-8 top-0 bottom-0 flex items-center overflow-hidden">
+                        <UserSelectValue
+                          users={assigneeEligibleUsers}
+                          value={subtask.assignee.id}
+                          placeholder="Unassigned"
+                          unassignedValue={UNASSIGNED_VALUE}
+                          unassignedLabel="Unassigned"
+                        />
+                      </div>
+                    ) : (
+                      <SelectValue placeholder="Unassigned" />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+                    {assigneeEligibleUsers.map((user) => (
+                      <UserSelectItem key={user.id} user={user} value={user.id} />
+                    ))}
+                  </SelectContent>
+                </Select>
+                <TicketStatusSelect
+                  value={subtask.status}
+                  onValueChange={(value) => handleUpdateField(subtask.id, "status", value)}
+                  disabled={!canEditTickets || updatingId === subtask.id}
+                  allowSqaStatuses={allowSqaStatuses}
+                  triggerClassName="h-7 w-full"
+                />
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {subtasks.length === 0 && !isAdding && (
-        <p className="text-sm text-muted-foreground text-center py-2">
-          No subtasks yet. {canEdit && "Click 'Add subtask' to create one."}
-        </p>
+      {canEditTickets && allowCreate && (
+        <div className="flex items-center gap-2">
+          <Input
+            value={newSubtaskTitle}
+            onChange={(e) => setNewSubtaskTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                void handleCreateSubtask()
+              }
+            }}
+            placeholder="Create subtask ticket..."
+            className="h-8"
+            disabled={creating}
+          />
+          <Button size="sm" className="h-8" onClick={handleCreateSubtask} disabled={!newSubtaskTitle.trim() || creating}>
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            Add
+          </Button>
+        </div>
       )}
+      {canEditTickets && !allowCreate ? (
+        <p className="text-xs text-muted-foreground">Subtask tickets cannot contain subtasks.</p>
+      ) : null}
     </div>
   )
 }

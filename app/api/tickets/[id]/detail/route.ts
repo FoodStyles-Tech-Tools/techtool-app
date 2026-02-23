@@ -3,6 +3,21 @@ import { requirePermission, getSupabaseWithUserContext } from "@/lib/auth-helper
 
 export const runtime = "nodejs"
 
+const TICKET_LINK_REGEX = /(?:https?:\/\/techtool-app\.vercel\.app)?\/tickets\/([a-z]{2,}-\d+)\b/gi
+
+function extractMentionedTicketSlugs(input: string): string[] {
+  const slugs = new Set<string>()
+  if (!input) return []
+
+  const regex = new RegExp(TICKET_LINK_REGEX.source, TICKET_LINK_REGEX.flags)
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(input)) !== null) {
+    const slug = String(match[1] || "").toLowerCase()
+    if (slug) slugs.add(slug)
+  }
+  return Array.from(slugs)
+}
+
 /** GET /api/tickets/[id]/detail – ticket + comments in one response for the detail dialog */
 export async function GET(
   request: NextRequest,
@@ -13,12 +28,9 @@ export async function GET(
     const { supabase } = await getSupabaseWithUserContext()
     const ticketId = params.id
 
-    const [ticketResult, commentsResult] = await Promise.all([
+    const [ticketResult, commentsResult, subtasksResult] = await Promise.all([
       (async () => {
-        const { data: ticket, error } = await supabase
-          .from("tickets")
-          .select(
-            `
+        const baseSelect = `
             *,
             project:projects(id, name, description, require_sqa),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
@@ -28,9 +40,29 @@ export async function GET(
             epic:epics(id, name, color),
             sprint:sprints(id, name, status, start_date, end_date)
           `
-          )
+        const relationSelect = `${baseSelect}, parent_ticket:tickets!tickets_parent_ticket_id_fkey(id, display_id, title, status, type)`
+
+        const withRelation = await supabase
+          .from("tickets")
+          .select(relationSelect)
           .eq("id", ticketId)
           .maybeSingle()
+
+        let ticket: any = withRelation.data
+        let error: any = withRelation.error
+
+        if (error) {
+          const fallback = await supabase
+            .from("tickets")
+            .select(baseSelect)
+            .eq("id", ticketId)
+            .maybeSingle()
+          ticket = fallback.data
+          error = fallback.error
+          if (ticket && !("parent_ticket" in ticket)) {
+            ticket.parent_ticket = null
+          }
+        }
 
         if (error) {
           if (error.message?.includes("coerce") || error.message?.includes("single JSON")) {
@@ -103,7 +135,8 @@ export async function GET(
 
         if (commentsError) {
           console.error("Error fetching comments:", commentsError)
-          return { comments: [], error: "Failed to fetch comments", status: 500 as const }
+          // Keep detail dialog usable even if comments fail.
+          return { comments: [] }
         }
 
         type CommentWithAuthor = {
@@ -171,6 +204,21 @@ export async function GET(
         const tree = rootComments.map(enrich)
         return { comments: tree }
       })(),
+      (async () => {
+        const { data: subtasks, error } = await supabase
+          .from("tickets")
+          .select("id, display_id, title, status, type")
+          .eq("parent_ticket_id", ticketId)
+          .order("created_at", { ascending: true })
+
+        if (error) {
+          console.error("Error fetching related subtickets:", error)
+          // Keep detail dialog usable even if relation fetch fails.
+          return { subtasks: [] }
+        }
+
+        return { subtasks: subtasks || [] }
+      })(),
     ])
 
     const ticketPayload = ticketResult as {
@@ -183,27 +231,113 @@ export async function GET(
       error?: string
       status?: number
     }
-
-    if (ticketPayload.status === 404 || !ticketPayload.ticket) {
-      return NextResponse.json({ error: "Ticket not found" }, { status: 404 })
-    }
     if (ticketPayload.status === 500) {
       return NextResponse.json(
         { error: ticketPayload.error || "Failed to fetch ticket" },
         { status: 500 }
       )
     }
-    if (commentsPayload.status === 500) {
-      return NextResponse.json(
-        { error: commentsPayload.error || "Failed to fetch comments" },
-        { status: 500 }
-      )
+    if (ticketPayload.status === 404 || !ticketPayload.ticket) {
+      return NextResponse.json({ error: "Ticket not found" }, { status: 404 })
+    }
+    const subtaskResult = (subtasksResult as { subtasks?: any[] }) || {}
+
+    const ticket = ticketPayload.ticket as any
+    const comments = commentsPayload.comments ?? []
+    const relatedSubtasks = subtaskResult.subtasks ?? []
+
+    const parentTicket = Array.isArray(ticket.parent_ticket)
+      ? ticket.parent_ticket[0] || null
+      : ticket.parent_ticket || null
+
+    type CommentNode = { id: string; body: string; replies?: CommentNode[] }
+    const mentionCommentIdsBySlug = new Map<string, Set<string>>()
+    const visitComments = (nodes: CommentNode[]) => {
+      nodes.forEach((node) => {
+        const slugs = extractMentionedTicketSlugs(node.body || "")
+        slugs.forEach((slug) => {
+          if (!mentionCommentIdsBySlug.has(slug)) {
+            mentionCommentIdsBySlug.set(slug, new Set<string>())
+          }
+          mentionCommentIdsBySlug.get(slug)?.add(node.id)
+        })
+        if (node.replies?.length) {
+          visitComments(node.replies)
+        }
+      })
+    }
+    visitComments(comments as CommentNode[])
+
+    const currentDisplaySlug = String(ticket.display_id || "").toLowerCase()
+    const mentionDisplayIds = Array.from(mentionCommentIdsBySlug.keys())
+      .filter((slug) => slug && slug !== currentDisplaySlug)
+      .map((slug) => slug.toUpperCase())
+
+    let mentionedInComments: Array<{
+      ticket: { id: string; display_id: string | null; title: string; status: string; type: string | null }
+      comment_ids: string[]
+    }> = []
+
+    if (mentionDisplayIds.length > 0) {
+      const { data: mentionedTickets, error: mentionTicketError } = await supabase
+        .from("tickets")
+        .select("id, display_id, title, status, type")
+        .in("display_id", mentionDisplayIds)
+
+      if (mentionTicketError) {
+        console.error("Error resolving mentioned tickets:", mentionTicketError)
+      } else if (Array.isArray(mentionedTickets)) {
+        const ticketBySlug = new Map<string, any>()
+        mentionedTickets.forEach((item) => {
+          const slug = String(item.display_id || "").toLowerCase()
+          if (slug) ticketBySlug.set(slug, item)
+        })
+
+        mentionedInComments = Array.from(mentionCommentIdsBySlug.entries())
+          .map(([slug, commentIdsSet]) => {
+            const mentionedTicket = ticketBySlug.get(slug)
+            if (!mentionedTicket) return null
+            return {
+              ticket: {
+                id: mentionedTicket.id,
+                display_id: mentionedTicket.display_id,
+                title: mentionedTicket.title,
+                status: mentionedTicket.status,
+                type: mentionedTicket.type || null,
+              },
+              comment_ids: Array.from(commentIdsSet),
+            }
+          })
+          .filter(Boolean) as Array<{
+          ticket: { id: string; display_id: string | null; title: string; status: string; type: string | null }
+          comment_ids: string[]
+        }>
+      }
     }
 
-    const ticket = ticketPayload.ticket
-    const comments = commentsPayload.comments ?? []
-
-    return NextResponse.json({ ticket, comments })
+    return NextResponse.json({
+      ticket,
+      comments,
+      relations: {
+        parent: parentTicket
+          ? {
+              id: parentTicket.id,
+              display_id: parentTicket.display_id,
+              title: parentTicket.title,
+              status: parentTicket.status,
+              type: parentTicket.type || null,
+            }
+          : null,
+        subtasks: relatedSubtasks.map((item) => ({
+          id: item.id,
+          display_id: item.display_id,
+          title: item.title,
+          status: item.status,
+          type: item.type || null,
+        })),
+        mentioned_in_comments: mentionedInComments,
+      },
+    })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

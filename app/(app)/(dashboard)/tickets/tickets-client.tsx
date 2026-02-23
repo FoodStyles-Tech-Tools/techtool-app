@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useMemo, useCallback, memo } from "react"
+import { useState, useMemo, useCallback, memo, useRef } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
 import Link from "next/link"
 import { useDepartments } from "@/hooks/use-departments"
 import { useTickets, useUpdateTicket } from "@/hooks/use-tickets"
+import { useQuery } from "@tanstack/react-query"
 import { useProjects } from "@/hooks/use-projects"
 import { useUsers } from "@/hooks/use-users"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -31,6 +32,8 @@ import {
 import { buildStatusChangeBody } from "@/lib/ticket-statuses"
 import type { Ticket } from "@/lib/types"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@/lib/rich-text"
+import { useSupabaseClient } from "@/lib/supabase-client"
+import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
 import {
   ASSIGNEE_ALLOWED_ROLES,
   SQA_ALLOWED_ROLES,
@@ -40,6 +43,16 @@ import {
 import { TicketsToolbar } from "@/components/tickets/tickets-toolbar"
 import { TicketsKanban } from "@/components/tickets/tickets-kanban"
 import { TicketsTable } from "@/components/tickets/tickets-table"
+
+type OpenSubtaskRow = {
+  id: string
+  display_id: string | null
+  title: string
+  status: string
+}
+
+type SubtaskDecision = "cancel" | "keep_open" | "close_all"
+const DONE_STATUS_KEYS = new Set(["completed", "cancelled", "rejected"])
 
 const TicketDetailDialog = dynamic(
   () => import("@/components/ticket-detail-dialog").then((mod) => mod.TicketDetailDialog),
@@ -72,8 +85,15 @@ export default function TicketsPage() {
     newStatus: string
     body: Record<string, unknown>
   } | null>(null)
+  const [openSubtasksDialog, setOpenSubtasksDialog] = useState<{
+    targetStatus: string
+    subtasks: OpenSubtaskRow[]
+  } | null>(null)
 
   const { user, flags } = usePermissions()
+  const subtaskDecisionResolverRef = useRef<((decision: SubtaskDecision) => void) | null>(null)
+  const supabase = useSupabaseClient()
+  const userEmail = useUserEmail()
   const { preferences } = useUserPreferences()
   const { data: projectsData } = useProjects()
   const projects = useMemo(() => projectsData || [], [projectsData])
@@ -123,6 +143,7 @@ export default function TicketsPage() {
     assignee_id: assigneeFilter !== "all" ? assigneeFilter : undefined,
     requested_by_id: requestedByFilter !== "all" ? requestedByFilter : undefined,
     exclude_done: excludeDone,
+    exclude_subtasks: true,
     limit: ROWS_PER_PAGE,
     page: currentPage,
   })
@@ -133,6 +154,29 @@ export default function TicketsPage() {
   const { statuses: ticketStatuses } = useTicketStatuses()
 
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
+  const parentTicketIds = useMemo(() => allTickets.map((ticket) => ticket.id), [allTickets])
+  const { data: subtaskCountMap = {} } = useQuery<Record<string, number>>({
+    queryKey: ["ticket-subtask-counts", parentTicketIds],
+    enabled: parentTicketIds.length > 0,
+    queryFn: async () => {
+      await ensureUserContext(supabase, userEmail)
+      const { data, error } = await supabase
+        .from("tickets")
+        .select("parent_ticket_id")
+        .eq("type", "subtask")
+        .in("parent_ticket_id", parentTicketIds)
+
+      if (error) throw error
+
+      const counts: Record<string, number> = {}
+      ;(data || []).forEach((row: { parent_ticket_id: string | null }) => {
+        if (!row.parent_ticket_id) return
+        counts[row.parent_ticket_id] = (counts[row.parent_ticket_id] || 0) + 1
+      })
+      return counts
+    },
+    staleTime: 30 * 1000,
+  })
   const users = useMemo(() => usersData || [], [usersData])
   const projectOptions = useMemo(
     () => {
@@ -155,6 +199,72 @@ export default function TicketsPage() {
   const loading = !ticketsData && ticketsLoading
   const canCreateTickets = flags?.canCreateTickets ?? false
   const canEditTickets = flags?.canEditTickets ?? false
+
+  const fetchOpenSubtasksForGuard = useCallback(async (ticketId: string): Promise<OpenSubtaskRow[]> => {
+    const response = await fetch(`/api/tickets/${ticketId}/detail`)
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error(payload?.error || "Failed to check open subtasks")
+    }
+    const payload = await response.json().catch(() => ({}))
+    const subtasks = Array.isArray(payload?.relations?.subtasks) ? payload.relations.subtasks : []
+    return (subtasks as OpenSubtaskRow[]).filter((subtask) => !DONE_STATUS_KEYS.has(String(subtask.status || "")))
+  }, [])
+
+  const askHowToHandleOpenSubtasks = useCallback(
+    (targetStatus: string, subtasks: OpenSubtaskRow[]) =>
+      new Promise<SubtaskDecision>((resolve) => {
+        subtaskDecisionResolverRef.current = resolve
+        setOpenSubtasksDialog({ targetStatus, subtasks })
+      }),
+    []
+  )
+
+  const resolveOpenSubtasksDialog = useCallback((decision: SubtaskDecision) => {
+    const resolver = subtaskDecisionResolverRef.current
+    subtaskDecisionResolverRef.current = null
+    setOpenSubtasksDialog(null)
+    resolver?.(decision)
+  }, [])
+
+  const closeSubtasksToStatus = useCallback(async (subtasks: OpenSubtaskRow[], status: string) => {
+    if (subtasks.length === 0) return
+    await Promise.all(
+      subtasks.map(async (subtask) => {
+        const response = await fetch(`/api/tickets/${subtask.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        })
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}))
+          throw new Error(payload?.error || `Failed to close subtask ${subtask.display_id || subtask.id}`)
+        }
+      })
+    )
+  }, [])
+
+  const resolveDoneStatusGuard = useCallback(
+    async (ticketId: string, targetStatus: string) => {
+      if (!DONE_STATUS_KEYS.has(targetStatus)) {
+        return { proceed: true, closeSubtasks: false, subtasks: [] as OpenSubtaskRow[] }
+      }
+      const openSubtasks = await fetchOpenSubtasksForGuard(ticketId)
+      if (openSubtasks.length === 0) {
+        return { proceed: true, closeSubtasks: false, subtasks: [] as OpenSubtaskRow[] }
+      }
+      const decision = await askHowToHandleOpenSubtasks(targetStatus, openSubtasks)
+      if (decision === "cancel") {
+        return { proceed: false, closeSubtasks: false, subtasks: [] as OpenSubtaskRow[] }
+      }
+      return {
+        proceed: true,
+        closeSubtasks: decision === "close_all",
+        subtasks: openSubtasks,
+      }
+    },
+    [askHowToHandleOpenSubtasks, fetchOpenSubtasksForGuard]
+  )
 
   const filteredTickets = useMemo(() => {
     const q = deferredSearchQuery.trim().toLowerCase()
@@ -203,15 +313,23 @@ export default function TicketsPage() {
         ...buildStatusChangeBody(previousStatus, columnId, { startedAt }),
       }
       try {
+        const doneGuard = await resolveDoneStatusGuard(ticketId, columnId)
+        if (!doneGuard.proceed) return false
+
         await updateTicket.mutateAsync({ id: ticketId, ...body })
-        toast("Ticket status updated")
+        if (doneGuard.closeSubtasks) {
+          await closeSubtasksToStatus(doneGuard.subtasks, columnId)
+          toast(`Ticket status updated. Closed ${doneGuard.subtasks.length} open subtask${doneGuard.subtasks.length === 1 ? "" : "s"}.`)
+        } else {
+          toast("Ticket status updated")
+        }
         return true
       } catch (err: unknown) {
         toast((err as { message?: string })?.message ?? "Failed to update ticket", "error")
         return false
       }
     },
-    [allTickets, updateTicket]
+    [allTickets, closeSubtasksToStatus, resolveDoneStatusGuard, updateTicket]
   )
 
   const kanban = useKanbanDrag({
@@ -301,6 +419,7 @@ export default function TicketsPage() {
     // Get current ticket to check previous values
     const currentTicket = allTickets.find(t => t.id === ticketId)
     
+    let doneGuard: { proceed: boolean; closeSubtasks: boolean; subtasks: OpenSubtaskRow[] } | null = null
     const body: any = {}
     if (field === "requested_by_id") {
       if (!value) {
@@ -361,6 +480,10 @@ export default function TicketsPage() {
       Object.assign(body, buildStatusChangeBody(previousStatus, newStatus, {
         startedAt: (currentTicket as { started_at?: string | null })?.started_at,
       }))
+      if (DONE_STATUS_KEYS.has(newStatus) && previousStatus !== newStatus) {
+        doneGuard = await resolveDoneStatusGuard(ticketId, newStatus)
+        if (!doneGuard.proceed) return
+      }
     } else if (field === "department_id") {
       body[field] = value || null
     } else {
@@ -376,6 +499,10 @@ export default function TicketsPage() {
         ...body,
       })
       toast(`${FIELD_LABELS[field] || "Ticket"} updated`)
+      if (field === "status" && doneGuard?.closeSubtasks) {
+        await closeSubtasksToStatus(doneGuard.subtasks, String(value))
+        toast(`Closed ${doneGuard.subtasks.length} open subtask${doneGuard.subtasks.length === 1 ? "" : "s"}.`)
+      }
     } catch (error: any) {
       toast(error.message || "Failed to update ticket", "error")
     } finally {
@@ -385,7 +512,7 @@ export default function TicketsPage() {
         return newState
       })
     }
-  }, [allTickets, updateTicket])
+  }, [allTickets, closeSubtasksToStatus, resolveDoneStatusGuard, updateTicket])
 
   const hasSearchQuery = deferredSearchQuery.trim().length > 0
 
@@ -448,6 +575,7 @@ export default function TicketsPage() {
         <TicketsKanban
           columns={kanbanColumns}
           ticketsByStatus={ticketsByStatus}
+          subtaskCountMap={subtaskCountMap}
           draggedTicket={draggedTicket}
           dragOverColumn={dragOverColumn}
           dropIndicator={dropIndicator}
@@ -471,6 +599,7 @@ export default function TicketsPage() {
           sortConfig={sortConfig}
           onSort={handleSort}
           tickets={paginatedTickets}
+          subtaskCountMap={subtaskCountMap}
           totalCount={sortedTickets.length}
           currentPage={currentPage}
           totalPages={totalPages || 1}
@@ -538,6 +667,9 @@ export default function TicketsPage() {
                 if (!pendingStatusChange) return
                 
                 const { ticketId, body, newStatus } = pendingStatusChange
+                const doneGuard = await resolveDoneStatusGuard(ticketId, newStatus)
+                if (!doneGuard.proceed) return
+
                 const normalizedReason = normalizeRichTextInput(cancelReason.trim())
                 if (!normalizedReason) {
                   toast("Please provide a reason", "error")
@@ -574,7 +706,12 @@ export default function TicketsPage() {
                     id: ticketId,
                     ...finalBody,
                   })
-                  toast("Status updated")
+                  if (doneGuard.closeSubtasks) {
+                    await closeSubtasksToStatus(doneGuard.subtasks, newStatus)
+                    toast(`Status updated. Closed ${doneGuard.subtasks.length} open subtask${doneGuard.subtasks.length === 1 ? "" : "s"}.`)
+                  } else {
+                    toast("Status updated")
+                  }
                 } catch (error: any) {
                   toast(error.message || "Failed to update ticket", "error")
                 } finally {
@@ -589,6 +726,45 @@ export default function TicketsPage() {
               }}
             >
               {pendingStatusChange?.newStatus === "rejected" ? "Confirm Rejection" : "Confirm Cancellation"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={!!openSubtasksDialog}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen && openSubtasksDialog) {
+            resolveOpenSubtasksDialog("cancel")
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Open Subtasks Found</DialogTitle>
+            <DialogDescription>
+              This ticket has open subtasks. Do you want to close them too when changing status to{" "}
+              <strong>{openSubtasksDialog?.targetStatus.replace(/_/g, " ")}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-56 space-y-2 overflow-y-auto py-1">
+            {(openSubtasksDialog?.subtasks || []).map((subtask) => (
+              <div key={subtask.id} className="rounded border px-2.5 py-1.5 text-sm">
+                <span className="font-mono text-xs text-muted-foreground">
+                  {(subtask.display_id || subtask.id.slice(0, 8)).toUpperCase()}
+                </span>{" "}
+                {subtask.title}
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => resolveOpenSubtasksDialog("cancel")}>
+              Cancel
+            </Button>
+            <Button variant="outline" onClick={() => resolveOpenSubtasksDialog("keep_open")}>
+              Keep Subtasks Open
+            </Button>
+            <Button onClick={() => resolveOpenSubtasksDialog("close_all")}>
+              Close All Subtasks
             </Button>
           </DialogFooter>
         </DialogContent>

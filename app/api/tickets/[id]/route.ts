@@ -304,6 +304,7 @@ export async function PATCH(
       department_id,
       epic_id,
       sprint_id,
+      parent_ticket_id,
       created_at,
       assigned_at,
       started_at,
@@ -432,6 +433,35 @@ export async function PATCH(
     if (department_id !== undefined) updates.department_id = department_id || null
     if (epic_id !== undefined) updates.epic_id = epic_id || null
     if (sprint_id !== undefined) updates.sprint_id = sprint_id || null
+    if (parent_ticket_id !== undefined) {
+      if (parent_ticket_id && parent_ticket_id === params.id) {
+        return NextResponse.json(
+          { error: "A ticket cannot be its own parent" },
+          { status: 400 }
+        )
+      }
+      if (parent_ticket_id) {
+        const { data: parentTicket, error: parentTicketError } = await supabase
+          .from("tickets")
+          .select("id, type")
+          .eq("id", parent_ticket_id)
+          .maybeSingle()
+
+        if (parentTicketError || !parentTicket) {
+          return NextResponse.json(
+            { error: "Parent ticket not found" },
+            { status: 400 }
+          )
+        }
+        if (parentTicket.type === "subtask") {
+          return NextResponse.json(
+            { error: "A subtask ticket cannot have child subtasks" },
+            { status: 400 }
+          )
+        }
+      }
+      updates.parent_ticket_id = parent_ticket_id || null
+    }
     if (reason !== undefined) updates.reason = reason
     updates.activity_actor_id = userId
     

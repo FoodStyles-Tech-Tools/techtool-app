@@ -19,6 +19,7 @@ export interface KanbanColumn {
 export interface TicketsKanbanProps {
   columns: KanbanColumn[]
   ticketsByStatus: Record<string, Ticket[]>
+  subtaskCountMap: Record<string, number>
   draggedTicket: string | null
   dragOverColumn: string | null
   dropIndicator: { columnId: string; ticketId: string | null; top: number } | null
@@ -41,6 +42,7 @@ export interface TicketsKanbanProps {
 export function TicketsKanban({
   columns,
   ticketsByStatus,
+  subtaskCountMap,
   draggedTicket,
   dragOverColumn,
   dropIndicator,
@@ -114,6 +116,7 @@ export function TicketsKanban({
                   )}
                   {columnTickets.map((ticket) => {
                     const dueDateDisplay = getDueDateDisplay(ticket.due_date)
+                    const subtaskCount = subtaskCountMap[ticket.id] || 0
                     return (
                       <Card
                         key={ticket.id}
@@ -145,6 +148,11 @@ export function TicketsKanban({
                               <h4 className="text-sm font-medium line-clamp-2 leading-tight">
                                 {ticket.title}
                               </h4>
+                              {subtaskCount > 0 ? (
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                  {subtaskCount} subtask{subtaskCount === 1 ? "" : "s"}
+                                </p>
+                              ) : null}
                             </div>
                           </div>
                           <div>

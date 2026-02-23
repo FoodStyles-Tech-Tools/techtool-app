@@ -14,6 +14,7 @@ export type TicketFilterOptions = {
   department_id?: string
   requested_by_id?: string
   exclude_done?: boolean
+  exclude_subtasks?: boolean
 }
 
 function ticketMatchesFilter(
@@ -21,6 +22,7 @@ function ticketMatchesFilter(
   opts?: TicketFilterOptions
 ): boolean {
   if (!opts) return true
+  if (opts.exclude_subtasks && ticket.type === "subtask") return false
   if (opts.project_id && ticket.project_id !== opts.project_id) return false
   if (opts.assignee_id) {
     if (opts.assignee_id === "unassigned" && ticket.assignee_id) return false
@@ -52,6 +54,7 @@ type TicketUpdateVariables = {
   department_id?: string | null
   epic_id?: string | null
   sprint_id?: string | null
+  parent_ticket_id?: string | null
 }
 
 function applyTicketUpdateVariables(
@@ -102,6 +105,7 @@ function applyTicketUpdateVariables(
       ? (() => { const s = sprintsData.find(x => x.id === variables.sprint_id); return s ? { id: s.id, name: s.name, status: s.status } : null })()
       : null
   }
+  if (variables.parent_ticket_id !== undefined) updated.parent_ticket_id = variables.parent_ticket_id
   return updated
 }
 
@@ -159,6 +163,7 @@ export function useTickets(options?: {
   department_id?: string
   requested_by_id?: string
   exclude_done?: boolean
+  exclude_subtasks?: boolean
   limit?: number
   page?: number
   enabled?: boolean
@@ -169,7 +174,8 @@ export function useTickets(options?: {
   const userEmail = useUserEmail()
   const enabled = options?.enabled !== false
   const realtime = options?.realtime === true
-  const queryKey = ["tickets", options?.project_id, options?.assignee_id, options?.status, options?.department_id, options?.requested_by_id, options?.exclude_done, options?.limit, options?.page]
+  const excludeSubtasks = options?.exclude_subtasks ?? true
+  const queryKey = ["tickets", options?.project_id, options?.assignee_id, options?.status, options?.department_id, options?.requested_by_id, options?.exclude_done, excludeSubtasks, options?.limit, options?.page]
 
   // Real-time subscription for tickets
   useRealtimeSubscription({
@@ -250,8 +256,8 @@ export function useTickets(options?: {
           const allQueries = queryClient.getQueriesData<Ticket[]>({ queryKey: ["tickets"] })
           for (const [queryKey, oldData] of allQueries) {
             if (!oldData) continue
-            const [, project_id, assignee_id, status, department_id, requested_by_id, exclude_done] = queryKey as any[]
-            const filterOptions: TicketFilterOptions = { project_id, assignee_id, status, department_id, requested_by_id, exclude_done }
+            const [, project_id, assignee_id, status, department_id, requested_by_id, exclude_done, exclude_subtasks] = queryKey as any[]
+            const filterOptions: TicketFilterOptions = { project_id, assignee_id, status, department_id, requested_by_id, exclude_done, exclude_subtasks }
             const ticketMatches = ticketMatchesFilter(enrichedTicket as any, filterOptions)
             const ticketIndex = oldData.findIndex(t => t.id === enrichedTicket.id)
             const ticketExists = ticketIndex !== -1
@@ -332,6 +338,9 @@ export function useTickets(options?: {
       }
       if (options?.status) {
         query = query.eq("status", options.status)
+      }
+      if (excludeSubtasks) {
+        query = query.neq("type", "subtask")
       }
       if (options?.department_id !== undefined) {
         if (options.department_id === "no_department") {
@@ -502,6 +511,7 @@ export function useCreateTicket() {
       links?: string[]
       epic_id?: string
       sprint_id?: string
+      parent_ticket_id?: string | null
     }) => {
       if (!userEmail) throw new Error("Not authenticated")
       
@@ -630,6 +640,7 @@ export function useUpdateTicket() {
       department_id?: string | null
       epic_id?: string | null
       sprint_id?: string | null
+      parent_ticket_id?: string | null
       assigned_at?: string | null
       sqa_assigned_at?: string | null
       started_at?: string | null

@@ -28,6 +28,7 @@ interface TicketsTableProps {
   sortConfig: { column: SortColumn; direction: "asc" | "desc" }
   onSort: (column: SortColumn) => void
   tickets: Ticket[]
+  subtaskCountMap: Record<string, number>
   totalCount: number
   currentPage: number
   totalPages: number
@@ -72,6 +73,7 @@ function renderSortableHeader(
 
 interface TicketRowProps {
   ticket: Ticket
+  subtaskCountMap: Record<string, number>
   onCopy: (ticket: Ticket) => void
   onSelectTicket: (ticketId: string) => void
   departments: Department[]
@@ -92,6 +94,7 @@ const TicketRow = memo(function TicketRow({
   ticket,
   onCopy,
   onSelectTicket,
+  subtaskCountMap,
   departments,
   users,
   assigneeEligibleUsers,
@@ -107,6 +110,7 @@ const TicketRow = memo(function TicketRow({
   const safeDueDateValue =
     dueDateValue && !Number.isNaN(dueDateValue.getTime()) ? dueDateValue : null
   const descriptionSnippet = richTextToPlainText(ticket.description)
+  const subtaskCount = subtaskCountMap[ticket.id] || 0
 
   return (
     <TableRow
@@ -138,6 +142,11 @@ const TicketRow = memo(function TicketRow({
             <span className="text-xs text-muted-foreground line-clamp-2">
               {descriptionSnippet || "No description"}
             </span>
+            {subtaskCount > 0 ? (
+              <span className="mt-0.5 text-[11px] text-muted-foreground">
+                {subtaskCount} subtask{subtaskCount === 1 ? "" : "s"}
+              </span>
+            ) : null}
           </div>
           <div className="bg-muted/50 rounded-md p-2 flex flex-col gap-0.5">
             <span className="text-xs text-muted-foreground">
@@ -325,6 +334,7 @@ export function TicketsTable({
   sortConfig,
   onSort,
   tickets,
+  subtaskCountMap,
   totalCount,
   currentPage,
   totalPages,
@@ -382,9 +392,10 @@ export function TicketsTable({
           </thead>
           <TableBody className="[&_tr:last-child]:border-0">
             {tickets.map((ticket) => (
-              <TicketRow
-                key={ticket.id}
-                ticket={ticket}
+            <TicketRow
+              key={ticket.id}
+              ticket={ticket}
+              subtaskCountMap={subtaskCountMap}
                 onCopy={onCopyTicket}
                 onSelectTicket={onSelectTicket}
                 departments={departments}

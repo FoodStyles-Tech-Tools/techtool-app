@@ -72,6 +72,28 @@ export interface TicketSprint {
   status: string
 }
 
+/** Related ticket for parent/subtask/mention relation display */
+export interface RelatedTicket {
+  id: string
+  display_id: string | null
+  title: string
+  status: string
+  type: string | null
+}
+
+/** Mention relation grouped by target ticket */
+export interface MentionedTicketRelation {
+  ticket: RelatedTicket
+  comment_ids: string[]
+}
+
+/** Ticket detail relations payload */
+export interface TicketDetailRelations {
+  parent: RelatedTicket | null
+  subtasks: RelatedTicket[]
+  mentioned_in_comments: MentionedTicketRelation[]
+}
+
 /** Cancelled reason stored on ticket.reason */
 export interface TicketCancelledReason {
   cancelled?: {
@@ -91,6 +113,7 @@ export interface TicketCancelledReason {
 export interface Ticket {
   id: string
   display_id: string | null
+  parent_ticket_id?: string | null
   title: string
   description: string | null
   status: string
@@ -146,7 +169,7 @@ export interface CalendarEvent {
 export interface QuickAddTicketData {
   title: string
   description: string
-  type: "bug" | "request" | "task"
+  type: "bug" | "request" | "task" | "subtask"
   priority: "low" | "medium" | "high" | "urgent"
   status: string
   department_id?: string

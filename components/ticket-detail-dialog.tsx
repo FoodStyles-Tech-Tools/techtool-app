@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Copy, AlertTriangle, ExternalLink, Pencil, Trash2, Plus, X, ChevronRight, ChevronDown, Share2 } from "lucide-react"
+import { Copy, AlertTriangle, ExternalLink, Pencil, Trash2, Plus, X, ChevronRight, ChevronDown, Share2, ArrowLeft } from "lucide-react"
 import { BrandLinkIcon } from "@/components/brand-link-icon"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -21,7 +22,7 @@ import { useSprints } from "@/hooks/use-sprints"
 import { Subtasks } from "@/components/subtasks"
 import { TicketActivity } from "@/components/ticket-activity"
 import { useTicketDetail } from "@/hooks/use-ticket-detail"
-import { useUpdateTicket } from "@/hooks/use-tickets"
+import { useUpdateTicket, useTickets } from "@/hooks/use-tickets"
 import { useUsers } from "@/hooks/use-users"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
@@ -55,6 +56,15 @@ interface TicketDetailDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+type RelationSubtask = {
+  id: string
+  display_id: string | null
+  title: string
+  status: string
+}
+
+type SubtaskCloseDecision = "cancel" | "keep_open" | "close_all"
+
 const RichTextEditor = dynamic(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
   { ssr: false }
@@ -67,6 +77,7 @@ const toUTCISOStringPreserveLocal = (date: Date) => {
 const TICKET_SHARE_BASE_URL = "https://techtool-app.vercel.app/tickets"
 
 export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetailDialogProps) {
+  const router = useRouter()
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [isEditingDescription, setIsEditingDescription] = useState(false)
   const [titleValue, setTitleValue] = useState("")
@@ -80,15 +91,21 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const [showReturnedReasonDialog, setShowReturnedReasonDialog] = useState(false)
   const [returnedReason, setReturnedReason] = useState("")
   const [pendingStatusChange, setPendingStatusChange] = useState<string | null>(null)
+  const [openSubtasksDialog, setOpenSubtasksDialog] = useState<{
+    targetStatus: string
+    subtasks: RelationSubtask[]
+  } | null>(null)
   const [isSubtasksCollapsed, setIsSubtasksCollapsed] = useState(true)
   const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
   const UNASSIGNED_VALUE = "unassigned"
   const NO_DEPARTMENT_VALUE = "no_department"
   const NO_PROJECT_VALUE = "no_project"
   const NO_EPIC_VALUE = "no_epic"
+  const NO_PARENT_TICKET_VALUE = "no_parent_ticket"
   const { departments } = useDepartments({ realtime: false })
   const { data: projectsData } = useProjects({ realtime: false })
   const { flags } = usePermissions()
+  const subtaskDecisionResolverRef = useRef<((decision: SubtaskCloseDecision) => void) | null>(null)
   const canEditTickets = flags?.canEditTickets ?? false
   const ensureCanEdit = () => {
     if (!canEditTickets) {
@@ -100,8 +117,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   
   const projects = projectsData || []
 
-  const { ticket, comments: detailComments, isLoading } = useTicketDetail(ticketId || "", {
+  const { ticket, comments: detailComments, relations, isLoading } = useTicketDetail(ticketId || "", {
     enabled: !!ticketId && open,
+  })
+  const { data: relationTicketsData } = useTickets({
+    enabled: !!ticketId && open,
+    realtime: false,
+    limit: 200,
+    page: 1,
   })
   const { data: usersData } = useUsers({ realtime: false })
   const updateTicket = useUpdateTicket()
@@ -130,6 +153,43 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const users = useMemo(() => usersData || [], [usersData])
+  const selectedParentTicketId = ((ticket as any)?.parent_ticket_id as string | null) || null
+  const parentTicketOptions = useMemo(() => {
+    const optionsMap = new Map<string, { id: string; display_id: string | null; title: string }>()
+    ;(relationTicketsData || []).forEach((candidate) => {
+      if (!candidate.id || candidate.id === ticketId) return
+      optionsMap.set(candidate.id, {
+        id: candidate.id,
+        display_id: candidate.display_id || null,
+        title: candidate.title || "Untitled ticket",
+      })
+    })
+
+    if (relations?.parent?.id && relations.parent.id !== ticketId && !optionsMap.has(relations.parent.id)) {
+      optionsMap.set(relations.parent.id, {
+        id: relations.parent.id,
+        display_id: relations.parent.display_id || null,
+        title: relations.parent.title || "Untitled ticket",
+      })
+    }
+
+    return Array.from(optionsMap.values()).sort((a, b) => {
+      const left = `${a.display_id || ""} ${a.title}`.trim().toLowerCase()
+      const right = `${b.display_id || ""} ${b.title}`.trim().toLowerCase()
+      return left.localeCompare(right)
+    })
+  }, [relationTicketsData, relations?.parent, ticketId])
+  const selectedParentTicketOption = useMemo(() => {
+    if (!selectedParentTicketId) return null
+    return parentTicketOptions.find((candidate) => candidate.id === selectedParentTicketId) || null
+  }, [parentTicketOptions, selectedParentTicketId])
+  const parentNavigationSlug = useMemo(() => {
+    const relationDisplayId = relations?.parent?.display_id
+    if (relationDisplayId) return String(relationDisplayId).toLowerCase()
+    const optionDisplayId = selectedParentTicketOption?.display_id
+    if (optionDisplayId) return String(optionDisplayId).toLowerCase()
+    return null
+  }, [relations?.parent?.display_id, selectedParentTicketOption?.display_id])
   const loading = !ticket && isLoading
 
   useEffect(() => {
@@ -193,6 +253,81 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
           return newState
         })
       }
+    }
+  }
+
+  const DONE_STATUSES = new Set(["completed", "cancelled", "rejected"])
+
+  const fetchOpenSubtasksForStatusGuard = async (): Promise<RelationSubtask[]> => {
+    if (!ticketId) return []
+    const response = await fetch(`/api/tickets/${ticketId}/detail`)
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}))
+      throw new Error(payload?.error || "Failed to check subtasks")
+    }
+    const payload = await response.json().catch(() => ({}))
+    const subtaskRows: RelationSubtask[] = Array.isArray(payload?.relations?.subtasks)
+      ? payload.relations.subtasks
+      : []
+    return subtaskRows.filter((subtask) => !DONE_STATUSES.has(String(subtask.status || "")))
+  }
+
+  const askHowToHandleOpenSubtasks = (
+    targetStatus: string,
+    subtasks: RelationSubtask[]
+  ): Promise<SubtaskCloseDecision> => {
+    return new Promise((resolve) => {
+      subtaskDecisionResolverRef.current = resolve
+      setOpenSubtasksDialog({ targetStatus, subtasks })
+    })
+  }
+
+  const resolveOpenSubtasksDialog = (decision: SubtaskCloseDecision) => {
+    const resolver = subtaskDecisionResolverRef.current
+    subtaskDecisionResolverRef.current = null
+    setOpenSubtasksDialog(null)
+    resolver?.(decision)
+  }
+
+  const closeSubtasksToStatus = async (subtasks: RelationSubtask[], targetStatus: string) => {
+    if (subtasks.length === 0) return
+    const results = await Promise.all(
+      subtasks.map(async (subtask) => {
+        const response = await fetch(`/api/tickets/${subtask.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: targetStatus }),
+        })
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}))
+          throw new Error(payload?.error || `Failed to close subtask ${subtask.display_id || subtask.id}`)
+        }
+      })
+    )
+    return results
+  }
+
+  const resolveSubtaskStatusGuard = async (
+    targetStatus: string
+  ): Promise<{ proceed: boolean; closeSubtasks: boolean; subtasks: RelationSubtask[] }> => {
+    if (!DONE_STATUSES.has(targetStatus)) {
+      return { proceed: true, closeSubtasks: false, subtasks: [] }
+    }
+
+    const openSubtasks = await fetchOpenSubtasksForStatusGuard()
+    if (openSubtasks.length === 0) {
+      return { proceed: true, closeSubtasks: false, subtasks: [] }
+    }
+
+    const decision = await askHowToHandleOpenSubtasks(targetStatus, openSubtasks)
+    if (decision === "cancel") {
+      return { proceed: false, closeSubtasks: false, subtasks: [] }
+    }
+
+    return {
+      proceed: true,
+      closeSubtasks: decision === "close_all",
+      subtasks: openSubtasks,
     }
   }
 
@@ -279,8 +414,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     await performStatusChange(newStatus)
   }
 
-  const performStatusChange = async (newStatus: string, returnedToDevReason?: string) => {
-    if (!ticket) return
+  const performStatusChange = async (
+    newStatus: string,
+    returnedToDevReason?: string,
+    subtaskDecisionOverride?: { proceed: boolean; closeSubtasks: boolean; subtasks: RelationSubtask[] }
+  ) => {
+    if (!ticket || !ticketId) return
     
     const previousStatus = ticket.status
     const updates: any = { status: newStatus }
@@ -325,7 +464,31 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       updates.completed_at = null
     }
     
-    await updateTicketWithToast(updates, "Status updated", "status")
+    setUpdatingFields((prev) => ({ ...prev, status: true }))
+    try {
+      const subtaskDecision = subtaskDecisionOverride ?? (await resolveSubtaskStatusGuard(newStatus))
+      if (!subtaskDecision.proceed) return
+
+      await updateTicket.mutateAsync({
+        id: ticketId,
+        ...updates,
+      })
+
+      if (subtaskDecision.closeSubtasks) {
+        await closeSubtasksToStatus(subtaskDecision.subtasks, newStatus)
+        toast(`Status updated. Closed ${subtaskDecision.subtasks.length} open subtask${subtaskDecision.subtasks.length === 1 ? "" : "s"}.`)
+      } else {
+        toast("Status updated")
+      }
+    } catch (error: any) {
+      toast(error.message || "Failed to update ticket", "error")
+    } finally {
+      setUpdatingFields((prev) => {
+        const next = { ...prev }
+        delete next.status
+        return next
+      })
+    }
   }
 
   const handleReturnedReasonSubmit = async () => {
@@ -347,6 +510,9 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     setPendingStatusChange(null)
 
     try {
+      const subtaskDecision = await resolveSubtaskStatusGuard(newStatus)
+      if (!subtaskDecision.proceed) return
+
       const commentBody = `<p><strong>Returned to Dev Reason</strong></p>${normalizedReason}`
       const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
         method: "POST",
@@ -359,7 +525,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
         throw new Error(errorPayload?.error || "Failed to save returned reason comment")
       }
 
-      await performStatusChange(newStatus, richTextToPlainText(normalizedReason))
+      await performStatusChange(newStatus, richTextToPlainText(normalizedReason), subtaskDecision)
       setReturnedReason("")
     } catch (error: any) {
       toast(error.message || "Failed to return ticket to development", "error")
@@ -411,6 +577,9 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     }
 
     try {
+      const subtaskDecision = await resolveSubtaskStatusGuard(newStatus)
+      if (!subtaskDecision.proceed) return
+
       const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -423,6 +592,10 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       }
 
       await updateTicketWithToast(updates, "Status updated", "status")
+      if (subtaskDecision.closeSubtasks) {
+        await closeSubtasksToStatus(subtaskDecision.subtasks, newStatus)
+        toast(`Closed ${subtaskDecision.subtasks.length} open subtask${subtaskDecision.subtasks.length === 1 ? "" : "s"}.`)
+      }
       setCancelReason("")
     } catch (error: any) {
       toast(error.message || "Failed to update ticket", "error")
@@ -481,6 +654,26 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       { project_id: newProjectId === NO_PROJECT_VALUE ? null : newProjectId },
       "Project updated",
       "project_id"
+    )
+  }
+
+  const handleParentTicketChange = async (newParentTicketId: string) => {
+    if (!ensureCanEdit()) return
+    if (!ticket) return
+
+    const nextParentId = newParentTicketId === NO_PARENT_TICKET_VALUE ? null : newParentTicketId
+    const currentParentId = (ticket as any).parent_ticket_id || null
+    if (nextParentId === currentParentId) return
+
+    const updates: Record<string, any> = { parent_ticket_id: nextParentId }
+    if (nextParentId && ticket.type !== "subtask") {
+      updates.type = "subtask"
+    }
+
+    await updateTicketWithToast(
+      updates,
+      nextParentId ? "Parent ticket linked" : "Parent ticket removed",
+      "parent_ticket_id"
     )
   }
 
@@ -762,6 +955,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       .catch(() => toast("Failed to copy hyperlinked URL", "error"))
   }
 
+  const handleGoToParentTicket = () => {
+    if (!parentNavigationSlug) {
+      toast("Parent ticket link is unavailable", "error")
+      return
+    }
+    router.push(`/tickets/${parentNavigationSlug}`)
+  }
+
   if (!ticketId) return null
   const subtasksPanelId = `ticket-subtasks-panel-${ticketId}`
 
@@ -773,8 +974,23 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
           <DialogTitle className="sr-only">
             {ticket ? `Ticket ${ticket.display_id || ticketId.slice(0, 8)}: ${ticket.title}` : `Ticket ${ticketId.slice(0, 8)}`}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Ticket detail panel with description, relations, and activity.
+          </DialogDescription>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
+              {parentNavigationSlug ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={handleGoToParentTicket}
+                  title="Back to parent ticket"
+                >
+                  <ArrowLeft className="mr-1 h-3.5 w-3.5" />
+                  Back to parent
+                </Button>
+              ) : null}
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
@@ -1106,7 +1322,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                   </CardHeader>
                   {!isSubtasksCollapsed && (
                     <CardContent id={subtasksPanelId} className="px-4 pb-4 pt-0">
-                      <Subtasks ticketId={ticketId} projectName={ticket.project?.name || null} displayId={ticket.display_id} />
+                      <Subtasks
+                        ticketId={ticketId}
+                        projectName={ticket.project?.name || null}
+                        displayId={ticket.display_id}
+                        projectId={ticket.project?.id || null}
+                        allowSqaStatuses={ticket.project?.require_sqa === true}
+                        allowCreate={ticket.type !== "subtask"}
+                      />
                     </CardContent>
                   )}
                 </Card>
@@ -1238,6 +1461,38 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                     </div>
 
                     <div className="flex items-start gap-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Parent</label>
+                      <div className="flex-1">
+                        <Select
+                          value={(ticket as any).parent_ticket_id || NO_PARENT_TICKET_VALUE}
+                          onValueChange={handleParentTicketChange}
+                          disabled={!canEditTickets || updatingFields["parent_ticket_id"]}
+                        >
+                          <SelectTrigger className="h-8 w-full">
+                            <SelectValue placeholder="No parent ticket" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NO_PARENT_TICKET_VALUE}>No parent ticket</SelectItem>
+                            {parentTicketOptions.map((candidate) => (
+                              <SelectItem key={candidate.id} value={candidate.id}>
+                                {(candidate.display_id || candidate.id.slice(0, 8)).toUpperCase()} · {candidate.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {parentNavigationSlug ? (
+                          <a
+                            href={`/tickets/${parentNavigationSlug}`}
+                            className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                          >
+                            Open parent ticket
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2">
                       <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Priority</label>
                       <div className="flex-1">
                         <TicketPrioritySelect
@@ -1340,6 +1595,52 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                             aria-label="Include inactive projects"
                           />
                         </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start gap-2">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-1.5 flex-shrink-0 w-24">Relations</label>
+                      <div className="flex-1 space-y-1.5">
+                        {relations.parent ? (
+                          <a
+                            href={`/tickets/${String(relations.parent.display_id || relations.parent.id).toLowerCase()}`}
+                            className="flex items-center justify-between rounded-md border px-2.5 py-1.5 text-sm hover:bg-muted/50"
+                          >
+                            <span className="truncate">
+                              Parent: {(relations.parent.display_id || relations.parent.id.slice(0, 8)).toUpperCase()} · {relations.parent.title}
+                            </span>
+                            <ExternalLink className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                          </a>
+                        ) : null}
+                        {(relations.subtasks || []).map((subtask) => (
+                          <a
+                            key={subtask.id}
+                            href={`/tickets/${String(subtask.display_id || subtask.id).toLowerCase()}`}
+                            className="flex items-center justify-between rounded-md border px-2.5 py-1.5 text-sm hover:bg-muted/50"
+                          >
+                            <span className="truncate">
+                              Subtask: {(subtask.display_id || subtask.id.slice(0, 8)).toUpperCase()} · {subtask.title}
+                            </span>
+                            <ExternalLink className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                          </a>
+                        ))}
+                        {(relations.mentioned_in_comments || []).map((mention) => (
+                          <a
+                            key={mention.ticket.id}
+                            href={`/tickets/${String(mention.ticket.display_id || mention.ticket.id).toLowerCase()}`}
+                            className="flex items-center justify-between rounded-md border px-2.5 py-1.5 text-sm hover:bg-muted/50"
+                          >
+                            <span className="truncate">
+                              Mentioned in {mention.comment_ids.length} comment{mention.comment_ids.length === 1 ? "" : "s"}: {(mention.ticket.display_id || mention.ticket.id.slice(0, 8)).toUpperCase()} · {mention.ticket.title}
+                            </span>
+                            <ExternalLink className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+                          </a>
+                        ))}
+                        {!relations.parent &&
+                        (relations.subtasks || []).length === 0 &&
+                        (relations.mentioned_in_comments || []).length === 0 ? (
+                          <p className="text-xs text-muted-foreground">No relations yet.</p>
+                        ) : null}
                       </div>
                     </div>
 
@@ -1582,6 +1883,45 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
           </Button>
           <Button onClick={handleReturnedReasonSubmit} disabled={!canEditTickets}>
             Confirm Return
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    <Dialog
+      open={!!openSubtasksDialog}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && openSubtasksDialog) {
+          resolveOpenSubtasksDialog("cancel")
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Open Subtasks Found</DialogTitle>
+          <DialogDescription>
+            This ticket has open subtasks. Do you want to close them too when moving this ticket to{" "}
+            <strong>{openSubtasksDialog?.targetStatus.replace(/_/g, " ")}</strong>?
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-56 space-y-2 overflow-y-auto py-1">
+          {(openSubtasksDialog?.subtasks || []).map((subtask) => (
+            <div key={subtask.id} className="rounded border px-2.5 py-1.5 text-sm">
+              <span className="font-mono text-xs text-muted-foreground">
+                {(subtask.display_id || subtask.id.slice(0, 8)).toUpperCase()}
+              </span>{" "}
+              {subtask.title}
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => resolveOpenSubtasksDialog("cancel")}>
+            Cancel
+          </Button>
+          <Button variant="outline" onClick={() => resolveOpenSubtasksDialog("keep_open")}>
+            Keep Subtasks Open
+          </Button>
+          <Button onClick={() => resolveOpenSubtasksDialog("close_all")}>
+            Close All Subtasks
           </Button>
         </DialogFooter>
       </DialogContent>

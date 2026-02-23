@@ -1,6 +1,6 @@
 "use client"
 
-import { Bug, FileText, CheckSquare } from "lucide-react"
+import { Bug, FileText, CheckSquare, GitBranch } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
@@ -27,6 +27,8 @@ export function TicketTypeSelect({
         return <FileText className="h-3.5 w-3.5 text-blue-500" />
       case "task":
         return <CheckSquare className="h-3.5 w-3.5 text-purple-500" />
+      case "subtask":
+        return <GitBranch className="h-3.5 w-3.5 text-emerald-500" />
       default:
         return null
     }
@@ -63,6 +65,12 @@ export function TicketTypeSelect({
             Task
           </div>
         </SelectItem>
+        <SelectItem value="subtask">
+          <div className="flex items-center gap-1.5">
+            <GitBranch className="h-3.5 w-3.5 text-emerald-500" />
+            Subtask
+          </div>
+        </SelectItem>
       </SelectContent>
     </Select>
   )
@@ -76,8 +84,9 @@ export function TicketTypeIcon({ type, className }: { type: string; className?: 
       return <FileText className={cn("h-3.5 w-3.5 text-blue-500", className)} />
     case "task":
       return <CheckSquare className={cn("h-3.5 w-3.5 text-purple-500", className)} />
+    case "subtask":
+      return <GitBranch className={cn("h-3.5 w-3.5 text-emerald-500", className)} />
     default:
       return null
   }
 }
-

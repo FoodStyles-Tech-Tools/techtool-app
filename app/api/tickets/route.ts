@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         display_id,
+        parent_ticket_id,
         title,
         description,
         project_id,
@@ -217,6 +218,7 @@ export async function POST(request: NextRequest) {
       department_id,
       epic_id,
       sprint_id,
+      parent_ticket_id,
     } = body
     const normalizedDescription = normalizeRichTextInput(description)
 
@@ -225,6 +227,27 @@ export async function POST(request: NextRequest) {
         { error: "Title is required" },
         { status: 400 }
       )
+    }
+
+    if (parent_ticket_id) {
+      const { data: parentTicket, error: parentTicketError } = await supabase
+        .from("tickets")
+        .select("id, type")
+        .eq("id", parent_ticket_id)
+        .maybeSingle()
+
+      if (parentTicketError || !parentTicket) {
+        return NextResponse.json(
+          { error: "Parent ticket not found" },
+          { status: 400 }
+        )
+      }
+      if (parentTicket.type === "subtask") {
+        return NextResponse.json(
+          { error: "A subtask ticket cannot have child subtasks" },
+          { status: 400 }
+        )
+      }
     }
 
     // Use provided requested_by_id or default to current user
@@ -269,6 +292,7 @@ export async function POST(request: NextRequest) {
         department_id: department_id || null,
         epic_id: epic_id || null,
         sprint_id: sprint_id || null,
+        parent_ticket_id: parent_ticket_id || null,
       })
       .select(`
         *,

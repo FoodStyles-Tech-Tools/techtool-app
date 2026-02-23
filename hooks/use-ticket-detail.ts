@@ -2,12 +2,13 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
-import type { Ticket } from "@/lib/types"
+import type { Ticket, TicketDetailRelations } from "@/lib/types"
 import type { TicketComment } from "./use-ticket-comments"
 
 interface TicketDetailResponse {
   ticket: Ticket
   comments: TicketComment[]
+  relations?: TicketDetailRelations
 }
 
 export function useTicketDetail(ticketId: string, options?: { enabled?: boolean }) {
@@ -39,10 +40,16 @@ export function useTicketDetail(ticketId: string, options?: { enabled?: boolean 
 
   const ticket = query.data?.ticket ?? null
   const comments = query.data?.comments ?? []
+  const relations = query.data?.relations ?? {
+    parent: null,
+    subtasks: [],
+    mentioned_in_comments: [],
+  }
 
   return {
     ticket,
     comments,
+    relations,
     isLoading: query.isLoading,
     isPending: query.isPending,
     error: query.error,
