@@ -1,7 +1,5 @@
-import { requirePagePermission } from "@/lib/server/require-page-permission"
-import ReportClient from "./report-client"
+import { redirect } from "next/navigation"
 
-export default async function ReportPage() {
-  await requirePagePermission("clockify", "view")
-  return <ReportClient />
+export default function ReportPage() {
+  redirect("/report/guild-lead-report")
 }

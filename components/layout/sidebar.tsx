@@ -68,17 +68,15 @@ const primaryNavItems: NavItem[] = [
     flag: "canViewClockify",
   },
   {
-    title: "Report",
-    href: "/report",
-    icon: FileSpreadsheet,
-    flag: "canViewClockify",
-  },
-  {
     title: "Tickets",
     href: "/tickets",
     icon: ClipboardList,
     flag: "canViewTickets",
   },
+]
+
+const reportSubItems: { title: string; href: string }[] = [
+  { title: "Guild Lead Report", href: "/report/guild-lead-report" },
 ]
 
 const settingsItems: SettingsItem[] = [
@@ -114,6 +112,10 @@ export function Sidebar() {
     const href = `/projects/${project.id}`
     return pathname === href || pathname.startsWith(`${href}/`)
   })
+  const reportSectionActive =
+    pathname === "/report" ||
+    pathname.startsWith("/report/guild-lead-report")
+  const [reportExpanded, setReportExpanded] = useState(reportSectionActive)
   const isVisible = (item: { flag?: keyof PermissionFlags }) =>
     item.flag ? Boolean(flags[item.flag]) : true
   const visibleSettingsItems = settingsItems.filter(isVisible)
@@ -152,6 +154,12 @@ export function Sidebar() {
       setPinnedExpanded(true)
     }
   }, [pinnedSectionActive])
+
+  useEffect(() => {
+    if (reportSectionActive) {
+      setReportExpanded(true)
+    }
+  }, [reportSectionActive])
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -229,6 +237,50 @@ export function Sidebar() {
             </p>
             {primaryNavItems.filter(isVisible).map(renderNavLink)}
           </div>
+
+          {isVisible({ flag: "canViewClockify" }) && (
+            <div className="mt-4 space-y-1">
+              <button
+                type="button"
+                onClick={() => setReportExpanded((current) => !current)}
+                className={cn(
+                  "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm transition-colors",
+                  "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                <FileSpreadsheet className="h-4 w-4 stroke-[1.75]" />
+                <span>Report</span>
+                <ChevronDown
+                  className={cn(
+                    "ml-auto h-4 w-4 transition-transform",
+                    reportExpanded ? "rotate-0" : "-rotate-90"
+                  )}
+                />
+              </button>
+              {reportExpanded && (
+                <div className="ml-2 space-y-0.5 border-l pl-2">
+                  {reportSubItems.map((item) => {
+                    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        prefetch={true}
+                        className={cn(
+                          "flex h-8 items-center rounded-md border border-transparent px-2 text-sm transition-colors",
+                          isActive
+                            ? SIDEBAR_ACTIVE_ITEM_CLASS
+                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                        )}
+                      >
+                        <span>{item.title}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {canViewProjects && (
             <div className="mt-4 space-y-1">
