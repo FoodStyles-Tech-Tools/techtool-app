@@ -95,6 +95,11 @@ const settingsItems: SettingsItem[] = [
     href: "/status",
     flag: "canManageStatus",
   },
+  {
+    title: "Deleted",
+    href: "/deleted-tickets",
+    flag: "canViewTickets",
+  },
 ]
 
 export function Sidebar() {
@@ -126,7 +131,9 @@ export function Sidebar() {
     pathname === "/roles" ||
     pathname.startsWith("/roles/") ||
     pathname === "/status" ||
-    pathname.startsWith("/status/")
+    pathname.startsWith("/status/") ||
+    pathname === "/deleted-tickets" ||
+    pathname.startsWith("/deleted-tickets/")
   const [settingsExpanded, setSettingsExpanded] = useState(settingsSectionActive)
   const [pinnedExpanded, setPinnedExpanded] = useState(true)
   const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()

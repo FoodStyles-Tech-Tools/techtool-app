@@ -23,6 +23,7 @@ import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
 import { richTextToPlainText } from "@/lib/rich-text"
+import { isDoneStatus, normalizeStatusKey } from "@/lib/ticket-statuses"
 
 interface TicketsTableProps {
   sortConfig: { column: SortColumn; direction: "asc" | "desc" }
@@ -105,7 +106,7 @@ const TicketRow = memo(function TicketRow({
   canEdit,
 }: TicketRowProps) {
   const requestedById = ticket.requested_by?.id || (ticket as { requested_by_id?: string }).requested_by_id
-  const dueDateDisplay = getDueDateDisplay(ticket.due_date)
+  const dueDateDisplay = getDueDateDisplay(ticket.due_date, isDoneStatus(normalizeStatusKey(ticket.status)))
   const dueDateValue = ticket.due_date ? new Date(ticket.due_date) : null
   const safeDueDateValue =
     dueDateValue && !Number.isNaN(dueDateValue.getTime()) ? dueDateValue : null
@@ -116,7 +117,7 @@ const TicketRow = memo(function TicketRow({
     <TableRow
       className={cn(
         "border-b-0 even:bg-muted/15 hover:bg-muted/30",
-        dueDateDisplay.highlightClassName
+        dueDateDisplay.isOverdue && "!bg-red-500/5 hover:!bg-red-500/10 dark:!bg-red-500/10 dark:hover:!bg-red-500/15"
       )}
     >
       <TableCell className="py-2 text-xs font-mono text-muted-foreground">

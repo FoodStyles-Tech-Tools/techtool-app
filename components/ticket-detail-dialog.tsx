@@ -32,6 +32,7 @@ import { EpicSelect } from "@/components/epic-select"
 import { SprintSelect } from "@/components/sprint-select"
 import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { Badge } from "@/components/ui/badge"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Dialog,
   DialogContent,
@@ -49,6 +50,7 @@ import {
 import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText, toDisplayHtml } from "@/lib/rich-text"
+import { useUserEmail } from "@/lib/supabase-context"
 
 interface TicketDetailDialogProps {
   ticketId: string | null
@@ -88,6 +90,8 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const [isAddingLink, setIsAddingLink] = useState(false)
   const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
   const [cancelReason, setCancelReason] = useState("")
+  const [showDeleteReasonDialog, setShowDeleteReasonDialog] = useState(false)
+  const [deleteReason, setDeleteReason] = useState("")
   const [showReturnedReasonDialog, setShowReturnedReasonDialog] = useState(false)
   const [returnedReason, setReturnedReason] = useState("")
   const [pendingStatusChange, setPendingStatusChange] = useState<string | null>(null)
@@ -97,6 +101,8 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   } | null>(null)
   const [isSubtasksCollapsed, setIsSubtasksCollapsed] = useState(true)
   const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
+  const [isParentPopoverOpen, setIsParentPopoverOpen] = useState(false)
+  const [parentSearch, setParentSearch] = useState("")
   const UNASSIGNED_VALUE = "unassigned"
   const NO_DEPARTMENT_VALUE = "no_department"
   const NO_PROJECT_VALUE = "no_project"
@@ -107,13 +113,6 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const { flags } = usePermissions()
   const subtaskDecisionResolverRef = useRef<((decision: SubtaskCloseDecision) => void) | null>(null)
   const canEditTickets = flags?.canEditTickets ?? false
-  const ensureCanEdit = () => {
-    if (!canEditTickets) {
-      toast("You do not have permission to edit tickets.", "error")
-      return false
-    }
-    return true
-  }
   
   const projects = projectsData || []
 
@@ -127,7 +126,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     page: 1,
   })
   const { data: usersData } = useUsers({ realtime: false })
+  const userEmail = useUserEmail()
   const updateTicket = useUpdateTicket()
+  const currentUser = useMemo(() => {
+    if (!userEmail || !usersData) return null
+    const lower = userEmail.toLowerCase()
+    return usersData.find((u) => u.email.toLowerCase() === lower) || null
+  }, [usersData, userEmail])
   const projectOptions = useMemo(() => {
     const selectedProjectId = ticket?.project?.id
     const visibleProjects = includeInactiveProjects
@@ -158,6 +163,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     const optionsMap = new Map<string, { id: string; display_id: string | null; title: string }>()
     ;(relationTicketsData || []).forEach((candidate) => {
       if (!candidate.id || candidate.id === ticketId) return
+      if (candidate.type === "subtask") return
       optionsMap.set(candidate.id, {
         id: candidate.id,
         display_id: candidate.display_id || null,
@@ -165,7 +171,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       })
     })
 
-    if (relations?.parent?.id && relations.parent.id !== ticketId && !optionsMap.has(relations.parent.id)) {
+    if (
+      relations?.parent?.id &&
+      relations.parent.id !== ticketId &&
+      relations.parent.type !== "subtask" &&
+      !optionsMap.has(relations.parent.id)
+    ) {
       optionsMap.set(relations.parent.id, {
         id: relations.parent.id,
         display_id: relations.parent.display_id || null,
@@ -179,6 +190,15 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       return left.localeCompare(right)
     })
   }, [relationTicketsData, relations?.parent, ticketId])
+  const parentFilteredOptions = useMemo(() => {
+    if (!parentSearch.trim()) return parentTicketOptions
+    const term = parentSearch.toLowerCase()
+    return parentTicketOptions.filter((candidate) => {
+      const idPart = String(candidate.display_id || candidate.id).toLowerCase()
+      const titlePart = (candidate.title || "").toLowerCase()
+      return idPart.includes(term) || titlePart.includes(term)
+    })
+  }, [parentTicketOptions, parentSearch])
   const selectedParentTicketOption = useMemo(() => {
     if (!selectedParentTicketId) return null
     return parentTicketOptions.find((candidate) => candidate.id === selectedParentTicketId) || null
@@ -191,6 +211,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     return null
   }, [relations?.parent?.display_id, selectedParentTicketOption?.display_id])
   const loading = !ticket && isLoading
+  const isAssignmentLocked = !!ticket && !ticket.assignee
 
   useEffect(() => {
     if (ticket) {
@@ -602,6 +623,40 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     }
   }
 
+  const handleDeleteReasonSubmit = async () => {
+    if (!ensureCanEdit()) return
+    if (!ticket || !ticketId) return
+    if (!deleteReason.trim()) {
+      toast("Please provide a reason for deleting this ticket", "error")
+      return
+    }
+
+    const normalizedReason = normalizeRichTextInput(deleteReason.trim())
+    if (!normalizedReason) {
+      toast("Please provide a reason for deleting this ticket", "error")
+      return
+    }
+
+    const body: any = {
+      status: "archived",
+      reason: {
+        ...(ticket.reason || {}),
+        archived: {
+          reason: deleteReason.trim(),
+          archivedAt: new Date().toISOString(),
+        },
+      },
+    }
+
+    try {
+      await updateTicketWithToast(body, "Ticket archived", "status")
+      setShowDeleteReasonDialog(false)
+      setDeleteReason("")
+    } catch (error: any) {
+      toast(error.message || "Failed to archive ticket", "error")
+    }
+  }
+
   const handleTypeChange = (newType: string) => {
     if (!ensureCanEdit()) return
     updateTicketWithToast({ type: newType }, "Type updated", "type")
@@ -678,7 +733,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleAssigneeChange = async (newAssigneeId: string | null) => {
-    if (!ensureCanEdit()) return
+    if (!ensureCanEdit({ allowWhenUnassigned: true })) return
     if (!ticket) return
     
     const previousAssigneeId = (ticket as any).assignee_id
@@ -871,6 +926,18 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
 
   const timestampValidation = getTimestampValidation()
 
+  const ensureCanEdit = (options?: { allowWhenUnassigned?: boolean }) => {
+    if (!canEditTickets) {
+      toast("You do not have permission to edit tickets.", "error")
+      return false
+    }
+    if (isAssignmentLocked && !options?.allowWhenUnassigned) {
+      toast("Assign this ticket before editing other fields.", "error")
+      return false
+    }
+    return true
+  }
+
   const getTimestampWarningMessage = (field: "assigned_at" | "started_at" | "completed_at"): string | null => {
     if (!ticket) return null
     
@@ -1029,12 +1096,28 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                 <TicketStatusSelect
                   value={ticket.status}
                   onValueChange={handleStatusChange}
-                  disabled={!canEditTickets || updatingFields["status"]}
+                  disabled={!canEditTickets || isAssignmentLocked || updatingFields["status"]}
                   allowSqaStatuses={ticket.project?.require_sqa === true}
                   triggerClassName="h-7 text-xs"
                 />
               )}
             </div>
+            {ticket && canEditTickets && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={() => {
+                    setDeleteReason("")
+                    setShowDeleteReasonDialog(true)
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="sr-only">Delete ticket</span>
+                </Button>
+              </div>
+            )}
           </div>
         </DialogHeader>
         
@@ -1044,7 +1127,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
           ) : !ticket ? (
             <p className="text-sm text-muted-foreground">Ticket not found</p>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
+            <div className="grid gap-4 lg:grid-cols-[1fr_minmax(280px,340px)]">
               <div className="space-y-4 min-w-0">
                 <Card className="border-0 shadow-none">
                   <CardContent className="p-4 pt-4">
@@ -1303,36 +1386,38 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-none">
-                  <CardHeader className="px-4 pt-4 pb-2">
-                    <button
-                      type="button"
-                      className="flex w-full items-center gap-2 text-left"
-                      onClick={() => setIsSubtasksCollapsed((prev) => !prev)}
-                      aria-expanded={!isSubtasksCollapsed}
-                      aria-controls={subtasksPanelId}
-                    >
-                      {isSubtasksCollapsed ? (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      )}
-                      <CardTitle className="text-base">Subtasks</CardTitle>
-                    </button>
-                  </CardHeader>
-                  {!isSubtasksCollapsed && (
-                    <CardContent id={subtasksPanelId} className="px-4 pb-4 pt-0">
-                      <Subtasks
-                        ticketId={ticketId}
-                        projectName={ticket.project?.name || null}
-                        displayId={ticket.display_id}
-                        projectId={ticket.project?.id || null}
-                        allowSqaStatuses={ticket.project?.require_sqa === true}
-                        allowCreate={ticket.type !== "subtask"}
-                      />
-                    </CardContent>
-                  )}
-                </Card>
+                {ticket.type !== "subtask" && (
+                  <Card className="border-0 shadow-none">
+                    <CardHeader className="px-4 pt-4 pb-2">
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-2 text-left"
+                        onClick={() => setIsSubtasksCollapsed((prev) => !prev)}
+                        aria-expanded={!isSubtasksCollapsed}
+                        aria-controls={subtasksPanelId}
+                      >
+                        {isSubtasksCollapsed ? (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <CardTitle className="text-base">Subtasks</CardTitle>
+                      </button>
+                    </CardHeader>
+                    {!isSubtasksCollapsed && (
+                      <CardContent id={subtasksPanelId} className="px-4 pb-4 pt-0">
+                        <Subtasks
+                          ticketId={ticketId}
+                          projectName={ticket.project?.name || null}
+                          displayId={ticket.display_id}
+                          projectId={ticket.project?.id || null}
+                          allowSqaStatuses={ticket.project?.require_sqa === true}
+                          allowCreate={ticket.type !== "subtask"}
+                        />
+                      </CardContent>
+                    )}
+                  </Card>
+                )}
 
                 <TicketActivity
                   ticketId={ticketId}
@@ -1341,55 +1426,69 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                 />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <Card>
                   <CardHeader className="px-4 pt-4 pb-2">
                     <CardTitle className="text-base">Details</CardTitle>
                   </CardHeader>
                   <CardContent className="px-4 pb-4 pt-0">
                   <div className="space-y-3">
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Assignee</label>
-                      <div className="flex-1">
-                        <Select
-                          value={ticket.assignee?.id || UNASSIGNED_VALUE}
-                          onValueChange={(value) =>
-                            handleAssigneeChange(value === UNASSIGNED_VALUE ? null : value)
-                          }
-                          disabled={!canEditTickets || updatingFields["assignee_id"]}
-                        >
-                          <SelectTrigger className="h-8 w-full relative overflow-hidden">
-                            {ticket.assignee?.id ? (
-                              <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
-                                <UserSelectValue
-                                  users={assigneeEligibleUsers}
-                                  value={ticket.assignee?.id || null}
-                                  placeholder="Unassigned"
-                                  unassignedValue={UNASSIGNED_VALUE}
-                                  unassignedLabel="Unassigned"
-                                />
-                              </div>
-                            ) : (
-                              <SelectValue placeholder="Unassigned" />
-                            )}
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-                            {assigneeEligibleUsers.map((user) => (
-                              <UserSelectItem key={user.id} user={user} value={user.id} />
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Assignee</label>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 min-w-0">
+                            <Select
+                              value={ticket.assignee?.id || UNASSIGNED_VALUE}
+                              onValueChange={(value) =>
+                                handleAssigneeChange(value === UNASSIGNED_VALUE ? null : value)
+                              }
+                              disabled={!canEditTickets || updatingFields["assignee_id"]}
+                            >
+                              <SelectTrigger className="h-8 w-full relative overflow-hidden">
+                                {ticket.assignee?.id ? (
+                                  <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
+                                    <UserSelectValue
+                                      users={assigneeEligibleUsers}
+                                      value={ticket.assignee?.id || null}
+                                      placeholder="Unassigned"
+                                      unassignedValue={UNASSIGNED_VALUE}
+                                      unassignedLabel="Unassigned"
+                                    />
+                                  </div>
+                                ) : (
+                                  <SelectValue placeholder="Unassigned" />
+                                )}
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+                                {assigneeEligibleUsers.map((user) => (
+                                  <UserSelectItem key={user.id} user={user} value={user.id} />
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {!ticket.assignee && currentUser && (
+                            <button
+                              type="button"
+                              className="text-[11px] text-blue-600 hover:underline whitespace-nowrap disabled:opacity-50"
+                              onClick={() => void handleAssigneeChange(currentUser.id)}
+                              disabled={updatingFields["assignee_id"] || !canEditTickets}
+                            >
+                              Assign to me
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Reporter</label>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Reporter</label>
+                      <div className="flex-1 min-w-0">
                         <Select
                           value={ticket.requested_by?.id ?? undefined}
                           onValueChange={handleRequestedByChange}
-                          disabled={!canEditTickets || updatingFields["requested_by_id"]}
+                          disabled={!canEditTickets || isAssignmentLocked || updatingFields["requested_by_id"]}
                         >
                           <SelectTrigger className="h-8 w-full relative overflow-hidden">
                             {ticket.requested_by?.id ? (
@@ -1413,15 +1512,15 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">SQA</label>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">SQA</label>
+                      <div className="flex-1 min-w-0">
                         <Select
                           value={ticket.sqa_assignee?.id || UNASSIGNED_VALUE}
                           onValueChange={(value) =>
                             handleSqaAssigneeChange(value === UNASSIGNED_VALUE ? null : value)
                           }
-                          disabled={!canEditTickets || updatingFields["sqa_assignee_id"]}
+                          disabled={!canEditTickets || isAssignmentLocked || updatingFields["sqa_assignee_id"]}
                         >
                           <SelectTrigger className="h-8 w-full relative overflow-hidden">
                             {ticket.sqa_assignee?.id ? (
@@ -1448,69 +1547,129 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Type</label>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Type</label>
+                      <div className="flex-1 min-w-0">
                         <TicketTypeSelect
                           value={ticket.type || "task"}
                           onValueChange={handleTypeChange}
-                          disabled={!canEditTickets || updatingFields["type"]}
+                          disabled={!canEditTickets || isAssignmentLocked || updatingFields["type"]}
                           triggerClassName="h-8 w-full"
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Parent</label>
-                      <div className="flex-1">
-                        <Select
-                          value={(ticket as any).parent_ticket_id || NO_PARENT_TICKET_VALUE}
-                          onValueChange={handleParentTicketChange}
-                          disabled={!canEditTickets || updatingFields["parent_ticket_id"]}
-                        >
-                          <SelectTrigger className="h-8 w-full">
-                            <SelectValue placeholder="No parent ticket" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={NO_PARENT_TICKET_VALUE}>No parent ticket</SelectItem>
-                            {parentTicketOptions.map((candidate) => (
-                              <SelectItem key={candidate.id} value={candidate.id}>
-                                {(candidate.display_id || candidate.id.slice(0, 8)).toUpperCase()} · {candidate.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {parentNavigationSlug ? (
-                          <a
-                            href={`/tickets/${parentNavigationSlug}`}
-                            className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                    {ticket.type === "subtask" && (
+                      <div className="flex items-start gap-3">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Parent</label>
+                        <div className="flex-1 min-w-0">
+                          <Popover
+                            open={isParentPopoverOpen}
+                            onOpenChange={(open) => {
+                              setIsParentPopoverOpen(open)
+                              if (!open) {
+                                setParentSearch("")
+                              }
+                            }}
                           >
-                            Open parent ticket
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        ) : null}
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={!canEditTickets || isAssignmentLocked || updatingFields["parent_ticket_id"]}
+                                className="h-8 w-full justify-between overflow-hidden"
+                              >
+                                <span className="truncate text-xs text-foreground">
+                                  {selectedParentTicketOption ? (
+                                    `${(selectedParentTicketOption.display_id || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()} · ${selectedParentTicketOption.title}`
+                                  ) : (
+                                    "No parent ticket"
+                                  )}
+                                </span>
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80 p-3" align="start">
+                              <Input
+                                placeholder="Search parent ticket..."
+                                value={parentSearch}
+                                onChange={(e) => setParentSearch(e.target.value)}
+                                className="h-8"
+                                autoFocus
+                              />
+                              <div className="mt-2 max-h-64 overflow-y-auto space-y-1">
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                                  onClick={() => {
+                                    void handleParentTicketChange(NO_PARENT_TICKET_VALUE)
+                                    setIsParentPopoverOpen(false)
+                                  }}
+                                >
+                                  <span className="text-xs">No parent ticket</span>
+                                </button>
+                                {parentFilteredOptions.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground px-2 py-3 text-center">
+                                    No tickets found
+                                  </p>
+                                ) : (
+                                  parentFilteredOptions.map((candidate) => {
+                                    const isSelected = candidate.id === selectedParentTicketId
+                                    return (
+                                      <button
+                                        key={candidate.id}
+                                        type="button"
+                                        className={[
+                                          "flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted",
+                                          isSelected ? "bg-muted" : "",
+                                        ].join(" ")}
+                                        onClick={() => {
+                                          void handleParentTicketChange(candidate.id)
+                                          setIsParentPopoverOpen(false)
+                                        }}
+                                      >
+                                        <span className="truncate">
+                                          {(candidate.display_id || candidate.id.slice(0, 8)).toUpperCase()} · {candidate.title}
+                                        </span>
+                                      </button>
+                                    )
+                                  })
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                          {parentNavigationSlug ? (
+                            <a
+                              href={`/tickets/${parentNavigationSlug}`}
+                              className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                            >
+                              Open parent ticket
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
+                    )}
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Priority</label>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Priority</label>
+                      <div className="flex-1 min-w-0">
                         <TicketPrioritySelect
                           value={ticket.priority}
                           onValueChange={handlePriorityChange}
-                          disabled={!canEditTickets || updatingFields["priority"]}
+                          disabled={!canEditTickets || isAssignmentLocked || updatingFields["priority"]}
                           triggerClassName="h-8 w-full"
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Due Date</label>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Due Date</label>
+                      <div className="flex-1 min-w-0">
                         <DateTimePicker
                           value={parseTimestamp(ticket.due_date)}
                           onChange={handleDueDateChange}
-                          disabled={!canEditTickets || updatingFields["due_date"]}
+                          disabled={!canEditTickets || isAssignmentLocked || updatingFields["due_date"]}
                           placeholder="No due date"
                           className="w-full h-8"
                           hideIcon
@@ -1518,13 +1677,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Department</label>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Department</label>
+                      <div className="flex-1 min-w-0">
                         <Select
                           value={ticket.department?.id || NO_DEPARTMENT_VALUE}
                           onValueChange={handleDepartmentChange}
-                          disabled={!canEditTickets || updatingFields["department_id"]}
+                          disabled={!canEditTickets || isAssignmentLocked || updatingFields["department_id"]}
                         >
                           <SelectTrigger className="h-8 w-full">
                             <SelectValue placeholder="No Department" />
@@ -1541,39 +1700,39 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Epic</label>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Epic</label>
+                      <div className="flex-1 min-w-0">
                         <EpicSelect
                           value={ticket.epic?.id || null}
                           onValueChange={handleEpicChange}
                           epics={epics}
-                          disabled={!canEditTickets || updatingFields["epic_id"] || !projectId}
+                          disabled={!canEditTickets || isAssignmentLocked || updatingFields["epic_id"] || !projectId}
                           triggerClassName="h-8 w-full"
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Sprint</label>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Sprint</label>
+                      <div className="flex-1 min-w-0">
                         <SprintSelect
                           value={ticket.sprint?.id || null}
                           onValueChange={handleSprintChange}
                           sprints={sprints}
-                          disabled={!canEditTickets || updatingFields["sprint_id"] || !projectId}
+                          disabled={!canEditTickets || isAssignmentLocked || updatingFields["sprint_id"] || !projectId}
                           triggerClassName="h-8 w-full"
                         />
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Project</label>
-                      <div className="flex-1">
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Project</label>
+                      <div className="flex-1 min-w-0">
                         <Select
                           value={ticket.project?.id || NO_PROJECT_VALUE}
                           onValueChange={handleProjectChange}
-                          disabled={!canEditTickets || updatingFields["project_id"]}
+                          disabled={!canEditTickets || isAssignmentLocked || updatingFields["project_id"]}
                         >
                           <SelectTrigger className="h-8 w-full">
                             <SelectValue placeholder="No Project" />
@@ -1587,7 +1746,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                             ))}
                           </SelectContent>
                         </Select>
-                        <div className="mt-2 flex items-center justify-end gap-2">
+                        <div className="mt-3 flex items-center justify-end gap-2">
                           <span className="text-xs text-muted-foreground">Include Inactive</span>
                           <Switch
                             checked={includeInactiveProjects}
@@ -1598,9 +1757,9 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-2">
-                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-1.5 flex-shrink-0 w-24">Relations</label>
-                      <div className="flex-1 space-y-1.5">
+                    <div className="flex items-start gap-3">
+                      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Relations</label>
+                      <div className="flex-1 min-w-0 space-y-1.5">
                         {relations.parent ? (
                           <a
                             href={`/tickets/${String(relations.parent.display_id || relations.parent.id).toLowerCase()}`}
@@ -1612,18 +1771,6 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                             <ExternalLink className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
                           </a>
                         ) : null}
-                        {(relations.subtasks || []).map((subtask) => (
-                          <a
-                            key={subtask.id}
-                            href={`/tickets/${String(subtask.display_id || subtask.id).toLowerCase()}`}
-                            className="flex items-center justify-between rounded-md border px-2.5 py-1.5 text-sm hover:bg-muted/50"
-                          >
-                            <span className="truncate">
-                              Subtask: {(subtask.display_id || subtask.id.slice(0, 8)).toUpperCase()} · {subtask.title}
-                            </span>
-                            <ExternalLink className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
-                          </a>
-                        ))}
                         {(relations.mentioned_in_comments || []).map((mention) => (
                           <a
                             key={mention.ticket.id}
@@ -1631,13 +1778,12 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                             className="flex items-center justify-between rounded-md border px-2.5 py-1.5 text-sm hover:bg-muted/50"
                           >
                             <span className="truncate">
-                              Mentioned in {mention.comment_ids.length} comment{mention.comment_ids.length === 1 ? "" : "s"}: {(mention.ticket.display_id || mention.ticket.id.slice(0, 8)).toUpperCase()} · {mention.ticket.title}
+                              Mentioned in {mention.comment_ids.length} comment{mention.comment_ids.length === 1 ? "" : "s"} on {(mention.ticket.display_id || mention.ticket.id.slice(0, 8)).toUpperCase()} · {mention.ticket.title}
                             </span>
                             <ExternalLink className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
                           </a>
                         ))}
                         {!relations.parent &&
-                        (relations.subtasks || []).length === 0 &&
                         (relations.mentioned_in_comments || []).length === 0 ? (
                           <p className="text-xs text-muted-foreground">No relations yet.</p>
                         ) : null}
@@ -1646,9 +1792,9 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
 
                     {(ticket.status === "cancelled" || ticket.status === "rejected") &&
                       (ticket.reason?.cancelled || ticket.reason?.rejected) && (
-                      <div className="flex items-start gap-2">
-                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Reason</label>
-                        <div className="flex-1">
+                      <div className="flex items-start gap-3">
+                        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Reason</label>
+                        <div className="flex-1 min-w-0">
                           <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
                             <div className="flex items-start gap-2">
                               <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0 mt-0.5" />
@@ -1694,13 +1840,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                     <div>
                       <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Timestamps</h3>
                       <div className="space-y-2.5">
-                        <div className="flex items-start gap-2">
-                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">Created</label>
-                          <div className="flex-1">
+                        <div className="flex items-start gap-3">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Created</label>
+                          <div className="flex-1 min-w-0">
                             <DateTimePicker
                               value={parseTimestamp(ticket.created_at)}
                               onChange={(date) => handleTimestampChange("created_at", date)}
-                              disabled={!canEditTickets || updatingFields["created_at"]}
+                              disabled={!canEditTickets || isAssignmentLocked || updatingFields["created_at"]}
                               placeholder="Not set"
                               className="w-full h-8"
                               hideIcon
@@ -1708,8 +1854,8 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-2">
-                          <div className="flex items-center gap-2 flex-shrink-0 w-24">
+                        <div className="flex items-start gap-3">
+                          <div className="flex items-center gap-1.5 flex-shrink-0 w-[6.5rem]">
                             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Assigned</label>
                             {!(ticket as any).assigned_at && timestampValidation.assigned_at && (
                               <span title={getTimestampWarningMessage("assigned_at") || ""} className="cursor-help pt-2">
@@ -1717,11 +1863,11 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                               </span>
                             )}
                           </div>
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <DateTimePicker
                               value={parseTimestamp((ticket as any).assigned_at)}
                               onChange={(date) => handleTimestampChange("assigned_at", date)}
-                              disabled={!canEditTickets || !ticket.assignee || updatingFields["assigned_at"]}
+                              disabled={!canEditTickets || isAssignmentLocked || !ticket.assignee || updatingFields["assigned_at"]}
                               placeholder="Not set"
                               className="w-full h-8"
                               hideIcon
@@ -1729,8 +1875,8 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-2">
-                          <div className="flex items-center gap-2 flex-shrink-0 w-24">
+                        <div className="flex items-start gap-3">
+                          <div className="flex items-center gap-1.5 flex-shrink-0 w-[6.5rem]">
                             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Started</label>
                             {!(ticket as any).started_at && timestampValidation.started_at && (
                               <span title={getTimestampWarningMessage("started_at") || ""} className="cursor-help pt-2">
@@ -1738,11 +1884,11 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                               </span>
                             )}
                           </div>
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <DateTimePicker
                               value={parseTimestamp((ticket as any).started_at)}
                               onChange={(date) => handleTimestampChange("started_at", date)}
-                              disabled={!canEditTickets || ticket.status === "open" || updatingFields["started_at"]}
+                              disabled={!canEditTickets || isAssignmentLocked || ticket.status === "open" || updatingFields["started_at"]}
                               placeholder="Not set"
                               className="w-full h-8"
                               hideIcon
@@ -1750,15 +1896,15 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-2">
-                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-24">
+                        <div className="flex items-start gap-3">
+                          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">
                             SQA Assigned
                           </label>
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <DateTimePicker
                               value={parseTimestamp((ticket as any).sqa_assigned_at)}
                               onChange={(date) => handleTimestampChange("sqa_assigned_at", date)}
-                              disabled={!canEditTickets || updatingFields["sqa_assigned_at"]}
+                              disabled={!canEditTickets || isAssignmentLocked || updatingFields["sqa_assigned_at"]}
                               placeholder="Not set"
                               className="w-full h-8"
                               hideIcon
@@ -1766,8 +1912,8 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           </div>
                         </div>
 
-                        <div className="flex items-start gap-2">
-                          <div className="flex items-center gap-2 flex-shrink-0 w-24">
+                        <div className="flex items-start gap-3">
+                          <div className="flex items-center gap-1.5 flex-shrink-0 w-[6.5rem]">
                             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Completed</label>
                             {!(ticket as any).completed_at && timestampValidation.completed_at && (
                               <span title={getTimestampWarningMessage("completed_at") || ""} className="cursor-help pt-2">
@@ -1775,11 +1921,11 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                               </span>
                             )}
                           </div>
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <DateTimePicker
                               value={parseTimestamp((ticket as any).completed_at)}
                               onChange={(date) => handleTimestampChange("completed_at", date)}
-                              disabled={!canEditTickets || (ticket.status !== "completed" && ticket.status !== "cancelled" && ticket.status !== "rejected") || updatingFields["completed_at"]}
+                              disabled={!canEditTickets || isAssignmentLocked || (ticket.status !== "completed" && ticket.status !== "cancelled" && ticket.status !== "rejected") || updatingFields["completed_at"]}
                               placeholder="Not set"
                               className="w-full h-8"
                               hideIcon
@@ -1833,6 +1979,57 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
           </Button>
           <Button onClick={handleCancelReasonSubmit} disabled={!canEditTickets}>
             {pendingStatusChange === "rejected" ? "Confirm Rejection" : "Confirm Cancellation"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    <Dialog
+      open={showDeleteReasonDialog}
+      onOpenChange={(open) => {
+        setShowDeleteReasonDialog(open)
+        if (!open) {
+          setDeleteReason("")
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Ticket</DialogTitle>
+          <DialogDescription>
+            This will archive the ticket. Please provide a reason for deleting it.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <Textarea
+            placeholder="Enter delete reason..."
+            value={deleteReason}
+            onChange={(e) => setDeleteReason(e.target.value)}
+            onKeyDown={(event) => {
+              if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                event.preventDefault()
+                void handleDeleteReasonSubmit()
+              }
+            }}
+            rows={4}
+            className="resize-none"
+          />
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowDeleteReasonDialog(false)
+              setDeleteReason("")
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteReasonSubmit}
+            disabled={!canEditTickets}
+          >
+            Confirm Delete
           </Button>
         </DialogFooter>
       </DialogContent>

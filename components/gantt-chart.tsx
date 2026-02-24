@@ -7,7 +7,7 @@ import { ChevronRight, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
-import { formatStatusLabel, normalizeStatusKey } from "@/lib/ticket-statuses"
+import { formatStatusLabel, normalizeStatusKey, isDoneStatus } from "@/lib/ticket-statuses"
 
 interface GanttItem {
   id: string
@@ -16,6 +16,7 @@ interface GanttItem {
   status?: string
   startDate?: Date | null
   endDate?: Date | null
+  dueDate?: Date | null
   children?: GanttItem[]
   color?: string
   displayId?: string | null
@@ -35,6 +36,7 @@ interface GanttChartProps {
     created_at: string
     started_at?: string | null
     completed_at?: string | null
+    due_date?: string | null
     display_id?: string | null
   }>
   sprints: Array<{
@@ -173,6 +175,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
         status: ticket.status,
         startDate,
         endDate,
+        dueDate: ticket.due_date ? parseISO(ticket.due_date) : null,
         displayId: ticket.display_id,
         level: 2,
       }
@@ -362,9 +365,17 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
     [visibleRowCount]
   )
 
+  const isItemOverdue = (item: GanttItem) => {
+    if (item.type !== "ticket" || !item.dueDate || !item.status) return false
+    const today = startOfDay(new Date())
+    const due = startOfDay(item.dueDate)
+    return due < today && !isDoneStatus(normalizeStatusKey(item.status))
+  }
+
   const renderListRow = (item: GanttItem): JSX.Element => {
     const isExpanded = expandedItems.has(item.id)
     const hasChildren = item.children && item.children.length > 0
+    const overdue = isItemOverdue(item)
 
     return (
       <div key={item.id}>
@@ -372,7 +383,8 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           className={cn(
             "flex items-center border-b border-border/50 hover:bg-muted/30 transition-colors group",
             item.type === "sprint" && "bg-muted/20 font-semibold",
-            item.type === "epic" && "bg-muted/10"
+            item.type === "epic" && "bg-muted/10",
+            overdue && "bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:bg-red-500/15 dark:hover:bg-red-500/25 dark:text-red-200"
           )}
           style={{ height: ROW_HEIGHT }}
           onClick={(e) => {
@@ -458,6 +470,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
   const renderTimelineRow = (item: GanttItem): JSX.Element => {
     const isExpanded = expandedItems.has(item.id)
     const hasChildren = item.children && item.children.length > 0
+    const overdue = isItemOverdue(item)
     const barPosition = item.startDate && item.endDate 
       ? getBarPosition(item.startDate, item.endDate)
       : { left: 0, width: 0 }
@@ -469,7 +482,8 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           className={cn(
             "relative border-b border-border/50",
             item.type === "sprint" && "bg-muted/20",
-            item.type === "epic" && "bg-muted/10"
+            item.type === "epic" && "bg-muted/10",
+            overdue && "bg-red-500/10 dark:bg-red-500/15"
           )}
           style={{ height: ROW_HEIGHT }}
           onClick={(e) => {
@@ -497,7 +511,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
                   : item.type === "sprint"
                   ? getStatusColor(item.status, "sprint")
                   : item.type === "ticket"
-                  ? getStatusColor(item.status, "ticket")
+                  ? (overdue ? "#ef4444" : getStatusColor(item.status, "ticket"))
                   : undefined,
               }}
               title={`${item.displayId ? `${item.displayId} ` : ""}${item.name}`}

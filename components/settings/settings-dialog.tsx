@@ -26,6 +26,7 @@ import { useTheme } from "@/components/theme-provider"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useSignOutOverlay } from "@/components/signout-overlay"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
+import { DeletedTicketsPanel } from "@/components/settings/deleted-tickets-panel"
 
 interface SettingsDialogProps {
   open: boolean
@@ -40,7 +41,7 @@ type CombinedUser = {
   role?: string | null
 }
 
-type SettingsSection = "account" | "preferences"
+type SettingsSection = "account" | "preferences" | "deleted_tickets"
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { data: session } = useSession()
@@ -102,6 +103,16 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 }`}
               >
                 Preferences
+              </button>
+              <button
+                onClick={() => setActiveSection("deleted_tickets")}
+                className={`w-full border border-transparent px-3 py-2 rounded-md text-sm text-left transition-colors ${
+                  activeSection === "deleted_tickets"
+                    ? "selected-ui"
+                    : "hover:bg-accent/50"
+                }`}
+              >
+                Deleted
               </button>
             </div>
           </div>
@@ -242,6 +253,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     </div>
                   </div>
                 </>
+              )}
+              {activeSection === "deleted_tickets" && (
+                <DeletedTicketsPanel />
               )}
             </div>
           </div>

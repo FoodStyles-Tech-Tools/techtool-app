@@ -9,6 +9,7 @@ import { getDueDateDisplay } from "@/lib/format-dates"
 import type { Ticket } from "@/lib/types"
 import { TicketTypeIcon } from "@/components/ticket-type-select"
 import { TicketPriorityIcon } from "@/components/ticket-priority-select"
+import { isDoneStatus, normalizeStatusKey } from "@/lib/ticket-statuses"
 
 export interface KanbanColumn {
   id: string
@@ -115,8 +116,9 @@ export function TicketsKanban({
                     />
                   )}
                   {columnTickets.map((ticket) => {
-                    const dueDateDisplay = getDueDateDisplay(ticket.due_date)
+                    const dueDateDisplay = getDueDateDisplay(ticket.due_date, isDoneStatus(normalizeStatusKey(ticket.status)))
                     const subtaskCount = subtaskCountMap[ticket.id] || 0
+                    if (ticket.status === "archived") return null
                     return (
                       <Card
                         key={ticket.id}
@@ -126,7 +128,7 @@ export function TicketsKanban({
                           draggedTicket === ticket.id && "kanban-card-dragging",
                           draggedTicket && draggedTicket !== ticket.id && "kanban-card-dimmed",
                           justDroppedTicketId === ticket.id && "kanban-card-landed",
-                          dueDateDisplay.highlightClassName ?? "bg-background hover:bg-muted/50"
+                          dueDateDisplay.isOverdue ? "!border-red-500 !bg-red-50 hover:!bg-red-100/50 dark:!border-red-500/50 dark:!bg-red-500/10 dark:hover:!bg-red-500/20" : "bg-background hover:bg-muted/50"
                         )}
                         draggable={canEditTickets}
                         onDragStart={(e) => onDragStart(e, ticket.id)}

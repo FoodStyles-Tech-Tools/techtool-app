@@ -7,6 +7,7 @@ export type DueDateDisplay = {
   className: string
   title?: string
   highlightClassName?: string
+  isOverdue?: boolean
 }
 
 const dueDateFormatter = new Intl.DateTimeFormat(undefined, {
@@ -38,7 +39,7 @@ export function formatRelativeDate(dateString: string): string {
   return "long time ago"
 }
 
-export function getDueDateDisplay(dueDateString?: string | null): DueDateDisplay {
+export function getDueDateDisplay(dueDateString?: string | null, isCompleted: boolean = false): DueDateDisplay {
   if (!dueDateString) {
     return {
       label: "No due date",
@@ -62,12 +63,17 @@ export function getDueDateDisplay(dueDateString?: string | null): DueDateDisplay
   const dueToday = normalizedDueDate.getTime() === today.getTime()
   const diffDays = Math.round((normalizedDueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
-  if (overdue) {
+  if (overdue && !isCompleted) {
     return {
       label: `Overdue: ${formattedDate}`,
-      className: "border border-red-200 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-50",
-      highlightClassName: "bg-red-50/70 hover:bg-red-100/70 dark:bg-red-500/10 dark:hover:bg-red-500/20",
+      className:
+        "border border-red-500 bg-red-500/10 text-red-700 font-semibold " +
+        "dark:border-red-400 dark:bg-red-500/15 dark:text-red-200",
+      highlightClassName:
+        "!border-red-500 !bg-red-50 hover:!bg-red-100/50 " +
+        "dark:!border-red-500/50 dark:!bg-red-500/10 dark:hover:!bg-red-500/20",
       title,
+      isOverdue: true,
     }
   }
 

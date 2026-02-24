@@ -94,7 +94,7 @@ export interface TicketDetailRelations {
   mentioned_in_comments: MentionedTicketRelation[]
 }
 
-/** Cancelled reason stored on ticket.reason */
+/** Cancelled / archived reason stored on ticket.reason */
 export interface TicketCancelledReason {
   cancelled?: {
     reason: string
@@ -103,6 +103,10 @@ export interface TicketCancelledReason {
   rejected?: {
     reason: string
     rejectedAt: string
+  }
+  archived?: {
+    reason: string
+    archivedAt: string
   }
 }
 

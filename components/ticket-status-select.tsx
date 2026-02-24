@@ -35,7 +35,9 @@ export function TicketStatusSelect({
   const { statuses, statusMap } = useTicketStatuses({ realtime: false })
   const selectableStatuses = useMemo(
     () => {
-      const visible = filterStatusesBySqaRequirement(statuses, allowSqaStatuses)
+      const visible = filterStatusesBySqaRequirement(statuses, allowSqaStatuses).filter(
+        (status) => normalizeStatusKey(status.key) !== "archived"
+      )
       return excludeDone ? visible.filter((status) => !isDoneStatus(status.key)) : visible
     },
     [allowSqaStatuses, excludeDone, statuses]
