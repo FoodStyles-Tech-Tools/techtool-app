@@ -1102,22 +1102,6 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                 />
               )}
             </div>
-            {ticket && canEditTickets && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-destructive hover:text-destructive"
-                  onClick={() => {
-                    setDeleteReason("")
-                    setShowDeleteReasonDialog(true)
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span className="sr-only">Delete ticket</span>
-                </Button>
-              </div>
-            )}
           </div>
         </DialogHeader>
         
@@ -1941,6 +1925,26 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
             </div>
           )}
         </div>
+        <DialogFooter className="shrink-0 border-t bg-background px-4 py-3 sm:justify-between">
+          <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:items-center">
+            {ticket && canEditTickets ? (
+              <Button
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                onClick={() => {
+                  setDeleteReason("")
+                  setShowDeleteReasonDialog(true)
+                }}
+              >
+                <Trash2 className="mr-2 h-3.5 w-3.5" />
+                Delete Ticket
+              </Button>
+            ) : null}
+          </div>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
     <Dialog open={showCancelReasonDialog} onOpenChange={setShowCancelReasonDialog}>

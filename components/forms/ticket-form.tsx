@@ -368,7 +368,9 @@ export function TicketForm({
                   </FormLabel>
                   <FormControl>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      {CREATE_TYPE_OPTIONS.map((option) => {
+                      {CREATE_TYPE_OPTIONS
+                        .filter((option) => option.value !== "subtask")
+                        .map((option) => {
                         const Icon = option.icon
                         const isActive = field.value === option.value
 
