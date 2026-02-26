@@ -30,7 +30,7 @@ const MenubarTrigger = React.forwardRef<
   <MenubarPrimitive.Trigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center rounded-sm border border-transparent px-3 py-1.5 text-sm font-medium outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:selected-ui",
+      "flex cursor-default select-none items-center rounded-sm border border-transparent px-3 py-1.5 text-sm font-medium leading-5 tracking-[-0.005em] outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:selected-ui",
       className
     )}
     {...props}
@@ -65,7 +65,7 @@ const MenubarItem = React.forwardRef<
   <MenubarPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm leading-5 tracking-[-0.005em] outline-none focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       inset && "pl-8",
       className
     )}
@@ -81,7 +81,7 @@ const MenubarCheckboxItem = React.forwardRef<
   <MenubarPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm border border-transparent py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[state=checked]:selected-ui data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center rounded-sm border border-transparent py-1.5 pl-8 pr-2 text-sm leading-5 tracking-[-0.005em] outline-none focus:bg-accent focus:text-accent-foreground data-[state=checked]:selected-ui data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     checked={checked}
@@ -106,7 +106,7 @@ const MenubarRadioItem = React.forwardRef<
   <MenubarPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm border border-transparent py-1.5 pl-8 pr-2 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[state=checked]:selected-ui data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "relative flex cursor-default select-none items-center rounded-sm border border-transparent py-1.5 pl-8 pr-2 text-sm leading-5 tracking-[-0.005em] outline-none focus:bg-accent focus:text-accent-foreground data-[state=checked]:selected-ui data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     {...props}
@@ -127,7 +127,7 @@ const MenubarLabel = React.forwardRef<
 >(({ className, inset, ...props }, ref) => (
   <MenubarPrimitive.Label
     ref={ref}
-    className={cn("px-2 py-1.5 text-sm font-semibold", inset && "pl-8", className)}
+    className={cn("px-2 py-1.5 text-xs font-medium tracking-[0.012em] text-muted-foreground", inset && "pl-8", className)}
     {...props}
   />
 ))
@@ -154,7 +154,7 @@ const MenubarSubTrigger = React.forwardRef<
   <MenubarPrimitive.SubTrigger
     ref={ref}
     className={cn(
-      "flex cursor-default select-none items-center rounded-sm border border-transparent px-2 py-1.5 text-sm outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:selected-ui",
+      "flex cursor-default select-none items-center rounded-sm border border-transparent px-2 py-1.5 text-sm leading-5 tracking-[-0.005em] outline-none focus:bg-accent focus:text-accent-foreground data-[state=open]:selected-ui",
       inset && "pl-8",
       className
     )}
@@ -188,7 +188,7 @@ const MenubarShortcut = ({
   ...props
 }: React.HTMLAttributes<HTMLSpanElement>) => (
   <span
-    className={cn("ml-auto text-xs tracking-widest text-muted-foreground", className)}
+    className={cn("ml-auto text-xs font-medium tracking-[0.06em] text-muted-foreground", className)}
     {...props}
   />
 )

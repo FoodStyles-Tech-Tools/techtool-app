@@ -208,7 +208,7 @@ export function Sidebar() {
         href={item.href}
         prefetch={true}
         className={cn(
-          "flex h-8 items-center gap-2 rounded-md border border-transparent px-2 text-sm transition-colors",
+          "flex h-8 items-center gap-2 rounded-md border border-transparent px-2 text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
           isActive
             ? SIDEBAR_ACTIVE_ITEM_CLASS
             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -228,8 +228,8 @@ export function Sidebar() {
             <div className="flex items-center gap-2.5">
               <img src="/icon.svg" alt="TECHTOOL" className="h-9 w-9 rounded-md" />
               <div className="space-y-0.5">
-                <p className="text-sm font-semibold tracking-tight">TECHTOOL</p>
-                <p className="text-xs text-muted-foreground">Workspace</p>
+                <p className="text-sm font-semibold tracking-[-0.012em]">TECHTOOL</p>
+                <p className="text-xs tracking-[0.012em] text-muted-foreground">Workspace</p>
               </div>
             </div>
             <div>
@@ -240,7 +240,7 @@ export function Sidebar() {
 
         <div className="flex-1 overflow-y-auto px-2 py-2">
           <div className="space-y-1">
-            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+            <p className="px-2 py-1 text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
               Platform
             </p>
             {primaryNavItems.filter(isVisible).map(renderNavLink)}
@@ -252,7 +252,7 @@ export function Sidebar() {
                 type="button"
                 onClick={() => setReportExpanded((current) => !current)}
                 className={cn(
-                  "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm transition-colors",
+                  "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
                   "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
@@ -275,7 +275,7 @@ export function Sidebar() {
                         href={item.href}
                         prefetch={true}
                         className={cn(
-                          "flex h-8 items-center rounded-md border border-transparent px-2 text-sm transition-colors",
+                          "flex h-8 items-center rounded-md border border-transparent px-2 text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
                           isActive
                             ? SIDEBAR_ACTIVE_ITEM_CLASS
                             : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -296,7 +296,7 @@ export function Sidebar() {
                 type="button"
                 onClick={() => setPinnedExpanded((current) => !current)}
                 className={cn(
-                  "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm transition-colors",
+                  "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
                   "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
@@ -312,9 +312,9 @@ export function Sidebar() {
               {pinnedExpanded && (
                 <>
                   {pinnedProjectsLoading ? (
-                    <p className="ml-2 px-2 py-1 text-xs text-muted-foreground">Loading...</p>
+                    <p className="ml-2 px-2 py-1 text-xs leading-4 tracking-[0.01em] text-muted-foreground">Loading...</p>
                   ) : pinnedProjectIds.length === 0 ? (
-                    <p className="ml-2 px-2 py-1 text-xs text-muted-foreground">No pinned projects</p>
+                    <p className="ml-2 px-2 py-1 text-xs leading-4 tracking-[0.01em] text-muted-foreground">No pinned projects</p>
                   ) : (
                     <div className="ml-2 space-y-0.5 border-l pl-2">
                       {pinnedProjects.map((project) => {
@@ -326,7 +326,7 @@ export function Sidebar() {
                             href={href}
                             prefetch={true}
                             className={cn(
-                              "flex h-8 items-center rounded-md border border-transparent px-2 text-sm transition-colors",
+                              "flex h-8 items-center rounded-md border border-transparent px-2 text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
                               isActive
                                 ? SIDEBAR_ACTIVE_ITEM_CLASS
                                 : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -344,7 +344,7 @@ export function Sidebar() {
           )}
 
           <div className="mt-4 space-y-1">
-            <p className="px-2 py-1 text-xs font-medium text-muted-foreground">
+            <p className="px-2 py-1 text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
               Admin
             </p>
             {canOpenSettings && (
@@ -353,7 +353,7 @@ export function Sidebar() {
                   type="button"
                   onClick={() => setSettingsExpanded((current) => !current)}
                   className={cn(
-                    "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm transition-colors",
+                    "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
                     "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
@@ -376,7 +376,7 @@ export function Sidebar() {
                           href={item.href}
                           prefetch={true}
                           className={cn(
-                            "block h-8 rounded-md border border-transparent px-2 py-1.5 text-sm leading-5 transition-colors",
+                            "block h-8 rounded-md border border-transparent px-2 py-1.5 text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
                             isActive
                               ? SIDEBAR_ACTIVE_ITEM_CLASS
                               : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
@@ -397,7 +397,7 @@ export function Sidebar() {
           <button
             type="button"
             onClick={() => setShortcutsOpen(true)}
-            className="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-xs font-medium tracking-[0.01em] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             <span className="flex items-center gap-2">
               <Command className="h-3.5 w-3.5 stroke-[1.75]" />
@@ -418,7 +418,7 @@ export function Sidebar() {
             </span>
           </button>
           <div>
-            <VersionIndicator className="h-8 w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-xs text-muted-foreground shadow-none transition-colors hover:bg-accent hover:text-accent-foreground" />
+            <VersionIndicator className="h-8 w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-xs font-medium tracking-[0.01em] text-muted-foreground shadow-none transition-colors hover:bg-accent hover:text-accent-foreground" />
           </div>
           <NavUser
             user={{

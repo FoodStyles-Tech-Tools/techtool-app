@@ -134,7 +134,7 @@ export function Toaster() {
           )}
           <p
             className={cn(
-              "text-sm",
+              "text-sm font-medium leading-5 tracking-[-0.005em]",
               toast.type === "success" && "text-green-900 dark:text-green-100",
               toast.type === "error" && "text-red-900 dark:text-red-100"
             )}
@@ -152,7 +152,6 @@ export function Toaster() {
     </div>
   )
 }
-
 
 
 

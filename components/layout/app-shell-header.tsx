@@ -130,7 +130,7 @@ export function AppShellHeader() {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="inline-flex max-w-[320px] items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                        className="inline-flex max-w-[320px] items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium leading-5 tracking-[-0.008em] text-foreground transition-colors hover:bg-accent"
                         aria-label="Switch project"
                       >
                         <span className="truncate">{activeProjectName}</span>
