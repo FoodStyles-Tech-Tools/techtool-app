@@ -44,7 +44,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { useEpics } from "@/hooks/use-epics"
+import { useDeleteEpic, useEpics, type Epic } from "@/hooks/use-epics"
 import { EpicForm } from "@/components/forms/epic-form"
 import { useSprints, type Sprint } from "@/hooks/use-sprints"
 import { SprintForm } from "@/components/forms/sprint-form"
@@ -92,6 +92,7 @@ export default function ProjectDetailClient() {
   })
   const { data: usersData } = useUsers()
   const { epics } = useEpics(projectId)
+  const deleteEpic = useDeleteEpic()
   const { sprints } = useSprints(projectId)
   const updateTicket = useUpdateTicket()
   const updateProject = useUpdateProject()
@@ -111,6 +112,7 @@ export default function ProjectDetailClient() {
   const [viewMode, setViewMode] = useState<"kanban" | "gantt">("kanban")
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
   const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false)
+  const [editingEpic, setEditingEpic] = useState<Pick<Epic, "id" | "name" | "description" | "color" | "sprint_id"> | null>(null)
   const [isSprintDialogOpen, setIsSprintDialogOpen] = useState(false)
   const [editingSprint, setEditingSprint] = useState<Pick<Sprint, "id" | "name" | "description" | "status" | "start_date" | "end_date"> | null>(null)
   const [draggedTicket, setDraggedTicket] = useState<string | null>(null)
@@ -222,6 +224,11 @@ export default function ProjectDetailClient() {
     if (!id) return undefined
     return users.find((user) => user.id === id)
   }
+
+  const sortedEpics = useMemo(
+    () => [...epics].sort((a, b) => a.name.localeCompare(b.name)),
+    [epics]
+  )
 
   // Client-side filtering for instant responsiveness with optimistic updates
   const filteredTickets = useMemo(() => {
@@ -1111,6 +1118,37 @@ export default function ProjectDetailClient() {
     }
   }
 
+  const handleOpenCreateEpic = () => {
+    setEditingEpic(null)
+    setIsEpicDialogOpen(true)
+  }
+
+  const handleOpenEditEpic = (epic: Epic) => {
+    setEditingEpic({
+      id: epic.id,
+      name: epic.name,
+      description: epic.description,
+      color: epic.color,
+      sprint_id: epic.sprint_id,
+    })
+    setIsEpicDialogOpen(true)
+  }
+
+  const handleDeleteEpic = async (epic: Epic) => {
+    const confirmed = confirm(`Delete epic "${epic.name}"? Tickets in this epic will move to "No Epic".`)
+    if (!confirmed) return
+
+    try {
+      await deleteEpic.mutateAsync(epic.id)
+      if (editingEpic?.id === epic.id) {
+        setEditingEpic(null)
+        setIsEpicDialogOpen(false)
+      }
+    } catch {
+      // handled by hook toast
+    }
+  }
+
   useEffect(() => {
     if (!project?.name) return
 
@@ -1520,7 +1558,7 @@ export default function ProjectDetailClient() {
                   </DropdownMenuItem>
                 ) : null}
                 {canEditProjects ? (
-                  <DropdownMenuItem onClick={() => setIsEpicDialogOpen(true)}>
+                  <DropdownMenuItem onClick={handleOpenCreateEpic}>
                     Epic
                   </DropdownMenuItem>
                 ) : null}
@@ -1529,6 +1567,59 @@ export default function ProjectDetailClient() {
                     Sprint
                   </DropdownMenuItem>
                 ) : null}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+          {canEditProjects ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+                >
+                  Epics
+                  <Badge variant="outline" className="text-[11px]">
+                    {sortedEpics.length}
+                  </Badge>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Manage Epics</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleOpenCreateEpic}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Epic
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {sortedEpics.length === 0 ? (
+                  <div className="px-2 py-2 text-sm text-muted-foreground">
+                    No epics yet.
+                  </div>
+                ) : (
+                  sortedEpics.map((epic) => (
+                    <DropdownMenuSub key={epic.id}>
+                      <DropdownMenuSubTrigger className="flex items-center gap-2">
+                        <Circle className="h-3 w-3" style={{ fill: epic.color, color: epic.color }} />
+                        <span className="truncate">{epic.name}</span>
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-52">
+                        <DropdownMenuItem onClick={() => handleOpenEditEpic(epic)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit / Rename
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDeleteEpic(epic)}
+                          disabled={deleteEpic.isPending}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Epic
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  ))
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           ) : null}
@@ -2024,15 +2115,31 @@ export default function ProjectDetailClient() {
           }
         }}
       />
-      <Dialog open={isEpicDialogOpen} onOpenChange={setIsEpicDialogOpen}>
+      <Dialog
+        open={isEpicDialogOpen}
+        onOpenChange={(open) => {
+          setIsEpicDialogOpen(open)
+          if (!open) {
+            setEditingEpic(null)
+          }
+        }}
+      >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Epic</DialogTitle>
+            <DialogTitle>{editingEpic ? "Edit Epic" : "Create Epic"}</DialogTitle>
           </DialogHeader>
           <EpicForm
             projectId={projectId}
+            initialData={editingEpic ? {
+              id: editingEpic.id,
+              name: editingEpic.name,
+              description: editingEpic.description ?? undefined,
+              color: editingEpic.color,
+              sprint_id: editingEpic.sprint_id ?? "",
+            } : undefined}
             onSuccess={() => {
               setIsEpicDialogOpen(false)
+              setEditingEpic(null)
             }}
           />
         </DialogContent>

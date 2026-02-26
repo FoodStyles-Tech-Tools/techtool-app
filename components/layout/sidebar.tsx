@@ -41,6 +41,7 @@ type SettingsItem = {
   title: string
   href: string
   flag?: keyof PermissionFlags
+  visible?: (flags: PermissionFlags) => boolean
 }
 
 const primaryNavItems: NavItem[] = [
@@ -91,9 +92,9 @@ const settingsItems: SettingsItem[] = [
     flag: "canViewRoles",
   },
   {
-    title: "Status",
-    href: "/status",
-    flag: "canManageStatus",
+    title: "Workspace",
+    href: "/workspace",
+    visible: (flags) => Boolean(flags.canManageStatus || flags.canEditProjects),
   },
   {
     title: "Deleted",
@@ -121,8 +122,8 @@ export function Sidebar() {
     pathname === "/report" ||
     pathname.startsWith("/report/guild-lead-report")
   const [reportExpanded, setReportExpanded] = useState(reportSectionActive)
-  const isVisible = (item: { flag?: keyof PermissionFlags }) =>
-    item.flag ? Boolean(flags[item.flag]) : true
+  const isVisible = (item: { flag?: keyof PermissionFlags; visible?: (flags: PermissionFlags) => boolean }) =>
+    item.visible ? item.visible(flags) : item.flag ? Boolean(flags[item.flag]) : true
   const visibleSettingsItems = settingsItems.filter(isVisible)
   const canOpenSettings = visibleSettingsItems.length > 0
   const settingsSectionActive =
@@ -130,8 +131,8 @@ export function Sidebar() {
     pathname.startsWith("/users/") ||
     pathname === "/roles" ||
     pathname.startsWith("/roles/") ||
-    pathname === "/status" ||
-    pathname.startsWith("/status/") ||
+    pathname === "/workspace" ||
+    pathname.startsWith("/workspace/") ||
     pathname === "/deleted-tickets" ||
     pathname.startsWith("/deleted-tickets/")
   const [settingsExpanded, setSettingsExpanded] = useState(settingsSectionActive)

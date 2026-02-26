@@ -1,0 +1,304 @@
+"use client"
+
+import { useMemo, useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { usePermissions } from "@/hooks/use-permissions"
+import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
+import { normalizeStatusKey, type TicketStatus } from "@/lib/ticket-statuses"
+import { toast } from "@/components/ui/toast"
+import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+
+type StatusDraft = {
+  label: string
+  color: string
+}
+
+type StatusRow = TicketStatus & {
+  updated_at?: string
+}
+
+const DEFAULT_COLOR = "#9ca3af"
+
+export function WorkspaceStatusPanel() {
+  const { flags } = usePermissions()
+  const canManageStatus = flags?.canManageStatus ?? false
+  const { statuses, loading, refresh } = useTicketStatuses({ fallback: false, enabled: canManageStatus })
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingStatus, setEditingStatus] = useState<TicketStatus | null>(null)
+  const [draft, setDraft] = useState<StatusDraft>({ label: "", color: DEFAULT_COLOR })
+  const [saving, setSaving] = useState(false)
+
+  const sortedStatuses = useMemo<StatusRow[]>(
+    () => [...(statuses as StatusRow[])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
+    [statuses]
+  )
+
+  const openCreate = () => {
+    setEditingStatus(null)
+    setDraft({ label: "", color: DEFAULT_COLOR })
+    setDialogOpen(true)
+  }
+
+  const openEdit = (status: TicketStatus) => {
+    setEditingStatus(status)
+    setDraft({
+      label: status.label,
+      color: status.color || DEFAULT_COLOR,
+    })
+    setDialogOpen(true)
+  }
+
+  const handleSave = async () => {
+    const trimmedLabel = draft.label.trim()
+    const normalizedColor = draft.color.trim().startsWith("#") ? draft.color.trim() : `#${draft.color.trim()}`
+    const colorRegex = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/
+    const normalizedKey = normalizeStatusKey(trimmedLabel)
+
+    if (!trimmedLabel) {
+      toast("Label is required", "error")
+      return
+    }
+    if (!normalizedKey) {
+      toast("Status key is invalid", "error")
+      return
+    }
+    if (!colorRegex.test(normalizedColor)) {
+      toast("Color must be a valid hex value", "error")
+      return
+    }
+
+    setSaving(true)
+    try {
+      const payload = editingStatus
+        ? {
+            label: trimmedLabel,
+            color: normalizedColor,
+            sort_order: editingStatus.sort_order,
+          }
+        : {
+            key: normalizedKey,
+            label: trimmedLabel,
+            color: normalizedColor,
+            sort_order: sortedStatuses.length + 1,
+          }
+
+      const res = await fetch(
+        editingStatus
+          ? `/api/ticket-statuses/${encodeURIComponent(editingStatus.key)}`
+          : "/api/ticket-statuses",
+        {
+          method: editingStatus ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      )
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => null)
+        throw new Error(error?.error || "Failed to save status")
+      }
+
+      await refresh()
+      toast(editingStatus ? "Status updated" : "Status created")
+      setDialogOpen(false)
+      setEditingStatus(null)
+    } catch (error: any) {
+      toast(error.message || "Failed to save status", "error")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (status: TicketStatus) => {
+    if (!confirm(`Delete status "${status.label}"?`)) return
+
+    try {
+      const res = await fetch(`/api/ticket-statuses/${encodeURIComponent(status.key)}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) {
+        const error = await res.json().catch(() => null)
+        throw new Error(error?.error || "Failed to delete status")
+      }
+      await refresh()
+      toast("Status deleted")
+    } catch (error: any) {
+      toast(error.message || "Failed to delete status", "error")
+    }
+  }
+
+  if (!canManageStatus) {
+    return (
+      <div className="space-y-2">
+        <h3 className="text-sm font-medium">Status</h3>
+        <p className="text-sm text-muted-foreground">You do not have permission to manage statuses.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start justify-between gap-3 border-b pb-3">
+        <div className="space-y-1">
+          <h3 className="text-base font-semibold">Status</h3>
+          <p className="text-sm text-muted-foreground">Global ticket statuses used across projects.</p>
+        </div>
+        <Button type="button" size="sm" variant="outline" onClick={openCreate}>
+          <Plus className="h-4 w-4 mr-1.5" />
+          Create Status
+        </Button>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border bg-background">
+        <div className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+          Statuses control available ticket workflow states.
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Label</TableHead>
+              <TableHead>Key</TableHead>
+              <TableHead>Color</TableHead>
+              <TableHead>Order</TableHead>
+              <TableHead>Updated</TableHead>
+              <TableHead className="w-[60px] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                  Loading statuses...
+                </TableCell>
+              </TableRow>
+            ) : sortedStatuses.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                  No statuses found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              sortedStatuses.map((status) => (
+                <TableRow key={status.key}>
+                  <TableCell className="font-medium">{status.label}</TableCell>
+                  <TableCell className="font-mono text-xs">{status.key}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <span className="inline-block h-3.5 w-3.5 rounded-full border" style={{ backgroundColor: status.color }} />
+                      <span className="font-mono text-xs">{status.color}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{status.sort_order}</TableCell>
+                  <TableCell>{status.updated_at ? new Date(status.updated_at).toLocaleDateString() : "-"}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md border border-transparent hover:border-border">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Open actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEdit(status)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => void handleDelete(status)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) {
+            setEditingStatus(null)
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingStatus ? "Edit Status" : "Create Status"}</DialogTitle>
+            <DialogDescription>
+              {editingStatus ? "Update the status label and color." : "Create a new ticket status."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="status-label">Label</Label>
+              <Input
+                id="status-label"
+                value={draft.label}
+                onChange={(event) => setDraft((prev) => ({ ...prev, label: event.target.value }))}
+                placeholder="In Review"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status-color">Color</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="status-color"
+                  type="color"
+                  value={draft.color}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, color: event.target.value }))}
+                  className="h-10 w-12 p-1"
+                />
+                <Input
+                  value={draft.color}
+                  onChange={(event) => setDraft((prev) => ({ ...prev, color: event.target.value }))}
+                  placeholder="#9ca3af"
+                  className="font-mono"
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}

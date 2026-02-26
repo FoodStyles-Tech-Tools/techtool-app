@@ -12,6 +12,7 @@ export interface Epic {
   description: string | null
   project_id: string
   color: string
+  sprint_id: string | null
   created_at: string
   updated_at: string
 }
@@ -201,4 +202,3 @@ export function useDeleteEpic() {
     },
   })
 }
-

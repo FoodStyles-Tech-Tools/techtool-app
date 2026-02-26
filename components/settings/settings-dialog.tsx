@@ -41,7 +41,10 @@ type CombinedUser = {
   role?: string | null
 }
 
-type SettingsSection = "account" | "preferences" | "deleted_tickets"
+type SettingsSection =
+  | "account"
+  | "preferences"
+  | "deleted_tickets"
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { data: session } = useSession()

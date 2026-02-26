@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
 
-export default async function StatusPage() {
+export default function WorkspacePage() {
   redirect("/workspace/status")
 }
