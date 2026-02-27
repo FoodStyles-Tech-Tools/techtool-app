@@ -7,7 +7,6 @@ import { toast } from "@/components/ui/toast"
 import Link from "next/link"
 import { useDepartments } from "@/hooks/use-departments"
 import { useTickets, useUpdateTicket } from "@/hooks/use-tickets"
-import { useQuery } from "@tanstack/react-query"
 import { useProjects } from "@/hooks/use-projects"
 import { useUsers } from "@/hooks/use-users"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -15,6 +14,7 @@ import { useTicketsFilters } from "@/hooks/use-tickets-filters"
 import { useTicketsSort } from "@/hooks/use-tickets-sort"
 import { useKanbanDrag } from "@/hooks/use-kanban-drag"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
+import { useTicketSubtaskCounts } from "@/hooks/use-ticket-subtask-counts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { Card } from "@/components/ui/card"
@@ -32,8 +32,6 @@ import {
 import { buildStatusChangeBody, isArchivedStatus } from "@/lib/ticket-statuses"
 import type { Ticket } from "@/lib/types"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@/lib/rich-text"
-import { useSupabaseClient } from "@/lib/supabase-client"
-import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
 import {
   ASSIGNEE_ALLOWED_ROLES,
   SQA_ALLOWED_ROLES,
@@ -92,8 +90,6 @@ export default function TicketsPage() {
 
   const { user, flags } = usePermissions()
   const subtaskDecisionResolverRef = useRef<((decision: SubtaskDecision) => void) | null>(null)
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
   const { preferences } = useUserPreferences()
   const { data: projectsData } = useProjects()
   const projects = useMemo(() => projectsData || [], [projectsData])
@@ -155,28 +151,7 @@ export default function TicketsPage() {
 
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
   const parentTicketIds = useMemo(() => allTickets.map((ticket) => ticket.id), [allTickets])
-  const { data: subtaskCountMap = {} } = useQuery<Record<string, number>>({
-    queryKey: ["ticket-subtask-counts", parentTicketIds],
-    enabled: parentTicketIds.length > 0,
-    queryFn: async () => {
-      await ensureUserContext(supabase, userEmail)
-      const { data, error } = await supabase
-        .from("tickets")
-        .select("parent_ticket_id")
-        .eq("type", "subtask")
-        .in("parent_ticket_id", parentTicketIds)
-
-      if (error) throw error
-
-      const counts: Record<string, number> = {}
-      ;(data || []).forEach((row: { parent_ticket_id: string | null }) => {
-        if (!row.parent_ticket_id) return
-        counts[row.parent_ticket_id] = (counts[row.parent_ticket_id] || 0) + 1
-      })
-      return counts
-    },
-    staleTime: 30 * 1000,
-  })
+  const { data: subtaskCountMap = {} } = useTicketSubtaskCounts(parentTicketIds)
   const users = useMemo(() => usersData || [], [usersData])
   const projectOptions = useMemo(
     () => {

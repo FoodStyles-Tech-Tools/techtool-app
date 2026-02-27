@@ -1,253 +1,114 @@
 "use client"
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
-import { useSupabaseClient } from "@/lib/supabase-client"
-import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
-
-interface User {
-  id: string
-  name: string | null
-  email: string
-  image: string | null
-  discord_id?: string | null
-  role?: string | null
-  created_at?: string
-}
+import { requestJson } from "@/lib/client/api"
+import type { User } from "@/lib/types"
 
 type UseUsersOptions = {
   enabled?: boolean
   realtime?: boolean
 }
 
+function sortUsersByName(users: User[]): User[] {
+  return [...users].sort((left, right) => {
+    const leftName = left.name?.trim() || left.email
+    const rightName = right.name?.trim() || right.email
+    return leftName.localeCompare(rightName, undefined, { sensitivity: "base" })
+  })
+}
+
 export function useUsers(options?: UseUsersOptions) {
   const queryClient = useQueryClient()
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
   const enabled = options?.enabled !== false
   const realtime = options?.realtime === true
 
-  // Real-time subscription for users
   useRealtimeSubscription({
     table: "users",
     enabled: enabled && realtime,
-    onInsert: async (payload) => {
-      const newUser = payload.new as User
-      // Update users query directly from payload
-      queryClient.setQueryData<User[]>(
-        ["users"],
-        (old) => {
-          if (!old) return old
-          if (!old.some(u => u.id === newUser.id)) {
-            return [...old, newUser]
-          }
-          return old
-        }
-      )
+    onInsert: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] })
     },
-    onUpdate: async (payload) => {
-      const updatedUser = payload.new as User
-      // Update user in query cache directly from payload
-      queryClient.setQueryData<User[]>(
-        ["users"],
-        (old) => {
-          if (!old) return old
-          const userIndex = old.findIndex(u => u.id === updatedUser.id)
-          if (userIndex !== -1) {
-            const newUsers = [...old]
-            newUsers[userIndex] = updatedUser
-            return newUsers
-          }
-          return old
-        }
-      )
-      // Also update single user query
-      queryClient.setQueryData<{ user: User }>(["user", updatedUser.id], { user: updatedUser })
+    onUpdate: (payload) => {
+      queryClient.invalidateQueries({ queryKey: ["users"] })
+      const updatedId = (payload.new as { id?: string } | null)?.id
+      if (updatedId) {
+        queryClient.invalidateQueries({ queryKey: ["user", updatedId] })
+      }
     },
     onDelete: (payload) => {
-      const deletedId = (payload.old as { id: string }).id
-      // Remove user from query cache
-      queryClient.setQueryData<User[]>(
-        ["users"],
-        (old) => {
-          if (!old) return old
-          return old.filter(u => u.id !== deletedId)
-        }
-      )
-      // Remove single user query
-      queryClient.removeQueries({ queryKey: ["user", deletedId] })
+      queryClient.invalidateQueries({ queryKey: ["users"] })
+      const deletedId = (payload.old as { id?: string } | null)?.id
+      if (deletedId) {
+        queryClient.removeQueries({ queryKey: ["user", deletedId] })
+      }
     },
   })
 
   return useQuery<User[]>({
     queryKey: ["users"],
-    queryFn: async () => {
-      // Set user context for RLS (cached, only called once per session)
-      await ensureUserContext(supabase, userEmail)
-
-      const { data: users, error } = await supabase
-        .from("users")
-        .select("*")
-        .order("name", { ascending: true, nullsFirst: false })
-
-      if (error) throw error
-      if (!users || users.length === 0) return []
-      
-      // Get images from auth_user for all users
-      const emails = users.map(u => u.email)
-      const { data: authUsers } = await supabase
-        .from("auth_user")
-        .select("email, image")
-        .in("email", emails)
-      
-      // Create a map of email -> image
-      const imageMap = new Map<string, string | null>()
-      authUsers?.forEach(au => {
-        imageMap.set(au.email, au.image || null)
-      })
-      
-      // Map users to include image from auth_user
-      const usersWithImage = users.map((user) => ({
-        ...user,
-        image: imageMap.get(user.email) || null,
-      }))
-      
-      return usersWithImage
-    },
     enabled,
-    staleTime: 2 * 60 * 1000, // 2 minutes - users don't change often
+    staleTime: 2 * 60 * 1000,
+    queryFn: async () => {
+      const response = await requestJson<{ users: User[] }>("/api/users")
+      return sortUsersByName(response.users || [])
+    },
   })
 }
 
 export function useUser(userId: string) {
   const queryClient = useQueryClient()
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
+  const enabled = !!userId
 
-  // Real-time subscription for specific user
   useRealtimeSubscription({
     table: "users",
     filter: `id=eq.${userId}`,
-    enabled: !!userId,
-    onUpdate: async (payload) => {
-      const updatedUser = payload.new as User
-      // Update single user cache directly from payload
-      queryClient.setQueryData<{ user: User }>(["user", userId], { user: updatedUser })
-      // Also update in users list
-      queryClient.setQueriesData<User[]>(
-        { queryKey: ["users"] },
-        (old) => {
-          if (!old) return old
-          const index = old.findIndex(u => u.id === userId)
-          if (index !== -1) {
-            const newUsers = [...old]
-            newUsers[index] = updatedUser
-            return newUsers
-          }
-          return old
-        }
-      )
+    enabled,
+    onInsert: () => {
+      queryClient.invalidateQueries({ queryKey: ["user", userId] })
+      queryClient.invalidateQueries({ queryKey: ["users"] })
+    },
+    onUpdate: () => {
+      queryClient.invalidateQueries({ queryKey: ["user", userId] })
+      queryClient.invalidateQueries({ queryKey: ["users"] })
     },
     onDelete: () => {
-      // Remove user from cache
       queryClient.removeQueries({ queryKey: ["user", userId] })
-      queryClient.setQueriesData<User[]>(
-        { queryKey: ["users"] },
-        (old) => old ? old.filter(u => u.id !== userId) : old
-      )
+      queryClient.invalidateQueries({ queryKey: ["users"] })
     },
   })
 
   return useQuery<{ user: User }>({
     queryKey: ["user", userId],
-    queryFn: async () => {
-      // Set user context for RLS (cached, only called once per session)
-      await ensureUserContext(supabase, userEmail)
-
-      const { data: user, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("id", userId)
-        .single()
-
-      if (error) throw error
-      if (!user) throw new Error("User not found")
-      
-      // Get image from auth_user
-      const { data: authUser } = await supabase
-        .from("auth_user")
-        .select("image")
-        .eq("email", user.email)
-        .single()
-      
-      // Map user to include image from auth_user
-      const userWithImage = {
-        ...user,
-        image: authUser?.image || null,
-      }
-      
-      return { user: userWithImage }
-    },
-    enabled: !!userId,
+    enabled,
     staleTime: 2 * 60 * 1000,
+    queryFn: async () => requestJson<{ user: User }>(`/api/users/${userId}`),
   })
 }
 
 export function useCreateUser() {
   const queryClient = useQueryClient()
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
-  
+
   return useMutation({
     mutationFn: async (data: {
       email: string
       name?: string
       discord_id?: string
       role?: string
-    }) => {
-      if (!userEmail) throw new Error("Not authenticated")
-      
-      await ensureUserContext(supabase, userEmail)
-
-      const { data: user, error } = await supabase
-        .from("users")
-        .insert(data)
-        .select("*")
-        .single()
-
-      if (error) throw error
-      if (!user) throw new Error("Failed to create user")
-      
-      // Get image from auth_user
-      const { data: authUser } = await supabase
-        .from("auth_user")
-        .select("image")
-        .eq("email", user.email)
-        .single()
-      
-      // Map user to include image from auth_user
-      const userWithImage = {
-        ...user,
-        image: authUser?.image || null,
-      }
-      
-      return { user: userWithImage }
-    },
-    onSuccess: (data) => {
-      // Optimistically update cache
-      queryClient.setQueriesData<User[]>(
-        { queryKey: ["users"] },
-        (old) => old ? [...old, data.user] : [data.user]
-      )
+    }) => requestJson<{ user: User }>("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] })
     },
   })
 }
 
 export function useUpdateUser() {
   const queryClient = useQueryClient()
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
-  
+
   return useMutation({
     mutationFn: async ({
       id,
@@ -257,84 +118,14 @@ export function useUpdateUser() {
       name?: string
       discord_id?: string
       role?: string
-    }) => {
-      if (!userEmail) throw new Error("Not authenticated")
-      
-      await ensureUserContext(supabase, userEmail)
-
-      const { data: user, error } = await supabase
-        .from("users")
-        .update(data)
-        .eq("id", id)
-        .select("*")
-        .single()
-
-      if (error) throw error
-      if (!user) throw new Error("User not found")
-      
-      // Get image from auth_user
-      const { data: authUser } = await supabase
-        .from("auth_user")
-        .select("image")
-        .eq("email", user.email)
-        .single()
-      
-      // Map user to include image from auth_user
-      const userWithImage = {
-        ...user,
-        image: authUser?.image || null,
-      }
-      
-      return { user: userWithImage }
-    },
-    onMutate: async (variables) => {
-      await queryClient.cancelQueries({ queryKey: ["user", variables.id] })
-      await queryClient.cancelQueries({ queryKey: ["users"] })
-
-      const previousUser = queryClient.getQueryData<{ user: User }>(["user", variables.id])
-      const previousUsers = queryClient.getQueriesData<User[]>({ queryKey: ["users"] })
-
-      // Optimistically update
-      if (previousUser) {
-        const updatedUser = { ...previousUser.user, ...variables }
-        queryClient.setQueryData<{ user: User }>(["user", variables.id], { user: updatedUser })
-      }
-
-      previousUsers.forEach(([queryKey, data]) => {
-        if (data) {
-          const updated = data.map(u => u.id === variables.id ? { ...u, ...variables } : u)
-          queryClient.setQueryData<User[]>(queryKey, updated)
-        }
-      })
-
-      return { previousUser, previousUsers }
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousUser) {
-        queryClient.setQueryData(["user", variables.id], context.previousUser)
-      }
-      if (context?.previousUsers) {
-        context.previousUsers.forEach(([queryKey, data]) => {
-          if (data) queryClient.setQueryData(queryKey, data)
-        })
-      }
-    },
+    }) => requestJson<{ user: User }>(`/api/users/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
     onSuccess: (data) => {
-      // Update cache with server response
-      queryClient.setQueryData<{ user: User }>(["user", data.user.id], { user: data.user })
-      queryClient.setQueriesData<User[]>(
-        { queryKey: ["users"] },
-        (old) => {
-          if (!old) return old
-          const index = old.findIndex(u => u.id === data.user.id)
-          if (index !== -1) {
-            const newUsers = [...old]
-            newUsers[index] = data.user
-            return newUsers
-          }
-          return old
-        }
-      )
+      queryClient.invalidateQueries({ queryKey: ["user", data.user.id] })
+      queryClient.invalidateQueries({ queryKey: ["users"] })
     },
   })
 }

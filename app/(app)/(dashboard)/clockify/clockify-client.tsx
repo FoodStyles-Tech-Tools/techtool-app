@@ -1155,7 +1155,7 @@ export default function ClockifyClient() {
         }}
       >
         <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
-          <DialogHeader className="border-b px-6 py-4">
+          <DialogHeader className="bg-muted/40 px-6 py-4">
             <DialogTitle>Create Ticket</DialogTitle>
             <DialogDescription>
               Ticket created_at will use the Clockify Start Date for this entry.
@@ -1179,7 +1179,7 @@ export default function ClockifyClient() {
               />
             )}
           </div>
-          <DialogFooter className="shrink-0 border-t bg-background px-6 py-4 sm:justify-end">
+          <DialogFooter className="shrink-0 bg-muted/40 px-6 py-4 sm:justify-end">
             <Button
               type="button"
               variant="outline"

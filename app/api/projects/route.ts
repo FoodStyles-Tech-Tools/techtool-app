@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
+import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
 
 export const runtime = 'nodejs'
 const PROJECT_STATUSES = new Set(["active", "inactive"])
@@ -74,9 +75,12 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
-    const page = parseInt(searchParams.get("page") || "1")
-    const limit = parseInt(searchParams.get("limit") || "10")
-    const offset = (page - 1) * limit
+    const rawPage = searchParams.get("page")
+    const rawLimit = searchParams.get("limit")
+    const hasPagination = rawLimit !== null
+    const page = Math.max(parseInt(rawPage || "1", 10), 1)
+    const limit = hasPagination ? Math.max(parseInt(rawLimit || "10", 10), 1) : null
+    const offset = limit ? (page - 1) * limit : 0
 
     let query = supabase
       .from("projects")
@@ -86,7 +90,10 @@ export async function GET(request: NextRequest) {
         department:departments(id, name)
       `, { count: "exact" })
       .order("created_at", { ascending: false })
-      .range(offset, offset + limit - 1)
+
+    if (limit) {
+      query = query.range(offset, offset + limit - 1)
+    }
 
     if (status) {
       query = query.eq("status", status)
@@ -103,6 +110,9 @@ export async function GET(request: NextRequest) {
     }
 
     if (!projects || projects.length === 0) {
+      if (!limit) {
+        return NextResponse.json({ projects: [] })
+      }
       return NextResponse.json({
         projects: [],
         pagination: {
@@ -142,6 +152,7 @@ export async function GET(request: NextRequest) {
     // Enrich projects with images
     const enrichedProjects = projectsWithCollaborators.map(project => ({
       ...project,
+      links: sanitizeLinkArray(project.links),
       owner: project.owner ? {
         ...project.owner,
         image: imageMap.get(project.owner.email) || null,
@@ -155,6 +166,10 @@ export async function GET(request: NextRequest) {
         image: requester?.email ? imageMap.get(requester.email) || null : null,
       })),
     }))
+
+    if (!limit) {
+      return NextResponse.json({ projects: enrichedProjects })
+    }
 
     return NextResponse.json({
       projects: enrichedProjects,
@@ -194,6 +209,7 @@ export async function POST(request: NextRequest) {
       collaborator_ids,
       requester_ids,
       require_sqa,
+      links,
     } = body
 
     if (!name) {
@@ -235,6 +251,7 @@ export async function POST(request: NextRequest) {
         collaborator_ids: Array.isArray(collaborator_ids) ? collaborator_ids : [],
         requester_ids: Array.isArray(requester_ids) ? requester_ids : [],
         require_sqa: require_sqa ?? false,
+        links: prepareLinkPayload(Array.isArray(links) ? links : []),
       })
       .select(`
         *,
@@ -277,6 +294,7 @@ export async function POST(request: NextRequest) {
 
     const enrichedProject = {
       ...projectWithCollaborators,
+      links: sanitizeLinkArray(projectWithCollaborators.links),
       owner: projectWithCollaborators.owner
         ? {
             ...projectWithCollaborators.owner,

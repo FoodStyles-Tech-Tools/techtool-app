@@ -2,8 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
-import { useSupabaseClient } from "@/lib/supabase-client"
-import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
+import { requestJson } from "@/lib/client/api"
 
 export interface Department {
   id: string
@@ -17,75 +16,31 @@ type UseDepartmentsOptions = {
 
 export function useDepartments(options?: UseDepartmentsOptions) {
   const queryClient = useQueryClient()
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
   const enabled = options?.enabled !== false
   const realtime = options?.realtime === true
 
-  // Real-time subscription for departments
   useRealtimeSubscription({
     table: "departments",
     enabled: enabled && realtime,
-    onInsert: (payload) => {
-      const newDepartment = payload.new as Department
-      // Update departments query
-      queryClient.setQueryData<Department[]>(
-        ["departments"],
-        (old) => {
-          if (!old) return old
-          if (!old.some(d => d.id === newDepartment.id)) {
-            return [...old, newDepartment]
-          }
-          return old
-        }
-      )
+    onInsert: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] })
     },
-    onUpdate: (payload) => {
-      const updatedDepartment = payload.new as Department
-      // Update department in query cache
-      queryClient.setQueryData<Department[]>(
-        ["departments"],
-        (old) => {
-          if (!old) return old
-          const departmentIndex = old.findIndex(d => d.id === updatedDepartment.id)
-          if (departmentIndex !== -1) {
-            const newDepartments = [...old]
-            newDepartments[departmentIndex] = updatedDepartment
-            return newDepartments
-          }
-          return old
-        }
-      )
+    onUpdate: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] })
     },
-    onDelete: (payload) => {
-      const deletedId = (payload.old as { id: string }).id
-      // Remove department from query cache
-      queryClient.setQueryData<Department[]>(
-        ["departments"],
-        (old) => {
-          if (!old) return old
-          return old.filter(d => d.id !== deletedId)
-        }
-      )
+    onDelete: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] })
     },
   })
 
   const { data, isLoading, refetch } = useQuery<Department[]>({
     queryKey: ["departments"],
-    queryFn: async () => {
-      // Set user context for RLS (cached, only called once per session)
-      await ensureUserContext(supabase, userEmail)
-      
-      const { data: departments, error } = await supabase
-        .from("departments")
-        .select("*")
-        .order("name", { ascending: true })
-
-      if (error) throw error
-      return departments || []
-    },
     enabled,
-    staleTime: 5 * 60 * 1000, // 5 minutes - departments don't change often
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const response = await requestJson<{ departments: Department[] }>("/api/departments")
+      return response.departments || []
+    },
   })
 
   return {

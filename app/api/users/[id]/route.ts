@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requireAuth, requireAdmin, requirePermission } from "@/lib/auth-helpers"
+import { requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
 
 export const runtime = 'nodejs'
@@ -10,6 +10,62 @@ function normalizeDiscordId(value: unknown): string | null {
   if (!trimmed) return null
   const mentionMatch = trimmed.match(/^<@!?(\d+)>$/)
   return mentionMatch ? mentionMatch[1] : trimmed
+}
+
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    await requirePermission("users", "view")
+    const supabase = createServerClient()
+
+    const { data: user, error } = await supabase
+      .from("users")
+      .select("id, name, email, discord_id, role, created_at")
+      .eq("id", params.id)
+      .maybeSingle()
+
+    if (error) {
+      console.error("Error fetching user:", error)
+      return NextResponse.json(
+        { error: "Failed to fetch user" },
+        { status: 500 }
+      )
+    }
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      )
+    }
+
+    const { data: authUser } = await supabase
+      .from("auth_user")
+      .select("image")
+      .eq("email", user.email)
+      .maybeSingle()
+
+    return NextResponse.json({
+      user: {
+        ...user,
+        image: authUser?.image || null,
+      },
+    })
+  } catch (error: any) {
+    if (error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    if (error.message?.includes("Forbidden") || error.message?.includes("permission")) {
+      return NextResponse.json({ error: error.message }, { status: 403 })
+    }
+    console.error("Error in GET /api/users/[id]:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
 }
 
 export async function PATCH(

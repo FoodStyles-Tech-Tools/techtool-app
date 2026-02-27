@@ -2,8 +2,7 @@
 
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { useSupabaseClient } from "@/lib/supabase-client"
-import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
+import { createQueryString, requestJson } from "@/lib/client/api"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
 
 export type PinnedProject = {
@@ -17,8 +16,6 @@ type UsePinnedProjectsOptions = {
 }
 
 export function usePinnedProjects(options?: UsePinnedProjectsOptions) {
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
   const { preferences, loading: preferencesLoading } = useUserPreferences()
   const pinnedProjectIds = useMemo(
     () =>
@@ -28,31 +25,19 @@ export function usePinnedProjects(options?: UsePinnedProjectsOptions) {
     [preferences.pinned_project_ids]
   )
   const enabled =
-    options?.enabled !== false && Boolean(userEmail) && !preferencesLoading && pinnedProjectIds.length > 0
+    options?.enabled !== false && !preferencesLoading && pinnedProjectIds.length > 0
 
   const query = useQuery<PinnedProject[]>({
     queryKey: ["pinned-projects", ...pinnedProjectIds],
-    queryFn: async () => {
-      await ensureUserContext(supabase, userEmail)
-
-      const { data, error } = await supabase
-        .from("projects")
-        .select("id, name, status")
-        .in("id", pinnedProjectIds)
-
-      if (error) throw error
-
-      const projectMap = new Map<string, PinnedProject>()
-      ;(data || []).forEach((project: any) => {
-        projectMap.set(project.id, project as PinnedProject)
-      })
-
-      return pinnedProjectIds
-        .map((projectId) => projectMap.get(projectId))
-        .filter((project): project is PinnedProject => Boolean(project))
-    },
     enabled,
     staleTime: 60 * 1000,
+    queryFn: async () => {
+      const query = createQueryString({ ids: pinnedProjectIds.join(",") })
+      const response = await requestJson<{ projects: PinnedProject[] }>(
+        `/api/projects/pinned${query}`
+      )
+      return response.projects || []
+    },
   })
 
   return {

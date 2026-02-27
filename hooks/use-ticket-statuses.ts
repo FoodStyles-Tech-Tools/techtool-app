@@ -2,9 +2,8 @@
 
 import { useMemo } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { useSupabaseClient } from "@/lib/supabase-client"
-import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
 import { useRealtimeSubscription } from "./use-realtime"
+import { requestJson } from "@/lib/client/api"
 import {
   DEFAULT_TICKET_STATUSES,
   sortTicketStatuses,
@@ -19,59 +18,31 @@ type UseTicketStatusesOptions = {
 
 export function useTicketStatuses(options?: UseTicketStatusesOptions) {
   const queryClient = useQueryClient()
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
   const enabled = options?.enabled !== false
   const realtime = options?.realtime === true
 
   useRealtimeSubscription({
     table: "ticket_statuses",
     enabled: enabled && realtime,
-    onInsert: (payload) => {
-      const newStatus = payload.new as TicketStatus
-      queryClient.setQueryData<TicketStatus[]>(["ticket-statuses"], (old) => {
-        if (!old) return old
-        if (!old.some((status) => status.key === newStatus.key)) {
-          return sortTicketStatuses([...old, newStatus])
-        }
-        return old
-      })
+    onInsert: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket-statuses"] })
     },
-    onUpdate: (payload) => {
-      const updatedStatus = payload.new as TicketStatus
-      queryClient.setQueryData<TicketStatus[]>(["ticket-statuses"], (old) => {
-        if (!old) return old
-        const next = old.map((status) =>
-          status.key === updatedStatus.key ? updatedStatus : status
-        )
-        return sortTicketStatuses(next)
-      })
+    onUpdate: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket-statuses"] })
     },
-    onDelete: (payload) => {
-      const deletedKey = (payload.old as { key: string }).key
-      queryClient.setQueryData<TicketStatus[]>(["ticket-statuses"], (old) => {
-        if (!old) return old
-        return old.filter((status) => status.key !== deletedKey)
-      })
+    onDelete: () => {
+      queryClient.invalidateQueries({ queryKey: ["ticket-statuses"] })
     },
   })
 
   const { data, isLoading, refetch, error } = useQuery<TicketStatus[]>({
     queryKey: ["ticket-statuses"],
-    queryFn: async () => {
-      await ensureUserContext(supabase, userEmail)
-
-      const { data: statuses, error: fetchError } = await supabase
-        .from("ticket_statuses")
-        .select("key, label, sort_order, color, created_at, updated_at")
-        .order("sort_order", { ascending: true })
-        .order("label", { ascending: true })
-
-      if (fetchError) throw fetchError
-      return statuses || []
-    },
     enabled,
     staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const response = await requestJson<{ statuses: TicketStatus[] }>("/api/ticket-statuses")
+      return response.statuses || []
+    },
   })
 
   const sortedStatuses = useMemo(() => sortTicketStatuses(data || []), [data])

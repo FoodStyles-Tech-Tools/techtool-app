@@ -55,7 +55,7 @@ export function GlobalTicketDialog({ open, onOpenChange }: GlobalTicketDialogPro
       }}
     >
       <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
-        <DialogHeader className="border-b px-6 py-4">
+        <DialogHeader className="bg-muted/40 px-6 py-4">
           <DialogTitle>Create Ticket</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
@@ -71,7 +71,7 @@ export function GlobalTicketDialog({ open, onOpenChange }: GlobalTicketDialogPro
             }}
           />
         </div>
-        <DialogFooter className="shrink-0 border-t bg-background px-6 py-4 sm:justify-end">
+        <DialogFooter className="shrink-0 bg-muted/40 px-6 py-4 sm:justify-end">
           <Button
             type="button"
             variant="outline"

@@ -3,12 +3,12 @@
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { Plus } from "lucide-react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { usePermissions } from "@/hooks/use-permissions"
-import { useCreateTicket, useUpdateTicket } from "@/hooks/use-tickets"
+import { useCreateTicket, useTickets, useUpdateTicket } from "@/hooks/use-tickets"
 import { useRealtimeSubscription } from "@/hooks/use-realtime"
 import { useUsers } from "@/hooks/use-users"
 import { toast } from "@/components/ui/toast"
@@ -17,8 +17,6 @@ import { TicketStatusSelect } from "@/components/ticket-status-select"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import { isDoneStatus } from "@/lib/ticket-statuses"
-import { useSupabaseClient } from "@/lib/supabase-client"
-import { ensureUserContext, useUserEmail } from "@/lib/supabase-context"
 
 interface SubtasksProps {
   ticketId: string
@@ -44,8 +42,6 @@ export function Subtasks({
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const { flags } = usePermissions()
   const canEditTickets = flags?.canEditTickets ?? false
-  const supabase = useSupabaseClient()
-  const userEmail = useUserEmail()
   const queryClient = useQueryClient()
   const { data: usersData } = useUsers({ realtime: false })
   const createTicket = useCreateTicket()
@@ -56,44 +52,21 @@ export function Subtasks({
     filter: `parent_ticket_id=eq.${ticketId}`,
     enabled: !!ticketId,
     onInsert: () => {
-      queryClient.invalidateQueries({ queryKey: ["ticket-subtasks", ticketId] })
+      queryClient.invalidateQueries({ queryKey: ["tickets"] })
     },
     onUpdate: () => {
-      queryClient.invalidateQueries({ queryKey: ["ticket-subtasks", ticketId] })
+      queryClient.invalidateQueries({ queryKey: ["tickets"] })
     },
     onDelete: () => {
-      queryClient.invalidateQueries({ queryKey: ["ticket-subtasks", ticketId] })
+      queryClient.invalidateQueries({ queryKey: ["tickets"] })
     },
   })
 
-  const { data: subtasksData = [], isLoading } = useQuery({
-    queryKey: ["ticket-subtasks", ticketId],
+  const { data: subtasksData = [], isLoading } = useTickets({
+    parent_ticket_id: ticketId,
+    exclude_subtasks: false,
     enabled: !!ticketId,
-    queryFn: async () => {
-      await ensureUserContext(supabase, userEmail)
-      const { data, error } = await supabase
-        .from("tickets")
-        .select(`
-          id,
-          display_id,
-          title,
-          status,
-          priority,
-          type,
-          created_at,
-          assignee:users!tickets_assignee_id_fkey(id, name, email)
-        `)
-        .eq("parent_ticket_id", ticketId)
-        .eq("type", "subtask")
-        .order("created_at", { ascending: true })
-
-      if (error) throw error
-      return (data || []).map((row: any) => ({
-        ...row,
-        assignee: Array.isArray(row.assignee) ? row.assignee[0] || null : row.assignee || null,
-      }))
-    },
-    staleTime: 30 * 1000,
+    realtime: false,
   })
 
   const users = useMemo(() => usersData || [], [usersData])
@@ -102,7 +75,16 @@ export function Subtasks({
     [users]
   )
 
-  const subtasks = useMemo(() => subtasksData, [subtasksData])
+  const subtasks = useMemo(
+    () =>
+      [...subtasksData]
+        .filter((ticket) => ticket.type === "subtask")
+        .sort(
+          (left, right) =>
+            new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
+        ),
+    [subtasksData]
+  )
 
   const doneCount = subtasks.filter((ticket) => isDoneStatus(ticket.status)).length
   const donePercent = subtasks.length ? Math.round((doneCount / subtasks.length) * 100) : 0

@@ -1049,7 +1049,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[92vh] overflow-hidden flex flex-col p-0 gap-0 border-0">
-        <DialogHeader className="px-4 pt-4 pb-3 bg-muted/30">
+        <DialogHeader className="bg-background/95 border-b border-border/60 px-4 pt-4 pb-3">
           <DialogTitle className="sr-only">
             {ticket ? `Ticket ${ticket.display_id || ticketId.slice(0, 8)}: ${ticket.title}` : `Ticket ${ticketId.slice(0, 8)}`}
           </DialogTitle>
@@ -1941,7 +1941,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
             </div>
           )}
         </div>
-        <DialogFooter className="shrink-0 border-t bg-background px-4 py-3 sm:justify-between">
+        <DialogFooter className="shrink-0 bg-background/95 border-t border-border/60 px-4 py-3 sm:justify-between">
           <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:items-center">
             {ticket && canEditTickets ? (
               <Button

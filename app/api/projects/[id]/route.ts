@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
+import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
 
 export const runtime = 'nodejs'
 const PROJECT_STATUSES = new Set(["active", "inactive"])
@@ -118,6 +119,7 @@ export async function GET(
 
     const enrichedProject = {
       ...projectWithCollaborators,
+      links: sanitizeLinkArray(projectWithCollaborators.links),
       owner: projectWithCollaborators.owner
         ? {
             ...projectWithCollaborators.owner,
@@ -159,7 +161,7 @@ export async function PATCH(
     const supabase = createServerClient()
 
     const body = await request.json()
-    const { name, description, status, department_id, collaborator_ids, requester_ids, require_sqa } = body
+    const { name, description, status, department_id, collaborator_ids, requester_ids, require_sqa, owner_id, links } = body
 
     if (status !== undefined && !PROJECT_STATUSES.has(status)) {
       return NextResponse.json(
@@ -173,7 +175,11 @@ export async function PATCH(
     if (description !== undefined) updates.description = description
     if (status !== undefined) updates.status = status
     if (department_id !== undefined) updates.department_id = department_id || null
+    if (owner_id !== undefined) updates.owner_id = owner_id || null
     if (require_sqa !== undefined) updates.require_sqa = require_sqa
+    if (links !== undefined) {
+      updates.links = prepareLinkPayload(Array.isArray(links) ? links : [])
+    }
     if (collaborator_ids !== undefined) {
       updates.collaborator_ids = Array.isArray(collaborator_ids) ? collaborator_ids : []
     }
@@ -232,6 +238,7 @@ export async function PATCH(
 
     const enrichedProject = {
       ...projectWithCollaborators,
+      links: sanitizeLinkArray(projectWithCollaborators.links),
       owner: projectWithCollaborators.owner
         ? {
             ...projectWithCollaborators.owner,
