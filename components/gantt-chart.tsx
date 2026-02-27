@@ -1,13 +1,13 @@
 "use client"
 
-import { useMemo, useState, useRef, useEffect } from "react"
+import { useMemo, useState, useRef, useEffect, useCallback } from "react"
 import { format, startOfWeek, endOfWeek, addDays, differenceInDays, parseISO, startOfDay } from "date-fns"
 import { Badge } from "@/components/ui/badge"
 import { ChevronRight, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
-import { formatStatusLabel, normalizeStatusKey, isDoneStatus } from "@/lib/ticket-statuses"
+import { formatStatusLabel, isArchivedStatus, normalizeStatusKey, isDoneStatus } from "@/lib/ticket-statuses"
 
 interface GanttItem {
   id: string
@@ -64,7 +64,10 @@ const SPRINT_STATUS_COLORS: Record<string, string> = {
 }
 
 const DAY_WIDTH = 18 // pixels per day
-const ROW_HEIGHT = 32
+const MIN_ROW_HEIGHT = 40
+const TICKET_LINE_HEIGHT = 16
+const TICKET_VERTICAL_PADDING = 10
+const ESTIMATED_TICKET_CHARS_PER_LINE = 22
 const INDENT_PER_LEVEL = 20
 const LEFT_COLUMN_WIDTH = 300
 const HEADER_HEIGHT = 48
@@ -74,7 +77,10 @@ const MAX_CHART_HEIGHT = 640
 export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintClick }: GanttChartProps) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const timelineRef = useRef<HTMLDivElement>(null)
-  const listRef = useRef<HTMLDivElement>(null)
+  const taskListRef = useRef<HTMLDivElement>(null)
+  const timelineBodyRef = useRef<HTMLDivElement>(null)
+  const verticalSyncSourceRef = useRef<"task" | "timeline" | null>(null)
+  const hasAutoScrolledToTodayRef = useRef(false)
   const { statusMap } = useTicketStatuses()
 
   // Organize tickets into Sprint > Epic > Ticket hierarchy
@@ -90,6 +96,8 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
     // Group tickets by sprint_id first, then epic_id
     // Hierarchy: Sprint (Grand Parent) > Epic (Parent) > Ticket (Child)
     tickets.forEach((ticket) => {
+      if (isArchivedStatus(ticket.status)) return
+
       // Use sprint_id directly if available, otherwise use sprint relation
       const sprintId = ticket.sprint_id || ticket.sprint?.id || "no_sprint"
       // Use epic_id directly if available, otherwise use epic relation
@@ -342,27 +350,41 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
     return formatStatusLabel(status)
   }
 
-  const visibleRowCount = useMemo(() => {
-    let count = 0
+  const getRowHeight = useCallback((item: GanttItem) => {
+    if (item.type !== "ticket") return MIN_ROW_HEIGHT
+
+    const label = `${item.displayId ? `${item.displayId} ` : ""}${item.name}`
+    const estimatedLineCount = Math.max(
+      1,
+      Math.ceil(label.length / ESTIMATED_TICKET_CHARS_PER_LINE)
+    )
+    return Math.max(
+      MIN_ROW_HEIGHT,
+      estimatedLineCount * TICKET_LINE_HEIGHT + TICKET_VERTICAL_PADDING
+    )
+  }, [])
+
+  const visibleRowsTotalHeight = useMemo(() => {
+    let total = 0
     const traverse = (items: GanttItem[]) => {
       items.forEach((item) => {
-        count += 1
+        total += getRowHeight(item)
         if (item.children && expandedItems.has(item.id)) {
           traverse(item.children)
         }
       })
     }
     traverse(ganttData)
-    return count
-  }, [ganttData, expandedItems])
+    return total
+  }, [ganttData, expandedItems, getRowHeight])
 
   const chartHeight = useMemo(
     () =>
       Math.min(
         MAX_CHART_HEIGHT,
-        Math.max(MIN_CHART_HEIGHT, visibleRowCount * ROW_HEIGHT + HEADER_HEIGHT)
+        Math.max(MIN_CHART_HEIGHT, visibleRowsTotalHeight + HEADER_HEIGHT)
       ),
-    [visibleRowCount]
+    [visibleRowsTotalHeight]
   )
 
   const isItemOverdue = (item: GanttItem) => {
@@ -376,17 +398,19 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
     const isExpanded = expandedItems.has(item.id)
     const hasChildren = item.children && item.children.length > 0
     const overdue = isItemOverdue(item)
+    const rowHeight = getRowHeight(item)
 
     return (
       <div key={item.id}>
         <div
           className={cn(
-            "flex items-center border-b border-border/50 hover:bg-muted/30 transition-colors group",
+            "flex border-b border-border/50 hover:bg-muted/30 transition-colors group",
+            item.type === "ticket" ? "items-start py-1" : "items-center",
             item.type === "sprint" && "bg-muted/20 font-semibold",
             item.type === "epic" && "bg-muted/10",
             overdue && "bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:bg-red-500/15 dark:hover:bg-red-500/25 dark:text-red-200"
           )}
-          style={{ height: ROW_HEIGHT }}
+          style={{ height: rowHeight }}
           onClick={(e) => {
             // Only allow expand/collapse via the button, not by clicking the row
             // This prevents accidental collapsing when clicking on items
@@ -421,10 +445,10 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           )}
           <span
             className={cn(
-              "truncate flex-1",
+              "flex-1 min-w-0",
               item.type === "sprint" && "text-base font-semibold",
               item.type === "epic" && "text-sm font-medium",
-              item.type === "ticket" && "text-xs",
+              item.type === "ticket" && "text-xs leading-4 whitespace-normal break-words",
               (item.type === "ticket" && onTicketClick) || (item.type === "sprint" && onSprintClick)
                 ? "cursor-pointer hover:text-primary transition-colors"
                 : "cursor-default"
@@ -471,6 +495,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
     const isExpanded = expandedItems.has(item.id)
     const hasChildren = item.children && item.children.length > 0
     const overdue = isItemOverdue(item)
+    const rowHeight = getRowHeight(item)
     const barPosition = item.startDate && item.endDate 
       ? getBarPosition(item.startDate, item.endDate)
       : { left: 0, width: 0 }
@@ -485,7 +510,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
             item.type === "epic" && "bg-muted/10",
             overdue && "bg-red-500/10 dark:bg-red-500/15"
           )}
-          style={{ height: ROW_HEIGHT }}
+          style={{ height: rowHeight }}
           onClick={(e) => {
             // Prevent any click events from bubbling up
             e.stopPropagation()
@@ -560,6 +585,42 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
     }
   }, [ganttData])
 
+  const syncVerticalScroll = useCallback((source: "task" | "timeline", scrollTop: number) => {
+    const target = source === "task" ? timelineBodyRef.current : taskListRef.current
+    if (!target) return
+    if (Math.abs(target.scrollTop - scrollTop) < 1) return
+
+    verticalSyncSourceRef.current = source
+    target.scrollTop = scrollTop
+
+    requestAnimationFrame(() => {
+      if (verticalSyncSourceRef.current === source) {
+        verticalSyncSourceRef.current = null
+      }
+    })
+  }, [])
+
+  useEffect(() => {
+    if (todayPosition === null || hasAutoScrolledToTodayRef.current) return
+
+    const timelineBody = timelineBodyRef.current
+    if (!timelineBody) return
+
+    const viewportWidth = timelineBody.clientWidth
+    const maxScrollLeft = Math.max(0, timelineBody.scrollWidth - viewportWidth)
+    const targetScrollLeft = Math.min(
+      maxScrollLeft,
+      Math.max(0, todayPosition - viewportWidth / 2)
+    )
+
+    timelineBody.scrollLeft = targetScrollLeft
+    if (timelineRef.current) {
+      timelineRef.current.scrollLeft = targetScrollLeft
+    }
+
+    hasAutoScrolledToTodayRef.current = true
+  }, [todayPosition, timelineWidth])
+
   return (
     <div
       className="flex flex-col border rounded-lg overflow-hidden bg-background shadow-sm self-start w-full"
@@ -574,8 +635,8 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           className="horizontal-scroll flex-1 overflow-x-auto overflow-y-hidden relative" 
           ref={timelineRef}
           onScroll={(e) => {
-            if (listRef.current) {
-              listRef.current.scrollLeft = e.currentTarget.scrollLeft
+            if (timelineBodyRef.current) {
+              timelineBodyRef.current.scrollLeft = e.currentTarget.scrollLeft
             }
           }}
           style={{ scrollbarWidth: 'thin' }}
@@ -622,15 +683,32 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
       <div className="flex-1 overflow-hidden bg-background">
         <div className="flex h-full">
           {/* List side - fixed width, scrollable vertically */}
-          <div className="flex-shrink-0 border-r border-border/50 overflow-y-auto bg-background" style={{ width: LEFT_COLUMN_WIDTH }}>
+          <div
+            className="flex-shrink-0 border-r border-border/50 overflow-y-auto bg-background"
+            style={{ width: LEFT_COLUMN_WIDTH }}
+            ref={taskListRef}
+            onScroll={(e) => {
+              if (verticalSyncSourceRef.current === "timeline") {
+                verticalSyncSourceRef.current = null
+                return
+              }
+              syncVerticalScroll("task", e.currentTarget.scrollTop)
+            }}
+          >
             {ganttData.map((item) => renderListRow(item))}
           </div>
 
           {/* Timeline side - scrollable horizontally and vertically */}
           <div
             className="no-scrollbar flex-1 overflow-x-hidden overflow-y-auto bg-muted/10"
-            ref={listRef}
+            ref={timelineBodyRef}
             onScroll={(e) => {
+              if (verticalSyncSourceRef.current === "task") {
+                verticalSyncSourceRef.current = null
+                return
+              }
+              syncVerticalScroll("timeline", e.currentTarget.scrollTop)
+
               // Sync horizontal scroll with header
               if (timelineRef.current) {
                 timelineRef.current.scrollLeft = e.currentTarget.scrollLeft

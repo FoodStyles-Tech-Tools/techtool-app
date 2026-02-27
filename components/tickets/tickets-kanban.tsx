@@ -9,7 +9,7 @@ import { getDueDateDisplay } from "@/lib/format-dates"
 import type { Ticket } from "@/lib/types"
 import { TicketTypeIcon } from "@/components/ticket-type-select"
 import { TicketPriorityIcon } from "@/components/ticket-priority-select"
-import { isDoneStatus, normalizeStatusKey } from "@/lib/ticket-statuses"
+import { isArchivedStatus, isDoneStatus, normalizeStatusKey } from "@/lib/ticket-statuses"
 
 export interface KanbanColumn {
   id: string
@@ -118,7 +118,7 @@ export function TicketsKanban({
                   {columnTickets.map((ticket) => {
                     const dueDateDisplay = getDueDateDisplay(ticket.due_date, isDoneStatus(normalizeStatusKey(ticket.status)))
                     const subtaskCount = subtaskCountMap[ticket.id] || 0
-                    if (ticket.status === "archived") return null
+                    if (isArchivedStatus(ticket.status)) return null
                     return (
                       <Card
                         key={ticket.id}

@@ -76,7 +76,7 @@ const RichTextEditor = dynamic(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
   { ssr: false }
 )
-import { filterStatusesBySqaRequirement, isDoneStatus } from "@/lib/ticket-statuses"
+import { filterStatusesBySqaRequirement, isArchivedStatus, isDoneStatus } from "@/lib/ticket-statuses"
 import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import type { Ticket } from "@/lib/types"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@/lib/rich-text"
@@ -151,7 +151,15 @@ export default function ProjectDetailClient() {
   useEffect(() => {
     if (user?.id && user?.role) {
       const userRole = user.role.toLowerCase()
+      const isSqa = userRole === "sqa"
       const isAdminOrMember = userRole === "admin" || userRole === "member"
+
+      // SQA: default to all tickets and all requesters.
+      if (isSqa) {
+        setAssigneeFilter("all")
+        setRequestedByFilter("all")
+        return
+      }
       
       // If user is not Admin or Member, set defaults
       if (!isAdminOrMember) {
@@ -203,7 +211,10 @@ export default function ProjectDetailClient() {
     department_id: "Department",
   }
   const visibleTicketStatuses = useMemo(
-    () => filterStatusesBySqaRequirement(ticketStatuses, project?.require_sqa === true),
+    () =>
+      filterStatusesBySqaRequirement(ticketStatuses, project?.require_sqa === true).filter(
+        (status) => !isArchivedStatus(status.key)
+      ),
     [project?.require_sqa, ticketStatuses]
   )
   const kanbanColumns = useMemo(
@@ -239,6 +250,10 @@ export default function ProjectDetailClient() {
       }
       return ticket
     }).filter((ticket) => {
+      if (isArchivedStatus(ticket.status)) {
+        return false
+      }
+
       // Search filter
       const descriptionText = richTextToPlainText(ticket.description)
       const matchesSearch = 

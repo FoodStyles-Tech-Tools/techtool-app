@@ -312,31 +312,66 @@ export async function PATCH(
       reason,
     } = body
 
-    // Fetch current ticket state if we need it for conditional logic or timestamp validation
-    let currentTicket: any = null
-    if (assignee_id !== undefined || sqa_assignee_id !== undefined || status !== undefined || created_at !== undefined || assigned_at !== undefined || started_at !== undefined || completed_at !== undefined) {
-      const { data, error: fetchError } = await supabase
-        .from("tickets")
-        .select("assignee_id, sqa_assignee_id, assigned_at, sqa_assigned_at, status, started_at, completed_at, created_at")
-        .eq("id", params.id)
-        .maybeSingle()
-      
-      if (fetchError) {
-        console.error("Error fetching current ticket:", fetchError)
+    // Always fetch current ticket for edit guard and timestamp logic.
+    const [{ data: currentTicket, error: fetchError }, { data: currentUser, error: userError }] =
+      await Promise.all([
+        supabase
+          .from("tickets")
+          .select("assignee_id, sqa_assignee_id, assigned_at, sqa_assigned_at, status, started_at, completed_at, created_at")
+          .eq("id", params.id)
+          .maybeSingle(),
+        supabase
+          .from("users")
+          .select("role")
+          .eq("id", userId)
+          .maybeSingle(),
+      ])
+
+    if (fetchError) {
+      console.error("Error fetching current ticket:", fetchError)
+      return NextResponse.json(
+        { error: "Failed to fetch ticket" },
+        { status: 500 }
+      )
+    }
+
+    if (!currentTicket) {
+      return NextResponse.json(
+        { error: "Ticket not found" },
+        { status: 404 }
+      )
+    }
+
+    if (userError) {
+      console.error("Error fetching current user role:", userError)
+      return NextResponse.json(
+        { error: "Failed to validate user role" },
+        { status: 500 }
+      )
+    }
+
+    const isSqaUser = (currentUser?.role || "").toLowerCase() === "sqa"
+    if (isSqaUser) {
+      const currentSqaAssigneeId = currentTicket.sqa_assignee_id || null
+      const requestedSqaAssigneeId =
+        sqa_assignee_id === undefined ? undefined : (sqa_assignee_id || null)
+      const touchedNonSqaAssignmentField = Object.keys(body).some(
+        (field) => field !== "sqa_assignee_id" && field !== "sqa_assigned_at"
+      )
+      const isSelfAssignOnlyRequest =
+        sqa_assignee_id !== undefined &&
+        requestedSqaAssigneeId === userId &&
+        !touchedNonSqaAssignmentField
+
+      if (currentSqaAssigneeId !== userId && !isSelfAssignOnlyRequest) {
         return NextResponse.json(
-          { error: "Failed to fetch ticket" },
-          { status: 500 }
+          {
+            error:
+              "SQA users can only edit tickets assigned to them. Assign yourself as SQA first.",
+          },
+          { status: 403 }
         )
       }
-      
-      if (!data) {
-        return NextResponse.json(
-          { error: "Ticket not found" },
-          { status: 404 }
-        )
-      }
-      
-      currentTicket = data
     }
 
     const updates: any = {}

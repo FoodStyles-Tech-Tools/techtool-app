@@ -8,6 +8,7 @@ import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import {
   filterStatusesBySqaRequirement,
   formatStatusLabel,
+  isArchivedStatus,
   isDoneStatus,
   normalizeStatusKey,
   type TicketStatus,
@@ -36,7 +37,7 @@ export function TicketStatusSelect({
   const selectableStatuses = useMemo(
     () => {
       const visible = filterStatusesBySqaRequirement(statuses, allowSqaStatuses).filter(
-        (status) => normalizeStatusKey(status.key) !== "archived"
+        (status) => !isArchivedStatus(status.key)
       )
       return excludeDone ? visible.filter((status) => !isDoneStatus(status.key)) : visible
     },

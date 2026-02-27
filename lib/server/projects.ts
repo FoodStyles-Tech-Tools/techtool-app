@@ -34,7 +34,7 @@ export async function getProjectsPageData(): Promise<{
   users: ServerUser[]
   ticketStats: Record<string, ProjectTicketStats>
 }> {
-  const { supabase } = await getSupabaseWithUserContext()
+  const { supabase, userId } = await getSupabaseWithUserContext()
 
   const [users, departmentsResult, projectsResult] = await Promise.all([
     fetchUsersWithImages(supabase),
@@ -59,8 +59,12 @@ export async function getProjectsPageData(): Promise<{
 
   const userMap = new Map<string, ServerUser>()
   users.forEach((user) => userMap.set(user.id, user))
+  const currentUserRole = users.find((user) => user.id === userId)?.role?.toLowerCase()
+  const visibleProjects = currentUserRole === "sqa"
+    ? (projectsResult.data || []).filter((project: any) => project.require_sqa === true)
+    : (projectsResult.data || [])
 
-  const projects: ServerProject[] = (projectsResult.data || []).map((project: any) => {
+  const projects: ServerProject[] = visibleProjects.map((project: any) => {
     const collaboratorIds = Array.isArray(project.collaborator_ids)
       ? project.collaborator_ids
       : []

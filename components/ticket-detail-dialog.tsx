@@ -212,6 +212,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }, [relations?.parent?.display_id, selectedParentTicketOption?.display_id])
   const loading = !ticket && isLoading
   const isAssignmentLocked = !!ticket && !ticket.assignee
+  const isSqaUser = (currentUser?.role || "").toLowerCase() === "sqa"
+  const currentTicketSqaAssigneeId = (ticket as any)?.sqa_assignee_id || ticket?.sqa_assignee?.id || null
+  const isSqaEditLocked =
+    !!ticket &&
+    isSqaUser &&
+    !!currentUser?.id &&
+    currentTicketSqaAssigneeId !== currentUser.id
 
   useEffect(() => {
     if (ticket) {
@@ -763,7 +770,8 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }
 
   const handleSqaAssigneeChange = async (newSqaAssigneeId: string | null) => {
-    if (!ensureCanEdit()) return
+    const canSelfAssignAsSqa = !!currentUser?.id && newSqaAssigneeId === currentUser.id
+    if (!ensureCanEdit({ allowSqaSelfAssign: canSelfAssignAsSqa })) return
     if (!ticket) return
 
     const previousSqaAssigneeId = (ticket as any).sqa_assignee_id || ticket.sqa_assignee?.id || null
@@ -926,9 +934,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
 
   const timestampValidation = getTimestampValidation()
 
-  const ensureCanEdit = (options?: { allowWhenUnassigned?: boolean }) => {
+  const ensureCanEdit = (options?: { allowWhenUnassigned?: boolean; allowSqaSelfAssign?: boolean }) => {
     if (!canEditTickets) {
       toast("You do not have permission to edit tickets.", "error")
+      return false
+    }
+    if (isSqaEditLocked && !options?.allowSqaSelfAssign) {
+      toast("Assign yourself as SQA before editing this ticket.", "error")
       return false
     }
     if (isAssignmentLocked && !options?.allowWhenUnassigned) {
@@ -1504,7 +1516,11 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                           onValueChange={(value) =>
                             handleSqaAssigneeChange(value === UNASSIGNED_VALUE ? null : value)
                           }
-                          disabled={!canEditTickets || isAssignmentLocked || updatingFields["sqa_assignee_id"]}
+                          disabled={
+                            !canEditTickets ||
+                            updatingFields["sqa_assignee_id"] ||
+                            (isAssignmentLocked && !isSqaEditLocked)
+                          }
                         >
                           <SelectTrigger className="h-8 w-full relative overflow-hidden">
                             {ticket.sqa_assignee?.id ? (

@@ -10,6 +10,38 @@ export async function PATCH(
   try {
     await requirePermission("tickets", "edit")
     const { supabase, userId } = await getSupabaseWithUserContext()
+    const [{ data: ticket, error: ticketError }, { data: currentUser, error: userError }] =
+      await Promise.all([
+        supabase.from("tickets").select("id, sqa_assignee_id").eq("id", params.id).maybeSingle(),
+        supabase.from("users").select("role").eq("id", userId).maybeSingle(),
+      ])
+
+    if (ticketError) {
+      console.error("Error fetching ticket for SQA edit guard:", ticketError)
+      return NextResponse.json(
+        { error: "Failed to fetch ticket" },
+        { status: 500 }
+      )
+    }
+    if (!ticket) {
+      return NextResponse.json(
+        { error: "Ticket not found" },
+        { status: 404 }
+      )
+    }
+    if (userError) {
+      console.error("Error fetching current user role for SQA edit guard:", userError)
+      return NextResponse.json(
+        { error: "Failed to validate user role" },
+        { status: 500 }
+      )
+    }
+    if ((currentUser?.role || "").toLowerCase() === "sqa" && ticket.sqa_assignee_id !== userId) {
+      return NextResponse.json(
+        { error: "SQA users can only edit tickets assigned to them. Assign yourself as SQA first." },
+        { status: 403 }
+      )
+    }
 
     const body = await request.json()
     const { title, completed } = body
@@ -81,6 +113,38 @@ export async function DELETE(
   try {
     await requirePermission("tickets", "edit")
     const { supabase, userId } = await getSupabaseWithUserContext()
+    const [{ data: ticket, error: ticketError }, { data: currentUser, error: userError }] =
+      await Promise.all([
+        supabase.from("tickets").select("id, sqa_assignee_id").eq("id", params.id).maybeSingle(),
+        supabase.from("users").select("role").eq("id", userId).maybeSingle(),
+      ])
+
+    if (ticketError) {
+      console.error("Error fetching ticket for SQA edit guard:", ticketError)
+      return NextResponse.json(
+        { error: "Failed to fetch ticket" },
+        { status: 500 }
+      )
+    }
+    if (!ticket) {
+      return NextResponse.json(
+        { error: "Ticket not found" },
+        { status: 404 }
+      )
+    }
+    if (userError) {
+      console.error("Error fetching current user role for SQA edit guard:", userError)
+      return NextResponse.json(
+        { error: "Failed to validate user role" },
+        { status: 500 }
+      )
+    }
+    if ((currentUser?.role || "").toLowerCase() === "sqa" && ticket.sqa_assignee_id !== userId) {
+      return NextResponse.json(
+        { error: "SQA users can only edit tickets assigned to them. Assign yourself as SQA first." },
+        { status: 403 }
+      )
+    }
 
     await supabase
       .from("subtasks")

@@ -29,7 +29,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { buildStatusChangeBody } from "@/lib/ticket-statuses"
+import { buildStatusChangeBody, isArchivedStatus } from "@/lib/ticket-statuses"
 import type { Ticket } from "@/lib/types"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@/lib/rich-text"
 import { useSupabaseClient } from "@/lib/supabase-client"
@@ -191,7 +191,9 @@ export default function TicketsPage() {
   )
   const kanbanColumns = useMemo(
     () =>
-      ticketStatuses.map((s) => ({ id: s.key, label: s.label, color: s.color })),
+      ticketStatuses
+        .filter((status) => !isArchivedStatus(status.key))
+        .map((s) => ({ id: s.key, label: s.label, color: s.color })),
     [ticketStatuses]
   )
   const statusKeys = useMemo(() => kanbanColumns.map((c) => c.id), [kanbanColumns])
@@ -268,13 +270,16 @@ export default function TicketsPage() {
 
   const filteredTickets = useMemo(() => {
     const q = deferredSearchQuery.trim().toLowerCase()
-    if (!q) return allTickets
+    if (!q) return allTickets.filter((ticket) => !isArchivedStatus(ticket.status))
     return allTickets.filter(
       (t) =>
-        t.title.toLowerCase().includes(q) ||
-        richTextToPlainText(t.description).toLowerCase().includes(q) ||
-        t.project?.name.toLowerCase().includes(q) ||
-        t.display_id?.toLowerCase().includes(q)
+        !isArchivedStatus(t.status) &&
+        (
+          t.title.toLowerCase().includes(q) ||
+          richTextToPlainText(t.description).toLowerCase().includes(q) ||
+          t.project?.name.toLowerCase().includes(q) ||
+          t.display_id?.toLowerCase().includes(q)
+        )
     )
   }, [allTickets, deferredSearchQuery])
 

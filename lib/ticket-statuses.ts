@@ -40,6 +40,9 @@ export const formatStatusLabel = (key: string) =>
     .replace(/_/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase())
 
+export const isArchivedStatus = (key: string) =>
+  normalizeStatusKey(key) === "archived"
+
 export const isDoneStatus = (key: string) =>
   key === "completed" || key === "cancelled" || key === "rejected"
 

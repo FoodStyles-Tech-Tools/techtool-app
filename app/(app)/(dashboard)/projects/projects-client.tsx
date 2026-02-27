@@ -150,10 +150,13 @@ export default function ProjectsClient({
   }, [deferredSearchQuery, departmentFilter, excludeDone, assignedToMeOnly])
 
   const currentUserId = currentUser?.id
+  const isSqaUser = currentUser?.role?.toLowerCase() === "sqa"
 
   const filteredProjects = useMemo(() => {
     const normalizedQuery = deferredSearchQuery.trim().toLowerCase()
     const filtered = projects.filter((project) => {
+      if (isSqaUser && !project.require_sqa) return false
+
       // Search filter
       const matchesSearch = 
         !normalizedQuery ||
@@ -182,7 +185,7 @@ export default function ProjectsClient({
     return filtered.sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
     )
-  }, [projects, deferredSearchQuery, departmentFilter, excludeDone, assignedToMeOnly, currentUserId])
+  }, [projects, deferredSearchQuery, departmentFilter, excludeDone, assignedToMeOnly, currentUserId, isSqaUser])
   const hasProjectSearch = deferredSearchQuery.trim().length > 0
   const activeFilterCount = useMemo(() => {
     let count = 0

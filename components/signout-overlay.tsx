@@ -28,7 +28,7 @@ export function SignOutOverlayProvider({ children }: { children: React.ReactNode
     <SignOutOverlayContext.Provider value={{ show, hide }}>
       {children}
       {visible && (
-        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/75 dark:bg-black/70">
           <div className="flex flex-col items-center gap-3 text-white">
             <Loader2 className="h-8 w-8 animate-spin" />
             <p className="text-lg font-semibold tracking-wide animate-pulse">Logging you out...</p>

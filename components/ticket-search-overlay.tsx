@@ -131,7 +131,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
       {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 z-[100] bg-black/40 backdrop-blur-sm transition-opacity duration-200 ease-in-out",
+          "fixed inset-0 z-[100] bg-black/75 dark:bg-black/70",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={() => onOpenChange(false)}
@@ -140,7 +140,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
       {/* Overlay */}
       <div 
         className={cn(
-          "fixed left-1/2 top-1/2 z-[100] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 transition-opacity duration-200 ease-in-out",
+          "fixed left-1/2 top-1/2 z-[100] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
