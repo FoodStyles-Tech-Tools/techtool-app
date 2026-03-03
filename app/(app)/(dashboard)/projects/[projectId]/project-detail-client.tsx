@@ -30,7 +30,7 @@ import {
   Search,
 } from "lucide-react"
 import { useProject, useUpdateProject } from "@/hooks/use-projects"
-import { useTickets, useUpdateTicket } from "@/hooks/use-tickets"
+import { useTickets, useUpdateTicket, useUpdateTicketWithReasonComment } from "@/hooks/use-tickets"
 import { useUsers } from "@/hooks/use-users"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeIcon } from "@/components/ticket-type-select"
@@ -94,6 +94,7 @@ export default function ProjectDetailClient() {
   const deleteEpic = useDeleteEpic()
   const { sprints } = useSprints(projectId)
   const updateTicket = useUpdateTicket()
+  const updateTicketWithReasonComment = useUpdateTicketWithReasonComment()
   const updateProject = useUpdateProject()
   const { user, flags } = usePermissions()
   const canCreateTickets = flags?.canCreateTickets ?? false
@@ -2177,21 +2178,32 @@ export default function ProjectDetailClient() {
                 setUpdatingFields(prev => ({ ...prev, [`${ticketId}-status`]: "status" }))
                 
                 try {
-                  const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ body: commentBody }),
-                  })
-
-                  if (!commentResponse.ok) {
-                    const errorPayload = await commentResponse.json().catch(() => ({}))
-                    throw new Error(errorPayload?.error || "Failed to save reason comment")
+                  const payload: {
+                    id: string
+                    status: "cancelled" | "rejected"
+                    reason: unknown
+                    reasonCommentBody: string
+                    startedAt?: string | null
+                    completedAt?: string | null
+                    epicId?: string | null
+                  } = {
+                    id: ticketId,
+                    status: reasonStatus as "cancelled" | "rejected",
+                    reason: updates.reason,
+                    reasonCommentBody: commentBody,
                   }
 
-                  await updateTicket.mutateAsync({
-                    id: ticketId,
-                    ...updates,
-                  })
+                  if ("started_at" in updates) {
+                    payload.startedAt = (updates as { started_at?: string | null }).started_at ?? null
+                  }
+                  if ("completed_at" in updates) {
+                    payload.completedAt = (updates as { completed_at?: string | null }).completed_at ?? null
+                  }
+                  if ("epic_id" in updates) {
+                    payload.epicId = (updates as { epic_id?: string | null }).epic_id ?? null
+                  }
+
+                  await updateTicketWithReasonComment.mutateAsync(payload)
                   toast("Ticket status updated")
                   
                   setTimeout(() => {
@@ -2282,11 +2294,11 @@ export default function ProjectDetailClient() {
                   toast("Please provide a reason for returning to development", "error")
                   return
                 }
+                const plainReason = richTextToPlainText(normalizedReason).trim()
 
                 const ticketId = pendingReturnedDropTicketId
                 const updates = {
                   ...pendingReturnedDropUpdates,
-                  returned_to_dev_reason: richTextToPlainText(normalizedReason),
                 }
                 const commentBody = `<p><strong>Returned to Dev Reason</strong></p>${normalizedReason}`
 
@@ -2299,21 +2311,37 @@ export default function ProjectDetailClient() {
                 setUpdatingFields(prev => ({ ...prev, [`${ticketId}-status`]: "status" }))
 
                 try {
-                  const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ body: commentBody }),
-                  })
-
-                  if (!commentResponse.ok) {
-                    const errorPayload = await commentResponse.json().catch(() => ({}))
-                    throw new Error(errorPayload?.error || "Failed to save returned reason comment")
+                  const payload: {
+                    id: string
+                    status: "returned_to_dev"
+                    reason: unknown
+                    reasonCommentBody: string
+                    startedAt?: string | null
+                    completedAt?: string | null
+                    epicId?: string | null
+                  } = {
+                    id: ticketId,
+                    status: "returned_to_dev",
+                    reason: {
+                      returned_to_dev: {
+                        reason: plainReason,
+                        returnedAt: new Date().toISOString(),
+                      },
+                    },
+                    reasonCommentBody: commentBody,
                   }
 
-                  await updateTicket.mutateAsync({
-                    id: ticketId,
-                    ...updates,
-                  })
+                  if ("started_at" in updates) {
+                    payload.startedAt = (updates as { started_at?: string | null }).started_at ?? null
+                  }
+                  if ("completed_at" in updates) {
+                    payload.completedAt = (updates as { completed_at?: string | null }).completed_at ?? null
+                  }
+                  if ("epic_id" in updates) {
+                    payload.epicId = (updates as { epic_id?: string | null }).epic_id ?? null
+                  }
+
+                  await updateTicketWithReasonComment.mutateAsync(payload)
                   toast("Ticket status updated")
 
                   setTimeout(() => {

@@ -80,10 +80,31 @@ export function useProjects(options?: UseProjectsOptions) {
       queryClient.invalidateQueries({ queryKey: ["projects"] })
     },
     onUpdate: (payload) => {
-      queryClient.invalidateQueries({ queryKey: ["projects"] })
       const updatedId = (payload.new as { id?: string } | null)?.id
       if (updatedId) {
-        queryClient.invalidateQueries({ queryKey: ["project", updatedId] })
+        const partial = payload.new as Partial<Project>
+        queryClient.setQueriesData<Project[]>({ queryKey: ["projects"] }, (current) => {
+          if (!Array.isArray(current) || current.length === 0) return current
+          let changed = false
+          const next = current.map((project) => {
+            if (project.id !== updatedId) return project
+            changed = true
+            return normalizeProject({
+              ...project,
+              ...partial,
+            } as Project)
+          })
+          return changed ? next : current
+        })
+        queryClient.setQueryData<{ project: Project }>(["project", updatedId], (current) => {
+          if (!current?.project) return current
+          return {
+            project: normalizeProject({
+              ...current.project,
+              ...partial,
+            } as Project),
+          }
+        })
       }
     },
     onDelete: (payload) => {

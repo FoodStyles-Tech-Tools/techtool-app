@@ -22,7 +22,7 @@ import { useSprints } from "@/hooks/use-sprints"
 import { Subtasks } from "@/components/subtasks"
 import { TicketActivity } from "@/components/ticket-activity"
 import { useTicketDetail } from "@/hooks/use-ticket-detail"
-import { useUpdateTicket, useTickets } from "@/hooks/use-tickets"
+import { useUpdateTicket, useUpdateTicketWithReasonComment, useTickets } from "@/hooks/use-tickets"
 import { useUsers } from "@/hooks/use-users"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
@@ -127,6 +127,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const { data: usersData } = useUsers({ realtime: false })
   const userEmail = useUserEmail()
   const updateTicket = useUpdateTicket()
+  const updateTicketWithReasonComment = useUpdateTicketWithReasonComment()
   const currentUser = useMemo(() => {
     if (!userEmail || !usersData) return null
     const lower = userEmail.toLowerCase()
@@ -438,16 +439,13 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
 
   const performStatusChange = async (
     newStatus: string,
-    returnedToDevReason?: string,
+    returnedToDevReasonRichText?: string,
     subtaskDecisionOverride?: { proceed: boolean; closeSubtasks: boolean; subtasks: RelationSubtask[] }
   ) => {
     if (!ticket || !ticketId) return
     
     const previousStatus = ticket.status
     const updates: any = { status: newStatus }
-    if (returnedToDevReason && newStatus === "returned_to_dev") {
-      updates.returned_to_dev_reason = returnedToDevReason
-    }
     
     // Condition 2: When status from Open/Blocked to any other status then update started_at timestamp
     if ((previousStatus === "open" || previousStatus === "blocked") && newStatus !== "open" && newStatus !== "blocked") {
@@ -491,10 +489,44 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       const subtaskDecision = subtaskDecisionOverride ?? (await resolveSubtaskStatusGuard(newStatus))
       if (!subtaskDecision.proceed) return
 
-      await updateTicket.mutateAsync({
-        id: ticketId,
-        ...updates,
-      })
+      if (newStatus === "returned_to_dev" && returnedToDevReasonRichText) {
+        const payload: {
+          id: string
+          status: "returned_to_dev"
+          reason: unknown
+          reasonCommentBody: string
+          startedAt?: string | null
+          completedAt?: string | null
+          epicId?: string | null
+        } = {
+          id: ticketId,
+          status: "returned_to_dev",
+          reason: {
+            returned_to_dev: {
+              reason: richTextToPlainText(returnedToDevReasonRichText).trim(),
+              returnedAt: new Date().toISOString(),
+            },
+          },
+          reasonCommentBody: `<p><strong>Returned to Dev Reason</strong></p>${returnedToDevReasonRichText}`,
+        }
+
+        if ("started_at" in updates) {
+          payload.startedAt = (updates as { started_at?: string | null }).started_at ?? null
+        }
+        if ("completed_at" in updates) {
+          payload.completedAt = (updates as { completed_at?: string | null }).completed_at ?? null
+        }
+        if ("epic_id" in updates) {
+          payload.epicId = (updates as { epic_id?: string | null }).epic_id ?? null
+        }
+
+        await updateTicketWithReasonComment.mutateAsync(payload)
+      } else {
+        await updateTicket.mutateAsync({
+          id: ticketId,
+          ...updates,
+        })
+      }
 
       if (subtaskDecision.closeSubtasks) {
         await closeSubtasksToStatus(subtaskDecision.subtasks, newStatus)
@@ -535,19 +567,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       const subtaskDecision = await resolveSubtaskStatusGuard(newStatus)
       if (!subtaskDecision.proceed) return
 
-      const commentBody = `<p><strong>Returned to Dev Reason</strong></p>${normalizedReason}`
-      const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: commentBody }),
-      })
-
-      if (!commentResponse.ok) {
-        const errorPayload = await commentResponse.json().catch(() => ({}))
-        throw new Error(errorPayload?.error || "Failed to save returned reason comment")
-      }
-
-      await performStatusChange(newStatus, richTextToPlainText(normalizedReason), subtaskDecision)
+      await performStatusChange(newStatus, normalizedReason, subtaskDecision)
       setReturnedReason("")
     } catch (error: any) {
       toast(error.message || "Failed to return ticket to development", "error")
@@ -602,18 +622,15 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       const subtaskDecision = await resolveSubtaskStatusGuard(newStatus)
       if (!subtaskDecision.proceed) return
 
-      const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: commentBody }),
+      await updateTicketWithReasonComment.mutateAsync({
+        id: ticketId,
+        status: newStatus as "cancelled" | "rejected",
+        reason: updates.reason,
+        reasonCommentBody: commentBody,
+        ...(updates.started_at !== undefined ? { startedAt: updates.started_at ?? null } : {}),
+        ...(updates.completed_at !== undefined ? { completedAt: updates.completed_at ?? null } : {}),
       })
-
-      if (!commentResponse.ok) {
-        const errorPayload = await commentResponse.json().catch(() => ({}))
-        throw new Error(errorPayload?.error || "Failed to save reason comment")
-      }
-
-      await updateTicketWithToast(updates, "Status updated", "status")
+      toast("Status updated")
       if (subtaskDecision.closeSubtasks) {
         await closeSubtasksToStatus(subtaskDecision.subtasks, newStatus)
         toast(`Closed ${subtaskDecision.subtasks.length} open subtask${subtaskDecision.subtasks.length === 1 ? "" : "s"}.`)

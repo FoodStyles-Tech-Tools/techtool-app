@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requirePermission, getSupabaseWithUserContext } from "@/lib/auth-helpers"
+import { getRequestContext } from "@/lib/auth-helpers"
 import { getDefaultReportDateRange } from "@/lib/report-date-range"
 import type { ReportSession, ReportSessionFilters } from "@/types/api/report"
 
@@ -23,8 +23,9 @@ function toSession(row: any): ReportSession {
 /** GET: List report sessions for the current user. */
 export async function GET() {
   try {
-    await requirePermission("clockify", "view")
-    const { supabase } = await getSupabaseWithUserContext()
+    const { supabase } = await getRequestContext({
+      permission: { resource: "clockify", action: "view" },
+    })
 
     const { data, error } = await supabase
       .from("report_sessions")
@@ -51,8 +52,9 @@ export async function GET() {
 /** POST: Create a new report session (default 5 completed weeks). */
 export async function POST(request: NextRequest) {
   try {
-    await requirePermission("clockify", "view")
-    const { supabase, userId } = await getSupabaseWithUserContext()
+    const { supabase, userId } = await getRequestContext({
+      permission: { resource: "clockify", action: "view" },
+    })
 
     const body = await request.json().catch(() => ({}))
     const name = typeof body.name === "string" ? body.name.trim() || null : null

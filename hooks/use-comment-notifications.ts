@@ -99,10 +99,6 @@ export function useCommentNotifications(options?: { unreadOnly?: boolean }) {
           unread_count: recalculateUnreadCount(nextNotifications),
         }
       })
-      queryClient.invalidateQueries({
-        queryKey: NOTIFICATIONS_QUERY_KEY,
-        refetchType: "active",
-      })
     },
     onUpdate: (payload) => {
       const updated = payload.new as CommentNotification

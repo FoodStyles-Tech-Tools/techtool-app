@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requirePermission, getSupabaseWithUserContext } from "@/lib/auth-helpers"
+import { getRequestContext } from "@/lib/auth-helpers"
 import type { TicketDetailPayload, TicketPerson } from "@/types/api/tickets"
 import { getOrSetServerCache } from "@/lib/server/cache"
+import { sanitizeLinkArray } from "@/lib/links"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -29,8 +30,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    await requirePermission("tickets", "view")
-    const { supabase, userId } = await getSupabaseWithUserContext()
+    const { supabase, userId } = await getRequestContext({
+      permission: { resource: "tickets", action: "view" },
+      requireUserContext: false,
+    })
 
     const { searchParams } = new URL(request.url)
     const view = searchParams.get("view") || "detail"
@@ -51,12 +54,14 @@ export async function GET(
             `
             id,
             display_id,
+            parent_ticket_id,
             title,
             description,
             status,
             priority,
             type,
             links,
+            reason,
             due_date,
             assigned_at,
             sqa_assigned_at,
@@ -64,13 +69,13 @@ export async function GET(
             completed_at,
             created_at,
             updated_at,
-            project:projects(id, name),
+            project:projects(id, name, description, require_sqa),
             assignee:users!tickets_assignee_id_fkey(id, name, email),
             sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
             requested_by:users!tickets_requested_by_id_fkey(id, name, email),
             department:departments(id, name),
             epic:epics(id, name, color),
-            sprint:sprints(id, name, status)
+            sprint:sprints(id, name, status, start_date, end_date)
           `
           )
           .eq("id", params.id)
@@ -99,18 +104,20 @@ export async function GET(
         }
 
         return {
-          ticket: {
-            id: ticket.id,
-            display_id: ticket.display_id,
-            title: ticket.title,
-            description: ticket.description,
-            status: ticket.status,
-            priority: ticket.priority,
-            type: ticket.type,
-            links: ticket.links,
-            due_date: ticket.due_date,
-            assigned_at: ticket.assigned_at,
-            sqa_assigned_at: ticket.sqa_assigned_at,
+            ticket: {
+              id: ticket.id,
+              display_id: ticket.display_id,
+              parent_ticket_id: ticket.parent_ticket_id,
+              title: ticket.title,
+              description: ticket.description,
+              status: ticket.status,
+              priority: ticket.priority,
+              type: ticket.type,
+              links: sanitizeLinkArray(ticket.links),
+              reason: ticket.reason,
+              due_date: ticket.due_date,
+              assigned_at: ticket.assigned_at,
+              sqa_assigned_at: ticket.sqa_assigned_at,
             started_at: ticket.started_at,
             completed_at: ticket.completed_at,
             created_at: ticket.created_at,

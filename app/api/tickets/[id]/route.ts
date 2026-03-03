@@ -1,187 +1,41 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseWithUserContext, requirePermission } from "@/lib/auth-helpers"
-import { createServerClient } from "@/lib/supabase"
+import { getRequestContext } from "@/lib/auth-helpers"
 import { normalizeRichTextInput } from "@/lib/rich-text"
 import { prepareLinkPayload } from "@/lib/links"
+import { enqueueTicketStatusDiscordNotifications } from "@/lib/server/discord-outbox"
 
 export const runtime = 'nodejs'
 
-const DISCORD_TICKET_BASE_URL = "https://techtool-app.vercel.app/tickets"
+const LEGACY_PATCH_BODY_KEYS = [
+  "assignee_id",
+  "sqa_assignee_id",
+  "sqa_assigned_at",
+  "requested_by_id",
+  "due_date",
+  "project_id",
+  "department_id",
+  "epic_id",
+  "sprint_id",
+  "parent_ticket_id",
+  "created_at",
+  "assigned_at",
+  "started_at",
+  "completed_at",
+]
 
-function normalizeRelation<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) return null
-  return Array.isArray(value) ? value[0] ?? null : value
+function hasOwn(obj: unknown, key: string): boolean {
+  if (!obj || typeof obj !== "object") return false
+  return Object.prototype.hasOwnProperty.call(obj, key)
 }
 
-function buildDiscordRoleEnvKey(role: string | null | undefined): string | null {
-  if (!role) return null
-  const normalized = role.trim().replace(/[^a-zA-Z0-9]+/g, "_").toUpperCase()
-  return normalized ? `DISCORD_ROLE_${normalized}` : null
-}
-
-function buildDiscordRoleMention(roleId: string | null | undefined): string | null {
-  if (!roleId) return null
-  return `<@&${roleId}>`
-}
-
-function buildDiscordUserMention(userId: string | null | undefined): string | null {
-  if (!userId) return null
-  return `<@${userId}>`
-}
-
-function escapeDiscordMarkdown(value: string): string {
-  return value.replace(/([\\\[\]])/g, "\\$1")
-}
-
-async function resolveDiscordUserIdByEmail(
-  supabase: any,
-  email: string,
-  logContext: string
-): Promise<string | null> {
-  const { data: authUser, error: authUserError } = await supabase
-    .from("auth_user")
-    .select("id")
-    .eq("email", email)
-    .maybeSingle()
-
-  if (authUserError) {
-    console.error(`Failed to resolve auth_user for ${logContext}:`, authUserError)
-    return null
+function readBodyValue<T = unknown>(body: Record<string, unknown>, camelKey: string, snakeKey?: string): T | undefined {
+  if (hasOwn(body, camelKey)) {
+    return body[camelKey] as T
   }
-
-  if (!authUser?.id) return null
-
-  const { data: discordAccount, error: discordAccountError } = await supabase
-    .from("account")
-    .select('"accountId", "providerId"')
-    .eq("userId", authUser.id)
-    .ilike("providerId", "discord%")
-    .limit(1)
-    .maybeSingle()
-
-  if (discordAccountError) {
-    console.error(`Failed to resolve Discord account for ${logContext}:`, discordAccountError)
-    return null
+  if (snakeKey && hasOwn(body, snakeKey)) {
+    return body[snakeKey] as T
   }
-
-  return (discordAccount as { accountId?: string } | null)?.accountId ?? null
-}
-
-function buildDiscordTicketLine(ticket: any): string {
-  const ticketLabel = String(ticket.display_id ?? ticket.id)
-  const ticketTitle = escapeDiscordMarkdown(ticket.title ?? "Untitled ticket")
-  const ticketSlug = String(ticket.display_id ?? ticket.id).toLowerCase()
-  const ticketUrl = `${DISCORD_TICKET_BASE_URL}/${encodeURIComponent(ticketSlug)}`
-  return `[[${escapeDiscordMarkdown(ticketLabel)}] - ${ticketTitle}](${ticketUrl})`
-}
-
-async function sendForQaDiscordNotification(
-  supabase: any,
-  ticket: any,
-  previousStatus: string | null | undefined
-) {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
-  if (!webhookUrl) return
-
-  const project = normalizeRelation<{ require_sqa?: boolean }>(ticket.project)
-  if (!project?.require_sqa) return
-
-  const currentStatus = typeof ticket.status === "string" ? ticket.status : null
-  if (currentStatus !== "for_qa" || previousStatus === "for_qa") return
-
-  const sqaAssignee = normalizeRelation<{ role?: string; email?: string; discord_id?: string | null }>(ticket.sqa_assignee)
-  const sqaRoleEnvKey = buildDiscordRoleEnvKey(sqaAssignee?.role)
-  const defaultRoleId = process.env.DISCORD_ROLE_ID
-  const fallbackSqaRoleId = process.env.DISCORD_ROLE_SQA
-
-  let assignedSqaDiscordUserId: string | null = sqaAssignee?.discord_id?.trim() || null
-  if (!assignedSqaDiscordUserId && ticket.sqa_assignee_id && sqaAssignee?.email) {
-    assignedSqaDiscordUserId = await resolveDiscordUserIdByEmail(
-      supabase,
-      sqaAssignee.email,
-      "SQA Discord mention"
-    )
-  }
-
-  const mentionRoleId = ticket.sqa_assignee_id
-    ? (sqaRoleEnvKey ? process.env[sqaRoleEnvKey] : null) ?? defaultRoleId ?? fallbackSqaRoleId
-    : fallbackSqaRoleId ?? defaultRoleId
-
-  const mention =
-    buildDiscordUserMention(assignedSqaDiscordUserId) ??
-    buildDiscordRoleMention(mentionRoleId) ??
-    "SQA"
-  const ticketLine = buildDiscordTicketLine(ticket)
-  const content = `Hi ${mention},\n${ticketLine}\nReady for QA`
-
-  try {
-    const response = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
-    })
-
-    if (!response.ok) {
-      const responseText = await response.text().catch(() => "")
-      console.error("Discord webhook failed for For QA notification:", response.status, responseText)
-    }
-  } catch (error) {
-    console.error("Discord webhook request failed for For QA notification:", error)
-  }
-}
-
-async function sendReturnedToDevDiscordNotification(
-  supabase: any,
-  ticket: any,
-  previousStatus: string | null | undefined
-) {
-  const webhookUrl = process.env.DISCORD_WEBHOOK_URL
-  if (!webhookUrl) return
-
-  const project = normalizeRelation<{ require_sqa?: boolean }>(ticket.project)
-  if (!project?.require_sqa) return
-
-  const currentStatus = typeof ticket.status === "string" ? ticket.status : null
-  if (currentStatus !== "returned_to_dev" || previousStatus === "returned_to_dev") return
-
-  const assignee = normalizeRelation<{ role?: string; email?: string; discord_id?: string | null }>(ticket.assignee)
-  const assigneeRoleEnvKey = buildDiscordRoleEnvKey(assignee?.role)
-  const defaultRoleId = process.env.DISCORD_ROLE_ID
-
-  let assigneeDiscordUserId: string | null = assignee?.discord_id?.trim() || null
-  if (!assigneeDiscordUserId && ticket.assignee_id && assignee?.email) {
-    assigneeDiscordUserId = await resolveDiscordUserIdByEmail(
-      supabase,
-      assignee.email,
-      "assignee Discord mention"
-    )
-  }
-
-  const mentionRoleId = ticket.assignee_id
-    ? (assigneeRoleEnvKey ? process.env[assigneeRoleEnvKey] : null) ?? defaultRoleId
-    : defaultRoleId
-
-  const mention =
-    buildDiscordUserMention(assigneeDiscordUserId) ??
-    buildDiscordRoleMention(mentionRoleId) ??
-    "Assignee"
-  const ticketLine = buildDiscordTicketLine(ticket)
-  const content = `Hi ${mention},\n${ticketLine}\nReturned to Dev`
-
-  try {
-    const response = await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content }),
-    })
-
-    if (!response.ok) {
-      const responseText = await response.text().catch(() => "")
-      console.error("Discord webhook failed for Returned to Dev notification:", response.status, responseText)
-    }
-  } catch (error) {
-    console.error("Discord webhook request failed for Returned to Dev notification:", error)
-  }
+  return undefined
 }
 
 export async function GET(
@@ -189,8 +43,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    await requirePermission("tickets", "view")
-    const supabase = createServerClient()
+    const { supabase } = await getRequestContext({
+      permission: { resource: "tickets", action: "view" },
+      requireUserContext: false,
+    })
 
     const { data: ticket, error } = await supabase
       .from("tickets")
@@ -263,7 +119,14 @@ export async function GET(
       }
     }
 
-    return NextResponse.json({ ticket: enrichedTicket })
+    return NextResponse.json(
+      { ticket: enrichedTicket },
+      {
+        headers: {
+          "X-Techtool-Deprecated": "Use /api/v2/tickets/[id]?view=detail",
+        },
+      }
+    )
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -284,33 +147,63 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    await requirePermission("tickets", "edit")
-    const { supabase, userId } = await getSupabaseWithUserContext()
+    const { supabase, userId } = await getRequestContext({
+      permission: { resource: "tickets", action: "edit" },
+    })
 
-    const body = await request.json()
-    const {
-      title,
-      description,
-      assignee_id,
-      sqa_assignee_id,
-      sqa_assigned_at,
-      requested_by_id,
-      status,
-      priority,
-      type,
-      due_date,
-      project_id,
-      links,
-      department_id,
-      epic_id,
-      sprint_id,
-      parent_ticket_id,
-      created_at,
-      assigned_at,
-      started_at,
-      completed_at,
-      reason,
-    } = body
+    const body = (await request.json()) as Record<string, unknown>
+    const hasField = (camelKey: string, snakeKey?: string) =>
+      hasOwn(body, camelKey) || (snakeKey ? hasOwn(body, snakeKey) : false)
+
+    const title = readBodyValue<string>(body, "title")
+    const description = readBodyValue<string | null>(body, "description")
+    const assigneeId = readBodyValue<string | null>(body, "assigneeId", "assignee_id")
+    const hasAssigneeId = hasField("assigneeId", "assignee_id")
+    const sqaAssigneeId = readBodyValue<string | null>(body, "sqaAssigneeId", "sqa_assignee_id")
+    const hasSqaAssigneeId = hasField("sqaAssigneeId", "sqa_assignee_id")
+    const sqaAssignedAt = readBodyValue<string | null>(body, "sqaAssignedAt", "sqa_assigned_at")
+    const hasSqaAssignedAt = hasField("sqaAssignedAt", "sqa_assigned_at")
+    const requestedById = readBodyValue<string | null>(body, "requestedById", "requested_by_id")
+    const hasRequestedById = hasField("requestedById", "requested_by_id")
+    const status = readBodyValue<string>(body, "status")
+    const hasStatus = hasField("status")
+    const priority = readBodyValue<string>(body, "priority")
+    const hasPriority = hasField("priority")
+    const type = readBodyValue<string>(body, "type")
+    const hasType = hasField("type")
+    const dueDate = readBodyValue<string | null>(body, "dueDate", "due_date")
+    const hasDueDate = hasField("dueDate", "due_date")
+    const projectId = readBodyValue<string | null>(body, "projectId", "project_id")
+    const hasProjectId = hasField("projectId", "project_id")
+    const links = readBodyValue<string[] | null>(body, "links")
+    const hasLinks = hasField("links")
+    const departmentId = readBodyValue<string | null>(body, "departmentId", "department_id")
+    const hasDepartmentId = hasField("departmentId", "department_id")
+    const epicId = readBodyValue<string | null>(body, "epicId", "epic_id")
+    const hasEpicId = hasField("epicId", "epic_id")
+    const sprintId = readBodyValue<string | null>(body, "sprintId", "sprint_id")
+    const hasSprintId = hasField("sprintId", "sprint_id")
+    const parentTicketId = readBodyValue<string | null>(body, "parentTicketId", "parent_ticket_id")
+    const hasParentTicketId = hasField("parentTicketId", "parent_ticket_id")
+    const createdAt = readBodyValue<string | null>(body, "createdAt", "created_at")
+    const hasCreatedAt = hasField("createdAt", "created_at")
+    const assignedAt = readBodyValue<string | null>(body, "assignedAt", "assigned_at")
+    const hasAssignedAt = hasField("assignedAt", "assigned_at")
+    const startedAt = readBodyValue<string | null>(body, "startedAt", "started_at")
+    const hasStartedAt = hasField("startedAt", "started_at")
+    const completedAt = readBodyValue<string | null>(body, "completedAt", "completed_at")
+    const hasCompletedAt = hasField("completedAt", "completed_at")
+    const reason = readBodyValue<unknown>(body, "reason")
+    const hasReason = hasField("reason")
+
+    const usedLegacyBodyKeys = LEGACY_PATCH_BODY_KEYS.filter((key) => hasOwn(body, key))
+    const deprecationHeaders =
+      usedLegacyBodyKeys.length > 0
+        ? {
+            "X-Techtool-Deprecated": "snake_case request body keys are deprecated; use camelCase keys",
+            "X-Techtool-Deprecated-Fields": usedLegacyBodyKeys.join(","),
+          }
+        : undefined
 
     // Always fetch current ticket for edit guard and timestamp logic.
     const [{ data: currentTicket, error: fetchError }, { data: currentUser, error: userError }] =
@@ -354,12 +247,16 @@ export async function PATCH(
     if (isSqaUser) {
       const currentSqaAssigneeId = currentTicket.sqa_assignee_id || null
       const requestedSqaAssigneeId =
-        sqa_assignee_id === undefined ? undefined : (sqa_assignee_id || null)
+        !hasSqaAssigneeId ? undefined : (sqaAssigneeId || null)
       const touchedNonSqaAssignmentField = Object.keys(body).some(
-        (field) => field !== "sqa_assignee_id" && field !== "sqa_assigned_at"
+        (field) =>
+          field !== "sqa_assignee_id" &&
+          field !== "sqa_assigned_at" &&
+          field !== "sqaAssigneeId" &&
+          field !== "sqaAssignedAt"
       )
       const isSelfAssignOnlyRequest =
-        sqa_assignee_id !== undefined &&
+        hasSqaAssigneeId &&
         requestedSqaAssigneeId === userId &&
         !touchedNonSqaAssignmentField
 
@@ -377,54 +274,54 @@ export async function PATCH(
     const updates: any = {}
     if (title !== undefined) updates.title = title
     if (description !== undefined) updates.description = normalizeRichTextInput(description)
-    if (assignee_id !== undefined) {
+    if (hasAssigneeId) {
       const previousAssigneeId = currentTicket?.assignee_id
-      updates.assignee_id = assignee_id || null
+      updates.assignee_id = assigneeId || null
       
       // If assignee is being cleared, also clear assigned_at
-      if (!assignee_id) {
+      if (!assigneeId) {
         updates.assigned_at = null
-      } else if (assigned_at === undefined) {
+      } else if (!hasAssignedAt) {
         // Condition 1: When assignee changed from Null -> add value then add assigned_at timestamp
         // Condition 2: If assignee is not null then change value then change timestamp assigned_at
-        if (!previousAssigneeId || previousAssigneeId !== assignee_id) {
+        if (!previousAssigneeId || previousAssigneeId !== assigneeId) {
           updates.assigned_at = new Date().toISOString()
         }
       }
     }
-    if (sqa_assignee_id !== undefined) {
+    if (hasSqaAssigneeId) {
       const previousSqaAssigneeId = currentTicket?.sqa_assignee_id
-      updates.sqa_assignee_id = sqa_assignee_id || null
+      updates.sqa_assignee_id = sqaAssigneeId || null
 
-      if (!sqa_assignee_id) {
+      if (!sqaAssigneeId) {
         updates.sqa_assigned_at = null
-      } else if (sqa_assigned_at === undefined) {
-        if (!previousSqaAssigneeId || previousSqaAssigneeId !== sqa_assignee_id) {
+      } else if (!hasSqaAssignedAt) {
+        if (!previousSqaAssigneeId || previousSqaAssigneeId !== sqaAssigneeId) {
           updates.sqa_assigned_at = new Date().toISOString()
         }
       }
     }
-    if (requested_by_id !== undefined) {
-      updates.requested_by_id = requested_by_id
+    if (hasRequestedById) {
+      updates.requested_by_id = requestedById
     }
-    if (status !== undefined) {
+    if (hasStatus) {
       const previousStatus = currentTicket?.status
       updates.status = status
       
       // Condition 2: When status from Open/Blocked to any other status then update started_at timestamp
       if ((previousStatus === "open" || previousStatus === "blocked") && status !== "open" && status !== "blocked") {
-        if (started_at === undefined) {
+        if (!hasStartedAt) {
           updates.started_at = new Date().toISOString()
         }
       }
       
       // Condition 3: When any status changed to Cancelled or Completed then update completed_at timestamp
       if (status === "completed" || status === "cancelled" || status === "rejected") {
-        if (completed_at === undefined) {
+        if (!hasCompletedAt) {
           updates.completed_at = new Date().toISOString()
         }
         // Also ensure started_at is set if not already
-        if (started_at === undefined && !currentTicket?.started_at) {
+        if (!hasStartedAt && !currentTicket?.started_at) {
           updates.started_at = new Date().toISOString()
         }
       }
@@ -454,32 +351,32 @@ export async function PATCH(
       
       // Additional: If status is in_progress or blocked (and not coming from open/blocked), ensure started_at is set
       if ((status === "in_progress" || status === "blocked") && previousStatus !== "open" && previousStatus !== "blocked") {
-        if (started_at === undefined && !currentTicket?.started_at) {
+        if (!hasStartedAt && !currentTicket?.started_at) {
           updates.started_at = new Date().toISOString()
         }
         updates.completed_at = null
       }
     }
-    if (priority !== undefined) updates.priority = priority
-    if (type !== undefined) updates.type = type
-    if (due_date !== undefined) updates.due_date = due_date || null
-    if (project_id !== undefined) updates.project_id = project_id || null
-    if (links !== undefined) updates.links = prepareLinkPayload(Array.isArray(links) ? links : [])
-    if (department_id !== undefined) updates.department_id = department_id || null
-    if (epic_id !== undefined) updates.epic_id = epic_id || null
-    if (sprint_id !== undefined) updates.sprint_id = sprint_id || null
-    if (parent_ticket_id !== undefined) {
-      if (parent_ticket_id && parent_ticket_id === params.id) {
+    if (hasPriority) updates.priority = priority
+    if (hasType) updates.type = type
+    if (hasDueDate) updates.due_date = dueDate || null
+    if (hasProjectId) updates.project_id = projectId || null
+    if (hasLinks) updates.links = prepareLinkPayload(Array.isArray(links) ? links : [])
+    if (hasDepartmentId) updates.department_id = departmentId || null
+    if (hasEpicId) updates.epic_id = epicId || null
+    if (hasSprintId) updates.sprint_id = sprintId || null
+    if (hasParentTicketId) {
+      if (parentTicketId && parentTicketId === params.id) {
         return NextResponse.json(
           { error: "A ticket cannot be its own parent" },
           { status: 400 }
         )
       }
-      if (parent_ticket_id) {
+      if (parentTicketId) {
         const { data: parentTicket, error: parentTicketError } = await supabase
           .from("tickets")
           .select("id, type")
-          .eq("id", parent_ticket_id)
+          .eq("id", parentTicketId)
           .maybeSingle()
 
         if (parentTicketError || !parentTicket) {
@@ -495,9 +392,9 @@ export async function PATCH(
           )
         }
       }
-      updates.parent_ticket_id = parent_ticket_id || null
+      updates.parent_ticket_id = parentTicketId || null
     }
-    if (reason !== undefined) updates.reason = reason
+    if (hasReason) updates.reason = reason
     updates.activity_actor_id = userId
     
     // Timestamp validation: Check ordering constraints before applying updates
@@ -545,16 +442,16 @@ export async function PATCH(
     
     // Build timestamp map for validation
     const timestampMap: Record<string, string | null> = {
-      created_at: created_at !== undefined ? (created_at || null) : (currentTicket?.created_at || null),
-      assigned_at: assigned_at !== undefined ? (assigned_at || null) : (updates.assigned_at !== undefined ? updates.assigned_at : (currentTicket?.assigned_at || null)),
-      started_at: started_at !== undefined ? (started_at || null) : (updates.started_at !== undefined ? updates.started_at : (currentTicket?.started_at || null)),
-      completed_at: completed_at !== undefined ? (completed_at || null) : (updates.completed_at !== undefined ? updates.completed_at : (currentTicket?.completed_at || null)),
+      created_at: hasCreatedAt ? (createdAt || null) : (currentTicket?.created_at || null),
+      assigned_at: hasAssignedAt ? (assignedAt || null) : (updates.assigned_at !== undefined ? updates.assigned_at : (currentTicket?.assigned_at || null)),
+      started_at: hasStartedAt ? (startedAt || null) : (updates.started_at !== undefined ? updates.started_at : (currentTicket?.started_at || null)),
+      completed_at: hasCompletedAt ? (completedAt || null) : (updates.completed_at !== undefined ? updates.completed_at : (currentTicket?.completed_at || null)),
     }
     
     // Validate and apply timestamp updates
-    if (created_at !== undefined) {
-      if (validateTimestampOrder("created_at", created_at || null, timestampMap)) {
-        updates.created_at = created_at || null
+    if (hasCreatedAt) {
+      if (validateTimestampOrder("created_at", createdAt || null, timestampMap)) {
+        updates.created_at = createdAt || null
       } else {
         return NextResponse.json(
           { error: "created_at cannot be higher than assigned_at, started_at, or completed_at" },
@@ -563,10 +460,10 @@ export async function PATCH(
       }
     }
     
-    if (assigned_at !== undefined) {
-      timestampMap.assigned_at = assigned_at || null
-      if (validateTimestampOrder("assigned_at", assigned_at || null, timestampMap)) {
-        updates.assigned_at = assigned_at || null
+    if (hasAssignedAt) {
+      timestampMap.assigned_at = assignedAt || null
+      if (validateTimestampOrder("assigned_at", assignedAt || null, timestampMap)) {
+        updates.assigned_at = assignedAt || null
       } else {
         return NextResponse.json(
           { error: "assigned_at must be >= created_at and <= started_at, completed_at" },
@@ -575,14 +472,14 @@ export async function PATCH(
       }
     }
 
-    if (sqa_assigned_at !== undefined) {
-      updates.sqa_assigned_at = sqa_assigned_at || null
+    if (hasSqaAssignedAt) {
+      updates.sqa_assigned_at = sqaAssignedAt || null
     }
     
-    if (started_at !== undefined) {
-      timestampMap.started_at = started_at || null
-      if (validateTimestampOrder("started_at", started_at || null, timestampMap)) {
-        updates.started_at = started_at || null
+    if (hasStartedAt) {
+      timestampMap.started_at = startedAt || null
+      if (validateTimestampOrder("started_at", startedAt || null, timestampMap)) {
+        updates.started_at = startedAt || null
       } else {
         return NextResponse.json(
           { error: "started_at must be >= created_at, assigned_at and <= completed_at" },
@@ -591,10 +488,10 @@ export async function PATCH(
       }
     }
     
-    if (completed_at !== undefined) {
-      timestampMap.completed_at = completed_at || null
-      if (validateTimestampOrder("completed_at", completed_at || null, timestampMap)) {
-        updates.completed_at = completed_at || null
+    if (hasCompletedAt) {
+      timestampMap.completed_at = completedAt || null
+      if (validateTimestampOrder("completed_at", completedAt || null, timestampMap)) {
+        updates.completed_at = completedAt || null
       } else {
         return NextResponse.json(
           { error: "completed_at must be >= created_at, assigned_at, and started_at" },
@@ -644,13 +541,8 @@ export async function PATCH(
       )
     }
 
-    if (status !== undefined) {
-      await sendForQaDiscordNotification(supabase, ticket, previousStatus)
-      await sendReturnedToDevDiscordNotification(
-        supabase,
-        ticket,
-        previousStatus
-      )
+    if (hasStatus) {
+      void enqueueTicketStatusDiscordNotifications(supabase, ticket, previousStatus)
     }
 
     // Get images from auth_user for assignee, SQA assignee, and requested_by
@@ -686,7 +578,10 @@ export async function PATCH(
       }
     }
 
-    return NextResponse.json({ ticket: enrichedTicket })
+    return NextResponse.json(
+      { ticket: enrichedTicket },
+      deprecationHeaders ? { headers: deprecationHeaders } : undefined
+    )
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

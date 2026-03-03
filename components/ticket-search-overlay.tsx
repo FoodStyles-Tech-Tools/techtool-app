@@ -26,6 +26,15 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
   const inputRef = useRef<HTMLInputElement>(null)
   const deferredQuery = useDeferredValue(searchQuery.trim())
   const ticketsQuery = useQuery<{
+    items?: Array<{
+      id: string
+      display_id: string | null
+      title: string
+      status: string
+      priority: string
+      type: string | null
+      project: { id: string; name: string } | null
+    }>
     data: Array<{
       id: string
       display_id: string | null
@@ -56,7 +65,10 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
     staleTime: 30 * 1000,
   })
   const { statusMap } = useTicketStatuses({ enabled: open, realtime: false })
-  const filteredTickets = useMemo(() => ticketsQuery.data?.data || [], [ticketsQuery.data?.data])
+  const filteredTickets = useMemo(
+    () => ticketsQuery.data?.items || ticketsQuery.data?.data || [],
+    [ticketsQuery.data?.items, ticketsQuery.data?.data]
+  )
   const isLoading = ticketsQuery.isLoading
 
   const handleSelectTicket = useCallback((ticketId: string) => {

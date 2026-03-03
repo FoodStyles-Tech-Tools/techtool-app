@@ -3,6 +3,7 @@ import { requirePermission } from "@/lib/auth-helpers"
 import { createServerClient } from "@/lib/supabase"
 
 export const runtime = "nodejs"
+export const dynamic = "force-dynamic"
 
 type PinnedProject = {
   id: string

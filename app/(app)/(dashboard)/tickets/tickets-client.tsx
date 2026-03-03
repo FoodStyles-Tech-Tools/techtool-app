@@ -5,7 +5,7 @@ import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
 import { useDepartments } from "@/hooks/use-departments"
-import { useTickets, useUpdateTicket } from "@/hooks/use-tickets"
+import { useTickets, useUpdateTicket, useUpdateTicketWithReasonComment } from "@/hooks/use-tickets"
 import { useProjects } from "@/hooks/use-projects"
 import { useUsers } from "@/hooks/use-users"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -118,7 +118,7 @@ export default function TicketsPage() {
     selectedProjectLabel,
   } = filters
 
-  const { data: ticketsData, isLoading: ticketsLoading } = useTickets({
+  const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
     status: statusFilter !== "all" ? statusFilter : undefined,
     project_id: projectFilter !== "all" ? projectFilter : undefined,
     department_id:
@@ -138,6 +138,7 @@ export default function TicketsPage() {
   const { data: usersData } = useUsers()
   const { departments } = useDepartments()
   const updateTicket = useUpdateTicket()
+  const updateTicketWithReasonComment = useUpdateTicketWithReasonComment()
   const { statuses: ticketStatuses } = useTicketStatuses()
 
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
@@ -491,7 +492,7 @@ export default function TicketsPage() {
   // For client-side search, we need to handle pagination here
   const totalPages = hasSearchQuery 
     ? Math.ceil(sortedTickets.length / ROWS_PER_PAGE)
-    : Math.ceil((ticketsData?.length || 0) / ROWS_PER_PAGE) // Server provides pagination info
+    : Math.max(1, ticketsPagination?.totalPages || 1)
   const startIndex = (currentPage - 1) * ROWS_PER_PAGE
   const endIndex = startIndex + ROWS_PER_PAGE
   const paginatedTickets = useMemo(
@@ -661,21 +662,32 @@ export default function TicketsPage() {
                 setUpdatingFields(prev => ({ ...prev, [cellKey]: "status" }))
                 
                 try {
-                  const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ body: commentBody }),
-                  })
-
-                  if (!commentResponse.ok) {
-                    const errorPayload = await commentResponse.json().catch(() => ({}))
-                    throw new Error(errorPayload?.error || "Failed to save reason comment")
+                  const payload: {
+                    id: string
+                    status: "cancelled" | "rejected"
+                    reason: unknown
+                    reasonCommentBody: string
+                    startedAt?: string | null
+                    completedAt?: string | null
+                    epicId?: string | null
+                  } = {
+                    id: ticketId,
+                    status: newStatus as "cancelled" | "rejected",
+                    reason: finalBody.reason,
+                    reasonCommentBody: commentBody,
                   }
 
-                  await updateTicket.mutateAsync({
-                    id: ticketId,
-                    ...finalBody,
-                  })
+                  if ("started_at" in finalBody) {
+                    payload.startedAt = (finalBody as { started_at?: string | null }).started_at ?? null
+                  }
+                  if ("completed_at" in finalBody) {
+                    payload.completedAt = (finalBody as { completed_at?: string | null }).completed_at ?? null
+                  }
+                  if ("epic_id" in finalBody) {
+                    payload.epicId = (finalBody as { epic_id?: string | null }).epic_id ?? null
+                  }
+
+                  await updateTicketWithReasonComment.mutateAsync(payload)
                   if (doneGuard.closeSubtasks) {
                     await closeSubtasksToStatus(doneGuard.subtasks, newStatus)
                     toast(`Status updated. Closed ${doneGuard.subtasks.length} open subtask${doneGuard.subtasks.length === 1 ? "" : "s"}.`)
@@ -790,6 +802,7 @@ export default function TicketsPage() {
                 }
 
                 const { ticketId, body } = pendingReturnedStatusChange
+                const plainReason = richTextToPlainText(normalizedReason).trim()
                 const commentBody = `<p><strong>Returned to Dev Reason</strong></p>${normalizedReason}`
 
                 setShowReturnedReasonDialog(false)
@@ -799,22 +812,37 @@ export default function TicketsPage() {
                 setUpdatingFields(prev => ({ ...prev, [cellKey]: "status" }))
 
                 try {
-                  const commentResponse = await fetch(`/api/tickets/${ticketId}/comments`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ body: commentBody }),
-                  })
-
-                  if (!commentResponse.ok) {
-                    const errorPayload = await commentResponse.json().catch(() => ({}))
-                    throw new Error(errorPayload?.error || "Failed to save returned reason comment")
+                  const payload: {
+                    id: string
+                    status: "returned_to_dev"
+                    reason: unknown
+                    reasonCommentBody: string
+                    startedAt?: string | null
+                    completedAt?: string | null
+                    epicId?: string | null
+                  } = {
+                    id: ticketId,
+                    status: "returned_to_dev",
+                    reason: {
+                      returned_to_dev: {
+                        reason: plainReason,
+                        returnedAt: new Date().toISOString(),
+                      },
+                    },
+                    reasonCommentBody: commentBody,
                   }
 
-                  await updateTicket.mutateAsync({
-                    id: ticketId,
-                    ...body,
-                    returned_to_dev_reason: richTextToPlainText(normalizedReason),
-                  })
+                  if ("started_at" in body) {
+                    payload.startedAt = (body as { started_at?: string | null }).started_at ?? null
+                  }
+                  if ("completed_at" in body) {
+                    payload.completedAt = (body as { completed_at?: string | null }).completed_at ?? null
+                  }
+                  if ("epic_id" in body) {
+                    payload.epicId = (body as { epic_id?: string | null }).epic_id ?? null
+                  }
+
+                  await updateTicketWithReasonComment.mutateAsync(payload)
                   toast("Status updated")
                 } catch (error: any) {
                   toast(error.message || "Failed to update ticket", "error")

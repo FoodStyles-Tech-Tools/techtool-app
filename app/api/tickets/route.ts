@@ -1,212 +1,60 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseWithUserContext, requirePermission } from "@/lib/auth-helpers"
-import { createServerClient } from "@/lib/supabase"
-import { timeQuery } from "@/lib/query-timing"
+import { getRequestContext } from "@/lib/auth-helpers"
 import { normalizeRichTextInput } from "@/lib/rich-text"
-import { sanitizeLinkArray } from "@/lib/links"
+import { fetchTicketList, parseTicketListQuery } from "@/lib/server/tickets-list"
+import { prepareLinkPayload } from "@/lib/links"
 
 export const runtime = 'nodejs'
 
+const LEGACY_CREATE_BODY_KEYS = [
+  "project_id",
+  "assignee_id",
+  "sqa_assignee_id",
+  "sqa_assigned_at",
+  "requested_by_id",
+  "due_date",
+  "department_id",
+  "epic_id",
+  "sprint_id",
+  "parent_ticket_id",
+  "created_at",
+]
+
+function hasOwn(obj: unknown, key: string): boolean {
+  if (!obj || typeof obj !== "object") return false
+  return Object.prototype.hasOwnProperty.call(obj, key)
+}
+
+function readBodyValue<T = unknown>(body: Record<string, unknown>, camelKey: string, snakeKey?: string): T | undefined {
+  if (hasOwn(body, camelKey)) {
+    return body[camelKey] as T
+  }
+  if (snakeKey && hasOwn(body, snakeKey)) {
+    return body[snakeKey] as T
+  }
+  return undefined
+}
+
 export async function GET(request: NextRequest) {
-  const startTime = performance.now()
   try {
-    await requirePermission("tickets", "view")
-    const supabase = createServerClient()
+    const { supabase } = await getRequestContext({
+      permission: { resource: "tickets", action: "view" },
+      requireUserContext: false,
+    })
 
     const { searchParams } = new URL(request.url)
-    const projectId = searchParams.get("project_id")
-    const parentTicketId = searchParams.get("parent_ticket_id")
-    const assigneeId = searchParams.get("assignee_id")
-    const status = searchParams.get("status")
-    const departmentId = searchParams.get("department_id")
-    const requestedById = searchParams.get("requested_by_id")
-    const excludeDone = searchParams.get("exclude_done") === "true"
-    const excludeSubtasks = searchParams.get("exclude_subtasks") === "true"
-    const rawPage = searchParams.get("page")
-    const rawLimit = searchParams.get("limit")
-    const hasPagination = rawLimit !== null
-    const page = Math.max(parseInt(rawPage || "1", 10), 1)
-    const limit = hasPagination ? Math.max(parseInt(rawLimit || "20", 10), 1) : null
-    const offset = limit ? (page - 1) * limit : 0
+    const listQuery = parseTicketListQuery(searchParams)
+    const result = await fetchTicketList(supabase, listQuery)
 
-    // OPTIMIZED: Select only needed columns, use composite indexes
-    // The composite indexes will be used based on filter combinations
-    let query = supabase
-      .from("tickets")
-      .select(`
-        id,
-        display_id,
-        parent_ticket_id,
-        title,
-        description,
-        due_date,
-        project_id,
-        assignee_id,
-        sqa_assignee_id,
-        requested_by_id,
-        status,
-        priority,
-        type,
-        links,
-        reason,
-        department_id,
-        epic_id,
-        sprint_id,
-        assigned_at,
-        sqa_assigned_at,
-        started_at,
-        completed_at,
-        created_at,
-        updated_at,
-        project:projects(id, name, require_sqa),
-        assignee:users!tickets_assignee_id_fkey(id, name, email),
-        sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
-        requested_by:users!tickets_requested_by_id_fkey(id, name, email),
-        department:departments(id, name),
-        epic:epics(id, name, color),
-        sprint:sprints(id, name, status, start_date, end_date)
-      `, { count: "exact" })
-      .order("created_at", { ascending: false })
-
-    if (limit) {
-      query = query.range(offset, offset + limit - 1)
+    const responseBody = {
+      tickets: result.items,
+      ...(result.pageInfo ? { pagination: result.pageInfo } : {}),
+      ...(result.nextCursor ? { nextCursor: result.nextCursor } : {}),
     }
 
-    if (projectId) {
-      query = query.eq("project_id", projectId)
-    }
-    if (parentTicketId) {
-      query = query.eq("parent_ticket_id", parentTicketId)
-    }
-    if (assigneeId) {
-      if (assigneeId === "unassigned") {
-        query = query.is("assignee_id", null)
-      } else {
-        query = query.eq("assignee_id", assigneeId)
-      }
-    }
-    if (status) {
-      query = query.eq("status", status)
-    }
-    if (excludeSubtasks) {
-      query = query.neq("type", "subtask")
-    }
-    if (departmentId) {
-      if (departmentId === "no_department") {
-        query = query.is("department_id", null)
-      } else {
-        query = query.eq("department_id", departmentId)
-      }
-    }
-    if (requestedById) {
-      query = query.eq("requested_by_id", requestedById)
-    }
-    if (excludeDone) {
-      // Exclude both completed and cancelled statuses
-      // PostgREST syntax: status.not.in.(completed,cancelled)
-      query = query.not("status", "in", "(completed,cancelled)")
-    }
-
-    // OPTIMIZED: Time the main query
-    const queryResult = await timeQuery(
-      `GET /api/tickets?project_id=${projectId || 'all'}&page=${page}&limit=${limit}`,
-      () => query
-    )
-    const { data: tickets, error, count } = queryResult
-
-    if (error) {
-      console.error("Error fetching tickets:", error)
-      return NextResponse.json(
-        { error: "Failed to fetch tickets" },
-        { status: 500 }
-      )
-    }
-
-    if (!tickets || tickets.length === 0) {
-      if (!limit) {
-        return NextResponse.json({ tickets: [] })
-      }
-      return NextResponse.json({
-        tickets: [],
-        pagination: {
-          page,
-          limit,
-          total: count || 0,
-          totalPages: Math.ceil((count || 0) / limit),
-        },
-      })
-    }
-
-    const normalizeUser = (value: any) => {
-      if (!value) return null
-      return Array.isArray(value) ? value[0] || null : value
-    }
-
-    const normalizedTickets = tickets.map(ticket => ({
-      ...ticket,
-      assignee: normalizeUser(ticket.assignee),
-      sqa_assignee: normalizeUser(ticket.sqa_assignee),
-      requested_by: normalizeUser(ticket.requested_by),
-    }))
-
-    // OPTIMIZED: Batch fetch images in parallel with main query if possible
-    // Get images from auth_user for all assignees, SQA assignees, and requested_by
-    const emails = new Set<string>()
-    normalizedTickets.forEach(ticket => {
-      if (ticket.assignee?.email) emails.add(ticket.assignee.email)
-      if (ticket.sqa_assignee?.email) emails.add(ticket.sqa_assignee.email)
-      if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
-    })
-    
-    // OPTIMIZED: Only fetch if there are emails to look up
-    const { data: authUsers } = emails.size > 0 ? await timeQuery(
-      `GET /api/tickets - fetch auth_user images`,
-      () => supabase
-        .from("auth_user")
-        .select("email, image")
-        .in("email", Array.from(emails))
-    ) : { data: null }
-    
-    // Create a map of email -> image
-    const imageMap = new Map<string, string | null>()
-    authUsers?.forEach(au => {
-      imageMap.set(au.email, au.image || null)
-    })
-    
-    // Enrich tickets with images
-    const enrichedTickets = normalizedTickets.map(ticket => ({
-      ...ticket,
-      links: sanitizeLinkArray(ticket.links),
-      assignee: ticket.assignee ? {
-        ...ticket.assignee,
-        image: imageMap.get(ticket.assignee.email) || null,
-      } : null,
-      sqa_assignee: ticket.sqa_assignee ? {
-        ...ticket.sqa_assignee,
-        image: imageMap.get(ticket.sqa_assignee.email) || null,
-      } : null,
-      requested_by: ticket.requested_by ? {
-        ...ticket.requested_by,
-        image: imageMap.get(ticket.requested_by.email) || null,
-      } : null,
-    }))
-
-    const totalTime = performance.now() - startTime
-    if (totalTime > 500) {
-      console.log(`[SLOW ENDPOINT] GET /api/tickets: ${totalTime.toFixed(2)}ms`)
-    }
-
-    if (!limit) {
-      return NextResponse.json({ tickets: enrichedTickets })
-    }
-
-    return NextResponse.json({
-      tickets: enrichedTickets,
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+    return NextResponse.json(responseBody, {
+      headers: {
+        "X-Techtool-Deprecated": "Use /api/v2/tickets",
       },
     })
   } catch (error: any) {
@@ -226,40 +74,52 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requirePermission("tickets", "create")
-    const { supabase, userId } = await getSupabaseWithUserContext()
+    const { supabase, userId } = await getRequestContext({
+      permission: { resource: "tickets", action: "create" },
+    })
 
-    const body = await request.json()
-    const {
-      project_id,
-      title,
-      description,
-      assignee_id,
-      sqa_assignee_id,
-      sqa_assigned_at,
-      requested_by_id,
-      priority = "medium",
-      type = "task",
-      status = "open",
-      department_id,
-      epic_id,
-      sprint_id,
-      parent_ticket_id,
-    } = body
+    const body = (await request.json()) as Record<string, unknown>
+    const projectId = readBodyValue<string | null>(body, "projectId", "project_id")
+    const title = readBodyValue<string>(body, "title")
+    const description = readBodyValue<string | null>(body, "description")
+    const assigneeId = readBodyValue<string | null>(body, "assigneeId", "assignee_id")
+    const sqaAssigneeId = readBodyValue<string | null>(body, "sqaAssigneeId", "sqa_assignee_id")
+    const sqaAssignedAtRaw = readBodyValue<string | null>(body, "sqaAssignedAt", "sqa_assigned_at")
+    const requestedById = readBodyValue<string | null>(body, "requestedById", "requested_by_id")
+    const priority = (readBodyValue<string>(body, "priority") || "medium").trim()
+    const type = (readBodyValue<string>(body, "type") || "task").trim()
+    const status = (readBodyValue<string>(body, "status") || "open").trim()
+    const departmentId = readBodyValue<string | null>(body, "departmentId", "department_id")
+    const epicId = readBodyValue<string | null>(body, "epicId", "epic_id")
+    const sprintId = readBodyValue<string | null>(body, "sprintId", "sprint_id")
+    const parentTicketId = readBodyValue<string | null>(body, "parentTicketId", "parent_ticket_id")
+    const dueDate = readBodyValue<string | null>(body, "dueDate", "due_date")
+    const links = readBodyValue<string[] | null>(body, "links")
+    const createdAt = readBodyValue<string | null>(body, "createdAt", "created_at")
+
+    const usedLegacyBodyKeys = LEGACY_CREATE_BODY_KEYS.filter((key) => hasOwn(body, key))
+    const deprecationHeaders =
+      usedLegacyBodyKeys.length > 0
+        ? {
+            "X-Techtool-Deprecated": "snake_case request body keys are deprecated; use camelCase keys",
+            "X-Techtool-Deprecated-Fields": usedLegacyBodyKeys.join(","),
+          }
+        : undefined
+
     const normalizedDescription = normalizeRichTextInput(description)
 
-    if (!title) {
+    if (!title || !String(title).trim()) {
       return NextResponse.json(
         { error: "Title is required" },
         { status: 400 }
       )
     }
 
-    if (parent_ticket_id) {
+    if (parentTicketId) {
       const { data: parentTicket, error: parentTicketError } = await supabase
         .from("tickets")
         .select("id, type")
-        .eq("id", parent_ticket_id)
+        .eq("id", parentTicketId)
         .maybeSingle()
 
       if (parentTicketError || !parentTicket) {
@@ -276,14 +136,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use provided requested_by_id or default to current user
-    const finalRequestedById = requested_by_id || userId
+    // Use provided requestedById or default to current user
+    const finalRequestedById = requestedById || userId
 
     // Set timestamps based on assignee and status
     const now = new Date().toISOString()
     
-    const assignedAt = assignee_id ? now : null
-    const sqaAssignedAt = sqa_assigned_at ?? (sqa_assignee_id ? now : null)
+    const assignedAt = assigneeId ? now : null
+    const sqaAssignedAt = sqaAssignedAtRaw ?? (sqaAssigneeId ? now : null)
     let startedAt: string | null = null
     let completedAt: string | null = null
     
@@ -301,24 +161,27 @@ export async function POST(request: NextRequest) {
     const { data: ticket, error } = await supabase
       .from("tickets")
       .insert({
-        project_id: project_id || null,
+        project_id: projectId || null,
         title,
         description: normalizedDescription,
-        assignee_id: assignee_id || null,
-        sqa_assignee_id: sqa_assignee_id || null,
+        assignee_id: assigneeId || null,
+        sqa_assignee_id: sqaAssigneeId || null,
         sqa_assigned_at: sqaAssignedAt,
         assigned_at: assignedAt,
         started_at: startedAt,
         completed_at: completedAt,
+        due_date: dueDate || null,
+        links: prepareLinkPayload(Array.isArray(links) ? links : []),
+        ...(createdAt ? { created_at: createdAt } : {}),
         requested_by_id: finalRequestedById,
         priority,
         type,
         status,
         activity_actor_id: userId,
-        department_id: department_id || null,
-        epic_id: epic_id || null,
-        sprint_id: sprint_id || null,
-        parent_ticket_id: parent_ticket_id || null,
+        department_id: departmentId || null,
+        epic_id: epicId || null,
+        sprint_id: sprintId || null,
+        parent_ticket_id: parentTicketId || null,
       })
       .select(`
         *,
@@ -381,7 +244,13 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      return NextResponse.json({ ticket: enrichedTicket }, { status: 201 })
+      return NextResponse.json(
+        { ticket: enrichedTicket },
+        {
+          status: 201,
+          ...(deprecationHeaders ? { headers: deprecationHeaders } : {}),
+        }
+      )
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

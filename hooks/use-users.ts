@@ -30,10 +30,29 @@ export function useUsers(options?: UseUsersOptions) {
       queryClient.invalidateQueries({ queryKey: ["users"] })
     },
     onUpdate: (payload) => {
-      queryClient.invalidateQueries({ queryKey: ["users"] })
       const updatedId = (payload.new as { id?: string } | null)?.id
       if (updatedId) {
-        queryClient.invalidateQueries({ queryKey: ["user", updatedId] })
+        const partial = payload.new as Partial<User>
+        queryClient.setQueriesData<User[]>({ queryKey: ["users"] }, (current) => {
+          if (!Array.isArray(current) || current.length === 0) return current
+          let changed = false
+          const next = current.map((user) => {
+            if (user.id !== updatedId) return user
+            changed = true
+            return {
+              ...user,
+              ...partial,
+            } as User
+          })
+          return changed ? sortUsersByName(next) : current
+        })
+        queryClient.setQueryData<User>(["user", updatedId], (current) => {
+          if (!current) return current
+          return {
+            ...current,
+            ...partial,
+          }
+        })
       }
     },
     onDelete: (payload) => {

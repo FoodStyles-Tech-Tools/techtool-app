@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getSupabaseWithUserContext, requirePermission } from "@/lib/auth-helpers"
+import { getRequestContext } from "@/lib/auth-helpers"
 
 export const runtime = "nodejs"
 
@@ -9,8 +9,9 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    await requirePermission("tickets", "view")
-    const { supabase } = await getSupabaseWithUserContext()
+    const { supabase } = await getRequestContext({
+      permission: { resource: "tickets", action: "view" },
+    })
 
     const ticketId = params.id
 

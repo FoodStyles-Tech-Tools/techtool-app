@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requirePermission, getSupabaseWithUserContext } from "@/lib/auth-helpers"
+import { getRequestContext } from "@/lib/auth-helpers"
 import { isRichTextEmpty } from "@/lib/rich-text"
 
 export const runtime = "nodejs"
@@ -10,8 +10,9 @@ export async function PATCH(
   { params }: { params: { id: string; commentId: string } }
 ) {
   try {
-    await requirePermission("tickets", "edit")
-    const { supabase, userId } = await getSupabaseWithUserContext()
+    const { supabase, userId } = await getRequestContext({
+      permission: { resource: "tickets", action: "edit" },
+    })
 
     const { data: existing } = await supabase
       .from("ticket_comments")
@@ -85,8 +86,9 @@ export async function DELETE(
   { params }: { params: { id: string; commentId: string } }
 ) {
   try {
-    await requirePermission("tickets", "edit")
-    const { supabase, userId } = await getSupabaseWithUserContext()
+    const { supabase, userId } = await getRequestContext({
+      permission: { resource: "tickets", action: "edit" },
+    })
 
     const { data: existing } = await supabase
       .from("ticket_comments")

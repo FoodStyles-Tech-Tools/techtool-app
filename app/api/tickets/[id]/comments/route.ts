@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { requirePermission, getSupabaseWithUserContext } from "@/lib/auth-helpers"
+import { getRequestContext } from "@/lib/auth-helpers"
 import { startTiming, endTiming } from "@/lib/query-timing"
 import { isRichTextEmpty } from "@/lib/rich-text"
 
 export const runtime = "nodejs"
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 /** GET /api/tickets/[id]/comments – list all comments for a ticket (threaded: root comments with replies, authors, mentions) */
 export async function GET(
@@ -12,8 +13,9 @@ export async function GET(
 ) {
   const startTime = performance.now()
   try {
-    await requirePermission("tickets", "view")
-    const { supabase } = await getSupabaseWithUserContext()
+    const { supabase } = await getRequestContext({
+      permission: { resource: "tickets", action: "view" },
+    })
 
     const ticketId = params.id
 
@@ -173,8 +175,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    await requirePermission("tickets", "edit")
-    const { supabase, userId } = await getSupabaseWithUserContext()
+    const { supabase, userId } = await getRequestContext({
+      permission: { resource: "tickets", action: "edit" },
+    })
 
     const ticketId = params.id
     const body = await request.json()
@@ -191,24 +194,54 @@ export async function POST(
       )
     }
 
-    const { data: ticket, error: ticketError } = await supabase
-      .from("tickets")
-      .select("id, display_id")
-      .eq("id", ticketId)
-      .maybeSingle()
+    const uniqueMentions = Array.from(
+      new Set(
+        (mention_user_ids as string[]).filter(
+          (id): id is string =>
+            typeof id === "string" && UUID_REGEX.test(id) && id !== userId
+        )
+      )
+    )
 
-    if (ticketError || !ticket) {
-      return NextResponse.json({ error: "Ticket not found" }, { status: 404 })
+    const { data: rpcRows, error: rpcError } = await supabase.rpc(
+      "create_ticket_comment_with_notifications",
+      {
+        p_ticket_id: ticketId,
+        p_author_id: userId,
+        p_body: text.trim(),
+        p_parent_id: parent_id || null,
+        p_mention_user_ids: uniqueMentions,
+      }
+    )
+
+    if (rpcError || !Array.isArray(rpcRows) || rpcRows.length === 0) {
+      const detail = rpcError?.details || ""
+      if (detail === "ticket_not_found") {
+        return NextResponse.json({ error: "Ticket not found" }, { status: 404 })
+      }
+      if (detail === "parent_comment_not_found") {
+        return NextResponse.json({ error: "Parent comment not found" }, { status: 400 })
+      }
+      if (detail === "parent_comment_ticket_mismatch") {
+        return NextResponse.json(
+          { error: "Parent comment does not belong to this ticket" },
+          { status: 400 }
+        )
+      }
+      console.error("Error creating comment via RPC:", rpcError)
+      return NextResponse.json(
+        { error: rpcError?.message || "Failed to create comment" },
+        { status: 500 }
+      )
     }
 
-    const { data: comment, error: insertError } = await supabase
+    const createdRow = rpcRows[0] as {
+      comment_id: string
+      mention_user_ids: string[] | null
+    }
+
+    const { data: comment, error: commentError } = await supabase
       .from("ticket_comments")
-      .insert({
-        ticket_id: ticketId,
-        parent_id: parent_id || null,
-        author_id: userId,
-        body: text.trim(),
-      })
       .select(
         `
         id,
@@ -221,96 +254,36 @@ export async function POST(
         author:users!ticket_comments_author_id_fkey(id, name, email, avatar_url)
       `
       )
+      .eq("id", createdRow.comment_id)
       .single()
 
-    if (insertError) {
-      console.error("Error creating comment:", insertError)
+    if (commentError || !comment) {
+      console.error("Error loading created comment:", commentError)
       return NextResponse.json(
-        { error: insertError.message || "Failed to create comment" },
+        { error: "Failed to load created comment" },
         { status: 500 }
       )
     }
 
-    const uniqueMentions = Array.from(
-      new Set((mention_user_ids as string[]).filter((id): id is string => typeof id === "string" && id !== userId))
-    )
-
-    if (uniqueMentions.length > 0) {
-      await supabase.from("comment_mentions").insert(
-        uniqueMentions.map((user_id) => ({
-          comment_id: comment.id,
-          user_id,
-        }))
-      )
-    }
-
-    let mentionUsersById = new Map<string, { id: string; name: string | null; email: string; avatar_url?: string | null }>()
-    if (uniqueMentions.length > 0) {
+    const mentionIds = (createdRow.mention_user_ids || []).filter((id) => typeof id === "string")
+    let mentionUsersById = new Map<
+      string,
+      { id: string; name: string | null; email: string; avatar_url?: string | null }
+    >()
+    if (mentionIds.length > 0) {
       const { data: mentionUsers } = await supabase
         .from("users")
         .select("id, name, email, avatar_url")
-        .in("id", uniqueMentions)
+        .in("id", mentionIds)
 
       if (Array.isArray(mentionUsers)) {
         mentionUsersById = new Map(
-          mentionUsers.map((user) => [user.id, user as { id: string; name: string | null; email: string; avatar_url?: string | null }])
+          mentionUsers.map((user) => [
+            user.id,
+            user as { id: string; name: string | null; email: string; avatar_url?: string | null },
+          ])
         )
       }
-    }
-
-    const notificationsToInsert: { user_id: string; type: "reply" | "mention"; comment_id: string; ticket_id: string }[] = []
-    const notifiedUserIds = new Set<string>()
-
-    const addNotification = (user_id: string, type: "reply" | "mention") => {
-      if (user_id === userId) return
-      if (notifiedUserIds.has(user_id)) return
-      notifiedUserIds.add(user_id)
-      notificationsToInsert.push({ user_id, type, comment_id: comment.id, ticket_id: ticketId })
-    }
-
-    if (parent_id) {
-      const [parentResult, mentionsResult, repliesResult] = await Promise.all([
-        supabase
-          .from("ticket_comments")
-          .select("author_id")
-          .eq("id", parent_id)
-          .single(),
-        supabase
-          .from("comment_mentions")
-          .select("user_id")
-          .eq("comment_id", parent_id),
-        supabase
-          .from("ticket_comments")
-          .select("author_id")
-          .eq("parent_id", parent_id)
-          .neq("id", comment.id),
-      ])
-
-      if (parentResult.data?.author_id) {
-        addNotification(parentResult.data.author_id, "reply")
-      }
-
-      if (mentionsResult.data && mentionsResult.data.length > 0) {
-        for (const mention of mentionsResult.data) {
-          addNotification(mention.user_id, "reply")
-        }
-      }
-
-      if (repliesResult.data && repliesResult.data.length > 0) {
-        for (const reply of repliesResult.data) {
-          if (reply.author_id) {
-            addNotification(reply.author_id, "reply")
-          }
-        }
-      }
-    }
-
-    for (const uid of uniqueMentions) {
-      addNotification(uid, "mention")
-    }
-
-    if (notificationsToInsert.length > 0) {
-      await supabase.from("comment_notifications").insert(notificationsToInsert)
     }
 
     const normalizedAuthor = Array.isArray(comment.author) ? comment.author[0] : comment.author
@@ -319,7 +292,7 @@ export async function POST(
       comment: {
         ...comment,
         author: normalizedAuthor,
-        mentions: uniqueMentions.map((user_id) => ({
+        mentions: mentionIds.map((user_id) => ({
           user_id,
           user: mentionUsersById.get(user_id),
         })),
