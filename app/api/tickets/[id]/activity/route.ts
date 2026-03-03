@@ -5,7 +5,7 @@ export const runtime = "nodejs"
 
 /** GET /api/tickets/[id]/activity – ticket activity timeline (comments + history + subtasks) */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {

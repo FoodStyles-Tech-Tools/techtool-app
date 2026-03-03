@@ -5,7 +5,7 @@ import { createServerClient } from "@/lib/supabase"
 export const runtime = 'nodejs'
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -115,7 +115,7 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
@@ -173,4 +173,3 @@ export async function DELETE(
     )
   }
 }
-

@@ -26,21 +26,9 @@ export function getDefaultReportDateRange(now: Date = new Date()): { start: Date
   return { start, end: lastCompletedWeekEnd }
 }
 
-/** Format as "YYYY Www" (e.g. 2026 W9). */
-export function formatISOWeekLabel(date: Date): string {
-  const year = getISOWeekYear(date)
-  const week = getISOWeek(date)
-  return `${year} W${week}`
-}
-
 /** Get ISO week key for a date (e.g. "2026-W09" for grouping). */
 export function getISOWeekKey(date: Date): string {
   const year = getISOWeekYear(date)
   const week = getISOWeek(date)
   return `${year}-W${String(week).padStart(2, "0")}`
-}
-
-/** Start of the ISO week that contains the given date. */
-export function startOfISOWeek(date: Date): Date {
-  return startOfWeek(date, ISO_WEEK_OPTS)
 }

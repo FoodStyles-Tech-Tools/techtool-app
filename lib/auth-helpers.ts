@@ -20,19 +20,6 @@ export async function requireAuth() {
   )
 }
 
-/** Get current user's id from users table (by session email). Use in API routes. */
-export async function getCurrentUserId(): Promise<string | null> {
-  const session = await requireAuth()
-  const { createServerClient } = await import("./supabase")
-  const supabase = createServerClient()
-  const { data: user } = await supabase
-    .from("users")
-    .select("id")
-    .eq("email", session.user.email)
-    .single()
-  return user?.id ?? null
-}
-
 /** Server Supabase client with RLS user context set. Use for comment/notification APIs so RLS sees the current user. */
 export async function getSupabaseWithUserContext(): Promise<{ supabase: Awaited<ReturnType<typeof import("./supabase").createServerClient>>; userId: string }> {
   return await timeQuery(
@@ -175,39 +162,3 @@ export async function requirePermission(
     100 // Log if >100ms
   )
 }
-
-export async function requireProjectAccess(projectId: string) {
-  const session = await requireAuth()
-  
-  const { supabase } = await import("./supabase")
-  
-  // Get user from users table
-  const { data: user } = await supabase
-    .from("users")
-    .select("id, role")
-    .eq("email", session.user.email)
-    .single()
-
-  if (!user) {
-    throw new Error("User not found")
-  }
-
-  // Check if user is owner or admin
-  const { data: project } = await supabase
-    .from("projects")
-    .select("owner_id")
-    .eq("id", projectId)
-    .single()
-
-  if (!project) {
-    throw new Error("Project not found")
-  }
-
-  // Allow if admin or owner (case-insensitive check for admin)
-  if (user.role?.toLowerCase() === "admin" || project.owner_id === user.id) {
-    return session
-  }
-
-  throw new Error("Forbidden: Project access denied")
-}
-

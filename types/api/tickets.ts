@@ -1,5 +1,3 @@
-import type { CursorPage } from "./common"
-
 export type TicketPerson = {
   id: string
   name: string | null
@@ -39,5 +37,3 @@ export type TicketDetailPayload = TicketListItem & {
   epic: { id: string; name: string; color: string } | null
   sprint: { id: string; name: string; status: string } | null
 }
-
-export type TicketListResponse = CursorPage<TicketListItem>

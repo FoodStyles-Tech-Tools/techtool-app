@@ -35,7 +35,6 @@ export interface TicketsToolbarProps {
   activeFilterCount: number
   excludeDone: boolean
   setExcludeDone: (value: boolean) => void
-  assigneeFilter: string
   setAssigneeFilter: (value: string) => void
   resetToolbarFilters: () => void
   canCreateTickets: boolean
@@ -56,7 +55,6 @@ export function TicketsToolbar({
   activeFilterCount,
   excludeDone,
   setExcludeDone,
-  assigneeFilter,
   setAssigneeFilter,
   resetToolbarFilters,
   canCreateTickets,

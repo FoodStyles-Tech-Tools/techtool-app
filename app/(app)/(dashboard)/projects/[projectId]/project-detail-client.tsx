@@ -77,7 +77,6 @@ const RichTextEditor = dynamic(
   { ssr: false }
 )
 import { filterStatusesBySqaRequirement, isArchivedStatus, isDoneStatus } from "@/lib/ticket-statuses"
-import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import type { Ticket } from "@/lib/types"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@/lib/rich-text"
 
@@ -195,21 +194,6 @@ export default function ProjectDetailClient() {
   const loading = (!projectData && projectLoading) || (!ticketsData && ticketsLoading)
 
   // All hooks must be called unconditionally before any early returns
-  const assigneeEligibleUsers = useMemo(
-    () => (usersData || []).filter((user) =>
-      user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false
-    ),
-    [usersData]
-  )
-
-  const FIELD_LABELS: Record<string, string> = {
-    status: "Status",
-    priority: "Priority",
-    type: "Type",
-    requested_by_id: "Requested By",
-    assignee_id: "Assignee",
-    department_id: "Department",
-  }
   const visibleTicketStatuses = useMemo(
     () =>
       filterStatusesBySqaRequirement(ticketStatuses, project?.require_sqa === true).filter(
@@ -230,11 +214,6 @@ export default function ProjectDetailClient() {
     () => kanbanColumns.map((column) => column.id),
     [kanbanColumns]
   )
-
-  const getUserById = (id?: string | null) => {
-    if (!id) return undefined
-    return users.find((user) => user.id === id)
-  }
 
   const sortedEpics = useMemo(
     () => [...epics].sort((a, b) => a.name.localeCompare(b.name)),
@@ -999,59 +978,6 @@ export default function ProjectDetailClient() {
         .catch(() => toast("Failed to copy ticket info", "error"))
     } else {
       toast("Clipboard not available", "error")
-    }
-  }
-
-  const updateTicketField = async (
-    ticketId: string,
-    field: string,
-    value: string | null | undefined
-  ) => {
-    // Get current ticket to check previous values
-    const currentTicket = allTickets.find(t => t.id === ticketId)
-    
-    const body: any = {}
-    if (field === "requested_by_id") {
-      if (!value) {
-        toast("Requested by cannot be empty", "error")
-        return
-      }
-      body[field] = value
-    } else if (field === "assignee_id") {
-      const previousAssigneeId = currentTicket?.assignee?.id || null
-      const newAssigneeId = value || null
-      body[field] = newAssigneeId
-      
-      // Condition 1: When assignee changed from Null -> add value then add assigned_at timestamp
-      // Condition 2: If assignee is not null then change value then change timestamp assigned_at
-      if (!newAssigneeId) {
-        body.assigned_at = null
-      } else if (!previousAssigneeId || previousAssigneeId !== newAssigneeId) {
-        body.assigned_at = new Date().toISOString()
-      }
-    } else if (field === "department_id") {
-      body[field] = value || null
-    } else {
-      body[field] = value
-    }
-
-    const cellKey = `${ticketId}-${field}`
-    setUpdatingFields(prev => ({ ...prev, [cellKey]: field }))
-
-    try {
-      await updateTicket.mutateAsync({
-        id: ticketId,
-        ...body,
-      })
-      toast(`${FIELD_LABELS[field] || "Ticket"} updated`)
-    } catch (error: any) {
-      toast(error.message || "Failed to update ticket", "error")
-    } finally {
-      setUpdatingFields(prev => {
-        const newState = { ...prev }
-        delete newState[cellKey]
-        return newState
-      })
     }
   }
 

@@ -106,7 +106,6 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const UNASSIGNED_VALUE = "unassigned"
   const NO_DEPARTMENT_VALUE = "no_department"
   const NO_PROJECT_VALUE = "no_project"
-  const NO_EPIC_VALUE = "no_epic"
   const NO_PARENT_TICKET_VALUE = "no_parent_ticket"
   const { departments } = useDepartments({ realtime: false })
   const { data: projectsData } = useProjects({ realtime: false })
@@ -252,11 +251,6 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     ),
     [users]
   )
-
-  const getUserById = (id?: string | null) => {
-    if (!id) return undefined
-    return users.find((user) => user.id === id)
-  }
 
   const updateTicketWithToast = async (updates: Record<string, any>, successMessage: string, fieldName?: string) => {
     if (!ticket || !ticketId) return

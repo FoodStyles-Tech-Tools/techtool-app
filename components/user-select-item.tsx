@@ -2,7 +2,7 @@
 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { SelectItem } from "@/components/ui/select"
-import { cn, truncateText } from "@/lib/utils"
+import { truncateText } from "@/lib/utils"
 
 interface User {
   id: string

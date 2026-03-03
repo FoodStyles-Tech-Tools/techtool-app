@@ -7,7 +7,7 @@ export const runtime = "nodejs"
 
 /** GET /api/tickets/[id]/comments – list all comments for a ticket (threaded: root comments with replies, authors, mentions) */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const startTime = performance.now()

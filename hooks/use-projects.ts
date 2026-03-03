@@ -220,21 +220,3 @@ export function useUpdateProject() {
     },
   })
 }
-
-export function useDeleteProject() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      await requestJson<{ success: boolean }>(`/api/projects/${id}`, {
-        method: "DELETE",
-      })
-
-      return { id }
-    },
-    onSuccess: ({ id }) => {
-      queryClient.removeQueries({ queryKey: ["project", id] })
-      queryClient.invalidateQueries({ queryKey: ["projects"] })
-    },
-  })
-}

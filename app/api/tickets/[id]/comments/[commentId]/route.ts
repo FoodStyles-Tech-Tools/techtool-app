@@ -81,7 +81,7 @@ export async function PATCH(
 
 /** DELETE /api/tickets/[id]/comments/[commentId] – delete own comment */
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string; commentId: string } }
 ) {
   try {

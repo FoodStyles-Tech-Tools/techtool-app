@@ -1,6 +1,6 @@
 "use client"
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
 import { requestJson } from "@/lib/client/api"
 import type { User } from "@/lib/types"
@@ -52,80 +52,6 @@ export function useUsers(options?: UseUsersOptions) {
     queryFn: async () => {
       const response = await requestJson<{ users: User[] }>("/api/users")
       return sortUsersByName(response.users || [])
-    },
-  })
-}
-
-export function useUser(userId: string) {
-  const queryClient = useQueryClient()
-  const enabled = !!userId
-
-  useRealtimeSubscription({
-    table: "users",
-    filter: `id=eq.${userId}`,
-    enabled,
-    onInsert: () => {
-      queryClient.invalidateQueries({ queryKey: ["user", userId] })
-      queryClient.invalidateQueries({ queryKey: ["users"] })
-    },
-    onUpdate: () => {
-      queryClient.invalidateQueries({ queryKey: ["user", userId] })
-      queryClient.invalidateQueries({ queryKey: ["users"] })
-    },
-    onDelete: () => {
-      queryClient.removeQueries({ queryKey: ["user", userId] })
-      queryClient.invalidateQueries({ queryKey: ["users"] })
-    },
-  })
-
-  return useQuery<{ user: User }>({
-    queryKey: ["user", userId],
-    enabled,
-    staleTime: 2 * 60 * 1000,
-    queryFn: async () => requestJson<{ user: User }>(`/api/users/${userId}`),
-  })
-}
-
-export function useCreateUser() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (data: {
-      email: string
-      name?: string
-      discord_id?: string
-      role?: string
-    }) => requestJson<{ user: User }>("/api/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] })
-    },
-  })
-}
-
-export function useUpdateUser() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async ({
-      id,
-      ...data
-    }: {
-      id: string
-      name?: string
-      discord_id?: string
-      role?: string
-    }) => requestJson<{ user: User }>(`/api/users/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["user", data.user.id] })
-      queryClient.invalidateQueries({ queryKey: ["users"] })
     },
   })
 }

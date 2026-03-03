@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useMemo, useCallback, memo, useRef } from "react"
+import { useState, useMemo, useCallback, useRef } from "react"
 import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/toast"
-import Link from "next/link"
 import { useDepartments } from "@/hooks/use-departments"
 import { useTickets, useUpdateTicket } from "@/hooks/use-tickets"
 import { useProjects } from "@/hooks/use-projects"
@@ -17,9 +16,6 @@ import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import { useTicketSubtaskCounts } from "@/hooks/use-ticket-subtask-counts"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
 import {
   Dialog,
@@ -101,19 +97,14 @@ export default function TicketsPage() {
   })
 
   const {
-    searchQuery,
-    setSearchQuery,
     deferredSearchQuery,
     statusFilter,
-    setStatusFilter,
     projectFilter,
     setProjectFilter,
     includeInactiveProjects,
     setIncludeInactiveProjects,
     departmentFilter,
-    setDepartmentFilter,
     requestedByFilter,
-    setRequestedByFilter,
     assigneeFilter,
     setAssigneeFilter,
     excludeDone,
@@ -523,7 +514,6 @@ export default function TicketsPage() {
         activeFilterCount={activeFilterCount}
         excludeDone={excludeDone}
         setExcludeDone={setExcludeDone}
-        assigneeFilter={assigneeFilter}
         setAssigneeFilter={setAssigneeFilter}
         resetToolbarFilters={resetToolbarFilters}
         canCreateTickets={canCreateTickets}

@@ -1,7 +1,7 @@
 "use client"
 
 import { Circle } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { Epic } from "@/hooks/use-epics"
 

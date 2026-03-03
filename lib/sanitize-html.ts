@@ -4,11 +4,6 @@
  * Use for user-generated or external HTML (e.g. calendar event summaries, rich text).
  */
 
-const ALLOWED_TAGS = new Set([
-  "p", "br", "span", "strong", "em", "u", "b", "i", "a", "ul", "ol", "li",
-  "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "code", "pre", "div",
-])
-
 const DANGEROUS_TAGS = ["script", "style", "iframe", "object", "embed", "form", "input", "button"]
 const TICKET_URL_PATTERN = /https?:\/\/techtool-app\.vercel\.app\/tickets\/([a-z]{2,}-\d+)\b/gi
 const HAS_TICKET_URL_PATTERN = /https?:\/\/techtool-app\.vercel\.app\/tickets\/([a-z]{2,}-\d+)\b/i

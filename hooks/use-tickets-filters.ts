@@ -3,12 +3,6 @@
 import { useState, useCallback, useMemo, useEffect, useDeferredValue } from "react"
 import { isDoneStatus } from "@/lib/ticket-statuses"
 
-export interface TicketStatusOption {
-  id: string
-  label: string
-  color: string
-}
-
 export interface ProjectsFilterOption {
   id: string
   name: string

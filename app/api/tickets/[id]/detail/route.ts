@@ -20,7 +20,7 @@ function extractMentionedTicketSlugs(input: string): string[] {
 
 /** GET /api/tickets/[id]/detail – ticket + comments in one response for the detail dialog */
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {

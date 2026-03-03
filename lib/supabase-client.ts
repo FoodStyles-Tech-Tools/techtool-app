@@ -68,11 +68,10 @@ export function useSupabaseClient(): SupabaseClient {
 
 // Helper to get authenticated client with user email
 // Uses the singleton instance and sets headers dynamically
-export function getAuthenticatedClient(userEmail: string | null | undefined): SupabaseClient {
+export function getAuthenticatedClient(_userEmail: string | null | undefined): SupabaseClient {
   const client = getClientInstance()
   
   // If we need to set user email, we can do it via RPC calls instead of creating new clients
   // The singleton client will be used, and set_user_context RPC will handle authentication
   return client
 }
-

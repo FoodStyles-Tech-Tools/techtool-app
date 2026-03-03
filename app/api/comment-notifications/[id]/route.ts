@@ -5,7 +5,7 @@ export const runtime = "nodejs"
 
 /** PATCH /api/comment-notifications/[id] – mark notification as read (set read_at) */
 export async function PATCH(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
