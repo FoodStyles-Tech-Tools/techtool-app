@@ -1,6 +1,5 @@
 import { Sidebar } from "./sidebar"
 import { PermissionsBootstrap } from "@/components/permissions-bootstrap"
-import { AppShellHeader } from "./app-shell-header"
 
 type PermissionsBootstrapPayload = {
   user: {
@@ -55,9 +54,8 @@ export function AppShell({
       <Sidebar />
       <div className="min-w-0 flex-1 bg-muted/40 p-2">
         <main className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border/50 bg-card shadow-sm">
-          <AppShellHeader />
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto w-full min-w-0 max-w-[1800px] px-4 pb-5 pt-0 sm:px-6 sm:pb-6 lg:px-8 xl:px-10">
+            <div className="mx-auto w-full min-w-0 max-w-[1800px] px-4 pb-5 pt-4 sm:px-6 sm:pb-6 lg:px-8 xl:px-10">
               {children}
             </div>
           </div>

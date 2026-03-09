@@ -606,7 +606,10 @@ const ProjectRow = memo(function ProjectRow({
     <TableRow className="border-b-0 even:bg-muted/20 hover:bg-muted/35">
       <TableCell className="py-2 w-[600px] min-w-[500px]">
         <div className="flex items-start gap-2">
-          <Link href={`/projects/${project.id}`} className="hover:underline flex min-w-0 flex-1 flex-col">
+          <Link
+            href={`/tickets?projectId=${project.id}`}
+            className="hover:underline flex min-w-0 flex-1 flex-col"
+          >
             <span className="text-sm">{project.name}</span>
             <span className="text-xs text-muted-foreground line-clamp-2">
               {project.description || "No description"}

@@ -11,26 +11,29 @@ export interface ProjectsFilterOption {
 
 interface UseTicketsFiltersOptions {
   user: { id: string; role?: string | null } | null
-  preferencesView?: "table" | "kanban" | null
+  preferencesView?: "table" | "kanban" | "gantt" | null
   projects: ProjectsFilterOption[]
+  initialProjectId?: string | null
 }
 
 export function useTicketsFilters({
   user,
   preferencesView,
   projects,
+  initialProjectId,
 }: UseTicketsFiltersOptions) {
   const [searchQuery, setSearchQuery] = useState("")
   const deferredSearchQuery = useDeferredValue(searchQuery)
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [projectFilter, setProjectFilter] = useState<string>("all")
+  const [projectFilter, setProjectFilter] = useState<string>(initialProjectId ?? "all")
   const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [requestedByFilter, setRequestedByFilter] = useState<string>("all")
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
+  const [sprintFilter, setSprintFilter] = useState<string>("all")
   const [excludeDone, setExcludeDone] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
-  const [view, setView] = useState<"table" | "kanban">(preferencesView || "table")
+  const [view, setView] = useState<"table" | "kanban" | "gantt">(preferencesView || "table")
 
   // Sync view from preferences
   useEffect(() => {
@@ -90,6 +93,10 @@ export function useTicketsFilters({
     setAssigneeFilter(value)
     setCurrentPage(1)
   }, [])
+  const setSprintFilterAndResetPage = useCallback((value: string) => {
+    setSprintFilter(value)
+    setCurrentPage(1)
+  }, [])
   const setExcludeDoneAndResetPage = useCallback((value: boolean) => {
     setExcludeDone(value)
     setCurrentPage(1)
@@ -102,6 +109,7 @@ export function useTicketsFilters({
     setRequestedByFilter("all")
     setProjectFilter("all")
     setAssigneeFilter("all")
+    setSprintFilter("all")
     setExcludeDone(true)
     setCurrentPage(1)
   }, [])
@@ -114,6 +122,7 @@ export function useTicketsFilters({
     if (departmentFilter !== "all") count += 1
     if (requestedByFilter !== "all") count += 1
     if (assigneeFilter !== "all") count += 1
+    if (sprintFilter !== "all") count += 1
     if (!excludeDone) count += 1
     return count
   }, [
@@ -123,6 +132,7 @@ export function useTicketsFilters({
     departmentFilter,
     requestedByFilter,
     assigneeFilter,
+    sprintFilter,
     excludeDone,
   ])
 
@@ -147,6 +157,8 @@ export function useTicketsFilters({
     setRequestedByFilter: setRequestedByFilterAndResetPage,
     assigneeFilter,
     setAssigneeFilter: setAssigneeFilterAndResetPage,
+    sprintFilter,
+    setSprintFilter: setSprintFilterAndResetPage,
     excludeDone,
     setExcludeDone: setExcludeDoneAndResetPage,
     currentPage,

@@ -14,6 +14,8 @@ import { useTicketsSort } from "@/hooks/use-tickets-sort"
 import { useKanbanDrag } from "@/hooks/use-kanban-drag"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import { useTicketSubtaskCounts } from "@/hooks/use-ticket-subtask-counts"
+import { useEpics } from "@/hooks/use-epics"
+import { useSprints } from "@/hooks/use-sprints"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
@@ -37,6 +39,8 @@ import {
 import { TicketsToolbar } from "@/components/tickets/tickets-toolbar"
 import { TicketsKanban } from "@/components/tickets/tickets-kanban"
 import { TicketsTable } from "@/components/tickets/tickets-table"
+import { EpicForm } from "@/components/forms/epic-form"
+import { SprintForm } from "@/components/forms/sprint-form"
 
 type OpenSubtaskRow = {
   id: string
@@ -60,8 +64,16 @@ const RichTextEditor = dynamic(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
   { ssr: false }
 )
+const GanttChart = dynamic(
+  () => import("@/components/gantt-chart").then((mod) => mod.GanttChart),
+  { ssr: false }
+)
 
-export default function TicketsPage() {
+type TicketsClientProps = {
+  initialProjectId?: string | null
+}
+
+export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isTicketDialogOpen, setTicketDialogOpen] = useState(false)
@@ -83,6 +95,8 @@ export default function TicketsPage() {
     targetStatus: string
     subtasks: OpenSubtaskRow[]
   } | null>(null)
+  const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false)
+  const [isSprintDialogOpen, setIsSprintDialogOpen] = useState(false)
 
   const { user, flags } = usePermissions()
   const subtaskDecisionResolverRef = useRef<((decision: SubtaskDecision) => void) | null>(null)
@@ -94,6 +108,7 @@ export default function TicketsPage() {
     user: user ?? null,
     preferencesView: preferences.tickets_view ?? null,
     projects: projects.map((p) => ({ id: p.id, name: p.name ?? "", status: p.status })),
+    initialProjectId: initialProjectId ?? null,
   })
 
   const {
@@ -107,6 +122,8 @@ export default function TicketsPage() {
     requestedByFilter,
     assigneeFilter,
     setAssigneeFilter,
+    sprintFilter,
+    setSprintFilter,
     excludeDone,
     setExcludeDone,
     currentPage,
@@ -114,7 +131,6 @@ export default function TicketsPage() {
     view,
     setView,
     resetToolbarFilters,
-    activeFilterCount,
     selectedProjectLabel,
   } = filters
 
@@ -140,6 +156,8 @@ export default function TicketsPage() {
   const updateTicket = useUpdateTicket()
   const updateTicketWithReasonComment = useUpdateTicketWithReasonComment()
   const { statuses: ticketStatuses } = useTicketStatuses()
+  const { epics } = useEpics(projectFilter === "all" ? null : projectFilter)
+  const { sprints } = useSprints(projectFilter === "all" ? null : projectFilter)
 
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
   const parentTicketIds = useMemo(() => allTickets.map((ticket) => ticket.id), [allTickets])
@@ -168,6 +186,7 @@ export default function TicketsPage() {
   const loading = !ticketsData && ticketsLoading
   const canCreateTickets = flags?.canCreateTickets ?? false
   const canEditTickets = flags?.canEditTickets ?? false
+  const canEditProjects = flags?.canEditProjects ?? false
 
   const fetchOpenSubtasksForGuard = useCallback(async (ticketId: string): Promise<OpenSubtaskRow[]> => {
     const response = await fetch(`/api/tickets/${ticketId}/detail`)
@@ -237,20 +256,47 @@ export default function TicketsPage() {
 
   const filteredTickets = useMemo(() => {
     const q = deferredSearchQuery.trim().toLowerCase()
-    if (!q) return allTickets.filter((ticket) => !isArchivedStatus(ticket.status))
-    return allTickets.filter(
-      (t) =>
-        !isArchivedStatus(t.status) &&
-        (
+    return allTickets.filter((t) => {
+      if (isArchivedStatus(t.status)) return false
+
+      if (q) {
+        const matchesSearch =
           t.title.toLowerCase().includes(q) ||
           richTextToPlainText(t.description).toLowerCase().includes(q) ||
           t.project?.name.toLowerCase().includes(q) ||
           t.display_id?.toLowerCase().includes(q)
-        )
-    )
-  }, [allTickets, deferredSearchQuery])
+        if (!matchesSearch) return false
+      }
+
+      if (sprintFilter !== "all") {
+        if (sprintFilter === "no_sprint") {
+          if (t.sprint?.id) return false
+        } else if (t.sprint?.id !== sprintFilter) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [allTickets, deferredSearchQuery, sprintFilter])
 
   const { sortConfig, handleSort, sortedTickets } = useTicketsSort(filteredTickets)
+
+  const handleOpenCreateEpic = useCallback(() => {
+    if (projectFilter === "all") {
+      toast("Select a project before creating an epic", "error")
+      return
+    }
+    setIsEpicDialogOpen(true)
+  }, [projectFilter])
+
+  const handleOpenCreateSprint = useCallback(() => {
+    if (projectFilter === "all") {
+      toast("Select a project before creating a sprint", "error")
+      return
+    }
+    setIsSprintDialogOpen(true)
+  }, [projectFilter])
 
   const handleKanbanDrop = useCallback(
     async (ticketId: string, columnId: string): Promise<boolean> => {
@@ -507,18 +553,24 @@ export default function TicketsPage() {
         projectFilter={projectFilter}
         setProjectFilter={setProjectFilter}
         projectOptions={projectOptions}
+        sprintFilter={sprintFilter}
+        setSprintFilter={setSprintFilter}
+        sprintOptions={sprints.map((sprint) => ({ id: sprint.id, name: sprint.name }))}
         includeInactiveProjects={includeInactiveProjects}
         setIncludeInactiveProjects={setIncludeInactiveProjects}
         view={view}
         setView={setView}
         onShareView={handleShareView}
-        activeFilterCount={activeFilterCount}
         excludeDone={excludeDone}
         setExcludeDone={setExcludeDone}
+        assigneeFilter={assigneeFilter}
         setAssigneeFilter={setAssigneeFilter}
         resetToolbarFilters={resetToolbarFilters}
         canCreateTickets={canCreateTickets}
         onOpenCreateTicket={() => setTicketDialogOpen(true)}
+        canEditProjects={canEditProjects}
+        onOpenCreateEpic={handleOpenCreateEpic}
+        onOpenCreateSprint={handleOpenCreateSprint}
         currentUserId={user?.id ?? null}
       />
 
@@ -565,6 +617,23 @@ export default function TicketsPage() {
           onScrollTop={(left) => syncKanbanScroll("top", left)}
           onRefreshTrackWidth={refreshKanbanTrackWidth}
         />
+      ) : view === "gantt" ? (
+        projectFilter === "all" ? (
+          <div className="rounded-lg border p-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Select a project to view the Gantt chart.
+            </p>
+          </div>
+        ) : (
+          <div className="flex flex-col min-h-0">
+            <GanttChart
+              tickets={filteredTickets}
+              sprints={sprints}
+              epics={epics}
+              onTicketClick={(ticketId) => setSelectedTicketId(ticketId)}
+            />
+          </div>
+        )
       ) : (
         <TicketsTable
           sortConfig={sortConfig}
@@ -860,6 +929,46 @@ export default function TicketsPage() {
               Confirm Return
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={isEpicDialogOpen}
+        onOpenChange={(open) => {
+          setIsEpicDialogOpen(open)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Epic</DialogTitle>
+          </DialogHeader>
+          {projectFilter !== "all" && (
+            <EpicForm
+              projectId={projectFilter}
+              onSuccess={() => {
+                setIsEpicDialogOpen(false)
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={isSprintDialogOpen}
+        onOpenChange={(open) => {
+          setIsSprintDialogOpen(open)
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Sprint</DialogTitle>
+          </DialogHeader>
+          {projectFilter !== "all" && (
+            <SprintForm
+              projectId={projectFilter}
+              onSuccess={() => {
+                setIsSprintDialogOpen(false)
+              }}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   LayoutGrid,
@@ -105,6 +105,7 @@ const settingsItems: SettingsItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -114,10 +115,11 @@ export function Sidebar() {
   const { pinnedProjectIds, pinnedProjects, loading: pinnedProjectsLoading } = usePinnedProjects({
     enabled: canViewProjects,
   })
-  const pinnedSectionActive = pinnedProjects.some((project) => {
-    const href = `/projects/${project.id}`
-    return pathname === href || pathname.startsWith(`${href}/`)
-  })
+  const activeProjectId = searchParams?.get("projectId")
+  const pinnedSectionActive =
+    pathname === "/tickets" &&
+    !!activeProjectId &&
+    pinnedProjects.some((project) => project.id === activeProjectId)
   const reportSectionActive =
     pathname === "/report" ||
     pathname.startsWith("/report/guild-lead-report")
@@ -318,8 +320,8 @@ export function Sidebar() {
                   ) : (
                     <div className="ml-2 space-y-0.5 border-l pl-2">
                       {pinnedProjects.map((project) => {
-                        const href = `/projects/${project.id}`
-                        const isActive = pathname === href || pathname.startsWith(`${href}/`)
+                        const href = `/tickets?projectId=${project.id}`
+                        const isActive = pathname === "/tickets" && activeProjectId === project.id
                         return (
                           <Link
                             key={project.id}

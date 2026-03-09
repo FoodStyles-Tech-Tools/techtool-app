@@ -154,7 +154,7 @@ const TicketRow = memo(function TicketRow({
             </span>
             {ticket.project?.name && (
               <Link
-                href={`/projects/${ticket.project.id}`}
+                href={`/tickets?projectId=${ticket.project.id}`}
                 className="text-xs text-muted-foreground hover:text-foreground hover:underline"
                 onClick={(e) => e.stopPropagation()}
               >

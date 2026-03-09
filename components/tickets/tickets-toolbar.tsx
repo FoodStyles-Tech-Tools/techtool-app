@@ -9,15 +9,17 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Switch } from "@/components/ui/switch"
-import { Circle, ChevronDown, Table2, LayoutGrid, Share2, ListFilter, Plus } from "lucide-react"
+import { Circle, ChevronDown, Table2, LayoutGrid, Share2, Plus, BarChart3 } from "lucide-react"
 
 interface ProjectOption {
+  id: string
+  name: string
+}
+
+interface SprintOption {
   id: string
   name: string
 }
@@ -27,18 +29,24 @@ export interface TicketsToolbarProps {
   projectFilter: string
   setProjectFilter: (value: string) => void
   projectOptions: ProjectOption[]
+  sprintFilter: string
+  setSprintFilter: (value: string) => void
+  sprintOptions: SprintOption[]
   includeInactiveProjects: boolean
   setIncludeInactiveProjects: (value: boolean) => void
-  view: "table" | "kanban"
-  setView: (view: "table" | "kanban") => void
+  view: "table" | "kanban" | "gantt"
+  setView: (view: "table" | "kanban" | "gantt") => void
   onShareView: () => void
-  activeFilterCount: number
   excludeDone: boolean
   setExcludeDone: (value: boolean) => void
+  assigneeFilter: string
   setAssigneeFilter: (value: string) => void
   resetToolbarFilters: () => void
   canCreateTickets: boolean
   onOpenCreateTicket: () => void
+  canEditProjects: boolean
+  onOpenCreateEpic: () => void
+  onOpenCreateSprint: () => void
   currentUserId: string | null
 }
 
@@ -47,20 +55,42 @@ export function TicketsToolbar({
   projectFilter,
   setProjectFilter,
   projectOptions,
+  sprintFilter,
+  setSprintFilter,
+  sprintOptions,
   includeInactiveProjects,
   setIncludeInactiveProjects,
   view,
   setView,
   onShareView,
-  activeFilterCount,
   excludeDone,
   setExcludeDone,
+  assigneeFilter,
   setAssigneeFilter,
   resetToolbarFilters,
   canCreateTickets,
   onOpenCreateTicket,
+  canEditProjects,
+  onOpenCreateEpic,
+  onOpenCreateSprint,
   currentUserId,
 }: TicketsToolbarProps) {
+  const showLabel =
+    assigneeFilter === "all"
+      ? "All tickets"
+      : assigneeFilter === "unassigned"
+      ? "Unassigned"
+      : assigneeFilter === currentUserId
+      ? "My tickets"
+      : "Custom"
+
+  const sprintLabel =
+    sprintFilter === "all"
+      ? "All sprints"
+      : sprintFilter === "no_sprint"
+      ? "No sprint"
+      : sprintOptions.find((s) => s.id === sprintFilter)?.name || "Sprint"
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
       <div className="flex min-w-0 flex-wrap items-center gap-1">
@@ -116,6 +146,15 @@ export function TicketsToolbar({
             <LayoutGrid className="h-4 w-4" />
             <span className="sr-only">Kanban view</span>
           </Button>
+          <Button
+            variant={view === "gantt" ? "selected" : "ghost"}
+            size="icon"
+            onClick={() => view !== "gantt" && setView("gantt")}
+            className="h-7 w-7"
+          >
+            <BarChart3 className="h-4 w-4" />
+            <span className="sr-only">Gantt view</span>
+          </Button>
         </div>
         <Button
           variant="ghost"
@@ -127,81 +166,109 @@ export function TicketsToolbar({
           Share
         </Button>
       </div>
-      <div className="flex flex-wrap items-center gap-0.5">
+      <div className="flex flex-wrap items-center gap-1">
+        <div className="flex items-center gap-2 rounded-md border px-2 py-1.5">
+          <span className="text-xs text-muted-foreground">Exclude Done</span>
+          <Switch
+            checked={excludeDone}
+            onCheckedChange={setExcludeDone}
+            aria-label="Exclude Done"
+          />
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              className="h-8 gap-1.5 px-2"
             >
-              <ListFilter className="h-4 w-4" />
-              Filter
-              {activeFilterCount > 0 ? (
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">
-                  {activeFilterCount}
-                </span>
-              ) : null}
+              {showLabel}
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>Filter</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuLabel>Show</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="justify-between gap-2"
-              onSelect={(e) => e.preventDefault()}
-            >
-              <span>Exclude Done</span>
-              <Switch
-                checked={excludeDone}
-                onCheckedChange={setExcludeDone}
-                aria-label="Exclude Done"
-              />
+            <DropdownMenuItem onClick={() => setAssigneeFilter("all")}>
+              All Tickets
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuSub>
-              <DropdownMenuSubTrigger>Show</DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="w-44">
-                <DropdownMenuItem onClick={() => setAssigneeFilter("all")}>
-                  All Tickets
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setAssigneeFilter(currentUserId || "all")}
-                  disabled={!currentUserId}
-                >
-                  My Tickets
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setAssigneeFilter("unassigned")}>
-                  Unassigned
-                </DropdownMenuItem>
-              </DropdownMenuSubContent>
-            </DropdownMenuSub>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={resetToolbarFilters}>Reset Filters</DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => setAssigneeFilter(currentUserId || "all")}
+              disabled={!currentUserId}
+            >
+              My Tickets
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setAssigneeFilter("unassigned")}>
+              Unassigned
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        {canCreateTickets && (
-          <button
-            type="button"
-            onClick={onOpenCreateTicket}
-            className="ml-1 inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Create Ticket</span>
-            <span className="hidden items-center gap-1 sm:inline-flex">
-              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
-                Alt
-              </kbd>
-              <span className="text-[10px] text-muted-foreground">/</span>
-              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
-                Cmd
-              </kbd>
-              <span className="text-[10px] text-muted-foreground">+</span>
-              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
-                A
-              </kbd>
-            </span>
-          </button>
+        {sprintOptions.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 px-2"
+              >
+                {sprintLabel}
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Sprint</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup value={sprintFilter} onValueChange={setSprintFilter}>
+                <DropdownMenuRadioItem value="all">All Sprints</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="no_sprint">No Sprint</DropdownMenuRadioItem>
+                {sprintOptions.map((sprint) => (
+                  <DropdownMenuRadioItem key={sprint.id} value={sprint.id}>
+                    {sprint.name}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2 text-muted-foreground hover:text-foreground"
+          onClick={resetToolbarFilters}
+        >
+          Reset
+        </Button>
+        {(canCreateTickets || canEditProjects) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="ml-1 inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Create</span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Create</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {canCreateTickets && (
+                <DropdownMenuItem onClick={onOpenCreateTicket}>
+                  Ticket
+                </DropdownMenuItem>
+              )}
+              {canEditProjects && (
+                <DropdownMenuItem onClick={onOpenCreateEpic}>
+                  Epic
+                </DropdownMenuItem>
+              )}
+              {canEditProjects && (
+                <DropdownMenuItem onClick={onOpenCreateSprint}>
+                  Sprint
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </div>
