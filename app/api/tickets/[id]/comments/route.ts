@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { startTiming, endTiming } from "@/lib/query-timing"
 import { isRichTextEmpty } from "@/lib/rich-text"
+import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
 
 export const runtime = "nodejs"
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -287,6 +288,7 @@ export async function POST(
     }
 
     const normalizedAuthor = Array.isArray(comment.author) ? comment.author[0] : comment.author
+    await invalidateTicketCaches()
 
     return NextResponse.json({
       comment: {

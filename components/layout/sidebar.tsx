@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
@@ -28,7 +29,7 @@ import { NavUser } from "@/components/layout/nav-user"
 import { usePinnedProjects } from "@/hooks/use-pinned-projects"
 
 const SIDEBAR_ACTIVE_ITEM_CLASS =
-  "border border-blue-500/60 bg-blue-500/10 text-blue-700 dark:text-blue-300"
+  "border border-blue-500/60 bg-blue-500/10 text-blue-700"
 
 type NavItem = {
   title: string
@@ -228,7 +229,7 @@ export function Sidebar() {
         <div className="px-2 py-2">
           <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1">
             <div className="flex items-center gap-2.5">
-              <img src="/icon.svg" alt="TECHTOOL" className="h-9 w-9 rounded-md" />
+              <Image src="/icon.svg" alt="TECHTOOL" width={36} height={36} className="h-9 w-9 rounded-md" />
               <div className="space-y-0.5">
                 <p className="text-sm font-semibold tracking-[-0.012em]">TECHTOOL</p>
                 <p className="text-xs tracking-[0.012em] text-muted-foreground">Workspace</p>

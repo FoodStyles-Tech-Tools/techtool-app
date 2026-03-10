@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { isRichTextEmpty } from "@/lib/rich-text"
 import { enqueueTicketStatusDiscordNotifications } from "@/lib/server/discord-outbox"
+import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
 
 export const runtime = "nodejs"
 
@@ -207,6 +208,7 @@ export async function POST(
     }
 
     await enqueueTicketStatusDiscordNotifications(supabase, normalizedTicket, previousStatus)
+    await invalidateTicketCaches()
 
     const enrichedTicket = {
       ...normalizedTicket,

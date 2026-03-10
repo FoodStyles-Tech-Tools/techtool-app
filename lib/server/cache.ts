@@ -37,6 +37,10 @@ async function runUpstashCommand(command: Array<string | number>) {
   return payload?.result
 }
 
+function namespaceVersionKey(namespace: string) {
+  return `cache-version:${namespace}`
+}
+
 export async function getServerCache<T>(key: string): Promise<T | null> {
   try {
     const external = await runUpstashCommand(["GET", key])
@@ -101,4 +105,52 @@ export async function getOrSetServerCache<T>(
   const value = await loader()
   await setServerCache(key, value, ttlSeconds)
   return value
+}
+
+export async function getCacheNamespaceVersion(namespace: string): Promise<number> {
+  const key = namespaceVersionKey(namespace)
+
+  try {
+    const external = await runUpstashCommand(["GET", key])
+    if (external !== null && external !== undefined) {
+      const parsed = Number(external)
+      if (Number.isFinite(parsed)) {
+        return parsed
+      }
+    }
+  } catch (error) {
+    if (isDev) {
+      console.warn(`[Cache] Failed to read namespace version "${namespace}"`, error)
+    }
+  }
+
+  const cached = inMemoryCache.get(key)
+  if (!cached) return 0
+
+  const parsed = Number(cached.value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+export async function bumpCacheNamespaceVersion(namespace: string): Promise<number> {
+  const key = namespaceVersionKey(namespace)
+  let nextValue = 1
+
+  try {
+    const external = await runUpstashCommand(["INCR", key])
+    const parsed = Number(external)
+    if (Number.isFinite(parsed)) {
+      nextValue = parsed
+    }
+  } catch (error) {
+    if (isDev) {
+      console.warn(`[Cache] Failed to bump namespace version "${namespace}"`, error)
+    }
+  }
+
+  inMemoryCache.set(key, {
+    value: nextValue,
+    expiresAt: Number.MAX_SAFE_INTEGER,
+  })
+
+  return nextValue
 }

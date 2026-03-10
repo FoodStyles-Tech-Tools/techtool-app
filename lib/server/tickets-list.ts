@@ -1,5 +1,6 @@
 import "server-only"
 import { sanitizeLinkArray } from "@/lib/links"
+import type { SortColumn } from "@/lib/ticket-constants"
 import type { TicketListItem, TicketPerson } from "@/types/api/tickets"
 
 type SupabaseLike = any
@@ -23,12 +24,15 @@ export type TicketListQuery = {
   status?: string | null
   departmentId?: string | null
   requestedById?: string | null
+  sprintId?: string | null
   excludeDone: boolean
   excludeSubtasks: boolean
   queryText?: string | null
   cursor?: string | null
   page?: number | null
   limit: number | null
+  sortBy?: SortColumn | null
+  sortDirection?: "asc" | "desc" | null
 }
 
 export type TicketListResult = {
@@ -95,6 +99,8 @@ function toTicketPerson(
 
 export function parseTicketListQuery(searchParams: URLSearchParams): TicketListQuery {
   const rawLimit = firstNonEmpty(searchParams, ["limit"])
+  const rawSortDirection = firstNonEmpty(searchParams, ["sortDirection", "sort_direction"])
+  const rawSortBy = firstNonEmpty(searchParams, ["sortBy", "sort_by"]) as SortColumn | null
 
   return {
     projectId: firstNonEmpty(searchParams, ["projectId", "project_id"]),
@@ -103,6 +109,7 @@ export function parseTicketListQuery(searchParams: URLSearchParams): TicketListQ
     status: firstNonEmpty(searchParams, ["status"]),
     departmentId: firstNonEmpty(searchParams, ["departmentId", "department_id"]),
     requestedById: firstNonEmpty(searchParams, ["requestedById", "requested_by_id"]),
+    sprintId: firstNonEmpty(searchParams, ["sprintId", "sprint_id"]),
     excludeDone: parseBoolean(searchParams, ["excludeDone", "exclude_done"]),
     excludeSubtasks: parseBoolean(searchParams, ["excludeSubtasks", "exclude_subtasks"]),
     queryText: firstNonEmpty(searchParams, ["q"]),
@@ -113,6 +120,32 @@ export function parseTicketListQuery(searchParams: URLSearchParams): TicketListQ
       return parsePositiveInt(pageValue, 1)
     })(),
     limit: rawLimit ? Math.min(parsePositiveInt(rawLimit, 50), 100) : null,
+    sortBy: rawSortBy,
+    sortDirection:
+      rawSortDirection === "asc" || rawSortDirection === "desc" ? rawSortDirection : null,
+  }
+}
+
+function applyTicketOrdering(query: any, sortBy?: SortColumn | null, sortDirection?: "asc" | "desc" | null) {
+  const ascending = sortDirection === "asc"
+
+  switch (sortBy) {
+    case "id":
+      return query.order("display_id", { ascending }).order("id", { ascending })
+    case "title":
+      return query.order("title", { ascending }).order("id", { ascending: false })
+    case "due_date":
+      return query.order("due_date", { ascending, nullsFirst: false }).order("id", { ascending: false })
+    case "type":
+      return query.order("type", { ascending }).order("id", { ascending: false })
+    case "status":
+      return query.order("status", { ascending }).order("id", { ascending: false })
+    case "priority":
+      return query.order("priority", { ascending }).order("id", { ascending: false })
+    case "sqa_assigned_at":
+      return query.order("sqa_assigned_at", { ascending, nullsFirst: false }).order("id", { ascending: false })
+    default:
+      return query.order("created_at", { ascending: false }).order("id", { ascending: false })
   }
 }
 
@@ -158,8 +191,6 @@ export async function fetchTicketList(
     `,
       usePageMode ? { count: "exact" } : undefined
     )
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
 
   if (query.projectId) {
     ticketsQuery = ticketsQuery.eq("project_id", query.projectId)
@@ -190,6 +221,13 @@ export async function fetchTicketList(
   if (query.requestedById) {
     ticketsQuery = ticketsQuery.eq("requested_by_id", query.requestedById)
   }
+  if (query.sprintId) {
+    if (query.sprintId === "no_sprint") {
+      ticketsQuery = ticketsQuery.is("sprint_id", null)
+    } else {
+      ticketsQuery = ticketsQuery.eq("sprint_id", query.sprintId)
+    }
+  }
   if (
     query.excludeDone &&
     query.status !== "completed" &&
@@ -201,9 +239,13 @@ export async function fetchTicketList(
   if (query.queryText) {
     const escaped = query.queryText.replace(/,/g, " ").trim()
     if (escaped) {
-      ticketsQuery = ticketsQuery.or(`title.ilike.%${escaped}%,display_id.ilike.%${escaped}%`)
+      ticketsQuery = ticketsQuery.or(
+        `title.ilike.%${escaped}%,display_id.ilike.%${escaped}%,description.ilike.%${escaped}%`
+      )
     }
   }
+
+  ticketsQuery = applyTicketOrdering(ticketsQuery, query.sortBy, query.sortDirection)
 
   if (hasCursor && !useUnboundedMode) {
     const parsedCursor = parseCursor(query.cursor)

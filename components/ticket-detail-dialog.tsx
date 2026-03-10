@@ -51,6 +51,7 @@ import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@/lib/ticket-constant
 import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText, toDisplayHtml } from "@/lib/rich-text"
 import { useUserEmail } from "@/lib/supabase-context"
+import { buildAssignmentPayload, buildStatusPayload, DONE_STATUS_KEYS } from "@/features/tickets/lib/update-payloads"
 
 interface TicketDetailDialogProps {
   ticketId: string | null
@@ -112,8 +113,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const { flags } = usePermissions()
   const subtaskDecisionResolverRef = useRef<((decision: SubtaskCloseDecision) => void) | null>(null)
   const canEditTickets = flags?.canEditTickets ?? false
-  
-  const projects = projectsData || []
+  const projects = useMemo(() => projectsData || [], [projectsData])
 
   const { ticket, comments: detailComments, relations, isLoading } = useTicketDetail(ticketId || "", {
     enabled: !!ticketId && open,
@@ -279,11 +279,9 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     }
   }
 
-  const DONE_STATUSES = new Set(["completed", "cancelled", "rejected"])
-
   const fetchOpenSubtasksForStatusGuard = async (): Promise<RelationSubtask[]> => {
     if (!ticketId) return []
-    const response = await fetch(`/api/tickets/${ticketId}/detail`)
+    const response = await fetch(`/api/v2/tickets/${ticketId}?view=detail`)
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}))
       throw new Error(payload?.error || "Failed to check subtasks")
@@ -292,7 +290,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     const subtaskRows: RelationSubtask[] = Array.isArray(payload?.relations?.subtasks)
       ? payload.relations.subtasks
       : []
-    return subtaskRows.filter((subtask) => !DONE_STATUSES.has(String(subtask.status || "")))
+    return subtaskRows.filter((subtask) => !DONE_STATUS_KEYS.has(String(subtask.status || "")))
   }
 
   const askHowToHandleOpenSubtasks = (
@@ -333,7 +331,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const resolveSubtaskStatusGuard = async (
     targetStatus: string
   ): Promise<{ proceed: boolean; closeSubtasks: boolean; subtasks: RelationSubtask[] }> => {
-    if (!DONE_STATUSES.has(targetStatus)) {
+    if (!DONE_STATUS_KEYS.has(targetStatus)) {
       return { proceed: true, closeSubtasks: false, subtasks: [] }
     }
 
@@ -443,46 +441,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     subtaskDecisionOverride?: { proceed: boolean; closeSubtasks: boolean; subtasks: RelationSubtask[] }
   ) => {
     if (!ticket || !ticketId) return
-    
-    const previousStatus = ticket.status
-    const updates: any = { status: newStatus }
-    
-    // Condition 2: When status from Open/Blocked to any other status then update started_at timestamp
-    if ((previousStatus === "open" || previousStatus === "blocked") && newStatus !== "open" && newStatus !== "blocked") {
-      updates.started_at = new Date().toISOString()
-    }
-    
-    // Condition 3: When any status changed to Completed/Cancelled/Rejected then update completed_at timestamp
-    if (newStatus === "completed" || newStatus === "cancelled" || newStatus === "rejected") {
-      updates.completed_at = new Date().toISOString()
-      // Also ensure started_at is set if not already
-      if (!(ticket as any).started_at) {
-        updates.started_at = new Date().toISOString()
-      }
-    }
-    
-    // Condition 4: If status changed from Completed/Cancelled/Rejected to other status then remove timestamp completed_at
-    if (
-      (previousStatus === "completed" || previousStatus === "cancelled" || previousStatus === "rejected") &&
-      newStatus !== "completed" &&
-      newStatus !== "cancelled" &&
-      newStatus !== "rejected"
-    ) {
-      updates.completed_at = null
-      // Clear reason when moving away from cancelled/rejected
-      updates.reason = null
-    }
-    
-    // Condition 5: If status changed from In Progress to Blocked or Open then remove timestamp started_at
-    if (previousStatus === "in_progress" && (newStatus === "blocked" || newStatus === "open")) {
-      updates.started_at = null
-    }
-    
-    // Additional: If status is open, clear started_at and completed_at
-    if (newStatus === "open") {
-      updates.started_at = null
-      updates.completed_at = null
-    }
+    const updates: any = buildStatusPayload(ticket, newStatus)
     
     setUpdatingFields((prev) => ({ ...prev, status: true }))
     try {
@@ -598,24 +557,9 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     const reasonHeading = newStatus === "rejected" ? "Reject Reason" : "Cancelled Reason"
     const commentBody = `<p><strong>${reasonHeading}</strong></p>${normalizedReason}`
     
-    const previousStatus = ticket.status
     const updates: any = { 
-      status: newStatus,
+      ...buildStatusPayload(ticket, newStatus),
       reason: { [reasonKey]: { reason: cancelReason.trim(), [reasonTimestampKey]: new Date().toISOString() } }
-    }
-    
-    // Condition 2: When status from Open/Blocked to any other status then update started_at timestamp
-    if ((previousStatus === "open" || previousStatus === "blocked") && newStatus !== "open" && newStatus !== "blocked") {
-      updates.started_at = new Date().toISOString()
-    }
-    
-    // Condition 3: When any status changed to Completed/Cancelled/Rejected then update completed_at timestamp
-    if (newStatus === "completed" || newStatus === "cancelled" || newStatus === "rejected") {
-      updates.completed_at = new Date().toISOString()
-      // Also ensure started_at is set if not already
-      if (!(ticket as any).started_at) {
-        updates.started_at = new Date().toISOString()
-      }
     }
 
     try {
@@ -753,21 +697,9 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const handleAssigneeChange = async (newAssigneeId: string | null) => {
     if (!ensureCanEdit({ allowWhenUnassigned: true })) return
     if (!ticket) return
-    
-    const previousAssigneeId = (ticket as any).assignee_id
-    const updates: any = { assignee_id: newAssigneeId }
-    
-    // If assignee is null, clear assigned_at
-    if (!newAssigneeId) {
-      updates.assigned_at = null
-    } else {
-      // Condition 1: When assignee changed from Null -> add value then add assigned_at timestamp
-      // Condition 2: If assignee is not null then change value then change timestamp assigned_at
-      if (!previousAssigneeId || previousAssigneeId !== newAssigneeId) {
-        updates.assigned_at = new Date().toISOString()
-      }
-    }
-    
+
+    const updates = buildAssignmentPayload("assignee_id", ticket, newAssigneeId)
+
     await updateTicketWithToast(updates, "Assignee updated", "assignee_id")
   }
 
@@ -785,14 +717,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     if (!ensureCanEdit({ allowSqaSelfAssign: canSelfAssignAsSqa })) return
     if (!ticket) return
 
-    const previousSqaAssigneeId = (ticket as any).sqa_assignee_id || ticket.sqa_assignee?.id || null
-    const updates: any = { sqa_assignee_id: newSqaAssigneeId }
-
-    if (!newSqaAssigneeId) {
-      updates.sqa_assigned_at = null
-    } else if (!previousSqaAssigneeId || previousSqaAssigneeId !== newSqaAssigneeId) {
-      updates.sqa_assigned_at = new Date().toISOString()
-    }
+    const updates = buildAssignmentPayload("sqa_assignee_id", ticket, newSqaAssigneeId)
 
     await updateTicketWithToast(updates, "SQA assignee updated", "sqa_assignee_id")
   }

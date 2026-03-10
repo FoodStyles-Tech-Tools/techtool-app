@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
+import { ticketQueryKeys } from "@/features/tickets/lib/query-keys"
 
 export interface CommentAuthor {
   id: string
@@ -97,6 +98,7 @@ export function useTicketComments(
 
       if (!alreadyExists) {
         queryClient.invalidateQueries({ queryKey: getCommentsQueryKey(ticketId) })
+        queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(ticketId) })
       }
     },
     onUpdate: (payload) => {
@@ -113,6 +115,7 @@ export function useTicketComments(
             })),
           }
         })
+        queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(ticketId) })
       }
     },
     onDelete: (payload) => {
@@ -121,6 +124,7 @@ export function useTicketComments(
         if (!old) return old
         return { ...old, comments: removeCommentFromTree(old.comments, deletedId) }
       })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(ticketId) })
     },
   })
 
@@ -182,6 +186,7 @@ export function useTicketComments(
           return { ...old, comments: [...old.comments, data.comment] }
         }
       })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(ticketId) })
     },
   })
 
@@ -218,6 +223,7 @@ export function useTicketComments(
           })),
         }
       })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(ticketId) })
     },
   })
 
@@ -236,6 +242,7 @@ export function useTicketComments(
         if (!old) return old
         return { ...old, comments: removeCommentFromTree(old.comments, commentId) }
       })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(ticketId) })
     },
   })
 

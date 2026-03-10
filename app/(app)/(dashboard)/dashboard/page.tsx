@@ -1,16 +1,3 @@
-import { getDashboardData } from "@/lib/server/dashboard"
-import { DashboardClient } from "./dashboard-client"
-
-export const dynamic = "force-dynamic"
-
-export default async function DashboardPage() {
-  const { tickets, ticketsError, ticketStatuses } = await getDashboardData()
-
-  return (
-    <DashboardClient
-      tickets={tickets}
-      ticketsError={ticketsError}
-      ticketStatuses={ticketStatuses}
-    />
-  )
+export default function DashboardPage() {
+  return <div className="min-h-[240px]" />
 }

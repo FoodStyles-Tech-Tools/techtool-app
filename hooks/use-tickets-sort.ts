@@ -4,6 +4,16 @@ import { useState, useCallback, useMemo } from "react"
 import type { Ticket } from "@/lib/types"
 import { PRIORITY_ORDER, type SortColumn } from "@/lib/ticket-constants"
 
+const SERVER_SORT_COLUMNS = new Set<SortColumn>([
+  "id",
+  "title",
+  "due_date",
+  "type",
+  "status",
+  "priority",
+  "sqa_assigned_at",
+])
+
 export function useTicketsSort(filteredTickets: Ticket[]) {
   const [sortConfig, setSortConfig] = useState<{
     column: SortColumn
@@ -32,6 +42,10 @@ export function useTicketsSort(filteredTickets: Ticket[]) {
   }, [])
 
   const sortedTickets = useMemo(() => {
+    if (SERVER_SORT_COLUMNS.has(sortConfig.column)) {
+      return filteredTickets
+    }
+
     const tickets = [...filteredTickets]
     tickets.sort((a, b) => {
       let result = 0
@@ -106,5 +120,12 @@ export function useTicketsSort(filteredTickets: Ticket[]) {
     )
   }, [])
 
-  return { sortConfig, handleSort, sortedTickets }
+  return {
+    sortConfig,
+    handleSort,
+    sortedTickets,
+    isServerSort: SERVER_SORT_COLUMNS.has(sortConfig.column),
+    serverSortBy: SERVER_SORT_COLUMNS.has(sortConfig.column) ? sortConfig.column : undefined,
+    serverSortDirection: SERVER_SORT_COLUMNS.has(sortConfig.column) ? sortConfig.direction : undefined,
+  }
 }

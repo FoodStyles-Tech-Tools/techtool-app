@@ -3,6 +3,7 @@ import { getRequestContext } from "@/lib/auth-helpers"
 import { normalizeRichTextInput } from "@/lib/rich-text"
 import { prepareLinkPayload } from "@/lib/links"
 import { enqueueTicketStatusDiscordNotifications } from "@/lib/server/discord-outbox"
+import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
 
 export const runtime = 'nodejs'
 
@@ -524,6 +525,8 @@ export async function PATCH(
     if (hasStatus) {
       void enqueueTicketStatusDiscordNotifications(supabase, ticket, previousStatus)
     }
+
+    await invalidateTicketCaches()
 
     const enrichedTicket = {
       ...ticket,

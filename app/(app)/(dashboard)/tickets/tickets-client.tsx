@@ -10,7 +10,6 @@ import { useProjects } from "@/hooks/use-projects"
 import { useUsers } from "@/hooks/use-users"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useTicketsFilters } from "@/hooks/use-tickets-filters"
-import { useTicketsSort } from "@/hooks/use-tickets-sort"
 import { useKanbanDrag } from "@/hooks/use-kanban-drag"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import { useTicketSubtaskCounts } from "@/hooks/use-ticket-subtask-counts"
@@ -35,7 +34,9 @@ import {
   SQA_ALLOWED_ROLES,
   ROWS_PER_PAGE,
   FIELD_LABELS,
+  type SortColumn,
 } from "@/lib/ticket-constants"
+import { buildAssignmentPayload, buildStatusPayload, DONE_STATUS_KEYS } from "@/features/tickets/lib/update-payloads"
 import { TicketsToolbar } from "@/components/tickets/tickets-toolbar"
 import { TicketsKanban } from "@/components/tickets/tickets-kanban"
 import { TicketsTable } from "@/components/tickets/tickets-table"
@@ -50,7 +51,16 @@ type OpenSubtaskRow = {
 }
 
 type SubtaskDecision = "cancel" | "keep_open" | "close_all"
-const DONE_STATUS_KEYS = new Set(["completed", "cancelled", "rejected"])
+
+const SERVER_SORT_COLUMNS = new Set<SortColumn>([
+  "id",
+  "title",
+  "due_date",
+  "type",
+  "status",
+  "priority",
+  "sqa_assigned_at",
+])
 
 const TicketDetailDialog = dynamic(
   () => import("@/components/ticket-detail-dialog").then((mod) => mod.TicketDetailDialog),
@@ -75,6 +85,10 @@ type TicketsClientProps = {
 
 export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
+  const [sortConfig, setSortConfig] = useState<{ column: SortColumn; direction: "asc" | "desc" }>({
+    column: "due_date",
+    direction: "asc",
+  })
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isTicketDialogOpen, setTicketDialogOpen] = useState(false)
   const [showCancelReasonDialog, setShowCancelReasonDialog] = useState(false)
@@ -113,6 +127,8 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
 
   const {
     deferredSearchQuery,
+    searchQuery,
+    setSearchQuery,
     statusFilter,
     projectFilter,
     setProjectFilter,
@@ -134,6 +150,10 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     selectedProjectLabel,
   } = filters
 
+  const listModeRequiresFullDataset = view === "kanban" || view === "gantt"
+  const serverSortBy = SERVER_SORT_COLUMNS.has(sortConfig.column) ? sortConfig.column : undefined
+  const serverSortDirection = SERVER_SORT_COLUMNS.has(sortConfig.column) ? sortConfig.direction : undefined
+
   const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
     status: statusFilter !== "all" ? statusFilter : undefined,
     project_id: projectFilter !== "all" ? projectFilter : undefined,
@@ -145,10 +165,14 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           : undefined,
     assignee_id: assigneeFilter !== "all" ? assigneeFilter : undefined,
     requested_by_id: requestedByFilter !== "all" ? requestedByFilter : undefined,
+    sprint_id: sprintFilter !== "all" ? sprintFilter : undefined,
     exclude_done: excludeDone,
     exclude_subtasks: true,
-    limit: ROWS_PER_PAGE,
-    page: currentPage,
+    q: deferredSearchQuery.trim() || undefined,
+    limit: listModeRequiresFullDataset ? undefined : ROWS_PER_PAGE,
+    page: listModeRequiresFullDataset ? undefined : currentPage,
+    sortBy: serverSortBy,
+    sortDirection: serverSortDirection,
   })
 
   const { data: usersData } = useUsers()
@@ -160,6 +184,11 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   const { sprints } = useSprints(projectFilter === "all" ? null : projectFilter)
 
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
+  const filteredTickets = useMemo(
+    () => allTickets.filter((ticket) => !isArchivedStatus(ticket.status)),
+    [allTickets]
+  )
+  const sortedTickets = filteredTickets
   const parentTicketIds = useMemo(() => allTickets.map((ticket) => ticket.id), [allTickets])
   const { data: subtaskCountMap = {} } = useTicketSubtaskCounts(parentTicketIds)
   const users = useMemo(() => usersData || [], [usersData])
@@ -189,7 +218,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   const canEditProjects = flags?.canEditProjects ?? false
 
   const fetchOpenSubtasksForGuard = useCallback(async (ticketId: string): Promise<OpenSubtaskRow[]> => {
-    const response = await fetch(`/api/tickets/${ticketId}/detail`)
+    const response = await fetch(`/api/v2/tickets/${ticketId}?view=detail`)
     if (!response.ok) {
       const payload = await response.json().catch(() => ({}))
       throw new Error(payload?.error || "Failed to check open subtasks")
@@ -253,34 +282,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     },
     [askHowToHandleOpenSubtasks, fetchOpenSubtasksForGuard]
   )
-
-  const filteredTickets = useMemo(() => {
-    const q = deferredSearchQuery.trim().toLowerCase()
-    return allTickets.filter((t) => {
-      if (isArchivedStatus(t.status)) return false
-
-      if (q) {
-        const matchesSearch =
-          t.title.toLowerCase().includes(q) ||
-          richTextToPlainText(t.description).toLowerCase().includes(q) ||
-          t.project?.name.toLowerCase().includes(q) ||
-          t.display_id?.toLowerCase().includes(q)
-        if (!matchesSearch) return false
-      }
-
-      if (sprintFilter !== "all") {
-        if (sprintFilter === "no_sprint") {
-          if (t.sprint?.id) return false
-        } else if (t.sprint?.id !== sprintFilter) {
-          return false
-        }
-      }
-
-      return true
-    })
-  }, [allTickets, deferredSearchQuery, sprintFilter])
-
-  const { sortConfig, handleSort, sortedTickets } = useTicketsSort(filteredTickets)
 
   const handleOpenCreateEpic = useCallback(() => {
     if (projectFilter === "all") {
@@ -351,7 +352,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   )
 
   const kanban = useKanbanDrag({
-    view,
+    view: view === "kanban" ? "kanban" : "table",
     canEditTickets,
     onDrop: handleKanbanDrop,
   })
@@ -396,6 +397,14 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
       .writeText(window.location.href)
       .then(() => toast("Link copied"))
       .catch(() => toast("Failed to copy link", "error"))
+  }, [])
+
+  const handleSort = useCallback((column: SortColumn) => {
+    setSortConfig((previous) =>
+      previous.column === column
+        ? { column, direction: previous.direction === "asc" ? "desc" : "asc" }
+        : { column, direction: "asc" }
+    )
   }, [])
 
   // Group tickets by status for kanban
@@ -446,27 +455,9 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
       }
       body[field] = value
     } else if (field === "assignee_id") {
-      const previousAssigneeId = currentTicket?.assignee?.id || null
-      const newAssigneeId = value || null
-      body[field] = newAssigneeId
-      
-      // Condition 1: When assignee changed from Null -> add value then add assigned_at timestamp
-      // Condition 2: If assignee is not null then change value then change timestamp assigned_at
-      if (!newAssigneeId) {
-        body.assigned_at = null
-      } else if (!previousAssigneeId || previousAssigneeId !== newAssigneeId) {
-        body.assigned_at = new Date().toISOString()
-      }
+      Object.assign(body, buildAssignmentPayload("assignee_id", currentTicket, value))
     } else if (field === "sqa_assignee_id") {
-      const previousSqaAssigneeId = currentTicket?.sqa_assignee?.id || null
-      const newSqaAssigneeId = value || null
-      body[field] = newSqaAssigneeId
-
-      if (!newSqaAssigneeId) {
-        body.sqa_assigned_at = null
-      } else if (!previousSqaAssigneeId || previousSqaAssigneeId !== newSqaAssigneeId) {
-        body.sqa_assigned_at = new Date().toISOString()
-      }
+      Object.assign(body, buildAssignmentPayload("sqa_assignee_id", currentTicket, value))
     } else if (field === "status") {
       const previousStatus = currentTicket?.status ?? "open"
       const newStatus = value as string
@@ -494,10 +485,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         return
       }
 
-      body[field] = newStatus
-      Object.assign(body, buildStatusChangeBody(previousStatus, newStatus, {
-        startedAt: (currentTicket as { started_at?: string | null })?.started_at,
-      }))
+      Object.assign(body, buildStatusPayload(currentTicket, newStatus))
       if (DONE_STATUS_KEYS.has(newStatus) && previousStatus !== newStatus) {
         doneGuard = await resolveDoneStatusGuard(ticketId, newStatus)
         if (!doneGuard.proceed) return
@@ -533,22 +521,16 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   }, [allTickets, closeSubtasksToStatus, resolveDoneStatusGuard, updateTicket])
 
   const hasSearchQuery = deferredSearchQuery.trim().length > 0
-
-  // Pagination - server-side pagination is handled by useTickets
-  // For client-side search, we need to handle pagination here
-  const totalPages = hasSearchQuery 
-    ? Math.ceil(sortedTickets.length / ROWS_PER_PAGE)
-    : Math.max(1, ticketsPagination?.totalPages || 1)
+  const totalPages = Math.max(1, ticketsPagination?.totalPages || 1)
   const startIndex = (currentPage - 1) * ROWS_PER_PAGE
   const endIndex = startIndex + ROWS_PER_PAGE
-  const paginatedTickets = useMemo(
-    () => (hasSearchQuery ? sortedTickets.slice(startIndex, endIndex) : sortedTickets),
-    [sortedTickets, hasSearchQuery, startIndex, endIndex]
-  )
+  const paginatedTickets = sortedTickets
 
   return (
     <div className="space-y-6">
       <TicketsToolbar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
         selectedProjectLabel={selectedProjectLabel}
         projectFilter={projectFilter}
         setProjectFilter={setProjectFilter}
@@ -627,7 +609,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         ) : (
           <div className="flex flex-col min-h-0">
             <GanttChart
-              tickets={filteredTickets}
+              tickets={sortedTickets}
               sprints={sprints}
               epics={epics}
               onTicketClick={(ticketId) => setSelectedTicketId(ticketId)}
@@ -640,7 +622,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           onSort={handleSort}
           tickets={paginatedTickets}
           subtaskCountMap={subtaskCountMap}
-          totalCount={sortedTickets.length}
+          totalCount={ticketsPagination?.total || sortedTickets.length}
           currentPage={currentPage}
           totalPages={totalPages || 1}
           onPageChange={setCurrentPage}

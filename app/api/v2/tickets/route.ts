@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import type { CursorPage } from "@/types/api/common"
 import { getOrSetServerCache } from "@/lib/server/cache"
+import { getTicketCacheVersion } from "@/lib/server/ticket-cache"
 import { fetchTicketList, parseTicketListQuery } from "@/lib/server/tickets-list"
 import type { TicketListItem } from "@/types/api/tickets"
 
@@ -25,13 +26,16 @@ export async function GET(request: NextRequest) {
     }
 
     const listQuery = parseTicketListQuery(searchParams)
+    const cacheVersion = await getTicketCacheVersion()
     const cacheKey = [
       "v2:tickets",
+      cacheVersion,
       userId,
       listQuery.projectId || "all",
       listQuery.parentTicketId || "all",
       listQuery.assigneeId || "all",
       listQuery.departmentId || "all",
+      listQuery.sprintId || "all",
       listQuery.requestedById || "all",
       listQuery.status || "all",
       listQuery.excludeDone ? "exclude_done" : "include_done",
@@ -40,6 +44,8 @@ export async function GET(request: NextRequest) {
       listQuery.cursor || "",
       String(listQuery.page || ""),
       String(listQuery.limit),
+      listQuery.sortBy || "default",
+      listQuery.sortDirection || "desc",
     ].join(":")
 
     const payload = await getOrSetServerCache<

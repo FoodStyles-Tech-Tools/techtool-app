@@ -8,17 +8,19 @@ type SubtaskCountResponse = {
 }
 
 export function useTicketSubtaskCounts(parentTicketIds: string[]) {
+  const stableParentTicketIds = [...parentTicketIds].sort()
+
   return useQuery<Record<string, number>>({
-    queryKey: ["ticket-subtask-counts", parentTicketIds],
-    enabled: parentTicketIds.length > 0,
+    queryKey: ["ticket-subtask-counts", stableParentTicketIds],
+    enabled: stableParentTicketIds.length > 0,
     staleTime: 30 * 1000,
     queryFn: async () => {
-      if (parentTicketIds.length === 0) {
+      if (stableParentTicketIds.length === 0) {
         return {}
       }
 
       const query = createQueryString({
-        ids: parentTicketIds.join(","),
+        ids: stableParentTicketIds.join(","),
       })
       const response = await requestJson<SubtaskCountResponse>(`/api/tickets/subtask-counts${query}`)
       return response.counts || {}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { isRichTextEmpty } from "@/lib/rich-text"
+import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
 
 export const runtime = "nodejs"
 
@@ -64,6 +65,7 @@ export async function PATCH(
     }
 
     const normalizedAuthor = Array.isArray(comment.author) ? comment.author[0] : comment.author
+    await invalidateTicketCaches()
     return NextResponse.json({ comment: { ...comment, author: normalizedAuthor } })
   } catch (error: any) {
     if (error.message === "Unauthorized") {
@@ -117,6 +119,7 @@ export async function DELETE(
       )
     }
 
+    await invalidateTicketCaches()
     return NextResponse.json({ success: true })
   } catch (error: any) {
     if (error.message === "Unauthorized") {

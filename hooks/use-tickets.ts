@@ -3,9 +3,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { useRealtimeSubscription } from "./use-realtime"
-import { createQueryString, requestJson } from "@/lib/client/api"
-import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
+import { requestJson } from "@/lib/client/api"
+import { prepareLinkPayload } from "@/lib/links"
+import {
+  fetchTicketDetail,
+  fetchTicketList,
+  normalizeTicket,
+  type TicketDetailResponse,
+  type TicketResponse,
+  type TicketsResponse,
+} from "@/features/tickets/lib/client"
+import { ticketQueryKeys } from "@/features/tickets/lib/query-keys"
 import type { Ticket } from "@/lib/types"
+import type { SortColumn } from "@/lib/ticket-constants"
 
 type UseTicketsOptions = {
   projectId?: string
@@ -19,44 +29,19 @@ type UseTicketsOptions = {
   department_id?: string
   requestedById?: string
   requested_by_id?: string
+  sprintId?: string
+  sprint_id?: string
   excludeDone?: boolean
   exclude_done?: boolean
   excludeSubtasks?: boolean
   exclude_subtasks?: boolean
+  q?: string
   limit?: number
   page?: number
+  sortBy?: SortColumn
+  sortDirection?: "asc" | "desc"
   enabled?: boolean
   realtime?: boolean
-}
-
-type TicketsResponse = {
-  items?: Ticket[]
-  tickets?: Ticket[]
-  data?: Ticket[]
-  pageInfo?: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
-  pagination?: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
-  nextCursor?: string | null
-}
-
-type TicketResponse = {
-  ticket: Ticket
-}
-
-function normalizeTicket(ticket: Ticket): Ticket {
-  return {
-    ...ticket,
-    links: sanitizeLinkArray(ticket.links),
-  }
 }
 
 export function useTickets(options?: UseTicketsOptions) {
@@ -68,25 +53,29 @@ export function useTickets(options?: UseTicketsOptions) {
   const assigneeId = options?.assigneeId ?? options?.assignee_id
   const departmentId = options?.departmentId ?? options?.department_id
   const requestedById = options?.requestedById ?? options?.requested_by_id
+  const sprintId = options?.sprintId ?? options?.sprint_id
   const excludeDone = options?.excludeDone ?? options?.exclude_done
   const excludeSubtasks = options?.excludeSubtasks ?? options?.exclude_subtasks ?? true
-  const queryKey = [
-    "tickets",
+  const queryKey = ticketQueryKeys.list({
     projectId,
     parentTicketId,
     assigneeId,
-    options?.status,
+    status: options?.status,
     departmentId,
     requestedById,
+    sprintId,
     excludeDone,
     excludeSubtasks,
-    options?.limit,
-    options?.page,
-  ] as const
+    q: options?.q,
+    limit: options?.limit,
+    page: options?.page,
+    sortBy: options?.sortBy,
+    sortDirection: options?.sortDirection,
+  })
 
   const patchTicketInLists = useCallback(
     (ticketId: string, updater: (ticket: Ticket) => Ticket) => {
-      queryClient.setQueriesData<TicketsResponse>({ queryKey: ["tickets"] }, (current) => {
+      queryClient.setQueriesData<TicketsResponse>({ queryKey: ticketQueryKeys.lists() }, (current) => {
         if (!current) return current
         const sourceItems = current?.items || current?.tickets || current?.data || []
         if (!sourceItems.length) return current
@@ -109,7 +98,7 @@ export function useTickets(options?: UseTicketsOptions) {
     table: "tickets",
     enabled: enabled && realtime,
     onInsert: () => {
-      queryClient.invalidateQueries({ queryKey: ["tickets"] })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.lists() })
     },
     onUpdate: (payload) => {
       const updatedId = (payload.new as { id?: string } | null)?.id
@@ -121,9 +110,19 @@ export function useTickets(options?: UseTicketsOptions) {
             ...partial,
           } as Ticket)
         )
-        queryClient.setQueryData<{ ticket: Ticket }>(["ticket", updatedId], (current) => {
+        queryClient.setQueryData<{ ticket: Ticket }>(ticketQueryKeys.entity(updatedId), (current) => {
           if (!current?.ticket) return current
           return {
+            ticket: normalizeTicket({
+              ...current.ticket,
+              ...partial,
+            } as Ticket),
+          }
+        })
+        queryClient.setQueryData<TicketDetailResponse>(ticketQueryKeys.detail(updatedId), (current) => {
+          if (!current?.ticket) return current
+          return {
+            ...current,
             ticket: normalizeTicket({
               ...current.ticket,
               ...partial,
@@ -135,7 +134,7 @@ export function useTickets(options?: UseTicketsOptions) {
     onDelete: (payload) => {
       const deletedId = (payload.old as { id?: string } | null)?.id
       if (deletedId) {
-        queryClient.setQueriesData<TicketsResponse>({ queryKey: ["tickets"] }, (current) => {
+        queryClient.setQueriesData<TicketsResponse>({ queryKey: ticketQueryKeys.lists() }, (current) => {
           if (!current) return current
           const sourceItems = current?.items || current?.tickets || current?.data || []
           if (!sourceItems.length) return current
@@ -164,7 +163,8 @@ export function useTickets(options?: UseTicketsOptions) {
             ...(pageInfo ? { pageInfo } : {}),
           }
         })
-        queryClient.removeQueries({ queryKey: ["ticket", deletedId] })
+        queryClient.removeQueries({ queryKey: ticketQueryKeys.entity(deletedId) })
+        queryClient.removeQueries({ queryKey: ticketQueryKeys.detail(deletedId) })
       }
     },
   })
@@ -173,31 +173,23 @@ export function useTickets(options?: UseTicketsOptions) {
     queryKey,
     enabled,
     staleTime: 30 * 1000,
-    queryFn: async () => {
-      const query = createQueryString({
-        view: "list",
+    queryFn: () =>
+      fetchTicketList({
         projectId,
         parentTicketId,
         assigneeId,
         status: options?.status,
         departmentId,
         requestedById,
+        sprintId,
         excludeDone,
         excludeSubtasks,
+        q: options?.q,
         limit: options?.limit,
         page: options?.page,
-      })
-
-      const response = await requestJson<TicketsResponse>(`/api/v2/tickets${query}`)
-      const items = (response.items || response.data || response.tickets || []).map(normalizeTicket)
-      const pageInfo = response.pageInfo || response.pagination
-      return {
-        items,
-        data: items,
-        ...(pageInfo ? { pageInfo } : {}),
-        ...(response.nextCursor !== undefined ? { nextCursor: response.nextCursor } : {}),
-      }
-    },
+        sortBy: options?.sortBy,
+        sortDirection: options?.sortDirection,
+      }),
   })
 
   return {
@@ -218,26 +210,29 @@ export function useTicket(ticketId: string, options?: { enabled?: boolean; realt
     filter: `id=eq.${ticketId}`,
     enabled: enabled && realtime,
     onInsert: () => {
-      queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] })
-      queryClient.invalidateQueries({ queryKey: ["tickets"] })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.entity(ticketId) })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(ticketId) })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.lists() })
     },
     onUpdate: () => {
-      queryClient.invalidateQueries({ queryKey: ["ticket", ticketId] })
-      queryClient.invalidateQueries({ queryKey: ["tickets"] })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.entity(ticketId) })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(ticketId) })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.lists() })
     },
     onDelete: () => {
-      queryClient.removeQueries({ queryKey: ["ticket", ticketId] })
-      queryClient.invalidateQueries({ queryKey: ["tickets"] })
+      queryClient.removeQueries({ queryKey: ticketQueryKeys.entity(ticketId) })
+      queryClient.removeQueries({ queryKey: ticketQueryKeys.detail(ticketId) })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.lists() })
     },
   })
 
   return useQuery<{ ticket: Ticket }>({
-    queryKey: ["ticket", ticketId],
+    queryKey: ticketQueryKeys.entity(ticketId),
     enabled,
     staleTime: 60 * 1000,
     queryFn: async () => {
-      const response = await requestJson<TicketResponse>(`/api/v2/tickets/${ticketId}?view=detail`)
-      return { ticket: normalizeTicket(response.ticket) }
+      const response = await fetchTicketDetail(ticketId)
+      return { ticket: response.ticket }
     },
   })
 }
@@ -316,8 +311,9 @@ export function useCreateTicket() {
       return { ticket: normalizeTicket(response.ticket) }
     },
     onSuccess: (data) => {
-      queryClient.setQueryData<{ ticket: Ticket }>(["ticket", data.ticket.id], data)
-      queryClient.invalidateQueries({ queryKey: ["tickets"] })
+      queryClient.setQueryData<{ ticket: Ticket }>(ticketQueryKeys.entity(data.ticket.id), data)
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detailRoot() })
       if (data.ticket.project?.id) {
         queryClient.invalidateQueries({ queryKey: ["project", data.ticket.project.id] })
       }
@@ -417,8 +413,11 @@ export function useUpdateTicket() {
       return { ticket: normalizeTicket(response.ticket) }
     },
     onSuccess: (data) => {
-      queryClient.setQueryData<{ ticket: Ticket }>(["ticket", data.ticket.id], data)
-      queryClient.setQueriesData<TicketsResponse>({ queryKey: ["tickets"] }, (current) => {
+      queryClient.setQueryData<{ ticket: Ticket }>(ticketQueryKeys.entity(data.ticket.id), data)
+      queryClient.setQueryData<TicketDetailResponse>(ticketQueryKeys.detail(data.ticket.id), (current) =>
+        current ? { ...current, ticket: data.ticket } : current
+      )
+      queryClient.setQueriesData<TicketsResponse>({ queryKey: ticketQueryKeys.lists() }, (current) => {
         if (!current) return current
         const sourceItems = current?.items || current?.tickets || current?.data || []
         if (!sourceItems.length) return current
@@ -435,6 +434,7 @@ export function useUpdateTicket() {
           data: nextItems,
         }
       })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detailRoot() })
       if (data.ticket.project?.id) {
         queryClient.invalidateQueries({ queryKey: ["project", data.ticket.project.id] })
       }
@@ -479,8 +479,11 @@ export function useUpdateTicketWithReasonComment() {
       return { ticket: normalizeTicket(response.ticket) }
     },
     onSuccess: (data) => {
-      queryClient.setQueryData<{ ticket: Ticket }>(["ticket", data.ticket.id], data)
-      queryClient.setQueriesData<TicketsResponse>({ queryKey: ["tickets"] }, (current) => {
+      queryClient.setQueryData<{ ticket: Ticket }>(ticketQueryKeys.entity(data.ticket.id), data)
+      queryClient.setQueryData<TicketDetailResponse>(ticketQueryKeys.detail(data.ticket.id), (current) =>
+        current ? { ...current, ticket: data.ticket } : current
+      )
+      queryClient.setQueriesData<TicketsResponse>({ queryKey: ticketQueryKeys.lists() }, (current) => {
         if (!current) return current
         const sourceItems = current?.items || current?.tickets || current?.data || []
         if (!sourceItems.length) return current
@@ -497,7 +500,8 @@ export function useUpdateTicketWithReasonComment() {
           data: nextItems,
         }
       })
-      queryClient.invalidateQueries({ queryKey: ["ticket-detail", data.ticket.id] })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(data.ticket.id) })
+      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.lists() })
       if (data.ticket.project?.id) {
         queryClient.invalidateQueries({ queryKey: ["project", data.ticket.project.id] })
       }

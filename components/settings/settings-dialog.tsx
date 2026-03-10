@@ -22,7 +22,6 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { signOut, useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
-import { useTheme } from "@/components/theme-provider"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useSignOutOverlay } from "@/components/signout-overlay"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
@@ -49,7 +48,6 @@ type SettingsSection =
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { data: session } = useSession()
   const router = useRouter()
-  const { theme, setTheme } = useTheme()
   const { user: permissionsUser } = usePermissions()
   const { preferences, updatePreferences, isUpdating } = useUserPreferences()
   const user = useMemo<CombinedUser | null>(
@@ -140,29 +138,6 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         <p className="text-sm text-muted-foreground">{user?.email}</p>
                         <Badge className="mt-2 capitalize">{user?.role}</Badge>
                       </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Appearance Section */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Appearance</h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="theme">Theme</Label>
-                      <Select value={theme} onValueChange={(value) => setTheme(value as "light" | "dark" | "system")}>
-                        <SelectTrigger id="theme" className="w-[180px]">
-                          <SelectValue placeholder="Select theme" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="light">Light</SelectItem>
-                          <SelectItem value="dark">Dark</SelectItem>
-                          <SelectItem value="system">System</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        Choose your preferred color scheme
-                      </p>
                     </div>
                   </div>
 

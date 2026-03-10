@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { normalizeRichTextInput } from "@/lib/rich-text"
+import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
 import { fetchTicketList, parseTicketListQuery } from "@/lib/server/tickets-list"
 import { prepareLinkPayload } from "@/lib/links"
 
@@ -208,29 +209,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Failed to create ticket" },
         { status: 500 }
-      )
-    }
-
-      const enrichedTicket = {
-        ...ticket,
-        assignee: ticket.assignee
-          ? { ...ticket.assignee, image: ticket.assignee.avatar_url || null }
-          : null,
-        sqa_assignee: ticket.sqa_assignee
-          ? { ...ticket.sqa_assignee, image: ticket.sqa_assignee.avatar_url || null }
-          : null,
-        requested_by: ticket.requested_by
-          ? { ...ticket.requested_by, image: ticket.requested_by.avatar_url || null }
-          : null,
+        )
       }
 
-      return NextResponse.json(
-        { ticket: enrichedTicket },
-        {
-          status: 201,
-          ...(deprecationHeaders ? { headers: deprecationHeaders } : {}),
-        }
-      )
+    await invalidateTicketCaches()
+
+    const enrichedTicket = {
+      ...ticket,
+      assignee: ticket.assignee
+        ? { ...ticket.assignee, image: ticket.assignee.avatar_url || null }
+        : null,
+      sqa_assignee: ticket.sqa_assignee
+        ? { ...ticket.sqa_assignee, image: ticket.sqa_assignee.avatar_url || null }
+        : null,
+      requested_by: ticket.requested_by
+        ? { ...ticket.requested_by, image: ticket.requested_by.avatar_url || null }
+        : null,
+    }
+
+    return NextResponse.json(
+      { ticket: enrichedTicket },
+      {
+        status: 201,
+        ...(deprecationHeaders ? { headers: deprecationHeaders } : {}),
+      }
+    )
   } catch (error: any) {
     if (error.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
