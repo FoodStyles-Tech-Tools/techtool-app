@@ -1,43 +1,35 @@
 import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-
 import { cn } from "@/lib/utils"
+type ButtonVariant = "primary" | "secondary" | "outline" | "ghost"
+type ButtonSize = "sm" | "md" | "lg" | "icon"
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium leading-5 tracking-[-0.01em] transition-colors focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline:
-          "border border-border/45 bg-background/60 hover:bg-accent/70 hover:text-accent-foreground hover:border-border/70",
-        secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        selected:
-          "selected-ui hover:bg-blue-500/15",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
+function getButtonClasses(variant: ButtonVariant, size: ButtonSize) {
+  const base =
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0"
+
+  const variantClasses: Record<ButtonVariant, string> = {
+    primary: "bg-blue-600 text-white hover:bg-blue-700",
+    secondary: "bg-slate-100 text-slate-900 hover:bg-slate-200",
+    outline: "border border-slate-300 bg-white hover:bg-slate-50",
+    ghost: "hover:bg-slate-100 hover:text-slate-900",
   }
-)
+
+  const sizeClasses: Record<ButtonSize, string> = {
+    sm: "h-8 px-3",
+    md: "h-9 px-3",
+    lg: "h-10 px-4",
+    icon: "h-9 w-9",
+  }
+
+  return cn(base, variantClasses[variant], sizeClasses[size])
+}
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+    React.AriaAttributes {
   asChild?: boolean
+  variant?: ButtonVariant
+  size?: ButtonSize
 }
 
 function composeRefs<T>(
@@ -56,8 +48,8 @@ function composeRefs<T>(
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
-    const classes = cn(buttonVariants({ variant, size, className }))
+  ({ className, variant = "primary", size = "md", asChild = false, children, ...props }, ref) => {
+    const classes = cn(getButtonClasses(variant, size), className)
 
     if (asChild) {
       const child = React.Children.only(children) as React.ReactElement<{
@@ -81,4 +73,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 )
 Button.displayName = "Button"
 
-export { Button, buttonVariants }
+export { Button }

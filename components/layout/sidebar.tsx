@@ -28,8 +28,7 @@ import { useSignOutOverlay } from "@/components/signout-overlay"
 import { NavUser } from "@/components/layout/nav-user"
 import { usePinnedProjects } from "@/hooks/use-pinned-projects"
 
-const SIDEBAR_ACTIVE_ITEM_CLASS =
-  "border border-blue-500/60 bg-blue-500/10 text-blue-700"
+const SIDEBAR_ACTIVE_ITEM_CLASS = "bg-blue-50 text-blue-700"
 
 type NavItem = {
   title: string
@@ -93,11 +92,6 @@ const settingsItems: SettingsItem[] = [
     flag: "canViewRoles",
   },
   {
-    title: "Workspace",
-    href: "/workspace",
-    visible: (flags) => Boolean(flags.canManageStatus || flags.canEditProjects),
-  },
-  {
     title: "Deleted",
     href: "/deleted-tickets",
     flag: "canViewTickets",
@@ -134,11 +128,12 @@ export function Sidebar() {
     pathname.startsWith("/users/") ||
     pathname === "/roles" ||
     pathname.startsWith("/roles/") ||
-    pathname === "/workspace" ||
-    pathname.startsWith("/workspace/") ||
     pathname === "/deleted-tickets" ||
     pathname.startsWith("/deleted-tickets/")
   const [settingsExpanded, setSettingsExpanded] = useState(settingsSectionActive)
+  const workspaceSectionActive =
+    pathname === "/workspace" || pathname.startsWith("/workspace/")
+  const [workspaceExpanded, setWorkspaceExpanded] = useState(workspaceSectionActive)
   const [pinnedExpanded, setPinnedExpanded] = useState(true)
   const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()
 
@@ -159,6 +154,12 @@ export function Sidebar() {
       setSettingsExpanded(true)
     }
   }, [settingsSectionActive])
+
+  useEffect(() => {
+    if (workspaceSectionActive) {
+      setWorkspaceExpanded(true)
+    }
+  }, [workspaceSectionActive])
 
   useEffect(() => {
     if (pinnedSectionActive) {
@@ -211,10 +212,8 @@ export function Sidebar() {
         href={item.href}
         prefetch={true}
         className={cn(
-          "flex h-8 items-center gap-2 rounded-md border border-transparent px-2 text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
-          isActive
-            ? SIDEBAR_ACTIVE_ITEM_CLASS
-            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          "flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-slate-600 transition-colors",
+          isActive ? SIDEBAR_ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
         )}
       >
         <Icon className="h-4 w-4 stroke-[1.75]" />
@@ -224,15 +223,15 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="h-full w-72 shrink-0 bg-muted/40">
-      <div className="flex h-full flex-col px-2 py-2">
-        <div className="px-2 py-2">
-          <div className="flex items-center justify-between gap-3 rounded-lg px-1 py-1">
+    <aside className="h-full w-64 shrink-0 border-r bg-white">
+      <div className="flex h-full flex-col px-3 py-3">
+        <div className="pb-3">
+          <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <Image src="/icon.svg" alt="TECHTOOL" width={36} height={36} className="h-9 w-9 rounded-md" />
               <div className="space-y-0.5">
-                <p className="text-sm font-semibold tracking-[-0.012em]">TECHTOOL</p>
-                <p className="text-xs tracking-[0.012em] text-muted-foreground">Workspace</p>
+                <p className="text-sm font-semibold text-slate-900">TECHTOOL</p>
+                <p className="text-xs text-slate-500">Workspace</p>
               </div>
             </div>
             <div>
@@ -241,9 +240,9 @@ export function Sidebar() {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-2 py-2">
+        <div className="flex-1 overflow-y-auto py-2">
           <div className="space-y-1">
-            <p className="px-2 py-1 text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
+            <p className="px-2 py-1 text-xs font-medium uppercase text-slate-500">
               Platform
             </p>
             {primaryNavItems.filter(isVisible).map(renderNavLink)}
@@ -255,8 +254,7 @@ export function Sidebar() {
                 type="button"
                 onClick={() => setReportExpanded((current) => !current)}
                 className={cn(
-                  "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
-                  "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                 )}
               >
                 <FileSpreadsheet className="h-4 w-4 stroke-[1.75]" />
@@ -269,7 +267,7 @@ export function Sidebar() {
                 />
               </button>
               {reportExpanded && (
-                <div className="ml-2 space-y-0.5 border-l pl-2">
+                <div className="mt-1 space-y-0.5">
                   {reportSubItems.map((item) => {
                     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
                     return (
@@ -278,10 +276,8 @@ export function Sidebar() {
                         href={item.href}
                         prefetch={true}
                         className={cn(
-                          "flex h-8 items-center rounded-md border border-transparent px-2 text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
-                          isActive
-                            ? SIDEBAR_ACTIVE_ITEM_CLASS
-                            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                          "flex h-8 items-center rounded-md px-2 text-sm font-medium text-slate-600 transition-colors",
+                          isActive ? SIDEBAR_ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
                         )}
                       >
                         <span>{item.title}</span>
@@ -299,8 +295,7 @@ export function Sidebar() {
                 type="button"
                 onClick={() => setPinnedExpanded((current) => !current)}
                 className={cn(
-                  "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
-                  "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                  "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                 )}
               >
                 <Pin className="h-4 w-4 stroke-[1.75]" />
@@ -315,11 +310,11 @@ export function Sidebar() {
               {pinnedExpanded && (
                 <>
                   {pinnedProjectsLoading ? (
-                    <p className="ml-2 px-2 py-1 text-xs leading-4 tracking-[0.01em] text-muted-foreground">Loading...</p>
+                    <p className="px-2 py-1 text-xs leading-4 text-slate-500">Loading...</p>
                   ) : pinnedProjectIds.length === 0 ? (
-                    <p className="ml-2 px-2 py-1 text-xs leading-4 tracking-[0.01em] text-muted-foreground">No pinned projects</p>
+                    <p className="px-2 py-1 text-xs leading-4 text-slate-500">No pinned projects</p>
                   ) : (
-                    <div className="ml-2 space-y-0.5 border-l pl-2">
+                    <div className="mt-1 space-y-0.5">
                       {pinnedProjects.map((project) => {
                         const href = `/tickets?projectId=${project.id}`
                         const isActive = pathname === "/tickets" && activeProjectId === project.id
@@ -329,10 +324,8 @@ export function Sidebar() {
                             href={href}
                             prefetch={true}
                             className={cn(
-                              "flex h-8 items-center rounded-md border border-transparent px-2 text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
-                              isActive
-                                ? SIDEBAR_ACTIVE_ITEM_CLASS
-                                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                              "flex h-8 items-center rounded-md px-2 text-sm font-medium text-slate-600 transition-colors",
+                              isActive ? SIDEBAR_ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
                             )}
                           >
                             <span className="truncate">{project.name}</span>
@@ -347,7 +340,7 @@ export function Sidebar() {
           )}
 
           <div className="mt-4 space-y-1">
-            <p className="px-2 py-1 text-xs font-medium uppercase tracking-[0.06em] text-muted-foreground">
+            <p className="px-2 py-1 text-xs font-medium uppercase text-slate-500">
               Admin
             </p>
             {canOpenSettings && (
@@ -356,8 +349,7 @@ export function Sidebar() {
                   type="button"
                   onClick={() => setSettingsExpanded((current) => !current)}
                   className={cn(
-                    "flex h-8 w-full items-center gap-2 rounded-md border border-transparent px-2 text-left text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
-                    "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
                   <SlidersHorizontal className="h-4 w-4 stroke-[1.75]" />
@@ -370,7 +362,7 @@ export function Sidebar() {
                   />
                 </button>
                 {settingsExpanded && (
-                  <div className="ml-2 space-y-0.5 border-l pl-2">
+                  <div className="mt-1 space-y-0.5">
                     {visibleSettingsItems.map((item) => {
                       const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
                       return (
@@ -379,10 +371,8 @@ export function Sidebar() {
                           href={item.href}
                           prefetch={true}
                           className={cn(
-                            "block h-8 rounded-md border border-transparent px-2 py-1.5 text-sm font-medium leading-5 tracking-[-0.005em] transition-colors",
-                            isActive
-                              ? SIDEBAR_ACTIVE_ITEM_CLASS
-                              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                            "block h-8 rounded-md px-2 py-1.5 text-sm font-medium text-slate-600 transition-colors",
+                            isActive ? SIDEBAR_ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
                           )}
                         >
                           {item.title}
@@ -393,35 +383,81 @@ export function Sidebar() {
                 )}
               </>
             )}
+            {Boolean(flags?.canManageStatus || flags?.canEditProjects) && (
+              <div className="mt-1 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => setWorkspaceExpanded((current) => !current)}
+                  className={cn(
+                    "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                  )}
+                >
+                  <span>Workspace</span>
+                  <ChevronDown
+                    className={cn(
+                      "ml-auto h-4 w-4 transition-transform",
+                      workspaceExpanded ? "rotate-0" : "-rotate-90"
+                    )}
+                  />
+                </button>
+                {workspaceExpanded && (
+                  <div className="mt-1 space-y-0.5">
+                    {[
+                      { title: "Status", href: "/workspace/status" },
+                      { title: "Epic", href: "/workspace/epic" },
+                      { title: "Sprint", href: "/workspace/sprint" },
+                    ].map((item) => {
+                      const isActive =
+                        pathname === item.href || pathname.startsWith(`${item.href}/`)
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          prefetch={true}
+                          className={cn(
+                            "block h-8 rounded-md px-2 py-1.5 text-sm font-medium text-slate-600 transition-colors",
+                            isActive
+                              ? SIDEBAR_ACTIVE_ITEM_CLASS
+                              : "hover:bg-slate-100 hover:text-slate-900"
+                          )}
+                        >
+                          {item.title}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="space-y-2 px-2 pb-2 pt-2">
+        <div className="space-y-2 border-t px-2 pb-2 pt-2">
           <button
             type="button"
             onClick={() => setShortcutsOpen(true)}
-            className="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-xs font-medium tracking-[0.01em] text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="flex h-8 w-full items-center justify-between rounded-md px-2 text-left text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
           >
             <span className="flex items-center gap-2">
               <Command className="h-3.5 w-3.5 stroke-[1.75]" />
               <span>Shortcuts</span>
             </span>
             <span className="hidden items-center gap-1 sm:flex">
-              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+              <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono text-[10px] leading-none text-slate-500">
                 Alt
               </kbd>
-              <span className="text-[10px] text-muted-foreground">/</span>
-              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+              <span className="text-[10px] text-slate-500">/</span>
+              <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono text-[10px] leading-none text-slate-500">
                 Cmd
               </kbd>
-              <span className="text-[10px] text-muted-foreground">+</span>
-              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
+              <span className="text-[10px] text-slate-500">+</span>
+              <kbd className="rounded border border-slate-300 bg-white px-1.5 py-0.5 font-mono text-[10px] leading-none text-slate-500">
                 ↓
               </kbd>
             </span>
           </button>
           <div>
-            <VersionIndicator className="h-8 w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-xs font-medium tracking-[0.01em] text-muted-foreground shadow-none transition-colors hover:bg-accent hover:text-accent-foreground" />
+            <VersionIndicator className="h-8 w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-xs font-medium text-slate-500 shadow-none" />
           </div>
           <NavUser
             user={{

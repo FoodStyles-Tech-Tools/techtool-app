@@ -122,28 +122,28 @@ export function Toaster() {
         <div
           key={toast.id}
           className={cn(
-            "flex items-center gap-3 rounded-lg border bg-background px-4 py-3 shadow-lg",
-            toast.type === "success" && "border-green-500/50 bg-green-50 dark:bg-green-950",
-            toast.type === "error" && "border-red-500/50 bg-red-50 dark:bg-red-950"
+            "flex items-center gap-3 rounded-lg border bg-white px-4 py-3 shadow-lg",
+            toast.type === "success" && "border-green-500/50 bg-green-50",
+            toast.type === "error" && "border-red-500/50 bg-red-50"
           )}
         >
           {toast.type === "success" ? (
-            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
           ) : (
-            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <AlertCircle className="h-5 w-5 text-red-600" />
           )}
           <p
             className={cn(
               "text-sm font-medium leading-5 tracking-[-0.005em]",
-              toast.type === "success" && "text-green-900 dark:text-green-100",
-              toast.type === "error" && "text-red-900 dark:text-red-100"
+              toast.type === "success" && "text-green-900",
+              toast.type === "error" && "text-red-900"
             )}
           >
             {toast.message}
           </p>
           <button
             onClick={() => removeToast(toast.id)}
-            className="ml-auto rounded-md p-1 hover:bg-black/10 dark:hover:bg-white/10"
+            className="ml-auto rounded-md p-1 hover:bg-black/5"
           >
             <X className="h-4 w-4" />
           </button>

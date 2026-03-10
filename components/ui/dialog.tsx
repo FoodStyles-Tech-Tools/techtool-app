@@ -138,7 +138,7 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("fixed inset-0 z-50 bg-black/75", className)}
+    className={cn("fixed inset-0 z-0 bg-black/40", className)}
     {...props}
   />
 ))
@@ -194,7 +194,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             aria-labelledby={titleId}
             aria-describedby={descriptionId}
             className={cn(
-              "relative z-10 grid w-full max-w-lg gap-5 rounded-lg border border-border/45 bg-card p-6 shadow-2xl ring-1 ring-black/20 outline-none",
+              "relative z-10 w-full max-w-lg rounded-md border bg-white p-6 shadow-lg outline-none",
               className
             )}
             {...props}
@@ -310,7 +310,7 @@ const DialogDescription = React.forwardRef<
     <p
       ref={ref}
       id={descriptionId}
-      className={cn("text-sm leading-6 text-muted-foreground", className)}
+      className={cn("text-sm leading-6 text-slate-500", className)}
       {...props}
     />
   )

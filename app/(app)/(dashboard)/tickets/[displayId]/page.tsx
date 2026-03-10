@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation"
 import { requirePagePermission } from "@/lib/server/require-page-permission"
 import { createServerClient } from "@/lib/supabase"
-import { TicketDisplayPageClient } from "@/features/tickets/components/ticket-display-page-client"
+import { TicketDetailPageClient } from "@/features/tickets/components/ticket-detail-page-client"
 
 interface TicketByDisplayIdPageProps {
   params: {
@@ -29,5 +29,5 @@ export default async function TicketByDisplayIdPage({ params }: TicketByDisplayI
     notFound()
   }
 
-  return <TicketDisplayPageClient ticketId={ticket.id} />
+  return <TicketDetailPageClient ticketId={ticket.id} />
 }

@@ -6,15 +6,12 @@ import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useUpdateProject } from "@/hooks/use-projects"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
-import { CollaboratorSelector } from "@/components/collaborator-selector"
 import {
   TableCell,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Circle, Search, Pin, Pencil, Archive } from "lucide-react"
-import { BrandLinkIcon } from "@/components/brand-link-icon"
+import { Plus, Circle, Search } from "lucide-react"
 import Link from "next/link"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/toast"
 import { cn, truncateText } from "@/lib/utils"
@@ -25,13 +22,9 @@ const ROWS_PER_PAGE = 20
 type ProjectTicketStats = { total: number; done: number; percentage: number }
 const DEFAULT_PROJECT_STATS = { total: 0, done: 0, percentage: 0 }
 const toolbarInputClassName =
-  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground/20"
+  "h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus-visible:ring-2 focus-visible:ring-blue-500"
 const toolbarToggleClassName =
-  "flex min-h-10 items-center gap-2 rounded-md border border-border/60 bg-background px-3 text-sm text-foreground"
-const cellSelectClassName =
-  "h-8 w-full rounded-md border border-border/40 bg-background/55 px-2 text-xs text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-70"
-const iconButtonClassName =
-  "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+  "flex min-h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
 
 interface Department {
   id: string
@@ -292,111 +285,89 @@ export default function ProjectsClient({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-lg border border-border/50 bg-background">
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-            <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_220px_auto_auto]">
-              <label className="space-y-1.5">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Search
-                </span>
-                <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search projects..."
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    className={cn(toolbarInputClassName, "pl-9")}
-                  />
-                </div>
-              </label>
-              <label className="space-y-1.5">
-                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                  Department
-                </span>
-                <select
-                  value={departmentFilter}
-                  onChange={(event) => setDepartmentFilter(event.target.value)}
-                  className={toolbarInputClassName}
-                >
-                  <option value="all">All Departments</option>
-                  <option value="no_department">No Department</option>
-                  {departments.map((department) => (
-                    <option key={department.id} value={department.id}>
-                      {department.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={toolbarToggleClassName}>
-                <input
-                  type="checkbox"
-                  checked={assignedToMeOnly}
-                  onChange={(event) => setAssignedToMeOnly(event.target.checked)}
-                  className="h-4 w-4 rounded border-border text-foreground"
-                />
-                <span>Assigned to me</span>
-              </label>
-              <label className={toolbarToggleClassName}>
-                <input
-                  type="checkbox"
-                  checked={excludeDone}
-                  onChange={(event) => setExcludeDone(event.target.checked)}
-                  className="h-4 w-4 rounded border-border text-foreground"
-                />
-                <span>Exclude inactive</span>
-              </label>
+      <section className="border-b pb-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-full min-w-[220px] md:w-64">
+              <Input
+                placeholder="Search projects..."
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className={cn(toolbarInputClassName)}
+              />
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {hasProjectSearch || activeFilterCount > 0 ? (
-                <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                  {hasProjectSearch ? "Search active" : null}
-                  {hasProjectSearch && activeFilterCount > 0 ? " · " : null}
-                  {activeFilterCount > 0 ? `${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} active` : null}
-                </div>
-              ) : null}
-              <Button variant="outline" size="sm" className="h-10" onClick={resetProjectFilters}>
-                Reset
+            <div className="w-full min-w-[200px] md:w-56">
+              <select
+                value={departmentFilter}
+                onChange={(event) => setDepartmentFilter(event.target.value)}
+                className={toolbarInputClassName}
+              >
+                <option value="all">All departments</option>
+                <option value="no_department">No department</option>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={assignedToMeOnly}
+                onChange={(event) => setAssignedToMeOnly(event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-900"
+              />
+              Assigned to me
+            </label>
+            <label className="flex items-center gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                checked={excludeDone}
+                onChange={(event) => setExcludeDone(event.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-slate-900"
+              />
+              Exclude inactive
+            </label>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" className="h-9 px-3" onClick={resetProjectFilters}>
+              Reset
+            </Button>
+            {canCreateProjects && (
+              <Button type="button" size="sm" className="h-9 px-3" onClick={() => setProjectFormOpen(true)}>
+                <Plus className="mr-1 h-4 w-4" />
+                Create project
               </Button>
-              {canCreateProjects && (
-                <button
-                  type="button"
-                  onClick={() => setProjectFormOpen(true)}
-                  className="inline-flex h-10 items-center gap-2 rounded-md border border-border/60 bg-background px-3 text-sm text-foreground transition-colors hover:bg-muted"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Create Project</span>
-                </button>
-              )}
-            </div>
+            )}
           </div>
         </div>
       </section>
 
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <p className="text-sm text-slate-500">Loading...</p>
       ) : filteredProjects.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center">
-          <p className="text-sm text-muted-foreground">
+        <div className="rounded-lg border border-slate-200 p-8 text-center bg-white">
+          <p className="text-sm text-slate-500">
             {hasProjectSearch ? "No projects found" : "No projects yet. Create one to get started."}
           </p>
         </div>
       ) : (
-        <div className="rounded-md border border-border/35 bg-muted/10">
+        <div className="rounded-md border border-slate-200 bg-white">
           <div className="max-h-[calc(100vh-220px)] overflow-y-auto relative">
             <table className="w-full caption-bottom text-sm">
-              <thead className="sticky top-0 z-20 bg-muted/80 shadow-sm border-b border-border/35">
+              <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm border-b border-slate-200">
                 <tr className="hover:bg-transparent">
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground w-[600px] min-w-[500px]">Project Name</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Progress</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Owner</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Requesters</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Collaborators</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Department</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Status</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Require SQA?</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Links</th>
-                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-muted-foreground">Created</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-slate-500 w-[600px] min-w-[500px]">Project Name</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-slate-500">Progress</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-slate-500">Owner</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-slate-500">Requesters</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-slate-500">Collaborators</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-slate-500">Department</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-slate-500">Status</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-slate-500">Require SQA?</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-slate-500">Links</th>
+                  <th className="h-9 py-2 px-4 text-left align-middle text-xs text-slate-500">Created</th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
@@ -423,8 +394,8 @@ export default function ProjectsClient({
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between border-t border-border/35 px-4 py-3">
-            <div className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
+            <div className="text-sm text-slate-500">
               Showing {startIndex + 1} to {Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} projects
             </div>
             <div className="flex items-center space-x-2">
@@ -438,7 +409,7 @@ export default function ProjectsClient({
                 >
                   Previous
                 </Button>
-                <div className="text-sm text-muted-foreground px-2">
+                <div className="text-sm text-slate-500 px-2">
                   Page {currentPage} of {totalPages || 1}
                 </div>
                 <Button
@@ -457,7 +428,7 @@ export default function ProjectsClient({
       )}
       <Dialog open={isProjectFormOpen} onOpenChange={setProjectFormOpen}>
         <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
-          <DialogHeader className="bg-muted/40 px-6 py-4">
+          <DialogHeader className="bg-slate-50 px-6 py-4 border-b border-slate-200">
             <DialogTitle>Create Project</DialogTitle>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
@@ -473,7 +444,7 @@ export default function ProjectsClient({
               }}
             />
           </div>
-          <DialogFooter className="shrink-0 bg-muted/40 px-6 py-4 sm:justify-end">
+          <DialogFooter className="shrink-0 bg-slate-50 px-6 py-4 border-t border-slate-200 sm:justify-end">
             <Button type="button" variant="outline" onClick={() => setProjectFormOpen(false)}>
               Cancel
             </Button>
@@ -485,7 +456,7 @@ export default function ProjectsClient({
       </Dialog>
       <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
         <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
-          <DialogHeader className="bg-muted/40 px-6 py-4">
+          <DialogHeader className="bg-slate-50 px-6 py-4 border-b border-slate-200">
             <DialogTitle>Edit Project</DialogTitle>
           </DialogHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
@@ -518,7 +489,7 @@ export default function ProjectsClient({
               />
             ) : null}
           </div>
-          <DialogFooter className="shrink-0 bg-muted/40 px-6 py-4 sm:justify-end">
+          <DialogFooter className="shrink-0 bg-slate-50 px-6 py-4 border-t border-slate-200 sm:justify-end">
             <Button type="button" variant="outline" onClick={() => setEditingProject(null)}>
               Cancel
             </Button>
@@ -550,247 +521,79 @@ interface ProjectRowProps {
 const ProjectRow = memo(function ProjectRow({
   project,
   stats,
-  users,
-  departments,
-  canEditProjects,
-  updateProjectField,
-  updatingFields,
-  isPinned,
-  pinDisabled,
-  onTogglePin,
-  onEditProject,
-  onArchiveProject,
 }: ProjectRowProps) {
-  const isUpdatingOwner = !!updatingFields[`${project.id}-owner_id`]
-  const isUpdatingDept = !!updatingFields[`${project.id}-department_id`]
-  const isUpdatingStatus = !!updatingFields[`${project.id}-status`]
-  const isUpdatingRequesters = !!updatingFields[`${project.id}-requester_ids`]
-  const isUpdatingCollaborators = !!updatingFields[`${project.id}-collaborator_ids`]
-  const isUpdatingRequireSqa = !!updatingFields[`${project.id}-require_sqa`]
-  const requesterIds = project.requesters?.map((requester) => requester.id) || []
-  const collaboratorIds = project.collaborators?.map((collab) => collab.id) || []
+  const ownerLabel = project.owner?.name || project.owner?.email || "Unassigned"
+  const requestersLabel =
+    project.requesters && project.requesters.length > 0
+      ? truncateText(
+          project.requesters
+            .map((r) => r.name || r.email)
+            .join(", "),
+          40
+        )
+      : "No requesters"
+  const collaboratorsLabel =
+    project.collaborators && project.collaborators.length > 0
+      ? truncateText(
+          project.collaborators
+            .map((c) => c.name || c.email)
+            .join(", "),
+          40
+        )
+      : "No collaborators"
 
   return (
-    <TableRow className="border-b-0 even:bg-muted/20 hover:bg-muted/35">
+    <TableRow>
       <TableCell className="py-2 w-[600px] min-w-[500px]">
         <div className="flex items-start gap-2">
           <Link
             href={`/tickets?projectId=${project.id}`}
-            className="hover:underline flex min-w-0 flex-1 flex-col"
+            className="flex min-w-0 flex-1 flex-col hover:underline"
           >
             <span className="text-sm">{project.name}</span>
-            <span className="text-xs text-muted-foreground line-clamp-2">
-              {project.description || "No description"}
-            </span>
+            {project.description ? (
+              <span className="text-xs text-slate-500 line-clamp-2">
+                {project.description}
+              </span>
+            ) : null}
           </Link>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "h-7 w-7 shrink-0",
-              isPinned ? "text-amber-500 hover:text-amber-500" : "text-muted-foreground hover:text-foreground"
-            )}
-            onClick={(event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              onTogglePin(project.id)
-            }}
-            disabled={pinDisabled}
-            title={isPinned ? "Unpin project" : "Pin project"}
-            aria-label={isPinned ? "Unpin project" : "Pin project"}
-          >
-            <Pin className={cn("h-3.5 w-3.5", isPinned ? "fill-current" : "")} />
-          </Button>
-          {canEditProjects ? (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                className={iconButtonClassName}
-                onClick={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  onEditProject(project)
-                }}
-                aria-label="Edit project"
-                title="Edit project"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                className={iconButtonClassName}
-                onClick={(event) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  void onArchiveProject(project)
-                }}
-                disabled={project.status === "inactive"}
-                aria-label="Archive project"
-                title="Archive project"
-              >
-                <Archive className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ) : null}
         </div>
       </TableCell>
       <TableCell className="py-2">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs text-muted-foreground">
-            {stats.total} ticket{stats.total !== 1 ? "s" : ""}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            {stats.done} done · {stats.percentage}%
-          </span>
+        <span className="text-xs text-slate-500">
+          {stats.total} tickets, {stats.done} done ({stats.percentage}%)
+        </span>
+      </TableCell>
+      <TableCell className="py-2">
+        <span className="text-xs text-slate-500" title={ownerLabel}>
+          {truncateText(ownerLabel, 32)}
+        </span>
+      </TableCell>
+      <TableCell className="py-2">
+        <span className="text-xs text-slate-500" title={requestersLabel}>
+          {requestersLabel}
+        </span>
+      </TableCell>
+      <TableCell className="py-2">
+        <span className="text-xs text-slate-500" title={collaboratorsLabel}>
+          {collaboratorsLabel}
+        </span>
+      </TableCell>
+      <TableCell className="py-2">
+        <span className="text-xs text-slate-500">
+          {project.department?.name || "No department"}
+        </span>
+      </TableCell>
+      <TableCell className="py-2">
+        <div className="flex items-center gap-1.5">
+          {getStatusIcon(project.status)}
+          <span className="text-xs capitalize">{project.status}</span>
         </div>
       </TableCell>
       <TableCell className="py-2">
-        {canEditProjects ? (
-          <select
-            value={project.owner?.id || ""}
-            onChange={(event) => updateProjectField(project.id, "owner_id", event.target.value || null)}
-            disabled={isUpdatingOwner}
-            className={cn(cellSelectClassName, "w-[150px]")}
-          >
-            <option value="">Select owner</option>
-            {users.map((user) => (
-              <option key={user.id} value={user.id}>
-                {truncateText(user.name || user.email, 24)}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <div className="flex items-center space-x-1.5">
-            <Avatar className="h-5 w-5">
-              <AvatarImage src={project.owner?.image || undefined} alt={project.owner?.name || ""} />
-              <AvatarFallback>
-                {project.owner?.name?.[0]?.toUpperCase() || project.owner?.email?.[0]?.toUpperCase() || "?"}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-xs text-muted-foreground max-w-[150px] truncate" title={project.owner?.name || project.owner?.email || "Unassigned"}>
-              {truncateText(project.owner?.name || project.owner?.email || "Unassigned", 18)}
-            </span>
-          </div>
-        )}
-      </TableCell>
-      <TableCell className="py-2">
-        {canEditProjects ? (
-          <CollaboratorSelector
-            users={users}
-            value={requesterIds}
-            onChange={(ids) => updateProjectField(project.id, "requester_ids", ids)}
-            placeholder="Select requesters"
-            buttonClassName="w-[180px] text-xs border-border/40 bg-background/55 hover:border-border/65"
-            disabled={isUpdatingRequesters}
-          />
-        ) : requesterIds.length ? (
-          <div className="flex items-center gap-1.5">
-            <div className="flex -space-x-2">
-              {project.requesters.slice(0, 3).map((requester) => (
-                <Avatar key={requester.id} className="h-5 w-5 border border-background">
-                  <AvatarImage src={requester.image || undefined} alt={requester.name || requester.email} />
-                  <AvatarFallback className="text-[10px]">
-                    {requester.name?.[0]?.toUpperCase() || requester.email[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-            </div>
-            {project.requesters.length > 3 && (
-              <span className="text-[10px] text-muted-foreground">+{project.requesters.length - 3}</span>
-            )}
-          </div>
-        ) : (
-          <span className="text-xs text-muted-foreground">No requesters</span>
-        )}
-      </TableCell>
-      <TableCell className="py-2">
-        {canEditProjects ? (
-          <CollaboratorSelector
-            users={users}
-            value={collaboratorIds}
-            onChange={(ids) => updateProjectField(project.id, "collaborator_ids", ids)}
-            placeholder="Select collaborators"
-            buttonClassName="w-[180px] text-xs border-border/40 bg-background/55 hover:border-border/65"
-            disabled={isUpdatingCollaborators}
-          />
-        ) : collaboratorIds.length ? (
-          <div className="flex items-center gap-1.5">
-            <div className="flex -space-x-2">
-              {project.collaborators.slice(0, 3).map((collaborator) => (
-                <Avatar key={collaborator.id} className="h-5 w-5 border border-background">
-                  <AvatarImage src={collaborator.image || undefined} alt={collaborator.name || collaborator.email} />
-                  <AvatarFallback className="text-[10px]">
-                    {collaborator.name?.[0]?.toUpperCase() || collaborator.email[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-            </div>
-            {project.collaborators.length > 3 && (
-              <span className="text-[10px] text-muted-foreground">+{project.collaborators.length - 3}</span>
-            )}
-          </div>
-        ) : (
-          <span className="text-xs text-muted-foreground">No collaborators</span>
-        )}
-      </TableCell>
-      <TableCell className="py-2">
-        {canEditProjects ? (
-          <select
-            value={project.department?.id || "no_department"}
-            onChange={(event) =>
-              updateProjectField(
-                project.id,
-                "department_id",
-                event.target.value === "no_department" ? null : event.target.value
-              )
-            }
-            disabled={isUpdatingDept}
-            className={cn(cellSelectClassName, "w-[140px]")}
-          >
-            <option value="no_department">No Department</option>
-            {departments.map((department) => (
-              <option key={department.id} value={department.id}>
-                {department.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <span className="text-xs text-muted-foreground">
-            {project.department?.name || "No Department"}
-          </span>
-        )}
-      </TableCell>
-      <TableCell className="py-2">
-        {canEditProjects ? (
-          <select
-            value={project.status}
-            onChange={(event) => updateProjectField(project.id, "status", event.target.value)}
-            disabled={isUpdatingStatus}
-            className={cn(cellSelectClassName, "w-[120px]")}
-          >
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        ) : (
-          <div className="flex items-center gap-1.5">
-            {getStatusIcon(project.status)}
-            <span className="text-xs capitalize">{project.status}</span>
-          </div>
-        )}
-      </TableCell>
-      <TableCell className="py-2">
-        {canEditProjects ? (
-          <input
-            type="checkbox"
-            checked={project.require_sqa}
-            onChange={(event) => updateProjectField(project.id, "require_sqa", event.target.checked)}
-            disabled={isUpdatingRequireSqa}
-            className="h-4 w-4 rounded border-border text-foreground"
-          />
-        ) : (
-          <span className="text-xs text-muted-foreground">{project.require_sqa ? "Yes" : "No"}</span>
-        )}
+        <span className="text-xs text-muted-foreground">
+          {project.require_sqa ? "Yes" : "No"}
+        </span>
       </TableCell>
       <TableCell className="py-2">
         {project.links && project.links.length > 0 ? (
@@ -801,23 +604,22 @@ const ProjectRow = memo(function ProjectRow({
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline inline-flex items-center gap-1 truncate max-w-[200px]"
+                className="text-xs text-blue-600 hover:underline truncate max-w-[200px]"
               >
-                <BrandLinkIcon url={url} className="h-3 w-3 flex-shrink-0" />
                 <span className="truncate">{formatLinkLabel(url)}</span>
               </a>
             ))}
             {project.links.length > 2 && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-slate-500">
                 +{project.links.length - 2} more
               </span>
             )}
           </div>
         ) : (
-          <span className="text-xs text-muted-foreground">-</span>
+          <span className="text-xs text-slate-500">-</span>
         )}
       </TableCell>
-      <TableCell className="py-2 text-xs text-muted-foreground">
+      <TableCell className="py-2 text-xs text-slate-500">
         {new Date(project.created_at).toLocaleDateString()}
       </TableCell>
     </TableRow>

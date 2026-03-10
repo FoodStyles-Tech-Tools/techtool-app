@@ -21,7 +21,6 @@ export function AppShellHeader() {
   const pathname = usePathname()
   const router = useRouter()
   const [detailLabel, setDetailLabel] = useState<string | null>(null)
-  const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
 
   useEffect(() => {
     const handleDetail = (event: Event) => {
@@ -67,72 +66,55 @@ export function AppShellHeader() {
   }, [isProjectDetail, nestedLabel, projectId, projects])
 
   const projectOptions = useMemo(
-    () => {
-      const visibleProjects = includeInactiveProjects
-        ? projects
-        : projects.filter(
-            (project) =>
-              project.status?.toLowerCase() !== "inactive" || project.id === projectId
-          )
-      return [...visibleProjects].sort((a, b) =>
+    () =>
+      [...projects].sort((a, b) =>
         (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
-      )
-    },
-    [projects, includeInactiveProjects, projectId]
+      ),
+    [projects]
   )
 
   return (
-    <header className="flex h-14 shrink-0 items-center border-b border-border/50 bg-background px-4">
+    <header className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-4">
       <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
           aria-label="Sidebar"
-          className="inline-flex h-8 w-8 items-center justify-center rounded border border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/40 hover:text-foreground"
+          className="inline-flex h-8 w-8 items-center justify-center rounded border border-transparent text-slate-500 hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900"
         >
           <PanelLeft className="h-4 w-4" />
         </button>
-        <div className="h-4 w-px bg-border/70" />
+        <div className="h-4 w-px bg-slate-200" />
         <nav aria-label="Breadcrumb" className="min-w-0">
-          <ol className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+          <ol className="flex min-w-0 items-center gap-2 text-sm text-slate-500">
             <li className="min-w-0">
               {nestedLabel ? (
-                <a href={baseHref} className="transition-colors hover:text-foreground">
+                <a href={baseHref} className="transition-colors hover:text-slate-900">
                   {baseLabel}
                 </a>
               ) : (
-                <span className="font-medium text-foreground">{baseLabel}</span>
+                <span className="font-medium text-slate-900">{baseLabel}</span>
               )}
             </li>
-            {nestedLabel ? <li aria-hidden="true" className="text-border">/</li> : null}
+            {nestedLabel ? <li aria-hidden="true" className="text-slate-300">/</li> : null}
             {nestedLabel ? (
               <li className="min-w-0">
                 {isProjectDetail && projectId ? (
                   <details className="relative">
-                    <summary className="inline-flex max-w-[320px] list-none items-center gap-1 rounded px-1 py-0.5 text-sm font-medium text-foreground hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
+                    <summary className="inline-flex max-w-[320px] list-none items-center gap-1 rounded px-1 py-0.5 text-sm font-medium text-slate-900 hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
                       <span className="truncate">{activeProjectName}</span>
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
                     </summary>
-                    <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-lg border border-border/60 bg-background p-2 shadow-md">
-                      <div className="border-b border-border/50 px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-lg border border-slate-200 bg-white p-2 shadow-md">
+                      <div className="border-b border-slate-200 px-2 pb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
                         Projects
                       </div>
-                      <label className="mt-2 flex items-center justify-between gap-3 rounded-md px-2 py-2 text-sm hover:bg-muted/40">
-                        <span>Include inactive</span>
-                        <input
-                          type="checkbox"
-                          checked={includeInactiveProjects}
-                          onChange={(event) => setIncludeInactiveProjects(event.target.checked)}
-                          className="h-4 w-4 rounded border-border text-foreground"
-                          aria-label="Include inactive projects"
-                        />
-                      </label>
                       <div className="mt-2 max-h-72 overflow-y-auto">
                         {projectsLoading ? (
-                          <div className="rounded-md px-2 py-2 text-sm text-muted-foreground">
+                          <div className="rounded-md px-2 py-2 text-sm text-slate-500">
                             Loading projects...
                           </div>
                         ) : projectOptions.length === 0 ? (
-                          <div className="rounded-md px-2 py-2 text-sm text-muted-foreground">
+                          <div className="rounded-md px-2 py-2 text-sm text-slate-500">
                             No projects
                           </div>
                         ) : (
@@ -141,7 +123,7 @@ export function AppShellHeader() {
                               key={project.id}
                               type="button"
                               onClick={() => router.push(`/projects/${project.id}`)}
-                              className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted/40"
+                              className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-100"
                             >
                               <span className="truncate">{project.name}</span>
                               {project.id === projectId ? (
@@ -154,7 +136,7 @@ export function AppShellHeader() {
                     </div>
                   </details>
                 ) : (
-                  <span className="truncate font-medium text-foreground">{nestedLabel}</span>
+                  <span className="truncate font-medium text-slate-900">{nestedLabel}</span>
                 )}
               </li>
             ) : null}

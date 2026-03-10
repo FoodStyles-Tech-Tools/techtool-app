@@ -118,26 +118,26 @@ export function VersionIndicator({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex items-center justify-between rounded-md border border-border/70 px-2 py-1 text-xs",
+        "flex items-center justify-between rounded-md border border-slate-300 px-2 py-1 text-xs bg-white",
         className
       )}
     >
       <div className="flex items-center gap-2">
-        <div
-          className={cn(
-            "h-2.5 w-2.5 rounded-full",
-            updateAvailable ? "bg-red-500 animate-pulse" : "bg-emerald-500"
-          )}
-        />
-        <p className="font-medium text-foreground">
-          Version: <span className="text-muted-foreground">v{initialVersion}</span>
+          <div
+            className={cn(
+              "h-2.5 w-2.5 rounded-full",
+              updateAvailable ? "bg-red-500" : "bg-emerald-500"
+            )}
+          />
+        <p className="font-medium text-slate-900">
+          Version: <span className="text-slate-500">v{initialVersion}</span>
         </p>
       </div>
       {updateAvailable && (
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="rounded-md border border-destructive/60 px-2 py-0.5 text-[11px] font-medium text-destructive hover:bg-destructive/10 disabled:opacity-50"
+          className="rounded-md border border-red-500/60 px-2 py-0.5 text-[11px] font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
         >
           {refreshing ? "Refreshing" : "Fetch"}
         </button>

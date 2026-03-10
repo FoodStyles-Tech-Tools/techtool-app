@@ -66,17 +66,14 @@ export function TicketsKanban({
     <div className="flex flex-col min-h-0">
       <div
         ref={kanbanTopScrollRef as React.RefObject<HTMLDivElement>}
-        className="horizontal-scroll mb-2 h-4 overflow-x-auto overflow-y-hidden flex-shrink-0"
+        className="mb-2 h-4 overflow-x-auto overflow-y-hidden flex-shrink-0"
         onScroll={(e) => onScrollTop(e.currentTarget.scrollLeft)}
       >
         <div style={{ width: Math.max(kanbanScrollTrackWidth, 1), height: 1 }} />
       </div>
       <div
         ref={kanbanScrollRef as React.RefObject<HTMLDivElement>}
-        className={cn(
-          "horizontal-scroll flex gap-4 overflow-x-auto overflow-y-hidden pb-4 max-h-[70vh]",
-          draggedTicket && "kanban-board-dragging"
-        )}
+        className="flex gap-4 overflow-x-auto overflow-y-hidden pb-4 max-h-[70vh]"
         onScroll={(e) => {
           onScrollBoard(e.currentTarget.scrollLeft)
           onRefreshTrackWidth()
@@ -87,15 +84,12 @@ export function TicketsKanban({
           return (
             <div
               key={column.id}
-              className={cn(
-                "flex-shrink-0 w-80 flex flex-col rounded-lg transition-all duration-200",
-                dragOverColumn === column.id && "kanban-drop-target"
-              )}
+              className="flex-shrink-0 w-80 flex flex-col rounded-lg"
               onDragOver={(e) => onDragOver(e, column.id)}
               onDragLeave={onDragLeave}
               onDrop={(e) => onDrop(e, column.id)}
             >
-              <div className="bg-muted/55 border border-border/60 rounded-xl p-3 flex flex-col h-full">
+              <div className="border border-slate-200 rounded-lg bg-slate-50 p-3 flex flex-col h-full">
                 <div className="flex items-center justify-between mb-3 flex-shrink-0">
                   <div className="flex items-center gap-2">
                     <Circle
@@ -111,7 +105,7 @@ export function TicketsKanban({
                 <div className="space-y-2 overflow-y-auto flex-1 min-h-0 relative">
                   {dropIndicator?.columnId === column.id && (
                     <div
-                      className="kanban-drop-indicator absolute left-0 right-0 h-1 z-10 pointer-events-none rounded-full"
+                      className="absolute left-0 right-0 h-1 z-10 pointer-events-none rounded-full bg-blue-500"
                       style={{ top: `${dropIndicator.top}px` }}
                     />
                   )}
@@ -124,11 +118,8 @@ export function TicketsKanban({
                         key={ticket.id}
                         data-ticket-id={ticket.id}
                         className={cn(
-                          "kanban-card p-4 cursor-pointer border shadow-sm",
-                          draggedTicket === ticket.id && "kanban-card-dragging",
-                          draggedTicket && draggedTicket !== ticket.id && "kanban-card-dimmed",
-                          justDroppedTicketId === ticket.id && "kanban-card-landed",
-                          dueDateDisplay.isOverdue ? "!border-red-500 !bg-red-50 hover:!bg-red-100/50 dark:!border-red-500/50 dark:!bg-red-500/10 dark:hover:!bg-red-500/20" : "bg-background hover:bg-muted/50"
+                          "p-4 cursor-pointer border border-slate-200 bg-white shadow-sm",
+                          dueDateDisplay.isOverdue ? "!border-red-500 !bg-red-50" : "",
                         )}
                         draggable={canEditTickets}
                         onDragStart={(e) => onDragStart(e, ticket.id)}

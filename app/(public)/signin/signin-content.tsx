@@ -53,11 +53,11 @@ export function SignInContent() {
   }, [searchParams])
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4 text-foreground">
-      <Card className="max-w-md w-full border border-border shadow-md bg-card">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 text-slate-900">
+      <Card className="max-w-md w-full border border-slate-200 shadow-md bg-white">
         <CardHeader>
           <CardTitle className="text-lg md:text-xl">Sign in to TechTool App</CardTitle>
-          <CardDescription className="text-xs md:text-sm text-muted-foreground">
+          <CardDescription className="text-xs md:text-sm text-slate-500">
             Enter your email below to login to your account
           </CardDescription>
         </CardHeader>
@@ -75,9 +75,7 @@ export function SignInContent() {
             )}>
               <Button
                 variant="outline"
-                className={cn(
-                  "w-full gap-2 h-11 bg-background hover:bg-muted"
-                )}
+                className={cn("w-full gap-2 h-11 bg-white hover:bg-slate-100")}
                 disabled={loading}
                 onClick={async () => {
                   await signIn.social(

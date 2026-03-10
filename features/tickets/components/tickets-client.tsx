@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "@/components/ui/toast"
 import { useDepartments } from "@/hooks/use-departments"
 import { useProjects } from "@/hooks/use-projects"
@@ -46,6 +47,7 @@ const SERVER_SORT_COLUMNS = new Set<SortColumn>([
 ])
 
 export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
+  const router = useRouter()
   const [sortConfig, setSortConfig] = useState<TicketSortConfig>({
     column: "due_date",
     direction: "asc",
@@ -269,6 +271,16 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   const endIndex = startIndex + ROWS_PER_PAGE
   const paginatedTickets = sortedTickets
 
+  const handleSelectTicket = useCallback(
+    (ticketId: string) => {
+      const ticket = allTickets.find((t) => t.id === ticketId)
+      if (!ticket) return
+      const slug = (ticket.displayId || ticketId.slice(0, 8)).toLowerCase()
+      router.push(`/tickets/${slug}`)
+    },
+    [allTickets, router]
+  )
+
   return (
     <div className="space-y-6">
       <TicketsToolbar
@@ -308,7 +320,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         sortedTickets={sortedTickets}
         sprints={sprints}
         epics={epics}
-        onSelectTicket={setSelectedTicketId}
+        onSelectTicket={handleSelectTicket}
         kanbanProps={{
           columns: kanbanColumns,
           ticketsByStatus,
@@ -318,7 +330,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           dropIndicator,
           justDroppedTicketId,
           canEditTickets,
-          onSelectTicket: setSelectedTicketId,
+          onSelectTicket: handleSelectTicket,
           onDragStart: handleDragStart,
           onDragEnd: handleDragEnd,
           onDragOver: handleDragOver,
@@ -343,7 +355,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           startIndex,
           endIndex,
           onCopyTicket: handleCopyTicketLabel,
-          onSelectTicket: setSelectedTicketId,
+          onSelectTicket: handleSelectTicket,
           departments,
           users,
           assigneeEligibleUsers,

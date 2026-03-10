@@ -36,10 +36,10 @@ type SettingsSection =
 
 const navButtonClassName =
   "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors"
-const sectionClassName = "rounded-lg border border-border/50 bg-background p-4"
-const sectionTitleClassName = "text-sm font-medium text-foreground"
+const sectionClassName = "rounded-lg border border-slate-200 bg-white p-4"
+const sectionTitleClassName = "text-sm font-medium text-slate-900"
 const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-70"
+  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-blue-500 disabled:cursor-not-allowed disabled:opacity-70"
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { data: session } = useSession()
@@ -75,9 +75,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         </DialogHeader>
 
         <div className="flex flex-1 overflow-hidden">
-          <div className="flex w-64 flex-col border-r bg-muted/15">
+          <div className="flex w-64 flex-col border-r bg-slate-50">
             <div className="space-y-1 px-4 pb-4 pt-6">
-              <div className="px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground">
+              <div className="px-3 py-2 text-xs uppercase tracking-wider text-slate-500">
                 Account
               </div>
               <button
@@ -85,8 +85,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 onClick={() => setActiveSection("account")}
                 className={`${navButtonClassName} ${
                   activeSection === "account"
-                    ? "border-border/60 bg-background text-foreground"
-                    : "border-transparent text-muted-foreground hover:border-border/40 hover:bg-background"
+                    ? "border-slate-300 bg-white text-slate-900"
+                    : "border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50"
                 }`}
               >
                 Account
@@ -96,8 +96,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 onClick={() => setActiveSection("preferences")}
                 className={`${navButtonClassName} ${
                   activeSection === "preferences"
-                    ? "border-border/60 bg-background text-foreground"
-                    : "border-transparent text-muted-foreground hover:border-border/40 hover:bg-background"
+                    ? "border-slate-300 bg-white text-slate-900"
+                    : "border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50"
                 }`}
               >
                 Preferences
@@ -107,8 +107,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 onClick={() => setActiveSection("deleted_tickets")}
                 className={`${navButtonClassName} ${
                   activeSection === "deleted_tickets"
-                    ? "border-border/60 bg-background text-foreground"
-                    : "border-transparent text-muted-foreground hover:border-border/40 hover:bg-background"
+                    ? "border-slate-300 bg-white text-slate-900"
+                    : "border-transparent text-slate-600 hover:border-slate-200 hover:bg-slate-50"
                 }`}
               >
                 Deleted
@@ -130,9 +130,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <p className="text-sm font-medium">{user?.name || "User"}</p>
-                        <p className="text-sm text-muted-foreground">{user?.email}</p>
-                        <div className="mt-2 inline-flex rounded-full border border-border/60 px-2.5 py-1 text-xs capitalize text-muted-foreground">
+                        <p className="text-sm font-medium text-slate-900">{user?.name || "User"}</p>
+                        <p className="text-sm text-slate-500">{user?.email}</p>
+                        <div className="mt-2 inline-flex rounded-full border border-slate-300 px-2.5 py-1 text-xs capitalize text-slate-600">
                           {user?.role || "member"}
                         </div>
                       </div>
@@ -143,11 +143,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     <h3 className={sectionTitleClassName}>Account Information</h3>
                     <div className="mt-4 space-y-4">
                       <div>
-                        <p className="mb-1 text-sm text-muted-foreground">Email</p>
+                        <p className="mb-1 text-sm text-slate-500">Email</p>
                         <p className="text-sm">{user?.email || "-"}</p>
                       </div>
                       <div>
-                        <p className="mb-1 text-sm text-muted-foreground">Role</p>
+                        <p className="mb-1 text-sm text-slate-500">Role</p>
                         <p className="text-sm capitalize">{user?.role || "-"}</p>
                       </div>
                     </div>
@@ -155,10 +155,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
                   <section className={sectionClassName}>
                     <h3 className={sectionTitleClassName}>Actions</h3>
-                    <Button variant="destructive" onClick={handleSignOut} disabled={signingOut}>
+                    <Button variant="outline" onClick={handleSignOut} disabled={signingOut}>
                       {signingOut ? (
                         <>
-                          <span className="mr-2 inline-flex h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          <span className="mr-2 inline-flex h-3 w-3 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
                           Signing Out...
                         </>
                       ) : (
@@ -174,7 +174,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   <section className={sectionClassName}>
                     <h3 className={sectionTitleClassName}>Preferences</h3>
                     <div className="mt-4 space-y-6">
-                      <div className="rounded-md border border-border/50 p-4">
+                      <div className="rounded-md border border-slate-200 p-4">
                         <label htmlFor="group-by-epic-default" className="flex items-start gap-3">
                           <input
                             id="group-by-epic-default"
@@ -184,21 +184,21 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                               updatePreferences({ group_by_epic: event.target.checked })
                             }}
                             disabled={isUpdating}
-                            className="mt-0.5 h-4 w-4 rounded border-border text-foreground"
+                            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900"
                           />
                           <span className="space-y-1">
-                            <span className="block text-sm font-medium text-foreground">
+                            <span className="block text-sm font-medium text-slate-900">
                               Default &quot;Group by Epic&quot; for Projects
                             </span>
-                            <span className="block text-xs text-muted-foreground">
+                            <span className="block text-xs text-slate-500">
                               When enabled, projects will default to grouping tickets by Epic
                             </span>
                           </span>
                         </label>
                       </div>
 
-                      <div className="rounded-md border border-border/50 p-4">
-                        <label htmlFor="tickets-view-default" className="block text-sm font-medium text-foreground">
+                      <div className="rounded-md border border-slate-200 p-4">
+                        <label htmlFor="tickets-view-default" className="block text-sm font-medium text-slate-900">
                           Default Tickets View
                         </label>
                         <select
@@ -213,7 +213,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                           <option value="table">Table</option>
                           <option value="kanban">Kanban</option>
                         </select>
-                        <p className="mt-2 text-xs text-muted-foreground">
+                        <p className="mt-2 text-xs text-slate-500">
                           Choose the default view for the Tickets page
                         </p>
                       </div>
