@@ -74,21 +74,22 @@ function normalizeRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] ?? null : value
 }
 
-function normalizeUser(value: any): { id: string; name: string | null; email: string } | null {
+function normalizeUser(
+  value: any
+): { id: string; name: string | null; email: string; avatar_url?: string | null } | null {
   if (!value) return null
   return Array.isArray(value) ? value[0] || null : value
 }
 
 function toTicketPerson(
-  user: { id: string; name: string | null; email: string } | null,
-  imageMap: Map<string, string | null>
+  user: { id: string; name: string | null; email: string; avatar_url?: string | null } | null
 ): TicketPerson | null {
   if (!user) return null
   return {
     id: user.id,
     name: user.name,
     email: user.email,
-    image: imageMap.get(user.email) || null,
+    image: user.avatar_url || null,
   }
 }
 
@@ -148,9 +149,9 @@ export async function fetchTicketList(
       created_at,
       updated_at,
       project:projects(id, name, require_sqa),
-      assignee:users!tickets_assignee_id_fkey(id, name, email),
-      sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
-      requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+      assignee:users!tickets_assignee_id_fkey(id, name, email, avatar_url),
+      sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email, avatar_url),
+      requested_by:users!tickets_requested_by_id_fkey(id, name, email, avatar_url),
       department:departments(id, name),
       epic:epics(id, name, color),
       sprint:sprints(id, name, status)
@@ -246,28 +247,6 @@ export async function fetchTicketList(
     }
   }
 
-  const emails = new Set<string>()
-  for (const row of pageRows as any[]) {
-    const assignee = normalizeUser(row.assignee)
-    const sqaAssignee = normalizeUser(row.sqa_assignee)
-    const requestedBy = normalizeUser(row.requested_by)
-    if (assignee?.email) emails.add(assignee.email)
-    if (sqaAssignee?.email) emails.add(sqaAssignee.email)
-    if (requestedBy?.email) emails.add(requestedBy.email)
-  }
-
-  const imageMap = new Map<string, string | null>()
-  if (emails.size > 0) {
-    const { data: authUsers } = await supabase
-      .from("auth_user")
-      .select("email, image")
-      .in("email", Array.from(emails))
-
-    authUsers?.forEach((row: { email: string; image: string | null }) => {
-      imageMap.set(row.email, row.image || null)
-    })
-  }
-
   const items: TicketListItem[] = (pageRows as any[]).map((row) => {
     const assignee = normalizeUser(row.assignee)
     const sqaAssignee = normalizeUser(row.sqa_assignee)
@@ -291,9 +270,9 @@ export async function fetchTicketList(
       created_at: row.created_at,
       updated_at: row.updated_at,
       project: normalizeRelation(row.project),
-      assignee: toTicketPerson(assignee, imageMap),
-      sqa_assignee: toTicketPerson(sqaAssignee, imageMap),
-      requested_by: toTicketPerson(requestedBy, imageMap),
+      assignee: toTicketPerson(assignee),
+      sqa_assignee: toTicketPerson(sqaAssignee),
+      requested_by: toTicketPerson(requestedBy),
       department: normalizeRelation(row.department),
       epic: normalizeRelation(row.epic),
       sprint: normalizeRelation(row.sprint),

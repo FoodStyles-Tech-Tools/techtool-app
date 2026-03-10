@@ -33,23 +33,8 @@ async function enrichAsset(
 
   const { data: collaboratorUsers } = await supabase
     .from("users")
-    .select("id, name, email")
+    .select("id, name, email, avatar_url")
     .in("id", collaboratorIds)
-
-  const collaboratorEmails = (collaboratorUsers || [])
-    .map((user) => user.email)
-    .filter(Boolean)
-  const { data: authUsers } = collaboratorEmails.length
-    ? await supabase
-        .from("auth_user")
-        .select("email, image")
-        .in("email", collaboratorEmails)
-    : { data: [] as Array<{ email: string; image: string | null }> }
-
-  const imageByEmail = new Map<string, string | null>()
-  ;(authUsers || []).forEach((authUser) => {
-    imageByEmail.set(authUser.email, authUser.image || null)
-  })
 
   const collaboratorById = new Map(
     (collaboratorUsers || []).map((user) => [
@@ -58,7 +43,7 @@ async function enrichAsset(
         id: user.id,
         name: user.name,
         email: user.email,
-        image: imageByEmail.get(user.email) || null,
+        image: user.avatar_url || null,
       },
     ])
   )

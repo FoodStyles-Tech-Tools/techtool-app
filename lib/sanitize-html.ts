@@ -1,7 +1,7 @@
 /**
  * Sanitize HTML for safe use with dangerouslySetInnerHTML.
  * Strips script, style, iframe, object, and other dangerous elements.
- * Use for user-generated or external HTML (e.g. calendar event summaries, rich text).
+ * Use for user-generated or external HTML (e.g. rich text).
  */
 
 const DANGEROUS_TAGS = ["script", "style", "iframe", "object", "embed", "form", "input", "button"]

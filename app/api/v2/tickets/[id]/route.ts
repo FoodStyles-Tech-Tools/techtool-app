@@ -7,21 +7,22 @@ import { sanitizeLinkArray } from "@/lib/links"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-function normalizeUser(value: any): { id: string; name: string | null; email: string } | null {
+function normalizeUser(
+  value: any
+): { id: string; name: string | null; email: string; avatar_url?: string | null } | null {
   if (!value) return null
   return Array.isArray(value) ? value[0] || null : value
 }
 
 function toTicketPerson(
-  user: { id: string; name: string | null; email: string } | null,
-  imageMap: Map<string, string | null>
+  user: { id: string; name: string | null; email: string; avatar_url?: string | null } | null
 ): TicketPerson | null {
   if (!user) return null
   return {
     id: user.id,
     name: user.name,
     email: user.email,
-    image: imageMap.get(user.email) || null,
+    image: user.avatar_url || null,
   }
 }
 
@@ -70,9 +71,9 @@ export async function GET(
             created_at,
             updated_at,
             project:projects(id, name, description, require_sqa),
-            assignee:users!tickets_assignee_id_fkey(id, name, email),
-            sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
-            requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+            assignee:users!tickets_assignee_id_fkey(id, name, email, avatar_url),
+            sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email, avatar_url),
+            requested_by:users!tickets_requested_by_id_fkey(id, name, email, avatar_url),
             department:departments(id, name),
             epic:epics(id, name, color),
             sprint:sprints(id, name, status, start_date, end_date)
@@ -88,20 +89,6 @@ export async function GET(
         const assignee = normalizeUser((ticket as any).assignee)
         const sqaAssignee = normalizeUser((ticket as any).sqa_assignee)
         const requestedBy = normalizeUser((ticket as any).requested_by)
-
-        const emails = [assignee?.email, sqaAssignee?.email, requestedBy?.email].filter(
-          (value): value is string => Boolean(value)
-        )
-        const imageMap = new Map<string, string | null>()
-        if (emails.length > 0) {
-          const { data: authUsers } = await supabase
-            .from("auth_user")
-            .select("email, image")
-            .in("email", emails)
-          authUsers?.forEach((user) => {
-            imageMap.set(user.email, user.image || null)
-          })
-        }
 
         return {
             ticket: {
@@ -127,9 +114,9 @@ export async function GET(
                 ? ticket.project[0]
                 : ticket.project
               : null,
-            assignee: toTicketPerson(assignee, imageMap),
-            sqa_assignee: toTicketPerson(sqaAssignee, imageMap),
-            requested_by: toTicketPerson(requestedBy, imageMap),
+            assignee: toTicketPerson(assignee),
+            sqa_assignee: toTicketPerson(sqaAssignee),
+            requested_by: toTicketPerson(requestedBy),
             department: ticket.department
               ? Array.isArray(ticket.department)
                 ? ticket.department[0]

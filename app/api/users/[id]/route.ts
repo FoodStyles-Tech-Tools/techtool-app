@@ -22,7 +22,7 @@ export async function GET(
 
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, name, email, discord_id, role, created_at")
+      .select("id, name, email, avatar_url, discord_id, role, created_at")
       .eq("id", params.id)
       .maybeSingle()
 
@@ -41,16 +41,15 @@ export async function GET(
       )
     }
 
-    const { data: authUser } = await supabase
-      .from("auth_user")
-      .select("image")
-      .eq("email", user.email)
-      .maybeSingle()
-
     return NextResponse.json({
       user: {
-        ...user,
-        image: authUser?.image || null,
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.avatar_url || null,
+        discord_id: user.discord_id,
+        role: user.role,
+        created_at: user.created_at,
       },
     })
   } catch (error: any) {

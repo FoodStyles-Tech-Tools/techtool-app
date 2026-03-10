@@ -20,7 +20,7 @@ export async function GET() {
 
     const { data: users, error } = await supabase
       .from("users")
-      .select("id, name, email, discord_id, role, created_at")
+      .select("id, name, email, avatar_url, discord_id, role, created_at")
       .order("created_at", { ascending: false })
 
     if (error) {
@@ -35,23 +35,14 @@ export async function GET() {
       return NextResponse.json({ users: [] })
     }
 
-    // Get images from auth_user for all users
-    const emails = users.map(u => u.email)
-    const { data: authUsers } = await supabase
-      .from("auth_user")
-      .select("email, image")
-      .in("email", emails)
-    
-    // Create a map of email -> image
-    const imageMap = new Map<string, string | null>()
-    authUsers?.forEach(au => {
-      imageMap.set(au.email, au.image || null)
-    })
-    
-    // Map users to include image from auth_user
     const usersWithImage = users.map((user) => ({
-      ...user,
-      image: imageMap.get(user.email) || null,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.avatar_url || null,
+      discord_id: user.discord_id,
+      role: user.role,
+      created_at: user.created_at,
     }))
 
     return NextResponse.json({ users: usersWithImage })

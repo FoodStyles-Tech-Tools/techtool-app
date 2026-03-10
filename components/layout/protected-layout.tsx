@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation"
-import { headers } from "next/headers"
 import { AppShell } from "./app-shell"
 import { buildPermissionFlags, getCurrentUserPermissions } from "@/lib/server/permissions"
 
@@ -13,9 +12,7 @@ export default async function ProtectedLayout({
   children: React.ReactNode
 }) {
   const { auth } = await import("@/lib/auth")
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  })
+  const session = await auth.api.getSession()
   if (!session) {
     redirect("/signin")
   }

@@ -1,7 +1,6 @@
 import "server-only"
 
 import { createServerClient } from "@/lib/supabase"
-import { headers } from "next/headers"
 import { auth } from "@/lib/auth"
 import { getServerCache, setServerCache } from "@/lib/server/cache"
 
@@ -117,11 +116,7 @@ export function buildPermissionFlags(permissions: Permission[]): PermissionFlags
 export async function getCurrentUserPermissions(
   session?: Awaited<ReturnType<typeof auth.api.getSession>>
 ): Promise<PermissionsUser | null> {
-  const currentSession =
-    session ||
-    (await auth.api.getSession({
-      headers: await headers(),
-    }))
+  const currentSession = session || (await auth.api.getSession())
 
   if (!currentSession?.user?.email) {
     return null
@@ -144,12 +139,6 @@ export async function getCurrentUserPermissions(
     await setServerCache(`permissions:${cacheKey}`, null, PERMISSIONS_CACHE_TTL_MS / 1000)
     return null
   }
-
-  const { data: authUser } = await supabase
-    .from("auth_user")
-    .select("image")
-    .eq("email", user.email)
-    .single()
 
   let permissions: Permission[] = []
 
@@ -183,7 +172,7 @@ export async function getCurrentUserPermissions(
     id: user.id,
     email: user.email,
     name: user.name,
-    image: authUser?.image || null,
+    image: user.avatar_url || null,
     role: user.role,
     permissions,
   }

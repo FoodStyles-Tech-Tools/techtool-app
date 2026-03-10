@@ -1,59 +1,65 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createServerClient as createSupabaseServerClient } from "@supabase/ssr"
+import { createClient, type SupabaseClient } from "@supabase/supabase-js"
+import { cookies } from "next/headers"
 
-// Lazy getter for Supabase URL with fallback
 function getSupabaseUrl(): string {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
   if (!url) {
     throw new Error(
-      'Missing Supabase URL. Please set SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL environment variable.'
+      "Missing Supabase URL. Please set SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL environment variable."
     )
   }
   return url
 }
 
-// Lazy getter for Supabase anon key with fallback
 function getSupabaseAnonKey(): string {
   const key = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   if (!key) {
     throw new Error(
-      'Missing Supabase anon key. Please set SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable.'
+      "Missing Supabase anon key. Please set SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable."
     )
   }
   return key
 }
 
-// Lazy getter for singleton instance - only creates when accessed
-// This will be initialized on first access, not at module load time
-let _supabaseInstance: SupabaseClient | null = null
-function getSupabaseInstance(): SupabaseClient {
-  if (!_supabaseInstance) {
-    const url = getSupabaseUrl()
-    const key = getSupabaseAnonKey()
-    _supabaseInstance = createClient(url, key)
+let serverFallbackClient: SupabaseClient | null = null
+
+function getFallbackClient(): SupabaseClient {
+  if (!serverFallbackClient) {
+    serverFallbackClient = createClient(getSupabaseUrl(), getSupabaseAnonKey())
   }
-  return _supabaseInstance
+  return serverFallbackClient
 }
 
-// Export as a Proxy to ensure lazy initialization
-// This prevents module-level execution during build
+export function createServerClient() {
+  const cookieStore = cookies()
+
+  return createSupabaseServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll()
+      },
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        } catch {
+          // Server Components cannot always write cookies. Middleware refreshes auth cookies.
+        }
+      },
+    },
+  })
+}
+
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_target, prop) {
-    const instance = getSupabaseInstance()
-    return (instance as any)[prop]
+    const instance = getFallbackClient()
+    return (instance as never as Record<string, unknown>)[prop as keyof SupabaseClient]
   },
   set(_target, prop, value) {
-    const instance = getSupabaseInstance()
-    ;(instance as any)[prop] = value
+    const instance = getFallbackClient() as never as Record<string, unknown>
+    instance[prop as string] = value
     return true
   },
 })
-
-// Server-side Supabase client for API routes
-// Falls back to NEXT_PUBLIC_* vars if server vars aren't set (for Vercel compatibility)
-export function createServerClient() {
-  const url = getSupabaseUrl()
-  const key = getSupabaseAnonKey()
-  return createClient(url, key)
-}
-
-

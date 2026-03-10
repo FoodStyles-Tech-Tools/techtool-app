@@ -3,18 +3,16 @@ import "server-only"
 import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
 import { DEFAULT_TICKET_STATUSES, sortTicketStatuses, type TicketStatus } from "@/lib/ticket-statuses"
 import type { TicketSummary } from "@/lib/types"
-import { getCalendarStateWithCache, type CalendarState } from "@/lib/server/calendar-sync"
 import { getOrSetServerCache } from "@/lib/server/cache"
 
 export async function getDashboardData(): Promise<{
   tickets: TicketSummary[]
   ticketsError: string | null
   ticketStatuses: TicketStatus[]
-  calendar: CalendarState
 }> {
   const { supabase, userId } = await getSupabaseWithUserContext()
 
-  const [ticketsResult, statusesResult, calendar] = await Promise.all([
+  const [ticketsResult, statusesResult] = await Promise.all([
     getOrSetServerCache(
       `dashboard:tickets:${userId}`,
       30,
@@ -47,7 +45,6 @@ export async function getDashboardData(): Promise<{
           .order("sort_order", { ascending: true })
           .order("label", { ascending: true })
     ),
-    getCalendarStateWithCache(supabase, userId),
   ])
 
   const ticketsError = ticketsResult.error ? "Failed to load tickets" : null
@@ -66,6 +63,5 @@ export async function getDashboardData(): Promise<{
     tickets,
     ticketsError,
     ticketStatuses: resolvedStatuses,
-    calendar,
   }
 }

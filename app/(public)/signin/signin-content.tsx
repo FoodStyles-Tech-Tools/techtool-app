@@ -36,6 +36,7 @@ export function SignInContent() {
     const errorParam = searchParams.get("error")
     if (errorParam) {
       if (
+        errorParam === "not_registered" ||
         errorParam === "unable_to_create_user" ||
         errorParam.includes("not registered") ||
         errorParam.includes("unable_to_link_account")

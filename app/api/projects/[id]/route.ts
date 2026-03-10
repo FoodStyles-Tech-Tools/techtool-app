@@ -38,7 +38,7 @@ async function attachCollaboratorsToProjects(
 
   const { data: collaboratorUsers, error } = await supabase
     .from("users")
-    .select("id, name, email")
+    .select("id, name, email, avatar_url")
     .in("id", userIds)
 
   if (error) {
@@ -80,7 +80,7 @@ export async function GET(
       .from("projects")
       .select(`
         *,
-        owner:users!projects_owner_id_fkey(id, name, email),
+        owner:users!projects_owner_id_fkey(id, name, email, avatar_url),
         department:departments(id, name),
         tickets(count)
       `)
@@ -96,43 +96,22 @@ export async function GET(
 
     const [projectWithCollaborators] = await attachCollaboratorsToProjects(supabase, [project])
 
-    const emails = new Set<string>()
-    if (projectWithCollaborators.owner?.email) emails.add(projectWithCollaborators.owner.email)
-    projectWithCollaborators.collaborators?.forEach((collab: any) => {
-      if (collab?.email) emails.add(collab.email)
-    })
-    projectWithCollaborators.requesters?.forEach((requester: any) => {
-      if (requester?.email) emails.add(requester.email)
-    })
-
-    const { data: authUsers } = emails.size
-      ? await supabase
-          .from("auth_user")
-          .select("email, image")
-          .in("email", Array.from(emails))
-      : { data: [] }
-
-    const imageMap = new Map<string, string | null>()
-    authUsers?.forEach((au) => {
-      imageMap.set(au.email, au.image || null)
-    })
-
     const enrichedProject = {
       ...projectWithCollaborators,
       links: sanitizeLinkArray(projectWithCollaborators.links),
       owner: projectWithCollaborators.owner
         ? {
             ...projectWithCollaborators.owner,
-            image: imageMap.get(projectWithCollaborators.owner.email) || null,
+            image: projectWithCollaborators.owner.avatar_url || null,
           }
         : projectWithCollaborators.owner,
       collaborators: (projectWithCollaborators.collaborators || []).map((collab: any) => ({
         ...collab,
-        image: collab?.email ? imageMap.get(collab.email) || null : null,
+        image: collab?.avatar_url || null,
       })),
       requesters: (projectWithCollaborators.requesters || []).map((requester: any) => ({
         ...requester,
-        image: requester?.email ? imageMap.get(requester.email) || null : null,
+        image: requester?.avatar_url || null,
       })),
     }
 
@@ -193,7 +172,7 @@ export async function PATCH(
       .eq("id", params.id)
       .select(`
         *,
-        owner:users!projects_owner_id_fkey(id, name, email),
+        owner:users!projects_owner_id_fkey(id, name, email, avatar_url),
         department:departments(id, name)
       `)
       .single()
@@ -215,43 +194,22 @@ export async function PATCH(
 
     const [projectWithCollaborators] = await attachCollaboratorsToProjects(supabase, [project])
 
-    const emails = new Set<string>()
-    if (projectWithCollaborators.owner?.email) emails.add(projectWithCollaborators.owner.email)
-    projectWithCollaborators.collaborators?.forEach((collab: any) => {
-      if (collab?.email) emails.add(collab.email)
-    })
-    projectWithCollaborators.requesters?.forEach((requester: any) => {
-      if (requester?.email) emails.add(requester.email)
-    })
-
-    const { data: authUsers } = emails.size
-      ? await supabase
-          .from("auth_user")
-          .select("email, image")
-          .in("email", Array.from(emails))
-      : { data: [] }
-
-    const imageMap = new Map<string, string | null>()
-    authUsers?.forEach((au) => {
-      imageMap.set(au.email, au.image || null)
-    })
-
     const enrichedProject = {
       ...projectWithCollaborators,
       links: sanitizeLinkArray(projectWithCollaborators.links),
       owner: projectWithCollaborators.owner
         ? {
             ...projectWithCollaborators.owner,
-            image: imageMap.get(projectWithCollaborators.owner.email) || null,
+            image: projectWithCollaborators.owner.avatar_url || null,
           }
         : projectWithCollaborators.owner,
       collaborators: (projectWithCollaborators.collaborators || []).map((collab: any) => ({
         ...collab,
-        image: collab?.email ? imageMap.get(collab.email) || null : null,
+        image: collab?.avatar_url || null,
       })),
       requesters: (projectWithCollaborators.requesters || []).map((requester: any) => ({
         ...requester,
-        image: requester?.email ? imageMap.get(requester.email) || null : null,
+        image: requester?.avatar_url || null,
       })),
     }
 

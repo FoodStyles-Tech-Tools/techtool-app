@@ -180,9 +180,9 @@ export async function POST(
       .select(`
         *,
         project:projects(id, name, require_sqa),
-        assignee:users!tickets_assignee_id_fkey(id, name, email, role, discord_id),
-        sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email, role, discord_id),
-        requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+        assignee:users!tickets_assignee_id_fkey(id, name, email, role, discord_id, avatar_url),
+        sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email, role, discord_id, avatar_url),
+        requested_by:users!tickets_requested_by_id_fkey(id, name, email, avatar_url),
         department:departments(id, name),
         epic:epics(id, name, color),
         sprint:sprints(id, name, status)
@@ -208,38 +208,26 @@ export async function POST(
 
     await enqueueTicketStatusDiscordNotifications(supabase, normalizedTicket, previousStatus)
 
-    const emails = new Set<string>()
-    if (normalizedTicket.assignee?.email) emails.add(normalizedTicket.assignee.email)
-    if (normalizedTicket.sqa_assignee?.email) emails.add(normalizedTicket.sqa_assignee.email)
-    if (normalizedTicket.requested_by?.email) emails.add(normalizedTicket.requested_by.email)
-
-    let enrichedTicket = normalizedTicket
-    if (emails.size > 0) {
-      const { data: authUsers } = await supabase
-        .from("auth_user")
-        .select("email, image")
-        .in("email", Array.from(emails))
-
-      const imageMap = new Map<string, string | null>()
-      authUsers?.forEach((au) => {
-        imageMap.set(au.email, au.image || null)
-      })
-
-      enrichedTicket = {
-        ...enrichedTicket,
-        assignee: enrichedTicket.assignee
-          ? {
-              ...enrichedTicket.assignee,
-              image: imageMap.get(enrichedTicket.assignee.email) || null,
-            }
-          : null,
-        sqa_assignee: enrichedTicket.sqa_assignee
-          ? {
-              ...enrichedTicket.sqa_assignee,
-              image: imageMap.get(enrichedTicket.sqa_assignee.email) || null,
-            }
-          : null,
-      }
+    const enrichedTicket = {
+      ...normalizedTicket,
+      assignee: normalizedTicket.assignee
+        ? {
+            ...normalizedTicket.assignee,
+            image: normalizedTicket.assignee.avatar_url || null,
+          }
+        : null,
+      sqa_assignee: normalizedTicket.sqa_assignee
+        ? {
+            ...normalizedTicket.sqa_assignee,
+            image: normalizedTicket.sqa_assignee.avatar_url || null,
+          }
+        : null,
+      requested_by: normalizedTicket.requested_by
+        ? {
+            ...normalizedTicket.requested_by,
+            image: normalizedTicket.requested_by.avatar_url || null,
+          }
+        : null,
     }
 
     return NextResponse.json(

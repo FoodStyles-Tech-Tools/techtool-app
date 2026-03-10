@@ -1,5 +1,4 @@
 import { auth } from "./auth"
-import { headers } from "next/headers"
 import { timeQuery } from "./query-timing"
 
 export type PermissionResource =
@@ -18,9 +17,7 @@ export async function requireAuth() {
   return await timeQuery(
     "requireAuth() - session check",
     async () => {
-      const session = await auth.api.getSession({
-        headers: await headers(),
-      })
+      const session = await auth.api.getSession()
 
       if (!session) {
         throw new Error("Unauthorized")
@@ -163,9 +160,9 @@ export async function getSupabaseWithUserContext(): Promise<{ supabase: Awaited<
 
 export async function requireAdmin() {
   const session = await requireAuth()
-  
-  // Get user from Supabase to check role
-  const { supabase } = await import("./supabase")
+
+  const { createServerClient } = await import("./supabase")
+  const supabase = createServerClient()
   const { data: user } = await supabase
     .from("users")
     .select("role")
@@ -190,7 +187,8 @@ export async function hasPermission(
   session?: Awaited<ReturnType<typeof requireAuth>> // Allow passing session to avoid double lookup
 ): Promise<boolean> {
   const userSession = session || (await requireAuth())
-  const { supabase } = await import("./supabase")
+  const { createServerClient } = await import("./supabase")
+  const supabase = createServerClient()
 
   const { data: user } = await timeQuery(
     `hasPermission() - user lookup for ${resource}:${action}`,

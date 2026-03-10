@@ -42,33 +42,18 @@ async function resolveDiscordUserIdByEmail(
   email: string,
   logContext: string
 ): Promise<string | null> {
-  const { data: authUser, error: authUserError } = await supabase
-    .from("auth_user")
-    .select("id")
+  const { data: user, error } = await supabase
+    .from("users")
+    .select("discord_id")
     .eq("email", email)
     .maybeSingle()
 
-  if (authUserError) {
-    console.error(`Failed to resolve auth_user for ${logContext}:`, authUserError)
+  if (error) {
+    console.error(`Failed to resolve Discord user for ${logContext}:`, error)
     return null
   }
 
-  if (!authUser?.id) return null
-
-  const { data: discordAccount, error: discordAccountError } = await supabase
-    .from("account")
-    .select('"accountId", "providerId"')
-    .eq("userId", authUser.id)
-    .ilike("providerId", "discord%")
-    .limit(1)
-    .maybeSingle()
-
-  if (discordAccountError) {
-    console.error(`Failed to resolve Discord account for ${logContext}:`, discordAccountError)
-    return null
-  }
-
-  return (discordAccount as { accountId?: string } | null)?.accountId ?? null
+  return user?.discord_id?.trim() || null
 }
 
 async function buildForQaDiscordContent(

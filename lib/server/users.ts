@@ -21,7 +21,7 @@ export async function getUsersWithImages(): Promise<ServerUser[]> {
 export async function fetchUsersWithImages(supabase: SupabaseClient): Promise<ServerUser[]> {
   const { data: users, error } = await supabase
     .from("users")
-    .select("id, name, email, discord_id, role, created_at")
+    .select("id, name, email, avatar_url, discord_id, role, created_at")
     .order("name", { ascending: true, nullsFirst: false })
 
   if (error || !users?.length) {
@@ -31,19 +31,13 @@ export async function fetchUsersWithImages(supabase: SupabaseClient): Promise<Se
     return []
   }
 
-  const emails = users.map((user) => user.email)
-  const { data: authUsers } = await supabase
-    .from("auth_user")
-    .select("email, image")
-    .in("email", emails)
-
-  const imageMap = new Map<string, string | null>()
-  authUsers?.forEach((au) => {
-    imageMap.set(au.email, au.image || null)
-  })
-
   return users.map((user) => ({
-    ...user,
-    image: imageMap.get(user.email) || null,
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    image: user.avatar_url || null,
+    discord_id: user.discord_id,
+    role: user.role,
+    created_at: user.created_at,
   }))
 }

@@ -20,9 +20,9 @@ export async function GET(
       .select(`
         *,
         project:projects(id, name, description, require_sqa),
-        assignee:users!tickets_assignee_id_fkey(id, name, email),
-        sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email),
-        requested_by:users!tickets_requested_by_id_fkey(id, name, email),
+        assignee:users!tickets_assignee_id_fkey(id, name, email, avatar_url),
+        sqa_assignee:users!tickets_sqa_assignee_id_fkey(id, name, email, avatar_url),
+        requested_by:users!tickets_requested_by_id_fkey(id, name, email, avatar_url),
         department:departments(id, name),
         epic:epics(id, name, color)
       `)
@@ -44,37 +44,17 @@ export async function GET(
       )
     }
 
-    // Get images from auth_user for assignee, SQA assignee, and requested_by
-    const emails = new Set<string>()
-    if (ticket.assignee?.email) emails.add(ticket.assignee.email)
-    if (ticket.sqa_assignee?.email) emails.add(ticket.sqa_assignee.email)
-    if (ticket.requested_by?.email) emails.add(ticket.requested_by.email)
-    
-    let enrichedTicket = ticket
-    if (emails.size > 0) {
-      const { data: authUsers } = await supabase
-        .from("auth_user")
-        .select("email, image")
-        .in("email", Array.from(emails))
-      
-      // Create a map of email -> image
-      const imageMap = new Map<string, string | null>()
-      authUsers?.forEach(au => {
-        imageMap.set(au.email, au.image || null)
-      })
-      
-      // Enrich ticket with images
-      enrichedTicket = {
-        ...enrichedTicket,
-        assignee: ticket.assignee ? {
-          ...ticket.assignee,
-          image: imageMap.get(ticket.assignee.email) || null,
-        } : null,
-        sqa_assignee: ticket.sqa_assignee ? {
-          ...ticket.sqa_assignee,
-          image: imageMap.get(ticket.sqa_assignee.email) || null,
-        } : null,
-      }
+    const enrichedTicket = {
+      ...ticket,
+      assignee: ticket.assignee
+        ? { ...ticket.assignee, image: ticket.assignee.avatar_url || null }
+        : null,
+      sqa_assignee: ticket.sqa_assignee
+        ? { ...ticket.sqa_assignee, image: ticket.sqa_assignee.avatar_url || null }
+        : null,
+      requested_by: ticket.requested_by
+        ? { ...ticket.requested_by, image: ticket.requested_by.avatar_url || null }
+        : null,
     }
 
     return NextResponse.json({ ticket: enrichedTicket })

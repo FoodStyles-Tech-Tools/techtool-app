@@ -151,24 +151,6 @@ export interface TicketSummary {
   project?: TicketProject | null
 }
 
-/** Google Calendar event summary used on the dashboard */
-export interface CalendarEvent {
-  id: string
-  summary?: string | null
-  description?: string | null
-  location?: string | null
-  start?: { date?: string; dateTime?: string }
-  end?: { date?: string; dateTime?: string }
-  hangoutLink?: string | null
-  conferenceData?: {
-    entryPoints?: Array<{
-      entryPointType?: string
-      uri?: string
-      label?: string
-    }>
-  }
-}
-
 /** Data shape for quick-add ticket form */
 export interface QuickAddTicketData {
   title: string

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic"
 import { ReactQueryProvider } from "@/lib/react-query"
+import { AuthProvider } from "@/lib/auth-client"
 import { ThemeProvider } from "@/components/theme-provider"
 import { SignOutOverlayProvider } from "@/components/signout-overlay"
 import { RichTextActionsListener } from "@/components/layout/rich-text-actions-listener"
@@ -14,15 +15,17 @@ const KeyboardShortcuts = dynamic(
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <ReactQueryProvider>
-      <ThemeProvider defaultTheme="system" storageKey="techtool-theme">
-        <SignOutOverlayProvider>
-          {children}
-          <RichTextActionsListener />
-          <Toaster />
-          <KeyboardShortcuts />
-        </SignOutOverlayProvider>
-      </ThemeProvider>
-    </ReactQueryProvider>
+    <AuthProvider>
+      <ReactQueryProvider>
+        <ThemeProvider defaultTheme="system" storageKey="techtool-theme">
+          <SignOutOverlayProvider>
+            {children}
+            <RichTextActionsListener />
+            <Toaster />
+            <KeyboardShortcuts />
+          </SignOutOverlayProvider>
+        </ThemeProvider>
+      </ReactQueryProvider>
+    </AuthProvider>
   )
 }
