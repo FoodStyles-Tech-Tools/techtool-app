@@ -13,6 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
+import { toast } from "@/components/ui/toast"
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -32,12 +33,14 @@ interface UserFormProps {
   onSuccess?: () => void
   initialData?: Partial<UserFormValues> & { id?: string }
   roles: Role[]
+  formId?: string
+  hideSubmitButton?: boolean
 }
 
 const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
 
-export function UserForm({ onSuccess, initialData, roles }: UserFormProps) {
+export function UserForm({ onSuccess, initialData, roles, formId, hideSubmitButton = false }: UserFormProps) {
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
     defaultValues: {
@@ -68,17 +71,17 @@ export function UserForm({ onSuccess, initialData, roles }: UserFormProps) {
         onSuccess?.()
       } else {
         const error = await res.json()
-        alert(error.error || "Failed to save user")
+        toast(error.error || "Failed to save user", "error")
       }
     } catch (error) {
       console.error("Error saving user:", error)
-      alert("Failed to save user")
+      toast("Failed to save user", "error")
     }
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="email"
@@ -141,9 +144,11 @@ export function UserForm({ onSuccess, initialData, roles }: UserFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
-          {initialData?.id ? "Update User" : "Add User"}
-        </Button>
+        {!hideSubmitButton ? (
+          <Button type="submit" className="w-full">
+            {initialData?.id ? "Update User" : "Add User"}
+          </Button>
+        ) : null}
       </form>
     </Form>
   )

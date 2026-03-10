@@ -5,8 +5,7 @@ import { useSession } from "@/lib/auth-client"
 import { usePathname } from "next/navigation"
 import dynamic from "next/dynamic"
 import { usePermissions } from "@/hooks/use-permissions"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { FormDialogShell } from "@/components/ui/form-dialog-shell"
 import { useUsers } from "@/hooks/use-users"
 import { useDepartments } from "@/hooks/use-departments"
 import { toast } from "@/components/ui/toast"
@@ -250,35 +249,26 @@ export function KeyboardShortcuts() {
         />
       ) : null}
       {canCreateProjects && (
-        <Dialog open={isProjectDialogOpen} onOpenChange={setIsProjectDialogOpen}>
-          <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
-            <DialogHeader className="bg-muted/40 px-6 py-4">
-              <DialogTitle>Create Project</DialogTitle>
-            </DialogHeader>
-            <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-              {isProjectDialogOpen ? (
-                <ProjectForm
-                  departments={departments}
-                  users={usersData || []}
-                  formId="shortcut-create-project-form"
-                  hideSubmitButton={true}
-                  onSuccess={() => {
-                    setIsProjectDialogOpen(false)
-                    toast("Project created successfully")
-                  }}
-                />
-              ) : null}
-            </div>
-            <div className="shrink-0 flex items-center justify-end gap-2 bg-muted/40 px-6 py-4">
-              <Button type="button" variant="outline" onClick={() => setIsProjectDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" form="shortcut-create-project-form">
-                Create
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <FormDialogShell
+          open={isProjectDialogOpen}
+          onOpenChange={setIsProjectDialogOpen}
+          title="Create Project"
+          formId="shortcut-create-project-form"
+          submitLabel="Create"
+        >
+          {isProjectDialogOpen ? (
+            <ProjectForm
+              departments={departments}
+              users={usersData || []}
+              formId="shortcut-create-project-form"
+              hideSubmitButton={true}
+              onSuccess={() => {
+                setIsProjectDialogOpen(false)
+                toast("Project created successfully")
+              }}
+            />
+          ) : null}
+        </FormDialogShell>
       )}
     </>
   )

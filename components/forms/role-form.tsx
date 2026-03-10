@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { toast } from "@/components/ui/toast"
 
 const roleSchema = z.object({
   name: z.string().min(1, "Role name is required"),
@@ -26,9 +27,11 @@ type RoleFormValues = z.infer<typeof roleSchema>
 interface RoleFormProps {
   onSuccess?: () => void
   initialData?: Partial<RoleFormValues> & { id?: string }
+  formId?: string
+  hideSubmitButton?: boolean
 }
 
-export function RoleForm({ onSuccess, initialData }: RoleFormProps) {
+export function RoleForm({ onSuccess, initialData, formId, hideSubmitButton = false }: RoleFormProps) {
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleSchema),
     defaultValues: {
@@ -57,17 +60,17 @@ export function RoleForm({ onSuccess, initialData }: RoleFormProps) {
         onSuccess?.()
       } else {
         const error = await res.json()
-        alert(error.error || "Failed to save role")
+        toast(error.error || "Failed to save role", "error")
       }
     } catch (error) {
       console.error("Error saving role:", error)
-      alert("Failed to save role")
+      toast("Failed to save role", "error")
     }
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -109,19 +112,20 @@ export function RoleForm({ onSuccess, initialData }: RoleFormProps) {
             </FormItem>
           )}
         />
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={
-            !!initialData?.id &&
-            ((initialData as any).is_system ||
-              (initialData as any).name?.toLowerCase() === "admin")
-          }
-        >
-          {initialData?.id ? "Update Role" : "Create Role"}
-        </Button>
+        {!hideSubmitButton ? (
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={
+              !!initialData?.id &&
+              ((initialData as any).is_system ||
+                (initialData as any).name?.toLowerCase() === "admin")
+            }
+          >
+            {initialData?.id ? "Update Role" : "Create Role"}
+          </Button>
+        ) : null}
       </form>
     </Form>
   )
 }
-

@@ -138,7 +138,7 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("fixed inset-0 z-0 bg-black/40", className)}
+    className={cn("fixed inset-0 z-0 bg-slate-900/40", className)}
     {...props}
   />
 ))
@@ -190,11 +190,12 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
           <div
             ref={ref}
             role="dialog"
+            data-state={open ? "open" : "closed"}
             aria-modal="true"
             aria-labelledby={titleId}
             aria-describedby={descriptionId}
             className={cn(
-              "relative z-10 w-full max-w-lg rounded-md border bg-white p-6 shadow-lg outline-none",
+              "relative z-10 w-full max-w-lg rounded-lg border border-slate-200 bg-white p-5 shadow-xl outline-none",
               className
             )}
             {...props}
@@ -203,7 +204,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             {showCloseButton ? (
               <button
                 type="button"
-                className="absolute right-4 top-4 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none"
+                className="absolute right-4 top-4 rounded-md p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none disabled:pointer-events-none"
                 onClick={() => setOpen(false)}
               >
                 <X className="h-4 w-4" />
@@ -263,7 +264,7 @@ const DialogHeader = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn("flex flex-col space-y-1 text-center sm:text-left", className)}
+    className={cn("flex flex-col gap-1 text-left", className)}
     {...props}
   />
 )
@@ -275,7 +276,7 @@ const DialogFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2",
+      "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
       className
     )}
     {...props}
@@ -293,7 +294,7 @@ const DialogTitle = React.forwardRef<
     <h2
       ref={ref}
       id={titleId}
-      className={cn("text-xl font-semibold leading-7 tracking-[-0.02em]", className)}
+      className={cn("text-lg font-semibold text-slate-900", className)}
       {...props}
     />
   )
@@ -310,7 +311,7 @@ const DialogDescription = React.forwardRef<
     <p
       ref={ref}
       id={descriptionId}
-      className={cn("text-sm leading-6 text-slate-500", className)}
+      className={cn("text-sm text-slate-500", className)}
       {...props}
     />
   )

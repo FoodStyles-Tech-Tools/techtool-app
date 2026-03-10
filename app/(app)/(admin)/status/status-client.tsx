@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { PageHeader } from "@/components/ui/page-header"
+import { EntityPageLayout } from "@/components/ui/entity-page-layout"
+import { DataState } from "@/components/ui/data-state"
+import { EntityTableShell } from "@/components/ui/entity-table-shell"
+import { FormDialogShell } from "@/components/ui/form-dialog-shell"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Table,
   TableBody,
@@ -12,15 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { toast } from "@/components/ui/toast"
 import { GripVertical, Plus, Pencil, Trash2 } from "lucide-react"
 import { normalizeStatusKey, type TicketStatus } from "@/lib/ticket-statuses"
@@ -50,6 +47,7 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
     color: DEFAULT_COLOR,
   })
   const [saving, setSaving] = useState(false)
+  const [deletingStatus, setDeletingStatus] = useState<TicketStatus | null>(null)
   const [orderedKeys, setOrderedKeys] = useState<string[]>([])
   const [draggedKey, setDraggedKey] = useState<string | null>(null)
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
@@ -192,10 +190,6 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
   }
 
   const handleDelete = async (status: TicketStatus) => {
-    if (!confirm(`Delete status "${status.label}"?`)) {
-      return
-    }
-
     try {
       const res = await fetch(`/api/ticket-statuses/${encodeURIComponent(status.key)}`, {
         method: "DELETE",
@@ -214,6 +208,7 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
       toast("Failed to delete status", "error")
     } finally {
       setLoading(false)
+      setDeletingStatus(null)
     }
   }
 
@@ -254,86 +249,30 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end border-b pb-2">
-        <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
-          <DialogTrigger asChild>
-            <button
-              type="button"
-              onClick={openAddDialog}
-              className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-            >
+    <EntityPageLayout
+      header={
+        <PageHeader
+          title="Status"
+          description="Manage the global ticket workflow states."
+          actions={
+            <Button type="button" onClick={openAddDialog}>
               <Plus className="h-4 w-4" />
-              <span>Create Status</span>
-            </button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editingStatus ? "Edit Status" : "Add Status"}</DialogTitle>
-              <DialogDescription>
-                {editingStatus
-                  ? "Update the label or color."
-                  : "Create a new status available for tickets."}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="status-label">Label</Label>
-                <Input
-                  id="status-label"
-                  value={formState.label}
-                  onChange={(event) => handleLabelChange(event.target.value)}
-                  placeholder="In Review"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Color</Label>
-                <div className="flex items-center gap-3">
-                  <Input
-                    type="color"
-                    value={formState.color}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, color: event.target.value }))
-                    }
-                    className="h-10 w-12 p-1"
-                  />
-                  <Input
-                    value={formState.color}
-                    onChange={(event) =>
-                      setFormState((prev) => ({ ...prev, color: event.target.value }))
-                    }
-                    placeholder="#9ca3af"
-                    className="font-mono"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? "Saving..." : "Save"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading statuses...</p>
-      ) : error ? (
-        <p className="text-sm text-destructive">Failed to load statuses.</p>
-      ) : statuses.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No statuses yet. Add one to get started.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-md border">
+              Create Status
+            </Button>
+          }
+        />
+      }
+    >
+      <DataState
+        loading={loading}
+        error={error ? "Failed to load statuses." : null}
+        isEmpty={!loading && statuses.length === 0}
+        emptyTitle="No statuses yet"
+        emptyDescription="Add a status to get started."
+        loadingTitle="Loading statuses"
+        loadingDescription="Please wait while statuses are loaded."
+      >
+        <EntityTableShell>
           <div className="px-4 py-3 text-xs text-muted-foreground">
             Drag the handle to reorder statuses. Order updates are saved automatically.
           </div>
@@ -431,7 +370,7 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDelete(status)}
+                        onClick={() => setDeletingStatus(status)}
                         aria-label={`Delete ${status.label}`}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -442,8 +381,73 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
               ))}
             </TableBody>
           </Table>
-        </div>
-      )}
-    </div>
+        </EntityTableShell>
+      </DataState>
+
+      <FormDialogShell
+        open={isDialogOpen}
+        onOpenChange={handleDialogOpenChange}
+        title={editingStatus ? "Edit Status" : "Create Status"}
+        description={editingStatus ? "Update the status label or color." : "Create a new ticket status."}
+        formId="status-form"
+        submitLabel={saving ? "Saving..." : "Save"}
+        submitDisabled={saving}
+      >
+        <form
+          id="status-form"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void handleSave()
+          }}
+          className="space-y-4"
+        >
+          <div className="space-y-2">
+            <Label htmlFor="status-label">Label</Label>
+            <Input
+              id="status-label"
+              value={formState.label}
+              onChange={(event) => handleLabelChange(event.target.value)}
+              placeholder="In Review"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="status-color">Color</Label>
+            <div className="flex items-center gap-3">
+              <Input
+                id="status-color"
+                type="color"
+                value={formState.color}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, color: event.target.value }))
+                }
+                className="h-10 w-12 p-1"
+              />
+              <Input
+                value={formState.color}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, color: event.target.value }))
+                }
+                placeholder="#9ca3af"
+                className="font-mono"
+              />
+            </div>
+          </div>
+        </form>
+      </FormDialogShell>
+
+      <ConfirmDialog
+        open={!!deletingStatus}
+        onOpenChange={(open) => !open && setDeletingStatus(null)}
+        title="Delete status?"
+        description={`This will remove the ${deletingStatus?.label || "selected"} status.`}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (deletingStatus) {
+            void handleDelete(deletingStatus)
+          }
+        }}
+      />
+    </EntityPageLayout>
   )
 }

@@ -13,6 +13,7 @@ import { Copy, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react"
 import type { Ticket, Department, User as BasicUser } from "@/lib/types"
 import {
   type SortColumn,
+  type TicketMutationField,
 } from "@/lib/ticket-constants"
 
 const SERVER_SORTABLE_COLUMNS = new Set<SortColumn>([

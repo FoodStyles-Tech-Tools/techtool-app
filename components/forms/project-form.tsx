@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DepartmentForm } from "@/components/forms/department-form"
 import { useCreateProject, useUpdateProject } from "@/hooks/use-projects"
 import { CollaboratorSelector } from "@/components/collaborator-selector"
+import { toast } from "@/components/ui/toast"
 
 const projectSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -51,7 +52,7 @@ interface ProjectFormProps {
 
 const NO_DEPARTMENT_VALUE = "no_department"
 const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
 
 export function ProjectForm({
   onSuccess,
@@ -110,7 +111,7 @@ export function ProjectForm({
       onSuccess?.()
     } catch (error) {
       console.error("Error saving project:", error)
-      alert("Failed to save project")
+      toast("Failed to save project", "error")
     }
   }
 
@@ -174,11 +175,11 @@ export function ProjectForm({
           name="require_sqa"
           render={({ field }) => (
             <FormItem>
-              <FieldGroup className="rounded-md border border-border/70 bg-muted/20 px-3 py-2">
+              <FieldGroup className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
                 <Field orientation="horizontal" className="justify-between gap-3">
                   <div className="space-y-0.5">
                     <FieldLabel htmlFor="project-require-sqa">Require SQA</FieldLabel>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-slate-500">
                       Set this as true if project requires SQA review before deployment.
                     </p>
                   </div>
@@ -188,7 +189,7 @@ export function ProjectForm({
                       type="checkbox"
                       checked={field.value}
                       onChange={(event) => field.onChange(event.target.checked)}
-                      className="h-4 w-4 rounded border-border text-foreground"
+                      className="h-4 w-4 rounded border-slate-300 text-slate-900"
                     />
                   </FormControl>
                 </Field>
@@ -285,7 +286,7 @@ export function ProjectForm({
               </div>
               <div className="space-y-3">
                 {linkFields.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No links added yet.</p>
+                  <p className="text-sm text-slate-500">No links added yet.</p>
                 )}
                 {linkFields.map((linkField, index) => (
                   <FormField

@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useDeleteAsset, type Asset } from "@/hooks/use-assets"
+import { PageHeader } from "@/components/ui/page-header"
+import { EntityPageLayout } from "@/components/ui/entity-page-layout"
+import { DataState } from "@/components/ui/data-state"
+import { EntityTableShell } from "@/components/ui/entity-table-shell"
+import { FormDialogShell } from "@/components/ui/form-dialog-shell"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { toast } from "@/components/ui/toast"
 import {
   Table,
   TableBody,
@@ -16,14 +23,12 @@ import {
 import { Plus, Trash2, Pencil } from "lucide-react"
 import { AssetForm } from "@/components/forms/asset-form"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { BrandLinkIcon } from "@/components/brand-link-icon"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
 
@@ -54,6 +59,8 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null)
   const [detailAsset, setDetailAsset] = useState<Asset | null>(null)
+  const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const canCreateAssets = flags?.canCreateAssets ?? false
   const canEditAssets = flags?.canEditAssets ?? false
@@ -77,80 +84,44 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this asset?")) {
-      return
-    }
-
+    setConfirmingDelete(true)
     try {
       await deleteAsset.mutateAsync(id)
       setAssets((prev) => prev.filter((asset) => asset.id !== id))
       router.refresh()
+      toast("Asset deleted")
     } catch (error) {
       console.error("Error deleting asset:", error)
-      alert("Failed to delete asset")
+      toast("Failed to delete asset", "error")
+    } finally {
+      setConfirmingDelete(false)
+      setDeletingAsset(null)
     }
   }
 
   return (
-    <div className="space-y-6">
-      {canCreateAssets && (
-        <div className="flex justify-end border-b pb-2">
-          <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
-              <button
-                type="button"
-                onClick={handleAddAsset}
-                className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
+    <EntityPageLayout
+      header={
+        <PageHeader
+          title="Assets"
+          description="Maintain shared assets, owners, collaborators, and source links."
+          actions={
+            canCreateAssets ? (
+              <Button type="button" onClick={handleAddAsset}>
                 <Plus className="h-4 w-4" />
-                <span>Create Asset</span>
-              </button>
-            </DialogTrigger>
-            <DialogContent className="max-w-3xl w-[90vw]">
-              <DialogHeader>
-                <DialogTitle>{editingAsset ? "Edit Asset" : "Add New Asset"}</DialogTitle>
-                <DialogDescription>
-                  {editingAsset
-                    ? "Update asset details and links"
-                    : "Add a new asset with links and a description"}
-                </DialogDescription>
-              </DialogHeader>
-              <AssetForm
-                initialData={
-                  editingAsset
-                    ? {
-                        id: editingAsset.id,
-                        name: editingAsset.name,
-                        description: editingAsset.description || "",
-                        links: editingAsset.links || [],
-                        collaborator_ids: editingAsset.collaborator_ids || [],
-                        owner_id: editingAsset.owner_id,
-                        production_url: editingAsset.production_url || "",
-                      }
-                    : undefined
-                }
-                defaultOwnerId={currentUser?.id}
-                canManageOwner={canManageAssets}
-                onSuccess={() => {
-                  setIsDialogOpen(false)
-                  setEditingAsset(null)
-                  router.refresh()
-                }}
-                users={users}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
-      )}
-
-      {assets.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No assets yet. Add one to get started.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-md border max-h-[65vh] overflow-y-auto">
+                Create Asset
+              </Button>
+            ) : null
+          }
+        />
+      }
+    >
+      <DataState
+        isEmpty={assets.length === 0}
+        emptyTitle="No assets yet"
+        emptyDescription="Add an asset to get started."
+      >
+        <EntityTableShell className="max-h-[65vh] overflow-y-auto">
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -237,9 +208,8 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                             href={url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline inline-flex items-center gap-1 truncate max-w-[220px]"
+                            className="inline-flex max-w-[220px] items-center gap-1 truncate text-xs text-slate-900 hover:underline"
                           >
-                            <BrandLinkIcon url={url} className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate">{formatLinkLabel(url)}</span>
                           </a>
                         ))}
@@ -259,9 +229,8 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                         href={asset.production_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline inline-flex items-center gap-1 truncate max-w-[220px]"
+                        className="inline-flex max-w-[220px] items-center gap-1 truncate text-xs text-slate-900 hover:underline"
                       >
-                        <BrandLinkIcon url={asset.production_url} className="h-3 w-3 flex-shrink-0" />
                         <span className="truncate">{formatLinkLabel(asset.production_url)}</span>
                       </a>
                     ) : (
@@ -287,7 +256,7 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(asset.id)}
+                            onClick={() => setDeletingAsset(asset)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -299,8 +268,45 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
               ))}
             </TableBody>
           </Table>
-        </div>
-      )}
+        </EntityTableShell>
+      </DataState>
+
+      <FormDialogShell
+        open={isDialogOpen}
+        onOpenChange={handleOpenChange}
+        title={editingAsset ? "Edit Asset" : "Create Asset"}
+        description={editingAsset ? "Update asset details and links." : "Add a new asset with links and a description."}
+        formId="asset-form"
+        submitLabel={editingAsset ? "Save" : "Create"}
+      >
+        <AssetForm
+          formId="asset-form"
+          hideSubmitButton
+          initialData={
+            editingAsset
+              ? {
+                  id: editingAsset.id,
+                  name: editingAsset.name,
+                  description: editingAsset.description || "",
+                  links: editingAsset.links || [],
+                  collaborator_ids: editingAsset.collaborator_ids || [],
+                  owner_id: editingAsset.owner_id,
+                  production_url: editingAsset.production_url || "",
+                }
+              : undefined
+          }
+          defaultOwnerId={currentUser?.id}
+          canManageOwner={canManageAssets}
+          onSuccess={() => {
+            setIsDialogOpen(false)
+            setEditingAsset(null)
+            toast(editingAsset ? "Asset updated" : "Asset created")
+            router.refresh()
+          }}
+          users={users}
+        />
+      </FormDialogShell>
+
       <Dialog open={!!detailAsset} onOpenChange={(open) => !open && setDetailAsset(null)}>
         <DialogContent className="max-w-3xl w-[90vw]">
           <DialogHeader>
@@ -319,6 +325,21 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
           )}
         </DialogContent>
       </Dialog>
-    </div>
+
+      <ConfirmDialog
+        open={!!deletingAsset}
+        onOpenChange={(open) => !open && setDeletingAsset(null)}
+        title="Delete asset?"
+        description={`This will permanently remove ${deletingAsset?.name || "the selected asset"}.`}
+        confirmLabel="Delete"
+        destructive
+        confirming={confirmingDelete}
+        onConfirm={() => {
+          if (deletingAsset) {
+            void handleDelete(deletingAsset.id)
+          }
+        }}
+      />
+    </EntityPageLayout>
   )
 }

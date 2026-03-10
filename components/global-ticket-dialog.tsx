@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+import { FormDialogShell } from "@/components/ui/form-dialog-shell"
 import { TicketForm } from "@/components/forms/ticket-form"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useProjects } from "@/hooks/use-projects"
@@ -47,44 +46,28 @@ export function GlobalTicketDialog({ open, onOpenChange }: GlobalTicketDialogPro
   const createTicketFormId = "create-ticket-form"
 
   return (
-    <Dialog
+    <FormDialogShell
       open={open && canCreate}
       onOpenChange={(nextOpen) => {
         if (isCreatingTicket) return
         onOpenChange(nextOpen)
       }}
+      title="Create Ticket"
+      formId={createTicketFormId}
+      submitLabel={isCreatingTicket ? "Creating..." : "Create"}
+      submitDisabled={isCreatingTicket}
     >
-      <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
-        <DialogHeader className="bg-muted/40 px-6 py-4">
-          <DialogTitle>Create Ticket</DialogTitle>
-        </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-          <TicketForm
-            projectId={projectId || undefined}
-            projectOptions={projects}
-            formId={createTicketFormId}
-            hideSubmitButton={true}
-            onSubmittingChange={setIsCreatingTicket}
-            onSuccess={() => {
-              setIsCreatingTicket(false)
-              onOpenChange(false)
-            }}
-          />
-        </div>
-        <DialogFooter className="shrink-0 bg-muted/40 px-6 py-4 sm:justify-end">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isCreatingTicket}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" form={createTicketFormId} disabled={isCreatingTicket}>
-            {isCreatingTicket ? "Creating..." : "Create"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <TicketForm
+        projectId={projectId || undefined}
+        projectOptions={projects}
+        formId={createTicketFormId}
+        hideSubmitButton={true}
+        onSubmittingChange={setIsCreatingTicket}
+        onSuccess={() => {
+          setIsCreatingTicket(false)
+          onOpenChange(false)
+        }}
+      />
+    </FormDialogShell>
   )
 }

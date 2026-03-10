@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useTicketComments, type TicketComment } from "@/hooks/use-ticket-comments"
 import { useCommentNotifications } from "@/hooks/use-comment-notifications"
 import { useTickets } from "@/hooks/use-tickets"
@@ -856,6 +857,7 @@ export function TicketComments({
   const [hoveredCommentId, setHoveredCommentId] = useState<string | null>(null)
   const [editingComment, setEditingComment] = useState<TicketComment | null>(null)
   const [editBody, setEditBody] = useState("")
+  const [commentToDelete, setCommentToDelete] = useState<TicketComment | null>(null)
   const [resolvedCommentTicketsBySlug, setResolvedCommentTicketsBySlug] = useState<TicketInfoBySlug>({})
   const commentTicketLookupInFlightRef = useRef<Set<string>>(new Set())
 
@@ -1009,12 +1011,13 @@ export function TicketComments({
   }
 
   const handleDelete = async (comment: TicketComment) => {
-    if (!confirm("Delete this comment?")) return
     try {
       await deleteComment.mutateAsync(comment.id)
       toast("Comment deleted")
     } catch (e: any) {
       toast(e.message || "Failed to delete comment", "error")
+    } finally {
+      setCommentToDelete(null)
     }
   }
 
@@ -1105,7 +1108,7 @@ export function TicketComments({
                         canEdit={canEdit}
                         onReply={handleReply}
                         onStartEdit={handleStartEdit}
-                        onDelete={handleDelete}
+                        onDelete={() => setCommentToDelete(comment)}
                         onHoverChange={setHoveredCommentId}
                         isHovered={hoveredCommentId === comment.id}
                         ticketInfoBySlug={ticketInfoBySlug}
@@ -1136,6 +1139,20 @@ export function TicketComments({
           </>
         )}
       </CardContent>
+      <ConfirmDialog
+        open={!!commentToDelete}
+        onOpenChange={(open) => !open && setCommentToDelete(null)}
+        title="Delete comment?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        confirming={deleteComment.isPending}
+        onConfirm={() => {
+          if (commentToDelete) {
+            void handleDelete(commentToDelete)
+          }
+        }}
+      />
     </Card>
   )
 }

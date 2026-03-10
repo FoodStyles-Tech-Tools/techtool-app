@@ -15,8 +15,13 @@ import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/toast"
 import { cn, truncateText } from "@/lib/utils"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectForm } from "@/components/forms/project-form"
+import { PageHeader } from "@/components/ui/page-header"
+import { EntityPageLayout } from "@/components/ui/entity-page-layout"
+import { FilterBar } from "@/components/ui/filter-bar"
+import { DataState } from "@/components/ui/data-state"
+import { EntityTableShell } from "@/components/ui/entity-table-shell"
+import { FormDialogShell } from "@/components/ui/form-dialog-shell"
 
 const ROWS_PER_PAGE = 20
 type ProjectTicketStats = { total: number; done: number; percentage: number }
@@ -284,76 +289,85 @@ export default function ProjectsClient({
   )
 
   return (
-    <div className="space-y-6">
-      <section className="border-b pb-3">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="w-full min-w-[220px] md:w-64">
-              <Input
-                placeholder="Search projects..."
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className={cn(toolbarInputClassName)}
-              />
-            </div>
-            <div className="w-full min-w-[200px] md:w-56">
-              <select
-                value={departmentFilter}
-                onChange={(event) => setDepartmentFilter(event.target.value)}
-                className={toolbarInputClassName}
-              >
-                <option value="all">All departments</option>
-                <option value="no_department">No department</option>
-                {departments.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <label className="flex items-center gap-2 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={assignedToMeOnly}
-                onChange={(event) => setAssignedToMeOnly(event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-900"
-              />
-              Assigned to me
-            </label>
-            <label className="flex items-center gap-2 text-xs text-slate-600">
-              <input
-                type="checkbox"
-                checked={excludeDone}
-                onChange={(event) => setExcludeDone(event.target.checked)}
-                className="h-4 w-4 rounded border-slate-300 text-slate-900"
-              />
-              Exclude inactive
-            </label>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+    <EntityPageLayout
+      header={
+        <PageHeader
+          title="Projects"
+          description="Manage project metadata, people, and progress in one place."
+          actions={
+            canCreateProjects ? (
+              <Button type="button" onClick={() => setProjectFormOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Create Project
+              </Button>
+            ) : null
+          }
+        />
+      }
+      toolbar={
+        <FilterBar
+          filters={
+            <>
+              <div className="w-full min-w-[220px] md:w-64">
+                <Input
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  className={cn(toolbarInputClassName)}
+                />
+              </div>
+              <div className="w-full min-w-[200px] md:w-56">
+                <select
+                  value={departmentFilter}
+                  onChange={(event) => setDepartmentFilter(event.target.value)}
+                  className={toolbarInputClassName}
+                >
+                  <option value="all">All departments</option>
+                  <option value="no_department">No department</option>
+                  {departments.map((department) => (
+                    <option key={department.id} value={department.id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={assignedToMeOnly}
+                  onChange={(event) => setAssignedToMeOnly(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                />
+                Assigned to me
+              </label>
+              <label className="flex items-center gap-2 text-xs text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={excludeDone}
+                  onChange={(event) => setExcludeDone(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                />
+                Exclude inactive
+              </label>
+            </>
+          }
+          actions={
             <Button variant="outline" size="sm" className="h-9 px-3" onClick={resetProjectFilters}>
               Reset
             </Button>
-            {canCreateProjects && (
-              <Button type="button" size="sm" className="h-9 px-3" onClick={() => setProjectFormOpen(true)}>
-                <Plus className="mr-1 h-4 w-4" />
-                Create project
-              </Button>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {loading ? (
-        <p className="text-sm text-slate-500">Loading...</p>
-      ) : filteredProjects.length === 0 ? (
-        <div className="rounded-lg border border-slate-200 p-8 text-center bg-white">
-          <p className="text-sm text-slate-500">
-            {hasProjectSearch ? "No projects found" : "No projects yet. Create one to get started."}
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-md border border-slate-200 bg-white">
+          }
+        />
+      }
+    >
+      <DataState
+        loading={loading}
+        isEmpty={filteredProjects.length === 0}
+        emptyTitle={hasProjectSearch ? "No projects found" : "No projects yet"}
+        emptyDescription={hasProjectSearch ? "Try changing the current filters." : "Create a project to get started."}
+        loadingTitle="Loading projects"
+        loadingDescription="Please wait while the project list is prepared."
+      >
+        <EntityTableShell>
           <div className="max-h-[calc(100vh-220px)] overflow-y-auto relative">
             <table className="w-full caption-bottom text-sm">
               <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm border-b border-slate-200">
@@ -424,82 +438,66 @@ export default function ProjectsClient({
               </div>
             </div>
           </div>
-        </div>
-      )}
-      <Dialog open={isProjectFormOpen} onOpenChange={setProjectFormOpen}>
-        <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
-          <DialogHeader className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-            <DialogTitle>Create Project</DialogTitle>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-            <ProjectForm
-              departments={departments}
-              users={users}
-              formId="create-project-form"
-              hideSubmitButton={true}
-              onSuccess={() => {
-                setProjectFormOpen(false)
-                toast("Project created successfully")
-                router.refresh()
-              }}
-            />
-          </div>
-          <DialogFooter className="shrink-0 bg-slate-50 px-6 py-4 border-t border-slate-200 sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => setProjectFormOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="create-project-form">
-              Create
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
-        <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
-          <DialogHeader className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-            <DialogTitle>Edit Project</DialogTitle>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-            {editingProject ? (
-              <ProjectForm
-                departments={departments}
-                users={users}
-                initialData={{
-                  id: editingProject.id,
-                  name: editingProject.name,
-                  description: editingProject.description || "",
-                  status: editingProject.status,
-                  require_sqa: editingProject.require_sqa,
-                  department_id: editingProject.department?.id,
-                  links: editingProject.links || [],
-                  requester_ids:
-                    editingProject.requester_ids ||
-                    editingProject.requesters.map((requester) => requester.id),
-                  collaborator_ids:
-                    editingProject.collaborator_ids ||
-                    editingProject.collaborators.map((collaborator) => collaborator.id),
-                }}
-                formId="edit-project-form"
-                hideSubmitButton={true}
-                onSuccess={() => {
-                  setEditingProject(null)
-                  toast("Project updated successfully")
-                  router.refresh()
-                }}
-              />
-            ) : null}
-          </div>
-          <DialogFooter className="shrink-0 bg-slate-50 px-6 py-4 border-t border-slate-200 sm:justify-end">
-            <Button type="button" variant="outline" onClick={() => setEditingProject(null)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="edit-project-form">
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </EntityTableShell>
+      </DataState>
+
+      <FormDialogShell
+        open={isProjectFormOpen}
+        onOpenChange={setProjectFormOpen}
+        title="Create Project"
+        formId="create-project-form"
+        submitLabel="Create"
+      >
+        <ProjectForm
+          departments={departments}
+          users={users}
+          formId="create-project-form"
+          hideSubmitButton={true}
+          onSuccess={() => {
+            setProjectFormOpen(false)
+            toast("Project created successfully")
+            router.refresh()
+          }}
+        />
+      </FormDialogShell>
+
+      <FormDialogShell
+        open={!!editingProject}
+        onOpenChange={(open) => !open && setEditingProject(null)}
+        title="Edit Project"
+        formId="edit-project-form"
+        submitLabel="Save"
+      >
+        {editingProject ? (
+          <ProjectForm
+            departments={departments}
+            users={users}
+            initialData={{
+              id: editingProject.id,
+              name: editingProject.name,
+              description: editingProject.description || "",
+              status: editingProject.status,
+              require_sqa: editingProject.require_sqa,
+              department_id: editingProject.department?.id,
+              links: editingProject.links || [],
+              requester_ids:
+                editingProject.requester_ids ||
+                editingProject.requesters.map((requester) => requester.id),
+              collaborator_ids:
+                editingProject.collaborator_ids ||
+                editingProject.collaborators.map((collaborator) => collaborator.id),
+            }}
+            formId="edit-project-form"
+            hideSubmitButton={true}
+            onSuccess={() => {
+              setEditingProject(null)
+              toast("Project updated successfully")
+              router.refresh()
+            }}
+          />
+        ) : null}
+      </FormDialogShell>
+    </EntityPageLayout>
   )
 }
 

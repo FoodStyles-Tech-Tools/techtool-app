@@ -4,6 +4,11 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { emitPermissionsRefresh, usePermissions } from "@/hooks/use-permissions"
+import { PageHeader } from "@/components/ui/page-header"
+import { EntityPageLayout } from "@/components/ui/entity-page-layout"
+import { DataState } from "@/components/ui/data-state"
+import { FormDialogShell } from "@/components/ui/form-dialog-shell"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Table,
@@ -15,14 +20,6 @@ import {
 } from "@/components/ui/table"
 import { Plus, Trash2, Pencil, Save } from "lucide-react"
 import { RoleForm } from "@/components/forms/role-form"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/components/ui/toast"
 
@@ -65,6 +62,8 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
   const [roles, setRoles] = useState<Role[]>(initialRoles)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
+  const [deletingRole, setDeletingRole] = useState<Role | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [editingPermissions, setEditingPermissions] = useState<Record<string, string[]>>({})
   const [originalPermissions, setOriginalPermissions] = useState<Record<string, string[]>>({})
   const [saving, setSaving] = useState<Record<string, boolean>>({})
@@ -110,10 +109,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
   }, [roles])
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this role?")) {
-      return
-    }
-
+    setConfirmingDelete(true)
     try {
       const res = await fetch(`/api/roles/${id}`, {
         method: "DELETE",
@@ -131,6 +127,9 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
     } catch (error) {
       console.error("Error deleting role:", error)
       toast("Failed to delete role", "error")
+    } finally {
+      setConfirmingDelete(false)
+      setDeletingRole(null)
     }
   }
 
@@ -260,54 +259,27 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {canCreateRoles && (
-        <div className="flex justify-end border-b pb-2">
-          <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
-              <button
-                type="button"
-                onClick={handleAddRole}
-                className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
+    <EntityPageLayout
+      header={
+        <PageHeader
+          title="Roles"
+          description="Create roles and manage permission sets across the workspace."
+          actions={
+            canCreateRoles ? (
+              <Button type="button" onClick={handleAddRole}>
                 <Plus className="h-4 w-4" />
-                <span>Create Role</span>
-              </button>
-            </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingRole ? "Edit Role" : "Add New Role"}
-              </DialogTitle>
-              <DialogDescription>
-                {editingRole
-                  ? "Update role information"
-                  : "Create a new role with custom permissions"}
-              </DialogDescription>
-            </DialogHeader>
-            <RoleForm
-              initialData={
-                editingRole
-                  ? {
-                      id: editingRole.id,
-                      name: editingRole.name,
-                      description: editingRole.description ?? undefined,
-                    }
-                  : undefined
-              }
-              onSuccess={() => {
-                setIsDialogOpen(false)
-                setEditingRole(null)
-                router.refresh()
-                emitPermissionsRefresh()
-              }}
-            />
-          </DialogContent>
-          </Dialog>
-        </div>
-      )}
-
-      {(
+                Create Role
+              </Button>
+            ) : null
+          }
+        />
+      }
+    >
+      <DataState
+        isEmpty={roles.length === 0}
+        emptyTitle="No roles yet"
+        emptyDescription="Create a role to start assigning permissions."
+      >
         <div className="grid gap-3">
           {roles.map((role) => {
             const isEditable = !isAdminRole(role)
@@ -342,7 +314,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                             <Button
                               variant="outline"
                               size="icon"
-                              onClick={() => handleDelete(role.id)}
+                              onClick={() => setDeletingRole(role)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -438,7 +410,52 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
             )
           })}
         </div>
-      )}
-    </div>
+      </DataState>
+
+      <FormDialogShell
+        open={isDialogOpen}
+        onOpenChange={handleOpenChange}
+        title={editingRole ? "Edit Role" : "Create Role"}
+        description={editingRole ? "Update role information." : "Create a new role with custom permissions."}
+        formId="role-form"
+        submitLabel={editingRole ? "Save" : "Create"}
+      >
+        <RoleForm
+          formId="role-form"
+          hideSubmitButton
+          initialData={
+            editingRole
+              ? {
+                  id: editingRole.id,
+                  name: editingRole.name,
+                  description: editingRole.description ?? undefined,
+                }
+              : undefined
+          }
+          onSuccess={() => {
+            setIsDialogOpen(false)
+            setEditingRole(null)
+            toast(editingRole ? "Role updated" : "Role created")
+            router.refresh()
+            emitPermissionsRefresh()
+          }}
+        />
+      </FormDialogShell>
+
+      <ConfirmDialog
+        open={!!deletingRole}
+        onOpenChange={(open) => !open && setDeletingRole(null)}
+        title="Delete role?"
+        description={`This will permanently remove the ${deletingRole?.name || "selected"} role.`}
+        confirmLabel="Delete"
+        destructive
+        confirming={confirmingDelete}
+        onConfirm={() => {
+          if (deletingRole) {
+            void handleDelete(deletingRole.id)
+          }
+        }}
+      />
+    </EntityPageLayout>
   )
 }

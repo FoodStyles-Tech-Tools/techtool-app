@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useCreateAsset, useUpdateAsset } from "@/hooks/use-assets"
 import { CollaboratorSelector } from "@/components/collaborator-selector"
+import { toast } from "@/components/ui/toast"
 
 const RichTextEditor = dynamic(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
@@ -44,10 +45,12 @@ interface AssetFormProps {
   defaultOwnerId?: string
   canManageOwner?: boolean
   users: Array<{ id: string; name: string | null; email: string; image: string | null; role?: string | null }>
+  formId?: string
+  hideSubmitButton?: boolean
 }
 
 const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
 
 export function AssetForm({
   onSuccess,
@@ -55,6 +58,8 @@ export function AssetForm({
   defaultOwnerId,
   canManageOwner = false,
   users,
+  formId,
+  hideSubmitButton = false,
 }: AssetFormProps) {
   const createAsset = useCreateAsset()
   const updateAsset = useUpdateAsset()
@@ -110,13 +115,13 @@ export function AssetForm({
       onSuccess?.()
     } catch (error) {
       console.error("Error saving asset:", error)
-      alert("Failed to save asset")
+      toast("Failed to save asset", "error")
     }
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form id={formId} onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -160,7 +165,7 @@ export function AssetForm({
               </div>
               <div className="space-y-3">
                 {linkFields.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No links added yet.</p>
+                  <p className="text-sm text-slate-500">No links added yet.</p>
                 )}
                 {linkFields.map((linkField, index) => (
                   <FormField
@@ -246,13 +251,15 @@ export function AssetForm({
             )}
           />
         )}
-        <Button
-          type="submit"
-          className="w-full"
-          disabled={createAsset.isPending || updateAsset.isPending}
-        >
-          {isEditing ? "Update Asset" : "Create Asset"}
-        </Button>
+        {!hideSubmitButton ? (
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={createAsset.isPending || updateAsset.isPending}
+          >
+            {isEditing ? "Update Asset" : "Create Asset"}
+          </Button>
+        ) : null}
       </form>
     </Form>
   )

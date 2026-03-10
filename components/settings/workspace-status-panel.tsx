@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Table,
   TableBody,
@@ -37,7 +38,7 @@ type StatusRow = TicketStatus & {
 
 const DEFAULT_COLOR = "#9ca3af"
 const actionButtonClassName =
-  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted/40 hover:text-foreground"
+  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
 
 export function WorkspaceStatusPanel() {
   const { flags } = usePermissions()
@@ -47,6 +48,7 @@ export function WorkspaceStatusPanel() {
   const [editingStatus, setEditingStatus] = useState<TicketStatus | null>(null)
   const [draft, setDraft] = useState<StatusDraft>({ label: "", color: DEFAULT_COLOR })
   const [saving, setSaving] = useState(false)
+  const [statusToDelete, setStatusToDelete] = useState<TicketStatus | null>(null)
 
   const sortedStatuses = useMemo<StatusRow[]>(
     () => [...(statuses as StatusRow[])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
@@ -130,8 +132,6 @@ export function WorkspaceStatusPanel() {
   }
 
   const handleDelete = async (status: TicketStatus) => {
-    if (!confirm(`Delete status "${status.label}"?`)) return
-
     try {
       const res = await fetch(`/api/ticket-statuses/${encodeURIComponent(status.key)}`, {
         method: "DELETE",
@@ -144,6 +144,8 @@ export function WorkspaceStatusPanel() {
       toast("Status deleted")
     } catch (error: any) {
       toast(error.message || "Failed to delete status", "error")
+    } finally {
+      setStatusToDelete(null)
     }
   }
 
@@ -158,10 +160,10 @@ export function WorkspaceStatusPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3 rounded-lg border border-border/50 bg-background p-4">
+      <div className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="space-y-1">
           <h3 className="text-base font-semibold">Status</h3>
-          <p className="text-sm text-muted-foreground">Global ticket statuses used across projects.</p>
+          <p className="text-sm text-slate-500">Global ticket statuses used across projects.</p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={openCreate}>
           <Plus className="h-4 w-4 mr-1.5" />
@@ -169,8 +171,8 @@ export function WorkspaceStatusPanel() {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-background">
-        <div className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs uppercase tracking-wide text-slate-500">
           Statuses control available ticket workflow states.
         </div>
         <Table>
@@ -224,7 +226,7 @@ export function WorkspaceStatusPanel() {
                       <button
                         type="button"
                         className={actionButtonClassName}
-                        onClick={() => void handleDelete(status)}
+                        onClick={() => setStatusToDelete(status)}
                         aria-label={`Delete ${status.label}`}
                         title="Delete status"
                       >
@@ -294,6 +296,20 @@ export function WorkspaceStatusPanel() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!statusToDelete}
+        onOpenChange={(open) => !open && setStatusToDelete(null)}
+        title="Delete status?"
+        description={`This will remove the ${statusToDelete?.label || "selected"} status.`}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => {
+          if (statusToDelete) {
+            void handleDelete(statusToDelete)
+          }
+        }}
+      />
     </div>
   )
 }

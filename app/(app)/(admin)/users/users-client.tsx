@@ -4,6 +4,13 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
+import { PageHeader } from "@/components/ui/page-header"
+import { EntityPageLayout } from "@/components/ui/entity-page-layout"
+import { DataState } from "@/components/ui/data-state"
+import { EntityTableShell } from "@/components/ui/entity-table-shell"
+import { FormDialogShell } from "@/components/ui/form-dialog-shell"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { toast } from "@/components/ui/toast"
 import {
   Table,
   TableBody,
@@ -14,14 +21,6 @@ import {
 } from "@/components/ui/table"
 import { Plus, Trash2, Pencil } from "lucide-react"
 import { UserForm } from "@/components/forms/user-form"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -45,6 +44,8 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [deletingUser, setDeletingUser] = useState<User | null>(null)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const { flags } = usePermissions()
   const canCreateUsers = flags?.canCreateUsers ?? false
   const canEditUsers = flags?.canEditUsers ?? false
@@ -76,10 +77,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
   }, [])
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) {
-      return
-    }
-
+    setConfirmingDelete(true)
     try {
       const res = await fetch(`/api/users/${id}`, {
         method: "DELETE",
@@ -88,13 +86,17 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
       if (res.ok) {
         setUsers((prev) => prev.filter((user) => user.id !== id))
         router.refresh()
+        toast("User deleted")
       } else {
         const error = await res.json()
-        alert(error.error || "Failed to delete user")
+        toast(error.error || "Failed to delete user", "error")
       }
     } catch (error) {
       console.error("Error deleting user:", error)
-      alert("Failed to delete user")
+      toast("Failed to delete user", "error")
+    } finally {
+      setConfirmingDelete(false)
+      setDeletingUser(null)
     }
   }
 
@@ -127,63 +129,28 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
   }
 
   return (
-    <div className="space-y-6">
-      {canCreateUsers && (
-        <div className="flex justify-end border-b pb-2">
-          <Dialog open={isDialogOpen} onOpenChange={handleOpenChange}>
-            <DialogTrigger asChild>
-              <button
-                type="button"
-                onClick={handleAddUser}
-                className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              >
+    <EntityPageLayout
+      header={
+        <PageHeader
+          title="Users"
+          description="Manage who can access the workspace and what role they hold."
+          actions={
+            canCreateUsers ? (
+              <Button type="button" onClick={handleAddUser}>
                 <Plus className="h-4 w-4" />
-                <span>Create User</span>
-              </button>
-            </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {editingUser ? "Edit User" : "Add New User"}
-              </DialogTitle>
-              <DialogDescription>
-                {editingUser
-                  ? "Update user information"
-                  : "Add a new user to the system"}
-              </DialogDescription>
-            </DialogHeader>
-            <UserForm
-              initialData={
-                editingUser
-                  ? {
-                      id: editingUser.id,
-                      email: editingUser.email,
-                      discord_id: editingUser.discord_id ?? undefined,
-                      role: editingUser.role ?? "member",
-                      name: editingUser.name ?? undefined,
-                    }
-                  : undefined
-              }
-              roles={roles}
-              onSuccess={() => {
-                setIsDialogOpen(false)
-                setEditingUser(null)
-                router.refresh()
-              }}
-            />
-          </DialogContent>
-          </Dialog>
-        </div>
-      )}
-
-      {users.length === 0 ? (
-        <div className="rounded-lg border p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            No users yet. Add one to get started.
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-md border">
+                Create User
+              </Button>
+            ) : null
+          }
+        />
+      }
+    >
+      <DataState
+        isEmpty={users.length === 0}
+        emptyTitle="No users yet"
+        emptyDescription="Add a user to get started."
+      >
+        <EntityTableShell>
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
@@ -200,7 +167,6 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
                 <TableRow 
                   key={user.id} 
                   data-user-id={user.id}
-                  className="hover:bg-muted/50 transition-colors"
                 >
                   <TableCell className="py-2">
                     <div className="flex items-center space-x-2">
@@ -244,7 +210,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => setDeletingUser(user)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -256,8 +222,55 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
               ))}
             </TableBody>
           </Table>
-        </div>
-      )}
-    </div>
+        </EntityTableShell>
+      </DataState>
+
+      <FormDialogShell
+        open={isDialogOpen}
+        onOpenChange={handleOpenChange}
+        title={editingUser ? "Edit User" : "Create User"}
+        description={editingUser ? "Update user information." : "Add a new user to the system."}
+        formId="user-form"
+        submitLabel={editingUser ? "Save" : "Create"}
+      >
+        <UserForm
+          formId="user-form"
+          hideSubmitButton
+          initialData={
+            editingUser
+              ? {
+                  id: editingUser.id,
+                  email: editingUser.email,
+                  discord_id: editingUser.discord_id ?? undefined,
+                  role: editingUser.role ?? "member",
+                  name: editingUser.name ?? undefined,
+                }
+              : undefined
+          }
+          roles={roles}
+          onSuccess={() => {
+            setIsDialogOpen(false)
+            setEditingUser(null)
+            toast(editingUser ? "User updated" : "User created")
+            router.refresh()
+          }}
+        />
+      </FormDialogShell>
+
+      <ConfirmDialog
+        open={!!deletingUser}
+        onOpenChange={(open) => !open && setDeletingUser(null)}
+        title="Delete user?"
+        description={`This will permanently remove ${deletingUser?.name || deletingUser?.email || "this user"}.`}
+        confirmLabel="Delete"
+        destructive
+        confirming={confirmingDelete}
+        onConfirm={() => {
+          if (deletingUser) {
+            void handleDelete(deletingUser.id)
+          }
+        }}
+      />
+    </EntityPageLayout>
   )
 }

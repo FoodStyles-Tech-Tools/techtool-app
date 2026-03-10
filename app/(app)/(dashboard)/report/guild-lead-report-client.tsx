@@ -19,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   ReportVolumeChart,
   ReportStatusCards,
@@ -164,6 +165,7 @@ export default function GuildLeadReportClient() {
   const [createName, setCreateName] = useState("")
   const [createStartDate, setCreateStartDate] = useState("")
   const [createEndDate, setCreateEndDate] = useState("")
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const [editName, setEditName] = useState("")
   const [editStartDate, setEditStartDate] = useState("")
   const [editEndDate, setEditEndDate] = useState("")
@@ -313,9 +315,7 @@ export default function GuildLeadReportClient() {
 
   const handleDeleteSession = () => {
     if (!selectedSessionId) return
-    const ok = window.confirm("Delete this report session? This cannot be undone.")
-    if (!ok) return
-    deleteMutation.mutate(selectedSessionId)
+    setConfirmDeleteOpen(true)
   }
 
   const hasSession = sessions.length > 0
@@ -503,6 +503,21 @@ export default function GuildLeadReportClient() {
           ) : null}
         </>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Delete report session?"
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        destructive
+        confirming={deleteMutation.isPending}
+        onConfirm={() => {
+          if (selectedSessionId) {
+            deleteMutation.mutate(selectedSessionId)
+          }
+        }}
+      />
 
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="sm:max-w-md">

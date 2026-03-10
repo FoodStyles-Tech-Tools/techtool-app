@@ -71,10 +71,10 @@ export function TicketsToolbar({
   currentUserId,
 }: TicketsToolbarProps) {
   const selectClassName =
-    "h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+    "h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
 
   return (
-    <div className="space-y-3 border-b pb-3">
+    <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <select
@@ -136,7 +136,7 @@ export function TicketsToolbar({
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white p-0.5">
             <Button
-              variant={view === "table" ? "primary" : "ghost"}
+              variant={view === "table" ? "default" : "ghost"}
               size="icon"
               onClick={() => setView("table")}
               className="h-8 w-8"
@@ -145,7 +145,7 @@ export function TicketsToolbar({
               <span className="sr-only">Table view</span>
             </Button>
             <Button
-              variant={view === "kanban" ? "primary" : "ghost"}
+              variant={view === "kanban" ? "default" : "ghost"}
               size="icon"
               onClick={() => setView("kanban")}
               className="h-8 w-8"
@@ -154,7 +154,7 @@ export function TicketsToolbar({
               <span className="sr-only">Kanban view</span>
             </Button>
             <Button
-              variant={view === "gantt" ? "primary" : "ghost"}
+              variant={view === "gantt" ? "default" : "ghost"}
               size="icon"
               onClick={() => setView("gantt")}
               className="h-8 w-8"

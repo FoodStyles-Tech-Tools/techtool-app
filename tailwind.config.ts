@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss"
 
 const config = {
-  darkMode: ["class"],
   content: [
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -10,30 +9,24 @@ const config = {
   ],
   prefix: "",
   theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": "1400px",
-      },
-    },
     extend: {
-      fontFamily: {
-        sans: [
-          "SF Pro Text",
-          "SF Pro Display",
-          "-apple-system",
-          "BlinkMacSystemFont",
-          "\"Segoe UI\"",
-          "Roboto",
-          "\"Helvetica Neue\"",
-          "Arial",
-          "sans-serif",
-        ],
+      colors: {
+        border: "hsl(var(--border) / <alpha-value>)",
+        background: "hsl(var(--background) / <alpha-value>)",
+        foreground: "hsl(var(--foreground) / <alpha-value>)",
+        muted: "hsl(var(--muted) / <alpha-value>)",
+        "muted-foreground": "hsl(var(--muted-foreground) / <alpha-value>)",
+        primary: "hsl(var(--primary) / <alpha-value>)",
+        "primary-foreground": "hsl(var(--primary-foreground) / <alpha-value>)",
+        destructive: "hsl(var(--destructive) / <alpha-value>)",
+        "destructive-foreground": "hsl(var(--destructive-foreground) / <alpha-value>)",
+        card: "hsl(var(--card) / <alpha-value>)",
+        popover: "hsl(var(--popover) / <alpha-value>)",
+        accent: "hsl(var(--accent) / <alpha-value>)",
+        ring: "hsl(var(--ring) / <alpha-value>)",
       },
     },
   },
 } satisfies Config
 
 export default config
-

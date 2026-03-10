@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { FormDialogShell } from "@/components/ui/form-dialog-shell"
 import { TicketForm } from "@/components/forms/ticket-form"
 import { toast } from "@/components/ui/toast"
 import { ChevronLeft, ChevronRight, Eye, Loader2, RefreshCw, Trash2 } from "lucide-react"
@@ -1138,53 +1139,35 @@ export default function ClockifyClient() {
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <FormDialogShell
         open={!!createTicketDialog}
         onOpenChange={(open) => {
           if (isCreatingTicket) return
           if (!open) setCreateTicketDialog(null)
         }}
+        title="Create Ticket"
+        description="Ticket created_at will use the Clockify start date for this entry."
+        formId="clockify-create-ticket-form"
+        submitLabel={isCreatingTicket ? "Creating..." : "Create"}
+        submitDisabled={isCreatingTicket}
       >
-        <DialogContent showCloseButton={false} className="flex h-[90vh] max-w-2xl flex-col overflow-hidden gap-0 p-0">
-          <DialogHeader className="bg-muted/40 px-6 py-4">
-            <DialogTitle>Create Ticket</DialogTitle>
-            <DialogDescription>
-              Ticket created_at will use the Clockify Start Date for this entry.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-            {createTicketDialog && (
-              <TicketForm
-                key={createTicketDialog.entryId}
-                formId="clockify-create-ticket-form"
-                hideSubmitButton={true}
-                projectOptions={projectOptions}
-                initialData={{ title: createTicketDialog.title }}
-                createOverrides={{ created_at: createTicketDialog.createdAt }}
-                onSubmittingChange={setIsCreatingTicket}
-                onCreated={handleClockifyTicketCreated}
-                onSuccess={() => {
-                  setIsCreatingTicket(false)
-                  setCreateTicketDialog(null)
-                }}
-              />
-            )}
-          </div>
-          <DialogFooter className="shrink-0 bg-muted/40 px-6 py-4 sm:justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCreateTicketDialog(null)}
-              disabled={isCreatingTicket}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" form="clockify-create-ticket-form" disabled={isCreatingTicket}>
-              {isCreatingTicket ? "Creating..." : "Create"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {createTicketDialog ? (
+          <TicketForm
+            key={createTicketDialog.entryId}
+            formId="clockify-create-ticket-form"
+            hideSubmitButton={true}
+            projectOptions={projectOptions}
+            initialData={{ title: createTicketDialog.title }}
+            createOverrides={{ created_at: createTicketDialog.createdAt }}
+            onSubmittingChange={setIsCreatingTicket}
+            onCreated={handleClockifyTicketCreated}
+            onSuccess={() => {
+              setIsCreatingTicket(false)
+              setCreateTicketDialog(null)
+            }}
+          />
+        ) : null}
+      </FormDialogShell>
     </div>
   )
 }

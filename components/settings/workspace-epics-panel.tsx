@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Table,
   TableBody,
@@ -42,9 +43,9 @@ type WorkspaceEpic = {
 }
 
 const nativeSelectClassName =
-  "h-9 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+  "h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
 const actionButtonClassName =
-  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted/40 hover:text-foreground disabled:opacity-50"
+  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50"
 
 export function WorkspaceEpicsPanel() {
   const { flags } = usePermissions()
@@ -57,6 +58,7 @@ export function WorkspaceEpicsPanel() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingEpic, setEditingEpic] = useState<WorkspaceEpic | null>(null)
   const [targetProjectId, setTargetProjectId] = useState<string>("")
+  const [epicToDelete, setEpicToDelete] = useState<WorkspaceEpic | null>(null)
 
   const projects = useMemo<WorkspaceProject[]>(
     () => (projectsData || []).map((project: any) => ({ id: project.id, name: project.name })),
@@ -136,14 +138,13 @@ export function WorkspaceEpicsPanel() {
   }
 
   const handleDeleteEpic = async (epic: WorkspaceEpic) => {
-    const confirmed = confirm(`Delete epic "${epic.name}"? Tickets in this epic will move to "No Epic".`)
-    if (!confirmed) return
-
     try {
       await deleteEpic.mutateAsync(epic.id)
       await loadEpics()
     } catch {
       // handled by mutation toast
+    } finally {
+      setEpicToDelete(null)
     }
   }
 
@@ -158,10 +159,10 @@ export function WorkspaceEpicsPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border/50 bg-background p-4">
+      <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="space-y-1">
           <h3 className="text-base font-semibold">Epic</h3>
-          <p className="text-sm text-muted-foreground">Epics are managed per project.</p>
+          <p className="text-sm text-slate-500">Epics are managed per project.</p>
         </div>
         <div className="flex items-end gap-2">
           <div className="w-[260px] space-y-1">
@@ -187,8 +188,8 @@ export function WorkspaceEpicsPanel() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-background">
-        <div className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs uppercase tracking-wide text-slate-500">
           Each epic belongs to a single project.
         </div>
         <Table>
@@ -240,7 +241,7 @@ export function WorkspaceEpicsPanel() {
                       <button
                         type="button"
                         className={actionButtonClassName}
-                        onClick={() => void handleDeleteEpic(epic)}
+                        onClick={() => setEpicToDelete(epic)}
                         disabled={deleteEpic.isPending}
                         aria-label={`Delete ${epic.name}`}
                         title="Delete epic"
@@ -316,6 +317,21 @@ export function WorkspaceEpicsPanel() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!epicToDelete}
+        onOpenChange={(open) => !open && setEpicToDelete(null)}
+        title="Delete epic?"
+        description={`This will remove ${epicToDelete?.name || "the selected epic"} and move attached tickets to No Epic.`}
+        confirmLabel="Delete"
+        destructive
+        confirming={deleteEpic.isPending}
+        onConfirm={() => {
+          if (epicToDelete) {
+            void handleDeleteEpic(epicToDelete)
+          }
+        }}
+      />
     </div>
   )
 }

@@ -179,6 +179,9 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
             onCopyTicketLabel={actions.handleCopyTicketLabel}
             onCopyShareUrl={actions.handleCopyShareUrl}
             onCopyHyperlinkedUrl={actions.handleCopyHyperlinkedUrl}
+            onStatusChange={(status) => {
+              void actions.handleStatusChange(status)
+            }}
             // onClose is handled by page navigation, so no close icon here
           />
         </div>
@@ -331,4 +334,3 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
     </>
   )
 }
-

@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import {
   Table,
   TableBody,
@@ -43,9 +44,9 @@ type WorkspaceSprint = {
 }
 
 const nativeSelectClassName =
-  "h-9 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+  "h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
 const actionButtonClassName =
-  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted/40 hover:text-foreground disabled:opacity-50"
+  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50"
 
 export function WorkspaceSprintsPanel() {
   const { flags } = usePermissions()
@@ -58,6 +59,7 @@ export function WorkspaceSprintsPanel() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingSprint, setEditingSprint] = useState<WorkspaceSprint | null>(null)
   const [targetProjectId, setTargetProjectId] = useState<string>("")
+  const [sprintToDelete, setSprintToDelete] = useState<WorkspaceSprint | null>(null)
 
   const projects = useMemo<WorkspaceProject[]>(
     () => (projectsData || []).map((project: any) => ({ id: project.id, name: project.name })),
@@ -137,14 +139,13 @@ export function WorkspaceSprintsPanel() {
   }
 
   const handleDeleteSprint = async (sprint: WorkspaceSprint) => {
-    const confirmed = confirm(`Delete sprint "${sprint.name}"?`)
-    if (!confirmed) return
-
     try {
       await deleteSprint.mutateAsync(sprint.id)
       await loadSprints()
     } catch {
       // handled by mutation toast
+    } finally {
+      setSprintToDelete(null)
     }
   }
 
@@ -159,10 +160,10 @@ export function WorkspaceSprintsPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border/50 bg-background p-4">
+      <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div className="space-y-1">
           <h3 className="text-base font-semibold">Sprint</h3>
-          <p className="text-sm text-muted-foreground">Sprints are always specific to a project.</p>
+          <p className="text-sm text-slate-500">Sprints are always specific to a project.</p>
         </div>
         <div className="flex items-end gap-2">
           <div className="w-[260px] space-y-1">
@@ -188,8 +189,8 @@ export function WorkspaceSprintsPanel() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-lg border bg-background">
-        <div className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs uppercase tracking-wide text-slate-500">
           Sprints belong to one project and can optionally include dates.
         </div>
         <Table>
@@ -240,7 +241,7 @@ export function WorkspaceSprintsPanel() {
                       <button
                         type="button"
                         className={actionButtonClassName}
-                        onClick={() => void handleDeleteSprint(sprint)}
+                        onClick={() => setSprintToDelete(sprint)}
                         disabled={deleteSprint.isPending}
                         aria-label={`Delete ${sprint.name}`}
                         title="Delete sprint"
@@ -317,6 +318,21 @@ export function WorkspaceSprintsPanel() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!sprintToDelete}
+        onOpenChange={(open) => !open && setSprintToDelete(null)}
+        title="Delete sprint?"
+        description={`This will permanently remove ${sprintToDelete?.name || "the selected sprint"}.`}
+        confirmLabel="Delete"
+        destructive
+        confirming={deleteSprint.isPending}
+        onConfirm={() => {
+          if (sprintToDelete) {
+            void handleDeleteSprint(sprintToDelete)
+          }
+        }}
+      />
     </div>
   )
 }

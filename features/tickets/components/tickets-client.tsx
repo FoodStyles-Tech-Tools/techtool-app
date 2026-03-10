@@ -35,6 +35,8 @@ import type {
 import { TicketsToolbar } from "@/components/tickets/tickets-toolbar"
 import { TicketsDialogs } from "@/features/tickets/components/tickets-dialogs"
 import { TicketsResults } from "@/features/tickets/components/tickets-results"
+import { PageHeader } from "@/components/ui/page-header"
+import { EntityPageLayout } from "@/components/ui/entity-page-layout"
 
 const SERVER_SORT_COLUMNS = new Set<SortColumn>([
   "id",
@@ -282,35 +284,43 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   )
 
   return (
-    <div className="space-y-6">
-      <TicketsToolbar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        selectedProjectLabel={selectedProjectLabel}
-        projectFilter={projectFilter}
-        setProjectFilter={setProjectFilter}
-        projectOptions={projectOptions}
-        sprintFilter={sprintFilter}
-        setSprintFilter={setSprintFilter}
-        sprintOptions={sprints.map((sprint) => ({ id: sprint.id, name: sprint.name }))}
-        includeInactiveProjects={includeInactiveProjects}
-        setIncludeInactiveProjects={setIncludeInactiveProjects}
-        view={view}
-        setView={setView}
-        onShareView={handleShareView}
-        excludeDone={excludeDone}
-        setExcludeDone={setExcludeDone}
-        assigneeFilter={assigneeFilter}
-        setAssigneeFilter={setAssigneeFilter}
-        resetToolbarFilters={resetToolbarFilters}
-        canCreateTickets={canCreateTickets}
-        onOpenCreateTicket={() => setTicketDialogOpen(true)}
-        canEditProjects={canEditProjects}
-        onOpenCreateEpic={handleOpenCreateEpic}
-        onOpenCreateSprint={handleOpenCreateSprint}
-        currentUserId={user?.id ?? null}
-      />
-
+    <EntityPageLayout
+      header={
+        <PageHeader
+          title="Tickets"
+          description={`Browse tickets in ${selectedProjectLabel}. Switch views without losing the current filters.`}
+        />
+      }
+      toolbar={
+        <TicketsToolbar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          selectedProjectLabel={selectedProjectLabel}
+          projectFilter={projectFilter}
+          setProjectFilter={setProjectFilter}
+          projectOptions={projectOptions}
+          sprintFilter={sprintFilter}
+          setSprintFilter={setSprintFilter}
+          sprintOptions={sprints.map((sprint) => ({ id: sprint.id, name: sprint.name }))}
+          includeInactiveProjects={includeInactiveProjects}
+          setIncludeInactiveProjects={setIncludeInactiveProjects}
+          view={view}
+          setView={setView}
+          onShareView={handleShareView}
+          excludeDone={excludeDone}
+          setExcludeDone={setExcludeDone}
+          assigneeFilter={assigneeFilter}
+          setAssigneeFilter={setAssigneeFilter}
+          resetToolbarFilters={resetToolbarFilters}
+          canCreateTickets={canCreateTickets}
+          onOpenCreateTicket={() => setTicketDialogOpen(true)}
+          canEditProjects={canEditProjects}
+          onOpenCreateEpic={handleOpenCreateEpic}
+          onOpenCreateSprint={handleOpenCreateSprint}
+          currentUserId={user?.id ?? null}
+        />
+      }
+    >
       <TicketsResults
         loading={loading}
         filteredTickets={filteredTickets}
@@ -396,6 +406,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         setIsEpicDialogOpen={setIsEpicDialogOpen}
         setIsSprintDialogOpen={setIsSprintDialogOpen}
       />
-    </div>
+    </EntityPageLayout>
   )
 }
