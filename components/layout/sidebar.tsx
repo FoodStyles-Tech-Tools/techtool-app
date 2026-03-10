@@ -20,7 +20,6 @@ import {
 } from "lucide-react"
 import { CommentNotificationsDropdown } from "@/components/comment-notifications-dropdown"
 import { signOut, useSession } from "@/lib/auth-client"
-import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { type PermissionFlags, usePermissions } from "@/hooks/use-permissions"
 import { KeyboardShortcutDialog } from "@/components/keyboard-shortcut-dialog"
 import { VersionIndicator } from "@/components/version-indicator"
@@ -103,7 +102,6 @@ export function Sidebar() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { data: session } = useSession()
-  const [settingsOpen, setSettingsOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const { flags } = usePermissions()
   const canViewProjects = flags?.canViewProjects ?? false
@@ -465,11 +463,9 @@ export function Sidebar() {
               email: user?.email || "",
               avatar: user?.image || "",
             }}
-            onOpenPreferences={() => setSettingsOpen(true)}
             onSignOut={handleSignOut}
           />
         </div>
-        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
         <KeyboardShortcutDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       </div>
     </aside>

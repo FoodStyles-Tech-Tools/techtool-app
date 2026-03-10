@@ -1,7 +1,6 @@
 "use client"
 
 import {
-  BadgeCheck,
   ChevronsUpDown,
   LogOut,
 } from "lucide-react"
@@ -13,13 +12,11 @@ type NavUserProps = {
     email: string
     avatar: string
   }
-  onOpenPreferences: () => void
   onSignOut: () => void
 }
 
 export function NavUser({
   user,
-  onOpenPreferences,
   onSignOut,
 }: NavUserProps) {
   const fallback = user.name?.charAt(0).toUpperCase() || "U"
@@ -48,15 +45,6 @@ export function NavUser({
             <span className="truncate text-xs tracking-[0.01em] text-slate-500">{user.email}</span>
           </div>
         </div>
-        <div className="my-1 h-px bg-slate-200" />
-        <button
-          type="button"
-          onClick={onOpenPreferences}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-100"
-        >
-          <BadgeCheck className="h-4 w-4" />
-          Preference
-        </button>
         <div className="my-1 h-px bg-slate-200" />
         <button
           type="button"
