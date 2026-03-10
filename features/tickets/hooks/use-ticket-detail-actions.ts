@@ -20,6 +20,14 @@ import type { TicketSubtaskDecision, TicketSubtaskRow } from "@/features/tickets
 const toUTCISOStringPreserveLocal = (date: Date) =>
   new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString()
 
+const TIMESTAMP_FIELD_TO_UPDATE_KEY: Record<TicketTimestampField, string> = {
+  created_at: "createdAt",
+  assigned_at: "assignedAt",
+  sqa_assigned_at: "sqaAssignedAt",
+  started_at: "startedAt",
+  completed_at: "completedAt",
+}
+
 type MutationClient = {
   mutateAsync: (input: any) => Promise<unknown>
 }
@@ -139,37 +147,37 @@ export function useTicketDetailActions({
   const handleDueDateChange = (value: Date | null) => {
     if (!ensureCanEdit()) return
     void updateTicketWithToast(
-      { due_date: value ? toUTCISOStringPreserveLocal(value) : null },
+      { dueDate: value ? toUTCISOStringPreserveLocal(value) : null },
       value ? "Due date updated" : "Due date cleared",
-      "due_date"
+      "dueDate"
     )
   }
 
   const handleDepartmentChange = (newDepartmentId: string, noDepartmentValue: string) => {
     if (!ensureCanEdit()) return
     void updateTicketWithToast(
-      { department_id: newDepartmentId === noDepartmentValue ? null : newDepartmentId },
+      { departmentId: newDepartmentId === noDepartmentValue ? null : newDepartmentId },
       "Department updated",
-      "department_id"
+      "departmentId"
     )
   }
 
   const handleEpicChange = (newEpicId: string | null) => {
     if (!ensureCanEdit()) return
-    void updateTicketWithToast({ epic_id: newEpicId }, "Epic updated", "epic_id")
+    void updateTicketWithToast({ epicId: newEpicId }, "Epic updated", "epicId")
   }
 
   const handleSprintChange = (newSprintId: string | null) => {
     if (!ensureCanEdit()) return
-    void updateTicketWithToast({ sprint_id: newSprintId }, "Sprint updated", "sprint_id")
+    void updateTicketWithToast({ sprintId: newSprintId }, "Sprint updated", "sprintId")
   }
 
   const handleProjectChange = (newProjectId: string, noProjectValue: string) => {
     if (!ensureCanEdit()) return
     void updateTicketWithToast(
-      { project_id: newProjectId === noProjectValue ? null : newProjectId },
+      { projectId: newProjectId === noProjectValue ? null : newProjectId },
       "Project updated",
-      "project_id"
+      "projectId"
     )
   }
 
@@ -181,10 +189,10 @@ export function useTicketDetailActions({
     if (!ticket) return
 
     const nextParentId = newParentTicketId === noParentTicketValue ? null : newParentTicketId
-    const currentParentId = ticket.parent_ticket_id || null
+    const currentParentId = ticket.parentTicketId || ticket.parent_ticket_id || null
     if (nextParentId === currentParentId) return
 
-    const updates: Record<string, any> = { parent_ticket_id: nextParentId }
+    const updates: Record<string, any> = { parentTicketId: nextParentId }
     if (nextParentId && ticket.type !== "subtask") {
       updates.type = "subtask"
     }
@@ -192,7 +200,7 @@ export function useTicketDetailActions({
     await updateTicketWithToast(
       updates,
       nextParentId ? "Parent ticket linked" : "Parent ticket removed",
-      "parent_ticket_id"
+      "parentTicketId"
     )
   }
 
@@ -201,9 +209,9 @@ export function useTicketDetailActions({
     if (!ticket) return
 
     await updateTicketWithToast(
-      buildAssignmentPayload("assignee_id", ticket, newAssigneeId),
+      buildAssignmentPayload("assigneeId", ticket, newAssigneeId),
       "Assignee updated",
-      "assignee_id"
+      "assigneeId"
     )
   }
 
@@ -214,9 +222,9 @@ export function useTicketDetailActions({
       return
     }
     void updateTicketWithToast(
-      { requested_by_id: newRequestedById },
+      { requestedById: newRequestedById },
       "Requested by updated",
-      "requested_by_id"
+      "requestedById"
     )
   }
 
@@ -226,9 +234,9 @@ export function useTicketDetailActions({
     if (!ticket) return
 
     await updateTicketWithToast(
-      buildAssignmentPayload("sqa_assignee_id", ticket, newSqaAssigneeId),
+      buildAssignmentPayload("sqaAssigneeId", ticket, newSqaAssigneeId),
       "SQA assignee updated",
-      "sqa_assignee_id"
+      "sqaAssigneeId"
     )
   }
 
@@ -284,14 +292,14 @@ export function useTicketDetailActions({
       status === "completed" || status === "cancelled" || status === "rejected"
         ? field === "completed_at"
           ? dateValue
-          : ticket.completed_at || null
+          : ticket.completedAt || ticket.completed_at || null
         : null
 
     const timestampMap: Record<string, string | null> = {
-      created_at: field === "created_at" ? dateValue : ticket.created_at || null,
-      assigned_at: field === "assigned_at" ? dateValue : ticket.assigned_at || null,
-      sqa_assigned_at: field === "sqa_assigned_at" ? dateValue : ticket.sqa_assigned_at || null,
-      started_at: field === "started_at" ? dateValue : ticket.started_at || null,
+      created_at: field === "created_at" ? dateValue : ticket.createdAt || ticket.created_at || null,
+      assigned_at: field === "assigned_at" ? dateValue : ticket.assignedAt || ticket.assigned_at || null,
+      sqa_assigned_at: field === "sqa_assigned_at" ? dateValue : ticket.sqaAssignedAt || ticket.sqa_assigned_at || null,
+      started_at: field === "started_at" ? dateValue : ticket.startedAt || ticket.started_at || null,
       completed_at: effectiveCompletedAt,
     }
 
@@ -307,9 +315,9 @@ export function useTicketDetailActions({
     if (
       field === "started_at" &&
       (status === "in_progress" || status === "blocked") &&
-      ticket.completed_at
+      (ticket.completedAt || ticket.completed_at)
     ) {
-      updates.completed_at = null
+      updates.completedAt = null
     }
 
     if (
@@ -322,7 +330,11 @@ export function useTicketDetailActions({
       return
     }
 
-    await updateTicketWithToast(updates, `${field.replace("_", " ")} updated`, field)
+    await updateTicketWithToast(
+      updates,
+      `${field.replace("_", " ")} updated`,
+      TIMESTAMP_FIELD_TO_UPDATE_KEY[field]
+    )
   }
 
   const timestampValidation = getTimestampValidation(ticket)

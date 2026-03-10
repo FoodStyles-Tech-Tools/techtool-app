@@ -63,8 +63,8 @@ export function Subtasks({
   })
 
   const { data: subtasksData = [], isLoading } = useTickets({
-    parent_ticket_id: ticketId,
-    exclude_subtasks: false,
+    parentTicketId: ticketId,
+    excludeSubtasks: false,
     enabled: !!ticketId,
     realtime: false,
   })
@@ -81,7 +81,8 @@ export function Subtasks({
         .filter((ticket) => ticket.type === "subtask")
         .sort(
           (left, right) =>
-            new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
+            new Date(left.createdAt || left.created_at).getTime() -
+            new Date(right.createdAt || right.created_at).getTime()
         ),
     [subtasksData]
   )
@@ -101,8 +102,8 @@ export function Subtasks({
         type: "subtask",
         status: "open",
         priority: "medium",
-        parent_ticket_id: ticketId,
-        project_id: projectId || undefined,
+        parentTicketId: ticketId,
+        projectId: projectId || undefined,
       })
       setNewSubtaskTitle("")
       toast("Subtask ticket created")
@@ -113,7 +114,11 @@ export function Subtasks({
     }
   }
 
-  const handleUpdateField = async (subtaskId: string, field: "priority" | "status" | "assignee_id", value: string | null) => {
+  const handleUpdateField = async (
+    subtaskId: string,
+    field: "priority" | "status" | "assigneeId",
+    value: string | null
+  ) => {
     if (!canEditTickets) return
     setUpdatingId(subtaskId)
     try {
@@ -155,10 +160,10 @@ export function Subtasks({
             {subtasks.map((subtask) => (
               <div key={subtask.id} className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] items-center gap-2 px-3 py-2">
                 <Link
-                  href={`/tickets/${String(subtask.display_id || subtask.id).toLowerCase()}`}
+                  href={`/tickets/${String(subtask.displayId || subtask.display_id || subtask.id).toLowerCase()}`}
                   className="min-w-0 truncate text-sm hover:underline"
                 >
-                  {(subtask.display_id || subtask.id.slice(0, 8)).toUpperCase()} {subtask.title}
+                  {(subtask.displayId || subtask.display_id || subtask.id.slice(0, 8)).toUpperCase()} {subtask.title}
                 </Link>
                 <TicketPrioritySelect
                   value={subtask.priority}
@@ -169,7 +174,7 @@ export function Subtasks({
                 <Select
                   value={subtask.assignee?.id || UNASSIGNED_VALUE}
                   onValueChange={(value) =>
-                    handleUpdateField(subtask.id, "assignee_id", value === UNASSIGNED_VALUE ? null : value)
+                    handleUpdateField(subtask.id, "assigneeId", value === UNASSIGNED_VALUE ? null : value)
                   }
                   disabled={!canEditTickets || updatingId === subtask.id}
                 >

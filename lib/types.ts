@@ -76,6 +76,7 @@ export interface TicketSprint {
 export interface RelatedTicket {
   id: string
   display_id: string | null
+  displayId?: string | null
   title: string
   status: string
   type: string | null
@@ -84,6 +85,7 @@ export interface RelatedTicket {
 /** Mention relation grouped by target ticket */
 export interface MentionedTicketRelation {
   ticket: RelatedTicket
+  mentionedInCommentIds?: string[]
   comment_ids: string[]
 }
 
@@ -92,6 +94,7 @@ export interface TicketDetailRelations {
   parent: RelatedTicket | null
   subtasks: RelatedTicket[]
   mentioned_in_comments: MentionedTicketRelation[]
+  mentionedInComments?: MentionedTicketRelation[]
 }
 
 /** Cancelled / archived reason stored on ticket.reason */
@@ -117,14 +120,18 @@ export interface TicketCancelledReason {
 export interface Ticket {
   id: string
   display_id: string | null
+  displayId?: string | null
   parent_ticket_id?: string | null
+  parentTicketId?: string | null
   title: string
   description: string | null
   status: string
   priority: string
   type: string
   due_date: string | null
+  dueDate?: string | null
   sqa_assigned_at?: string | null
+  sqaAssignedAt?: string | null
   links: string[]
   reason?: TicketCancelledReason | null
   department: TicketDepartment | null
@@ -133,11 +140,17 @@ export interface Ticket {
   project: TicketProject | null
   assignee: TicketUser | null
   sqa_assignee: TicketUser | null
+  sqaAssignee?: TicketUser | null
   requested_by: TicketUser
+  requestedBy?: TicketUser
   created_at: string
+  createdAt?: string
   started_at?: string | null
+  startedAt?: string | null
   completed_at?: string | null
+  completedAt?: string | null
   assigned_at?: string | null
+  assignedAt?: string | null
 }
 
 /** Minimal ticket for lists (e.g. dashboard carousel) */

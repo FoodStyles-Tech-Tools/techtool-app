@@ -62,7 +62,7 @@ export function TicketDetailAssignmentSection({
     if (!parentSearch.trim()) return parentTicketOptions
     const term = parentSearch.toLowerCase()
     return parentTicketOptions.filter((candidate) => {
-      const idPart = String(candidate.display_id || candidate.id).toLowerCase()
+      const idPart = String(candidate.displayId || candidate.id).toLowerCase()
       const titlePart = (candidate.title || "").toLowerCase()
       return idPart.includes(term) || titlePart.includes(term)
     })
@@ -78,7 +78,7 @@ export function TicketDetailAssignmentSection({
               <Select
                 value={ticket.assignee?.id || UNASSIGNED_VALUE}
                 onValueChange={(value) => void onAssigneeChange(value === UNASSIGNED_VALUE ? null : value)}
-                disabled={!canEditTickets || updatingFields["assignee_id"]}
+                disabled={!canEditTickets || updatingFields["assigneeId"]}
               >
                 <SelectTrigger className="h-8 w-full relative overflow-hidden">
                   {ticket.assignee?.id ? (
@@ -108,7 +108,7 @@ export function TicketDetailAssignmentSection({
                 type="button"
                 className="text-[11px] text-blue-600 hover:underline whitespace-nowrap disabled:opacity-50"
                 onClick={() => void onAssigneeChange(currentUser.id)}
-                disabled={updatingFields["assignee_id"] || !canEditTickets}
+                disabled={updatingFields["assigneeId"] || !canEditTickets}
               >
                 Assign to me
               </button>
@@ -121,16 +121,16 @@ export function TicketDetailAssignmentSection({
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Reporter</label>
         <div className="flex-1 min-w-0">
           <Select
-            value={ticket.requested_by?.id ?? undefined}
+            value={ticket.requestedBy?.id || ticket.requested_by?.id || undefined}
             onValueChange={(value) => void onRequestedByChange(value)}
-            disabled={!canEditTickets || isAssignmentLocked || updatingFields["requested_by_id"]}
+            disabled={!canEditTickets || isAssignmentLocked || updatingFields["requestedById"]}
           >
             <SelectTrigger className="h-8 w-full relative overflow-hidden">
-              {ticket.requested_by?.id ? (
+              {ticket.requestedBy?.id || ticket.requested_by?.id ? (
                 <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
                   <UserSelectValue
                     users={users}
-                    value={ticket.requested_by?.id ?? undefined}
+                    value={ticket.requestedBy?.id || ticket.requested_by?.id || undefined}
                     placeholder="Select user"
                   />
                 </div>
@@ -151,16 +151,16 @@ export function TicketDetailAssignmentSection({
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">SQA</label>
         <div className="flex-1 min-w-0">
           <Select
-            value={ticket.sqa_assignee?.id || UNASSIGNED_VALUE}
+            value={ticket.sqaAssignee?.id || ticket.sqa_assignee?.id || UNASSIGNED_VALUE}
             onValueChange={(value) => void onSqaAssigneeChange(value === UNASSIGNED_VALUE ? null : value)}
-            disabled={!canEditTickets || updatingFields["sqa_assignee_id"] || (isAssignmentLocked && !isSqaEditLocked)}
+            disabled={!canEditTickets || updatingFields["sqaAssigneeId"] || (isAssignmentLocked && !isSqaEditLocked)}
           >
             <SelectTrigger className="h-8 w-full relative overflow-hidden">
-              {ticket.sqa_assignee?.id ? (
+              {ticket.sqaAssignee?.id || ticket.sqa_assignee?.id ? (
                 <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
                   <UserSelectValue
                     users={sqaEligibleUsers}
-                    value={ticket.sqa_assignee?.id || null}
+                    value={ticket.sqaAssignee?.id || ticket.sqa_assignee?.id || null}
                     placeholder="Unassigned"
                     unassignedValue={UNASSIGNED_VALUE}
                     unassignedLabel="Unassigned"
@@ -210,12 +210,12 @@ export function TicketDetailAssignmentSection({
                   type="button"
                   variant="outline"
                   size="sm"
-                  disabled={!canEditTickets || isAssignmentLocked || updatingFields["parent_ticket_id"]}
+                  disabled={!canEditTickets || isAssignmentLocked || updatingFields["parentTicketId"]}
                   className="h-8 w-full justify-between overflow-hidden"
                 >
                   <span className="truncate text-xs text-foreground">
                     {selectedParentTicketOption
-                      ? `${(selectedParentTicketOption.display_id || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()} · ${selectedParentTicketOption.title}`
+                      ? `${(selectedParentTicketOption.displayId || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()} · ${selectedParentTicketOption.title}`
                       : "No parent ticket"}
                   </span>
                 </Button>
@@ -258,7 +258,7 @@ export function TicketDetailAssignmentSection({
                           }}
                         >
                           <span className="truncate">
-                            {(candidate.display_id || candidate.id.slice(0, 8)).toUpperCase()} · {candidate.title}
+                            {(candidate.displayId || candidate.id.slice(0, 8)).toUpperCase()} · {candidate.title}
                           </span>
                         </button>
                       )

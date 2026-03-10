@@ -101,14 +101,14 @@ export function useTicketDetailStatusActions({
           reasonCommentBody: `<p><strong>Returned to Dev Reason</strong></p>${returnedToDevReasonRichText}`,
         }
 
-        if ("started_at" in updates) {
-          payload.startedAt = (updates as { started_at?: string | null }).started_at ?? null
+        if ("startedAt" in updates) {
+          payload.startedAt = (updates as { startedAt?: string | null }).startedAt ?? null
         }
-        if ("completed_at" in updates) {
-          payload.completedAt = (updates as { completed_at?: string | null }).completed_at ?? null
+        if ("completedAt" in updates) {
+          payload.completedAt = (updates as { completedAt?: string | null }).completedAt ?? null
         }
-        if ("epic_id" in updates) {
-          payload.epicId = (updates as { epic_id?: string | null }).epic_id ?? null
+        if ("epicId" in updates) {
+          payload.epicId = (updates as { epicId?: string | null }).epicId ?? null
         }
 
         await updateTicketWithReasonComment.mutateAsync(payload)
@@ -229,8 +229,8 @@ export function useTicketDetailStatusActions({
         status: newStatus as "cancelled" | "rejected",
         reason: updates.reason,
         reasonCommentBody: commentBody,
-        ...(updates.started_at !== undefined ? { startedAt: updates.started_at ?? null } : {}),
-        ...(updates.completed_at !== undefined ? { completedAt: updates.completed_at ?? null } : {}),
+        ...(updates.startedAt !== undefined ? { startedAt: updates.startedAt ?? null } : {}),
+        ...(updates.completedAt !== undefined ? { completedAt: updates.completedAt ?? null } : {}),
       })
       toast("Status updated")
       if (subtaskDecision.closeSubtasks) {

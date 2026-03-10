@@ -12,13 +12,38 @@ export const FIELD_LABELS: Record<string, string> = {
   status: "Status",
   priority: "Priority",
   type: "Type",
-  requested_by_id: "Requested By",
-  assignee_id: "Assignee",
-  sqa_assignee_id: "SQA Assignee",
-  sqa_assigned_at: "SQA Assigned At",
-  department_id: "Department",
-  due_date: "Due Date",
+  requestedById: "Requested By",
+  assigneeId: "Assignee",
+  sqaAssigneeId: "SQA Assignee",
+  sqaAssignedAt: "SQA Assigned At",
+  departmentId: "Department",
+  dueDate: "Due Date",
+  epicId: "Epic",
+  sprintId: "Sprint",
+  parentTicketId: "Parent Ticket",
+  assignedAt: "Assigned At",
+  startedAt: "Started At",
+  completedAt: "Completed At",
+  createdAt: "Created At",
 }
+
+export type TicketMutationField =
+  | "status"
+  | "priority"
+  | "type"
+  | "requestedById"
+  | "assigneeId"
+  | "sqaAssigneeId"
+  | "sqaAssignedAt"
+  | "departmentId"
+  | "dueDate"
+  | "epicId"
+  | "sprintId"
+  | "parentTicketId"
+  | "assignedAt"
+  | "startedAt"
+  | "completedAt"
+  | "createdAt"
 
 export type SortColumn =
   | "id"

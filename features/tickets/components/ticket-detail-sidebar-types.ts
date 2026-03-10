@@ -3,6 +3,7 @@
 export type ParentTicketOption = {
   id: string
   display_id: string | null
+  displayId?: string | null
   title: string
 }
 

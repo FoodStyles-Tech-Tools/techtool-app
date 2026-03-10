@@ -15,7 +15,12 @@ type TicketDetailSubtasksResponse = {
 export async function fetchTicketOpenSubtasks(ticketId: string): Promise<TicketSubtaskRow[]> {
   const payload = await requestJson<TicketDetailSubtasksResponse>(`/api/v2/tickets/${ticketId}?view=detail`)
   const subtasks = Array.isArray(payload?.relations?.subtasks) ? payload.relations.subtasks : []
-  return subtasks.filter((subtask) => !DONE_STATUS_KEYS.has(String(subtask.status || "")))
+  return subtasks
+    .map((subtask) => ({
+      ...subtask,
+      displayId: subtask.displayId ?? subtask.display_id ?? null,
+    }))
+    .filter((subtask) => !DONE_STATUS_KEYS.has(String(subtask.status || "")))
 }
 
 export async function closeTicketSubtasksToStatus(subtasks: TicketSubtaskRow[], status: string) {

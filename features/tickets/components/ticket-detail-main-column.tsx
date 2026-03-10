@@ -341,7 +341,7 @@ export function TicketDetailMainColumn({
               <Subtasks
                 ticketId={ticketId}
                 projectName={ticket.project?.name || null}
-                displayId={ticket.display_id}
+                displayId={ticket.displayId || ticket.display_id}
                 projectId={ticket.project?.id || null}
                 allowSqaStatuses={ticket.project?.require_sqa === true}
                 allowCreate={ticket.type !== "subtask"}
@@ -351,7 +351,7 @@ export function TicketDetailMainColumn({
         </Card>
       ) : null}
 
-      <TicketActivity ticketId={ticketId} displayId={ticket.display_id} initialComments={detailComments} />
+      <TicketActivity ticketId={ticketId} displayId={ticket.displayId || ticket.display_id} initialComments={detailComments} />
     </div>
   )
 }

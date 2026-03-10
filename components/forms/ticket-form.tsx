@@ -300,13 +300,13 @@ export function TicketForm({
         description: normalizeRichTextInput(values.description),
         priority: values.priority,
         type: values.type,
-        project_id:
+        projectId:
           projectId || (values.project_id && values.project_id !== NO_PROJECT_VALUE ? values.project_id : null),
-        assignee_id: values.assignee_id || undefined,
-        requested_by_id: values.requested_by_id || undefined,
-        department_id: values.department_id || undefined,
-        epic_id: values.epic_id || undefined,
-        sprint_id: values.sprint_id || undefined,
+        assigneeId: values.assignee_id || undefined,
+        requestedById: values.requested_by_id || undefined,
+        departmentId: values.department_id || undefined,
+        epicId: values.epic_id || undefined,
+        sprintId: values.sprint_id || undefined,
         links: sanitizedLinks,
       }
 
@@ -316,7 +316,7 @@ export function TicketForm({
       } else {
         const created = await createTicket.mutateAsync({
           ...payload,
-          created_at: createOverrides?.created_at || undefined,
+          createdAt: createOverrides?.created_at || undefined,
         })
         if (created?.ticket?.id && created?.ticket?.title) {
           await onCreated?.({

@@ -39,6 +39,7 @@ export function useTicketDetail(ticketId: string, options?: { enabled?: boolean 
     parent: null,
     subtasks: [],
     mentioned_in_comments: [],
+    mentionedInComments: [],
   }
 
   return {

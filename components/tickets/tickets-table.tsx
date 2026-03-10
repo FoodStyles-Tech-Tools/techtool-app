@@ -16,7 +16,12 @@ import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { cn } from "@/lib/utils"
 import { formatRelativeDate, getDueDateDisplay, toUTCISOStringPreserveLocal } from "@/lib/format-dates"
 import type { Ticket, Department, User as BasicUser } from "@/lib/types"
-import { NO_DEPARTMENT_VALUE, UNASSIGNED_VALUE, type SortColumn } from "@/lib/ticket-constants"
+import {
+  NO_DEPARTMENT_VALUE,
+  UNASSIGNED_VALUE,
+  type SortColumn,
+  type TicketMutationField,
+} from "@/lib/ticket-constants"
 import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
@@ -53,7 +58,7 @@ interface TicketsTableProps {
   sqaEligibleUsers: BasicUser[]
   updateTicketField: (
     ticketId: string,
-    field: string,
+    field: TicketMutationField,
     value: string | null | undefined
   ) => Promise<void> | void
   updatingFields: Record<string, string>
@@ -96,7 +101,7 @@ interface TicketRowProps {
   sqaEligibleUsers: BasicUser[]
   updateTicketField: (
     ticketId: string,
-    field: string,
+    field: TicketMutationField,
     value: string | null | undefined
   ) => Promise<void> | void
   updatingFields: Record<string, string>
@@ -118,9 +123,12 @@ const TicketRow = memo(function TicketRow({
   excludeDone,
   canEdit,
 }: TicketRowProps) {
-  const requestedById = ticket.requested_by?.id || (ticket as { requested_by_id?: string }).requested_by_id
-  const dueDateDisplay = getDueDateDisplay(ticket.due_date, isDoneStatus(normalizeStatusKey(ticket.status)))
-  const dueDateValue = ticket.due_date ? new Date(ticket.due_date) : null
+  const requestedById =
+    ticket.requested_by?.id ||
+    (ticket as { requestedById?: string | null }).requestedById ||
+    (ticket as { requested_by_id?: string | null }).requested_by_id
+  const dueDateDisplay = getDueDateDisplay(ticket.dueDate ?? ticket.due_date, isDoneStatus(normalizeStatusKey(ticket.status)))
+  const dueDateValue = ticket.dueDate ? new Date(ticket.dueDate) : ticket.due_date ? new Date(ticket.due_date) : null
   const safeDueDateValue =
     dueDateValue && !Number.isNaN(dueDateValue.getTime()) ? dueDateValue : null
   const descriptionSnippet = richTextToPlainText(ticket.description)
@@ -143,7 +151,7 @@ const TicketRow = memo(function TicketRow({
           >
             <Copy className="h-3.5 w-3.5" />
           </Button>
-          <span>{ticket.display_id || ticket.id.slice(0, 8)}</span>
+          <span>{ticket.displayId || ticket.display_id || ticket.id.slice(0, 8)}</span>
         </div>
       </TableCell>
       <TableCell className="py-2 w-[400px] min-w-[300px]">
@@ -164,7 +172,7 @@ const TicketRow = memo(function TicketRow({
           </div>
           <div className="bg-muted/50 rounded-md p-2 flex flex-col gap-0.5">
             <span className="text-xs text-muted-foreground">
-              Created {formatRelativeDate(ticket.created_at)}
+              Created {formatRelativeDate(ticket.createdAt || ticket.created_at)}
             </span>
             {ticket.project?.name && (
               <Link
@@ -185,11 +193,11 @@ const TicketRow = memo(function TicketRow({
             onChange={(date) =>
               updateTicketField(
                 ticket.id,
-                "due_date",
+                "dueDate",
                 date ? toUTCISOStringPreserveLocal(date) : null
               )
             }
-            disabled={!canEdit || !!updatingFields[`${ticket.id}-due_date`]}
+            disabled={!canEdit || !!updatingFields[`${ticket.id}-dueDate`]}
             placeholder="No due date"
             hideIcon
             className={cn(
@@ -213,11 +221,11 @@ const TicketRow = memo(function TicketRow({
           onValueChange={(value) =>
             updateTicketField(
               ticket.id,
-              "department_id",
+              "departmentId",
               value === NO_DEPARTMENT_VALUE ? null : value
             )
           }
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-department_id`]}
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-departmentId`]}
         >
           <SelectTrigger className="h-7 w-[140px] text-xs">
             <SelectValue />
@@ -251,8 +259,8 @@ const TicketRow = memo(function TicketRow({
       <TableCell className="py-2">
         <Select
           value={requestedById ?? undefined}
-          onValueChange={(value) => updateTicketField(ticket.id, "requested_by_id", value)}
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-requested_by_id`]}
+          onValueChange={(value) => updateTicketField(ticket.id, "requestedById", value)}
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-requestedById`]}
         >
           <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
             {requestedById ? (
@@ -276,11 +284,11 @@ const TicketRow = memo(function TicketRow({
           onValueChange={(value) =>
             updateTicketField(
               ticket.id,
-              "assignee_id",
+              "assigneeId",
               value === UNASSIGNED_VALUE ? null : value
             )
           }
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-assignee_id`]}
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-assigneeId`]}
         >
           <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
             {ticket.assignee?.id ? (
@@ -307,22 +315,22 @@ const TicketRow = memo(function TicketRow({
       </TableCell>
       <TableCell className="py-2">
         <Select
-          value={ticket.sqa_assignee?.id || UNASSIGNED_VALUE}
+          value={ticket.sqaAssignee?.id || ticket.sqa_assignee?.id || UNASSIGNED_VALUE}
           onValueChange={(value) =>
             updateTicketField(
               ticket.id,
-              "sqa_assignee_id",
+              "sqaAssigneeId",
               value === UNASSIGNED_VALUE ? null : value
             )
           }
-          disabled={!canEdit || !!updatingFields[`${ticket.id}-sqa_assignee_id`]}
+          disabled={!canEdit || !!updatingFields[`${ticket.id}-sqaAssigneeId`]}
         >
           <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
-            {ticket.sqa_assignee?.id ? (
+            {ticket.sqaAssignee?.id || ticket.sqa_assignee?.id ? (
               <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
                 <UserSelectValue
                   users={sqaEligibleUsers}
-                  value={ticket.sqa_assignee.id}
+                  value={ticket.sqaAssignee?.id || ticket.sqa_assignee?.id || null}
                   placeholder="Unassigned"
                   unassignedValue={UNASSIGNED_VALUE}
                   unassignedLabel="Unassigned"

@@ -2,10 +2,9 @@
 
 import { useCallback, useState } from "react"
 import { toast } from "@/components/ui/toast"
-import { buildStatusChangeBody } from "@/lib/ticket-statuses"
 import type { Ticket } from "@/lib/types"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@/lib/rich-text"
-import { FIELD_LABELS } from "@/lib/ticket-constants"
+import { FIELD_LABELS, type TicketMutationField } from "@/lib/ticket-constants"
 import {
   closeTicketSubtasksToStatus,
   resolveTicketDoneStatusGuard,
@@ -83,37 +82,30 @@ export function useTicketBoardActions({
     async (ticketId: string, columnId: string): Promise<boolean> => {
       const ticket = allTickets.find((candidate) => candidate.id === ticketId)
       if (!ticket || ticket.status === columnId) return false
-      const previousStatus = ticket.status
-      const startedAt = (ticket as { started_at?: string | null }).started_at
 
       if (columnId === "cancelled" || columnId === "rejected") {
-        const statusBody = buildStatusChangeBody(previousStatus, columnId, { startedAt })
         setPendingStatusChange({
           ticketId,
           newStatus: columnId,
-          body: { status: columnId, ...statusBody },
+          body: buildStatusPayload(ticket, columnId),
         })
         setCancelReason("")
         setShowCancelReasonDialog(true)
         return false
       }
 
-      if (columnId === "returned_to_dev" && previousStatus !== "returned_to_dev") {
-        const statusBody = buildStatusChangeBody(previousStatus, columnId, { startedAt })
+      if (columnId === "returned_to_dev" && ticket.status !== "returned_to_dev") {
         setPendingReturnedStatusChange({
           ticketId,
           newStatus: columnId,
-          body: { status: columnId, ...statusBody },
+          body: buildStatusPayload(ticket, columnId),
         })
         setReturnedReason("")
         setShowReturnedReasonDialog(true)
         return false
       }
 
-      const body = {
-        status: columnId,
-        ...buildStatusChangeBody(previousStatus, columnId, { startedAt }),
-      }
+      const body = buildStatusPayload(ticket, columnId)
 
       try {
         const doneGuard = await resolveDoneStatusGuard(ticketId, columnId)
@@ -137,7 +129,7 @@ export function useTicketBoardActions({
 
   const handleCopyTicketLabel = useCallback((ticket: Ticket) => {
     const projectName = ticket.project?.name || "No Project"
-    const label = `[${projectName}] ${ticket.display_id || ticket.id.slice(0, 8)}_${ticket.title}`
+    const label = `[${projectName}] ${ticket.displayId || ticket.display_id || ticket.id.slice(0, 8)}_${ticket.title}`
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard
         .writeText(label)
@@ -149,43 +141,37 @@ export function useTicketBoardActions({
   }, [])
 
   const updateTicketField = useCallback(
-    async (ticketId: string, field: string, value: string | null | undefined) => {
+    async (ticketId: string, field: TicketMutationField, value: string | null | undefined) => {
       const currentTicket = allTickets.find((ticket) => ticket.id === ticketId)
 
       let doneGuard: TicketStatusGuardResult | null = null
       const body: any = {}
-      if (field === "requested_by_id") {
+      if (field === "requestedById") {
         if (!value) {
           toast("Requested by cannot be empty", "error")
           return
         }
         body[field] = value
-      } else if (field === "assignee_id") {
-        Object.assign(body, buildAssignmentPayload("assignee_id", currentTicket, value))
-      } else if (field === "sqa_assignee_id") {
-        Object.assign(body, buildAssignmentPayload("sqa_assignee_id", currentTicket, value))
+      } else if (field === "assigneeId") {
+        Object.assign(body, buildAssignmentPayload("assigneeId", currentTicket, value))
+      } else if (field === "sqaAssigneeId") {
+        Object.assign(body, buildAssignmentPayload("sqaAssigneeId", currentTicket, value))
       } else if (field === "status") {
         const previousStatus = currentTicket?.status ?? "open"
         const newStatus = value as string
 
         if ((newStatus === "cancelled" || newStatus === "rejected") && previousStatus !== newStatus) {
-          const statusBody = buildStatusChangeBody(previousStatus, newStatus, {
-            startedAt: (currentTicket as { started_at?: string | null })?.started_at,
-          })
-          Object.assign(body, statusBody)
-          body[field] = newStatus
-          setPendingStatusChange({ ticketId, newStatus, body })
+          setPendingStatusChange({ ticketId, newStatus, body: buildStatusPayload(currentTicket, newStatus) })
           setCancelReason("")
           setShowCancelReasonDialog(true)
           return
         }
         if (newStatus === "returned_to_dev" && previousStatus !== "returned_to_dev") {
-          const statusBody = buildStatusChangeBody(previousStatus, newStatus, {
-            startedAt: (currentTicket as { started_at?: string | null })?.started_at,
+          setPendingReturnedStatusChange({
+            ticketId,
+            newStatus,
+            body: buildStatusPayload(currentTicket, newStatus),
           })
-          Object.assign(body, statusBody)
-          body[field] = newStatus
-          setPendingReturnedStatusChange({ ticketId, newStatus, body })
           setReturnedReason("")
           setShowReturnedReasonDialog(true)
           return
@@ -196,7 +182,7 @@ export function useTicketBoardActions({
           doneGuard = await resolveDoneStatusGuard(ticketId, newStatus)
           if (!doneGuard.proceed) return
         }
-      } else if (field === "department_id") {
+      } else if (field === "departmentId") {
         body[field] = value || null
       } else {
         body[field] = value
@@ -283,14 +269,14 @@ export function useTicketBoardActions({
         reasonCommentBody: commentBody,
       }
 
-      if ("started_at" in finalBody) {
-        payload.startedAt = (finalBody as { started_at?: string | null }).started_at ?? null
+      if ("startedAt" in finalBody) {
+        payload.startedAt = (finalBody as { startedAt?: string | null }).startedAt ?? null
       }
-      if ("completed_at" in finalBody) {
-        payload.completedAt = (finalBody as { completed_at?: string | null }).completed_at ?? null
+      if ("completedAt" in finalBody) {
+        payload.completedAt = (finalBody as { completedAt?: string | null }).completedAt ?? null
       }
-      if ("epic_id" in finalBody) {
-        payload.epicId = (finalBody as { epic_id?: string | null }).epic_id ?? null
+      if ("epicId" in finalBody) {
+        payload.epicId = (finalBody as { epicId?: string | null }).epicId ?? null
       }
 
       await updateTicketWithReasonComment.mutateAsync(payload)
@@ -363,14 +349,14 @@ export function useTicketBoardActions({
         reasonCommentBody: commentBody,
       }
 
-      if ("started_at" in body) {
-        payload.startedAt = (body as { started_at?: string | null }).started_at ?? null
+      if ("startedAt" in body) {
+        payload.startedAt = (body as { startedAt?: string | null }).startedAt ?? null
       }
-      if ("completed_at" in body) {
-        payload.completedAt = (body as { completed_at?: string | null }).completed_at ?? null
+      if ("completedAt" in body) {
+        payload.completedAt = (body as { completedAt?: string | null }).completedAt ?? null
       }
-      if ("epic_id" in body) {
-        payload.epicId = (body as { epic_id?: string | null }).epic_id ?? null
+      if ("epicId" in body) {
+        payload.epicId = (body as { epicId?: string | null }).epicId ?? null
       }
 
       await updateTicketWithReasonComment.mutateAsync(payload)

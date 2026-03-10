@@ -19,22 +19,14 @@ import type { SortColumn } from "@/lib/ticket-constants"
 
 type UseTicketsOptions = {
   projectId?: string
-  project_id?: string
   parentTicketId?: string
-  parent_ticket_id?: string
   assigneeId?: string
-  assignee_id?: string
   status?: string
   departmentId?: string
-  department_id?: string
   requestedById?: string
-  requested_by_id?: string
   sprintId?: string
-  sprint_id?: string
   excludeDone?: boolean
-  exclude_done?: boolean
   excludeSubtasks?: boolean
-  exclude_subtasks?: boolean
   q?: string
   limit?: number
   page?: number
@@ -48,14 +40,14 @@ export function useTickets(options?: UseTicketsOptions) {
   const queryClient = useQueryClient()
   const enabled = options?.enabled !== false
   const realtime = options?.realtime === true
-  const projectId = options?.projectId ?? options?.project_id
-  const parentTicketId = options?.parentTicketId ?? options?.parent_ticket_id
-  const assigneeId = options?.assigneeId ?? options?.assignee_id
-  const departmentId = options?.departmentId ?? options?.department_id
-  const requestedById = options?.requestedById ?? options?.requested_by_id
-  const sprintId = options?.sprintId ?? options?.sprint_id
-  const excludeDone = options?.excludeDone ?? options?.exclude_done
-  const excludeSubtasks = options?.excludeSubtasks ?? options?.exclude_subtasks ?? true
+  const projectId = options?.projectId
+  const parentTicketId = options?.parentTicketId
+  const assigneeId = options?.assigneeId
+  const departmentId = options?.departmentId
+  const requestedById = options?.requestedById
+  const sprintId = options?.sprintId
+  const excludeDone = options?.excludeDone
+  const excludeSubtasks = options?.excludeSubtasks ?? true
   const queryKey = ticketQueryKeys.list({
     projectId,
     parentTicketId,
@@ -243,62 +235,40 @@ export function useCreateTicket() {
   return useMutation({
     mutationFn: async (data: {
       projectId?: string | null
-      project_id?: string | null
       title: string
       description?: string | null
       dueDate?: string
-      due_date?: string
       createdAt?: string
-      created_at?: string
       assigneeId?: string
-      assignee_id?: string
       sqaAssigneeId?: string
-      sqa_assignee_id?: string
       sqaAssignedAt?: string | null
-      sqa_assigned_at?: string | null
       requestedById?: string
-      requested_by_id?: string
       priority?: string
       type?: string
       status?: string
       departmentId?: string
-      department_id?: string
       links?: string[]
       epicId?: string
-      epic_id?: string
       sprintId?: string
-      sprint_id?: string
       parentTicketId?: string | null
-      parent_ticket_id?: string | null
     }) => {
-      const projectId = data.projectId ?? data.project_id
-      const dueDate = data.dueDate ?? data.due_date
-      const createdAt = data.createdAt ?? data.created_at
-      const assigneeId = data.assigneeId ?? data.assignee_id
-      const sqaAssigneeId = data.sqaAssigneeId ?? data.sqa_assignee_id
-      const sqaAssignedAt = data.sqaAssignedAt ?? data.sqa_assigned_at
-      const requestedById = data.requestedById ?? data.requested_by_id
-      const departmentId = data.departmentId ?? data.department_id
-      const epicId = data.epicId ?? data.epic_id
-      const sprintId = data.sprintId ?? data.sprint_id
-      const parentTicketId = data.parentTicketId ?? data.parent_ticket_id
       const payload = {
         title: data.title,
-        ...(projectId !== undefined ? { projectId } : {}),
+        ...(data.projectId !== undefined ? { projectId: data.projectId } : {}),
         ...(data.description !== undefined ? { description: data.description } : {}),
-        ...(dueDate !== undefined ? { dueDate } : {}),
-        ...(createdAt !== undefined ? { createdAt } : {}),
-        ...(assigneeId !== undefined ? { assigneeId } : {}),
-        ...(sqaAssigneeId !== undefined ? { sqaAssigneeId } : {}),
-        ...(sqaAssignedAt !== undefined ? { sqaAssignedAt } : {}),
-        ...(requestedById !== undefined ? { requestedById } : {}),
+        ...(data.dueDate !== undefined ? { dueDate: data.dueDate } : {}),
+        ...(data.createdAt !== undefined ? { createdAt: data.createdAt } : {}),
+        ...(data.assigneeId !== undefined ? { assigneeId: data.assigneeId } : {}),
+        ...(data.sqaAssigneeId !== undefined ? { sqaAssigneeId: data.sqaAssigneeId } : {}),
+        ...(data.sqaAssignedAt !== undefined ? { sqaAssignedAt: data.sqaAssignedAt } : {}),
+        ...(data.requestedById !== undefined ? { requestedById: data.requestedById } : {}),
         ...(data.priority !== undefined ? { priority: data.priority } : {}),
         ...(data.type !== undefined ? { type: data.type } : {}),
         ...(data.status !== undefined ? { status: data.status } : {}),
-        ...(departmentId !== undefined ? { departmentId } : {}),
-        ...(epicId !== undefined ? { epicId } : {}),
-        ...(sprintId !== undefined ? { sprintId } : {}),
-        ...(parentTicketId !== undefined ? { parentTicketId } : {}),
+        ...(data.departmentId !== undefined ? { departmentId: data.departmentId } : {}),
+        ...(data.epicId !== undefined ? { epicId: data.epicId } : {}),
+        ...(data.sprintId !== undefined ? { sprintId: data.sprintId } : {}),
+        ...(data.parentTicketId !== undefined ? { parentTicketId: data.parentTicketId } : {}),
         links: prepareLinkPayload(data.links),
       }
 
@@ -333,73 +303,45 @@ export function useUpdateTicket() {
       title?: string
       description?: string | null
       dueDate?: string | null
-      due_date?: string | null
       status?: string
       priority?: string
       type?: string
       projectId?: string | null
-      project_id?: string | null
       assigneeId?: string | null
-      assignee_id?: string | null
       sqaAssigneeId?: string | null
-      sqa_assignee_id?: string | null
       requestedById?: string
-      requested_by_id?: string
       departmentId?: string | null
-      department_id?: string | null
       epicId?: string | null
-      epic_id?: string | null
       sprintId?: string | null
-      sprint_id?: string | null
       parentTicketId?: string | null
-      parent_ticket_id?: string | null
       assignedAt?: string | null
-      assigned_at?: string | null
       sqaAssignedAt?: string | null
-      sqa_assigned_at?: string | null
       startedAt?: string | null
-      started_at?: string | null
       completedAt?: string | null
-      completed_at?: string | null
       createdAt?: string | null
-      created_at?: string | null
       links?: string[]
       reason?: unknown
     }) => {
-      const dueDate = data.dueDate ?? data.due_date
-      const projectId = data.projectId ?? data.project_id
-      const assigneeId = data.assigneeId ?? data.assignee_id
-      const sqaAssigneeId = data.sqaAssigneeId ?? data.sqa_assignee_id
-      const requestedById = data.requestedById ?? data.requested_by_id
-      const departmentId = data.departmentId ?? data.department_id
-      const epicId = data.epicId ?? data.epic_id
-      const sprintId = data.sprintId ?? data.sprint_id
-      const parentTicketId = data.parentTicketId ?? data.parent_ticket_id
-      const assignedAt = data.assignedAt ?? data.assigned_at
-      const sqaAssignedAt = data.sqaAssignedAt ?? data.sqa_assigned_at
-      const startedAt = data.startedAt ?? data.started_at
-      const completedAt = data.completedAt ?? data.completed_at
-      const createdAt = data.createdAt ?? data.created_at
       const payload = {
         ...(data.title !== undefined ? { title: data.title } : {}),
         ...(data.description !== undefined ? { description: data.description } : {}),
-        ...(dueDate !== undefined ? { dueDate } : {}),
+        ...(data.dueDate !== undefined ? { dueDate: data.dueDate } : {}),
         ...(data.status !== undefined ? { status: data.status } : {}),
         ...(data.priority !== undefined ? { priority: data.priority } : {}),
         ...(data.type !== undefined ? { type: data.type } : {}),
-        ...(projectId !== undefined ? { projectId } : {}),
-        ...(assigneeId !== undefined ? { assigneeId } : {}),
-        ...(sqaAssigneeId !== undefined ? { sqaAssigneeId } : {}),
-        ...(requestedById !== undefined ? { requestedById } : {}),
-        ...(departmentId !== undefined ? { departmentId } : {}),
-        ...(epicId !== undefined ? { epicId } : {}),
-        ...(sprintId !== undefined ? { sprintId } : {}),
-        ...(parentTicketId !== undefined ? { parentTicketId } : {}),
-        ...(assignedAt !== undefined ? { assignedAt } : {}),
-        ...(sqaAssignedAt !== undefined ? { sqaAssignedAt } : {}),
-        ...(startedAt !== undefined ? { startedAt } : {}),
-        ...(completedAt !== undefined ? { completedAt } : {}),
-        ...(createdAt !== undefined ? { createdAt } : {}),
+        ...(data.projectId !== undefined ? { projectId: data.projectId } : {}),
+        ...(data.assigneeId !== undefined ? { assigneeId: data.assigneeId } : {}),
+        ...(data.sqaAssigneeId !== undefined ? { sqaAssigneeId: data.sqaAssigneeId } : {}),
+        ...(data.requestedById !== undefined ? { requestedById: data.requestedById } : {}),
+        ...(data.departmentId !== undefined ? { departmentId: data.departmentId } : {}),
+        ...(data.epicId !== undefined ? { epicId: data.epicId } : {}),
+        ...(data.sprintId !== undefined ? { sprintId: data.sprintId } : {}),
+        ...(data.parentTicketId !== undefined ? { parentTicketId: data.parentTicketId } : {}),
+        ...(data.assignedAt !== undefined ? { assignedAt: data.assignedAt } : {}),
+        ...(data.sqaAssignedAt !== undefined ? { sqaAssignedAt: data.sqaAssignedAt } : {}),
+        ...(data.startedAt !== undefined ? { startedAt: data.startedAt } : {}),
+        ...(data.completedAt !== undefined ? { completedAt: data.completedAt } : {}),
+        ...(data.createdAt !== undefined ? { createdAt: data.createdAt } : {}),
         ...(data.reason !== undefined ? { reason: data.reason } : {}),
         ...(data.links !== undefined ? { links: prepareLinkPayload(data.links) } : {}),
       }

@@ -71,9 +71,9 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   const { sprints } = useSprints(projectId)
   const users = useMemo(() => usersData || [], [usersData])
 
-  const selectedParentTicketId = ticket?.parent_ticket_id || null
+  const selectedParentTicketId = ticket?.parentTicketId || null
   const parentTicketOptions = useMemo(() => {
-    const optionsMap = new Map<string, { id: string; display_id: string | null; title: string }>()
+    const optionsMap = new Map<string, { id: string; display_id: string | null; displayId?: string | null; title: string }>()
 
     ;(relationTicketsData || []).forEach((candidate) => {
       if (!candidate.id || candidate.id === ticketId) return
@@ -81,6 +81,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       optionsMap.set(candidate.id, {
         id: candidate.id,
         display_id: candidate.display_id || null,
+        displayId: candidate.displayId || candidate.display_id || null,
         title: candidate.title || "Untitled ticket",
       })
     })
@@ -94,13 +95,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
       optionsMap.set(relations.parent.id, {
         id: relations.parent.id,
         display_id: relations.parent.display_id || null,
+        displayId: relations.parent.displayId || relations.parent.display_id || null,
         title: relations.parent.title || "Untitled ticket",
       })
     }
 
     return Array.from(optionsMap.values()).sort((left, right) => {
-      const leftLabel = `${left.display_id || ""} ${left.title}`.trim().toLowerCase()
-      const rightLabel = `${right.display_id || ""} ${right.title}`.trim().toLowerCase()
+      const leftLabel = `${left.displayId || ""} ${left.title}`.trim().toLowerCase()
+      const rightLabel = `${right.displayId || ""} ${right.title}`.trim().toLowerCase()
       return leftLabel.localeCompare(rightLabel)
     })
   }, [relationTicketsData, relations?.parent, ticketId])
@@ -111,17 +113,17 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
   }, [parentTicketOptions, selectedParentTicketId])
 
   const parentNavigationSlug = useMemo(() => {
-    const relationDisplayId = relations?.parent?.display_id
+    const relationDisplayId = relations?.parent?.displayId
     if (relationDisplayId) return String(relationDisplayId).toLowerCase()
-    const optionDisplayId = selectedParentTicketOption?.display_id
+    const optionDisplayId = selectedParentTicketOption?.displayId
     if (optionDisplayId) return String(optionDisplayId).toLowerCase()
     return null
-  }, [relations?.parent?.display_id, selectedParentTicketOption?.display_id])
+  }, [relations?.parent?.displayId, selectedParentTicketOption?.displayId])
 
   const loading = !ticket && isLoading
   const isAssignmentLocked = !!ticket && !ticket.assignee
   const isSqaUser = (currentUser?.role || "").toLowerCase() === "sqa"
-  const currentTicketSqaAssigneeId = ticket?.sqa_assignee?.id || null
+  const currentTicketSqaAssigneeId = ticket?.sqaAssignee?.id || null
   const isSqaEditLocked =
     !!ticket && isSqaUser && !!currentUser?.id && currentTicketSqaAssigneeId !== currentUser.id
 
@@ -175,7 +177,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
           <DialogHeader className="border-b border-border/60 bg-background/95 px-4 pb-3 pt-4">
             <DialogTitle className="sr-only">
               {ticket
-                ? `Ticket ${ticket.display_id || ticketId.slice(0, 8)}: ${ticket.title}`
+                ? `Ticket ${ticket.displayId || ticketId.slice(0, 8)}: ${ticket.title}`
                 : `Ticket ${ticketId.slice(0, 8)}`}
             </DialogTitle>
             <DialogDescription className="sr-only">

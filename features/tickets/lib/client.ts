@@ -1,7 +1,7 @@
 import { createQueryString, requestJson } from "@/lib/client/api"
 import { sanitizeLinkArray } from "@/lib/links"
 import type { SortColumn } from "@/lib/ticket-constants"
-import type { Ticket, TicketDetailRelations } from "@/lib/types"
+import type { MentionedTicketRelation, RelatedTicket, Ticket, TicketDetailRelations } from "@/lib/types"
 import type { TicketComment } from "@/hooks/use-ticket-comments"
 
 export type TicketSortDirection = "asc" | "desc"
@@ -52,10 +52,46 @@ export type TicketDetailResponse = {
   relations?: TicketDetailRelations
 }
 
+function normalizeRelatedTicket(ticket: RelatedTicket): RelatedTicket {
+  return {
+    ...ticket,
+    displayId: ticket.displayId ?? ticket.display_id ?? null,
+  }
+}
+
+function normalizeMentionedTicketRelation(relation: MentionedTicketRelation): MentionedTicketRelation {
+  return {
+    ...relation,
+    ticket: normalizeRelatedTicket(relation.ticket),
+    mentionedInCommentIds: relation.mentionedInCommentIds ?? relation.comment_ids,
+  }
+}
+
 export function normalizeTicket(ticket: Ticket): Ticket {
   return {
     ...ticket,
+    displayId: ticket.displayId ?? ticket.display_id ?? null,
+    parentTicketId: ticket.parentTicketId ?? ticket.parent_ticket_id ?? null,
+    dueDate: ticket.dueDate ?? ticket.due_date ?? null,
+    sqaAssignedAt: ticket.sqaAssignedAt ?? ticket.sqa_assigned_at ?? null,
+    requestedBy: ticket.requestedBy ?? ticket.requested_by,
+    sqaAssignee: ticket.sqaAssignee ?? ticket.sqa_assignee ?? null,
+    createdAt: ticket.createdAt ?? ticket.created_at,
+    startedAt: ticket.startedAt ?? ticket.started_at ?? null,
+    completedAt: ticket.completedAt ?? ticket.completed_at ?? null,
+    assignedAt: ticket.assignedAt ?? ticket.assigned_at ?? null,
     links: sanitizeLinkArray(ticket.links),
+  }
+}
+
+export function normalizeTicketRelations(relations?: TicketDetailRelations): TicketDetailRelations | undefined {
+  if (!relations) return relations
+
+  return {
+    parent: relations.parent ? normalizeRelatedTicket(relations.parent) : null,
+    subtasks: relations.subtasks.map(normalizeRelatedTicket),
+    mentioned_in_comments: relations.mentioned_in_comments.map(normalizeMentionedTicketRelation),
+    mentionedInComments: relations.mentioned_in_comments.map(normalizeMentionedTicketRelation),
   }
 }
 
@@ -97,6 +133,6 @@ export async function fetchTicketDetail(ticketId: string) {
   return {
     ...response,
     ticket: normalizeTicket(response.ticket),
+    relations: normalizeTicketRelations(response.relations),
   }
 }
-

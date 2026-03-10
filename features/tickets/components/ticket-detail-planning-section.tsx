@@ -73,9 +73,9 @@ export function TicketDetailPlanningSection({
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Due Date</label>
         <div className="flex-1 min-w-0">
           <DateTimePicker
-            value={parseTimestamp(ticket.due_date)}
+            value={parseTimestamp(ticket.dueDate || ticket.due_date)}
             onChange={(value) => void onDueDateChange(value)}
-            disabled={!canEditTickets || isAssignmentLocked || updatingFields["due_date"]}
+            disabled={!canEditTickets || isAssignmentLocked || updatingFields["dueDate"]}
             placeholder="No due date"
             className="w-full h-8"
             hideIcon
@@ -89,7 +89,7 @@ export function TicketDetailPlanningSection({
           <Select
             value={ticket.department?.id || NO_DEPARTMENT_VALUE}
             onValueChange={(value) => void onDepartmentChange(value)}
-            disabled={!canEditTickets || isAssignmentLocked || updatingFields["department_id"]}
+            disabled={!canEditTickets || isAssignmentLocked || updatingFields["departmentId"]}
           >
             <SelectTrigger className="h-8 w-full">
               <SelectValue placeholder="No Department" />
@@ -113,7 +113,7 @@ export function TicketDetailPlanningSection({
             value={ticket.epic?.id || null}
             onValueChange={(value) => void onEpicChange(value)}
             epics={epics}
-            disabled={!canEditTickets || isAssignmentLocked || updatingFields["epic_id"] || !projectId}
+            disabled={!canEditTickets || isAssignmentLocked || updatingFields["epicId"] || !projectId}
             triggerClassName="h-8 w-full"
           />
         </div>
@@ -126,7 +126,7 @@ export function TicketDetailPlanningSection({
             value={ticket.sprint?.id || null}
             onValueChange={(value) => void onSprintChange(value)}
             sprints={sprints}
-            disabled={!canEditTickets || isAssignmentLocked || updatingFields["sprint_id"] || !projectId}
+            disabled={!canEditTickets || isAssignmentLocked || updatingFields["sprintId"] || !projectId}
             triggerClassName="h-8 w-full"
           />
         </div>
@@ -138,7 +138,7 @@ export function TicketDetailPlanningSection({
           <Select
             value={ticket.project?.id || NO_PROJECT_VALUE}
             onValueChange={(value) => void onProjectChange(value)}
-            disabled={!canEditTickets || isAssignmentLocked || updatingFields["project_id"]}
+            disabled={!canEditTickets || isAssignmentLocked || updatingFields["projectId"]}
           >
             <SelectTrigger className="h-8 w-full">
               <SelectValue placeholder="No Project" />

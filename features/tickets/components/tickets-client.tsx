@@ -95,18 +95,18 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
 
   const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
     status: statusFilter !== "all" ? statusFilter : undefined,
-    project_id: projectFilter !== "all" ? projectFilter : undefined,
-    department_id:
+    projectId: projectFilter !== "all" ? projectFilter : undefined,
+    departmentId:
       departmentFilter !== "all" && departmentFilter !== "no_department"
         ? departmentFilter
         : departmentFilter === "no_department"
           ? "no_department"
           : undefined,
-    assignee_id: assigneeFilter !== "all" ? assigneeFilter : undefined,
-    requested_by_id: requestedByFilter !== "all" ? requestedByFilter : undefined,
-    sprint_id: sprintFilter !== "all" ? sprintFilter : undefined,
-    exclude_done: excludeDone,
-    exclude_subtasks: true,
+    assigneeId: assigneeFilter !== "all" ? assigneeFilter : undefined,
+    requestedById: requestedByFilter !== "all" ? requestedByFilter : undefined,
+    sprintId: sprintFilter !== "all" ? sprintFilter : undefined,
+    excludeDone,
+    excludeSubtasks: true,
     q: deferredSearchQuery.trim() || undefined,
     limit: listModeRequiresFullDataset ? undefined : ROWS_PER_PAGE,
     page: listModeRequiresFullDataset ? undefined : currentPage,
