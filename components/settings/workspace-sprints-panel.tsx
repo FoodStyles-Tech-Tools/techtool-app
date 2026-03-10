@@ -153,7 +153,7 @@ export function WorkspaceSprintsPanel() {
     return (
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Sprint</h3>
-        <p className="text-sm text-muted-foreground">You do not have permission to manage sprints.</p>
+        <p className="text-sm text-slate-500">You do not have permission to manage sprints.</p>
       </div>
     )
   }
@@ -207,13 +207,13 @@ export function WorkspaceSprintsPanel() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={6} className="py-8 text-center text-sm text-slate-500">
                   Loading sprints...
                 </TableCell>
               </TableRow>
             ) : sprints.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={6} className="py-8 text-center text-sm text-slate-500">
                   No sprints found.
                 </TableCell>
               </TableRow>
@@ -223,7 +223,7 @@ export function WorkspaceSprintsPanel() {
                   <TableCell className="font-medium">{sprint.name}</TableCell>
                   <TableCell>{sprint.project_name}</TableCell>
                   <TableCell className="capitalize">{sprint.status}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
+                  <TableCell className="text-sm text-slate-500">
                     {sprint.start_date || "-"} to {sprint.end_date || "-"}
                   </TableCell>
                   <TableCell>{sprint.updated_at ? new Date(sprint.updated_at).toLocaleDateString() : "-"}</TableCell>
@@ -314,7 +314,7 @@ export function WorkspaceSprintsPanel() {
               }}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">Select a project to continue.</p>
+            <p className="text-sm text-slate-500">Select a project to continue.</p>
           )}
         </DialogContent>
       </Dialog>

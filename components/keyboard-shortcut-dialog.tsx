@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useState, useEffect } from "react"
+import { Fragment, useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 type ShortcutCombo = string[]
@@ -28,10 +28,7 @@ const baseShortcuts: BaseShortcut[] = [
   {
     action: "Open ticket search",
     description: "Quickly find tickets from anywhere in the app.",
-    combos: [
-      ["Ctrl", "F"],
-      ["Cmd", "F"],
-    ],
+    combos: [["Ctrl", "F"], ["Cmd", "F"]],
   },
   {
     action: "Create a new ticket",
@@ -41,18 +38,12 @@ const baseShortcuts: BaseShortcut[] = [
   {
     action: "Create a new project",
     description: "Opens the Add Project dialog from anywhere.",
-    combos: [
-      ["Alt", "P"],
-      ["Cmd", "P"],
-    ],
+    combos: [["Alt", "P"], ["Cmd", "P"]],
   },
   {
     action: "Show keyboard shortcuts",
     description: "Displays this list of available shortcuts.",
-    combos: [
-      ["Alt", "Arrow Down"],
-      ["Cmd", "Arrow Down"],
-    ],
+    combos: [["Alt", "Arrow Down"], ["Cmd", "Arrow Down"]],
   },
   {
     action: "Close dialogs",
@@ -62,7 +53,7 @@ const baseShortcuts: BaseShortcut[] = [
   {
     action: "Send comment",
     description: "Submit the current comment or reply from the comment box.",
-    combosMac: [["⌘", "Enter"]],
+    combosMac: [["Cmd", "Enter"]],
     combosWin: [["Ctrl", "Enter"]],
   },
   {
@@ -78,26 +69,28 @@ interface KeyboardShortcutDialogProps {
 }
 
 const keyClass =
-  "rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-foreground"
+  "rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-900"
 
 export function KeyboardShortcutDialog({ open, onOpenChange }: KeyboardShortcutDialogProps) {
   const [isMac, setIsMac] = useState(false)
+
   useEffect(() => {
     setIsMac(typeof navigator !== "undefined" && /Mac|iPad|iPhone/i.test(navigator.platform))
   }, [])
 
-  const shortcuts: Shortcut[] = baseShortcuts.map((s) => {
-    if ("combosMac" in s && "combosWin" in s) {
+  const shortcuts: Shortcut[] = baseShortcuts.map((shortcut) => {
+    if ("combosMac" in shortcut && "combosWin" in shortcut) {
       return {
-        action: s.action,
-        description: s.description,
-        combos: isMac ? s.combosMac : s.combosWin,
+        action: shortcut.action,
+        description: shortcut.description,
+        combos: isMac ? shortcut.combosMac : shortcut.combosWin,
       }
     }
+
     return {
-      action: s.action,
-      description: s.description,
-      combos: s.combos,
+      action: shortcut.action,
+      description: shortcut.description,
+      combos: shortcut.combos,
     }
   })
 
@@ -112,11 +105,11 @@ export function KeyboardShortcutDialog({ open, onOpenChange }: KeyboardShortcutD
           {shortcuts.map((shortcut) => (
             <div
               key={shortcut.action}
-              className="flex items-start justify-between gap-4 rounded-md border border-border/60 bg-card/60 p-3"
+              className="flex items-start justify-between gap-4 rounded-md border border-slate-200 bg-white p-3"
             >
               <div>
                 <p className="text-sm font-medium">{shortcut.action}</p>
-                <p className="text-xs text-muted-foreground">{shortcut.description}</p>
+                <p className="text-xs text-slate-500">{shortcut.description}</p>
               </div>
               <div className="flex flex-col items-end gap-1">
                 {shortcut.combos.map((combo, comboIndex) => (
@@ -124,9 +117,9 @@ export function KeyboardShortcutDialog({ open, onOpenChange }: KeyboardShortcutD
                     {combo.map((key, keyIndex) => (
                       <Fragment key={`${shortcut.action}-${comboIndex}-${key}-${keyIndex}`}>
                         <kbd className={keyClass}>{key}</kbd>
-                        {keyIndex !== combo.length - 1 && (
-                          <span className="text-xs text-muted-foreground">+</span>
-                        )}
+                        {keyIndex !== combo.length - 1 ? (
+                          <span className="text-xs text-slate-500">+</span>
+                        ) : null}
                       </Fragment>
                     ))}
                   </div>

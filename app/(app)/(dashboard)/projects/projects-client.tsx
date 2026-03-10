@@ -589,7 +589,7 @@ const ProjectRow = memo(function ProjectRow({
         </div>
       </TableCell>
       <TableCell className="py-2">
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-slate-500">
           {project.require_sqa ? "Yes" : "No"}
         </span>
       </TableCell>

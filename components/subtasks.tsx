@@ -6,6 +6,7 @@ import { Plus } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { DataState } from "@/components/ui/data-state"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useCreateTicket, useTickets, useUpdateTicket } from "@/hooks/use-tickets"
 import { useRealtimeSubscription } from "@/hooks/use-realtime"
@@ -27,7 +28,7 @@ interface SubtasksProps {
 
 const UNASSIGNED_VALUE = "unassigned"
 const subtaskSelectClassName =
-  "h-7 w-full rounded-md border border-border/45 bg-background/60 px-2 text-xs text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50"
+  "h-7 w-full rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
 
 export function Subtasks({
   ticketId,
@@ -71,7 +72,10 @@ export function Subtasks({
 
   const users = useMemo(() => usersData || [], [usersData])
   const assigneeEligibleUsers = useMemo(
-    () => users.filter((user) => (user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false)),
+    () =>
+      users.filter((user) =>
+        user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false
+      ),
     [users]
   )
 
@@ -132,33 +136,37 @@ export function Subtasks({
     }
   }
 
-  if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading subtasks...</div>
-  }
-
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-slate-500">
           {(displayId || "").toUpperCase()} {projectName ? `• ${projectName}` : ""}
         </p>
-        <p className="text-xs text-muted-foreground">{donePercent}% Done</p>
+        <p className="text-xs text-slate-500">{donePercent}% Done</p>
       </div>
 
-      <div className="overflow-hidden rounded-md border">
-        <div className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground">
-          <div>Work</div>
-          <div>Priority</div>
-          <div>Assignee</div>
-          <div>Status</div>
-        </div>
+      <DataState
+        loading={isLoading}
+        isEmpty={!isLoading && subtasks.length === 0}
+        loadingTitle="Loading subtasks"
+        loadingDescription="Subtask tickets are being prepared."
+        emptyTitle="No subtask tickets yet"
+        emptyDescription="Create subtasks here to break this work into smaller pieces."
+      >
+        <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
+          <div className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
+            <div>Work</div>
+            <div>Priority</div>
+            <div>Assignee</div>
+            <div>Status</div>
+          </div>
 
-        {subtasks.length === 0 ? (
-          <div className="px-3 py-3 text-sm text-muted-foreground">No subtask tickets yet.</div>
-        ) : (
-          <div className="divide-y">
+          <div className="divide-y divide-slate-200">
             {subtasks.map((subtask) => (
-              <div key={subtask.id} className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] items-center gap-2 px-3 py-2">
+              <div
+                key={subtask.id}
+                className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] items-center gap-2 px-3 py-2"
+              >
                 <Link
                   href={`/tickets/${String(subtask.displayId || subtask.id).toLowerCase()}`}
                   className="min-w-0 truncate text-sm hover:underline"
@@ -183,12 +191,12 @@ export function Subtasks({
                   disabled={!canEditTickets || updatingId === subtask.id}
                   className={subtaskSelectClassName}
                 >
-                    <option value={UNASSIGNED_VALUE}>Unassigned</option>
-                    {assigneeEligibleUsers.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name || user.email}
-                      </option>
-                    ))}
+                  <option value={UNASSIGNED_VALUE}>Unassigned</option>
+                  {assigneeEligibleUsers.map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name || user.email}
+                    </option>
+                  ))}
                 </select>
                 <TicketStatusSelect
                   value={subtask.status}
@@ -200,10 +208,10 @@ export function Subtasks({
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      </DataState>
 
-      {canEditTickets && allowCreate && (
+      {canEditTickets && allowCreate ? (
         <div className="flex items-center gap-2">
           <Input
             value={newSubtaskTitle}
@@ -218,14 +226,19 @@ export function Subtasks({
             className="h-8"
             disabled={creating}
           />
-          <Button size="sm" className="h-8" onClick={handleCreateSubtask} disabled={!newSubtaskTitle.trim() || creating}>
+          <Button
+            size="sm"
+            className="h-8"
+            onClick={handleCreateSubtask}
+            disabled={!newSubtaskTitle.trim() || creating}
+          >
             <Plus className="mr-1 h-3.5 w-3.5" />
             Add
           </Button>
         </div>
-      )}
+      ) : null}
       {canEditTickets && !allowCreate ? (
-        <p className="text-xs text-muted-foreground">Subtask tickets cannot contain subtasks.</p>
+        <p className="text-xs text-slate-500">Subtask tickets cannot contain subtasks.</p>
       ) : null}
     </div>
   )

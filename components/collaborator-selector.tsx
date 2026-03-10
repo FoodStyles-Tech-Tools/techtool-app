@@ -59,15 +59,15 @@ export function CollaboratorSelector({
   }
 
   return (
-    <details className={cn("w-full rounded-md border border-border/60 bg-background", disabled && "opacity-70", buttonClassName)}>
+    <details className={cn("w-full rounded-md border border-slate-200 bg-white", disabled && "opacity-70", buttonClassName)}>
       <summary className="flex h-8 cursor-pointer list-none items-center justify-between gap-2 px-2 text-left">
         {selectedUsers.length === 0 ? (
-          <span className="truncate text-xs text-muted-foreground">{placeholder}</span>
+          <span className="truncate text-xs text-slate-500">{placeholder}</span>
         ) : (
           <div className="flex items-center gap-1 overflow-hidden">
             <div className="flex -space-x-2">
               {selectedUsers.slice(0, 3).map((user) => (
-                <Avatar key={user.id} className="h-5 w-5 border border-background">
+                <Avatar key={user.id} className="h-5 w-5 border border-white">
                   <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
                   <AvatarFallback className="text-[10px]">
                     {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
@@ -76,13 +76,13 @@ export function CollaboratorSelector({
               ))}
             </div>
             {selectedUsers.length > 3 && (
-              <span className="text-[10px] text-muted-foreground">+{selectedUsers.length - 3}</span>
+              <span className="text-[10px] text-slate-500">+{selectedUsers.length - 3}</span>
             )}
           </div>
         )}
-        <span className="text-[10px] text-muted-foreground">Select</span>
+        <span className="text-[10px] text-slate-500">Select</span>
       </summary>
-      <div className="border-t border-border/50 p-3">
+      <div className="border-t border-slate-200 p-3">
         <Input
           placeholder="Search collaborators"
           value={search}
@@ -92,21 +92,21 @@ export function CollaboratorSelector({
         />
         <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
           {filteredUsers.length === 0 && (
-            <p className="py-4 text-center text-xs text-muted-foreground">No users found</p>
+            <p className="py-4 text-center text-xs text-slate-500">No users found</p>
           )}
           {filteredUsers.map((user) => {
             const checked = selectedIds.includes(user.id)
             return (
               <label
                 key={user.id}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-50"
               >
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggleUser(user.id)}
                   disabled={disabled}
-                  className="h-4 w-4 rounded border-border text-foreground"
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900"
                   aria-label={`Toggle ${user.name || user.email}`}
                 />
                 <Avatar className="h-6 w-6">
@@ -117,7 +117,7 @@ export function CollaboratorSelector({
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm">{user.name || user.email}</p>
-                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                  <p className="truncate text-xs text-slate-500">{user.email}</p>
                 </div>
               </label>
             )
@@ -126,7 +126,7 @@ export function CollaboratorSelector({
         {selectedIds.length > 0 && (
           <button
             type="button"
-            className="mt-2 w-full rounded-md border border-border/50 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
             onClick={() => onChange([])}
             disabled={disabled}
           >

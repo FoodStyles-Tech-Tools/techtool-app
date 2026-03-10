@@ -131,7 +131,7 @@ export function TicketsKanban({
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 mb-1">
                                 {ticket.displayId && (
-                                  <span className="text-xs font-mono text-muted-foreground">
+                                  <span className="text-xs font-mono text-slate-500">
                                     {ticket.displayId}
                                   </span>
                                 )}
@@ -142,7 +142,7 @@ export function TicketsKanban({
                                 {ticket.title}
                               </h4>
                               {subtaskCount > 0 ? (
-                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                <p className="mt-1 text-[11px] text-slate-500">
                                   {subtaskCount} subtask{subtaskCount === 1 ? "" : "s"}
                                 </p>
                               ) : null}
@@ -165,7 +165,7 @@ export function TicketsKanban({
                                     ticket.assignee.email[0].toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
-                              <span className="text-xs text-muted-foreground truncate">
+                              <span className="truncate text-xs text-slate-500">
                                 {ticket.assignee.name || ticket.assignee.email}
                               </span>
                             </div>

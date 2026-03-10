@@ -156,7 +156,7 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                             </button>
                           </>
                         ) : (
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-xs text-slate-500">
                             No description provided.
                           </p>
                         )}
@@ -168,7 +168,7 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                       {asset.owner?.name || asset.owner?.email || "Unknown"}
                     </div>
                     {asset.owner?.name && asset.owner?.email && (
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-slate-500">
                         {asset.owner.email}
                       </div>
                     )}
@@ -190,13 +190,13 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                           ))}
                         </div>
                         {asset.collaborators.length > 3 && (
-                          <span className="text-[10px] text-muted-foreground">
+                          <span className="text-[10px] text-slate-500">
                             +{asset.collaborators.length - 3}
                           </span>
                         )}
                       </div>
                     ) : (
-                      <span className="text-xs text-muted-foreground">No collaborators</span>
+                      <span className="text-xs text-slate-500">No collaborators</span>
                     )}
                   </TableCell>
                   <TableCell className="py-2">
@@ -214,13 +214,13 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                           </a>
                         ))}
                         {asset.links.length > 2 && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-slate-500">
                             +{asset.links.length - 2} more
                           </span>
                         )}
                       </div>
                     ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
+                      <span className="text-xs text-slate-500">-</span>
                     )}
                   </TableCell>
                   <TableCell className="py-2">
@@ -234,10 +234,10 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                         <span className="truncate">{formatLinkLabel(asset.production_url)}</span>
                       </a>
                     ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
+                      <span className="text-xs text-slate-500">-</span>
                     )}
                   </TableCell>
-                  <TableCell className="py-2 text-xs text-muted-foreground">
+                  <TableCell className="py-2 text-xs text-slate-500">
                     {new Date(asset.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="py-2 text-right">
@@ -321,7 +321,7 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
               dangerouslySetInnerHTML={getSanitizedHtmlProps(detailAsset.description) ?? { __html: "" }}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">No description provided.</p>
+            <p className="text-sm text-slate-500">No description provided.</p>
           )}
         </DialogContent>
       </Dialog>

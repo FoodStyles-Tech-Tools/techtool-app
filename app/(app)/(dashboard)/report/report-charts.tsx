@@ -24,16 +24,16 @@ import type {
 } from "@/types/api/report"
 
 const CHART_COLORS = ["#2563eb", "#0ea5e9", "#14b8a6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]
-const AXIS_TICK = { fontSize: 12, fill: "hsl(var(--muted-foreground))" }
+const AXIS_TICK = { fontSize: 12, fill: "#64748b" }
 const LEGEND_STYLE = { fontSize: "12px", paddingTop: "8px" }
 const WEEK_GROUP_GAP = "4%"
 const WEEK_BAR_GAP = 6
 const WEEK_BAR_SIZE = 12
 const TOOLTIP_STYLE = {
   borderRadius: "0.5rem",
-  border: "1px solid hsl(var(--border))",
-  backgroundColor: "hsl(var(--background))",
-  boxShadow: "0 16px 30px -20px hsl(var(--foreground) / 0.35)",
+  border: "1px solid #e2e8f0",
+  backgroundColor: "#ffffff",
+  boxShadow: "0 16px 30px -20px rgba(15, 23, 42, 0.2)",
 }
 const VOLUME_TYPE_ORDER = ["bug", "task", "request"] as const
 const VOLUME_TYPE_COLOR: Record<string, string> = {
@@ -95,14 +95,14 @@ function getPriorityColor(priority: string, fallbackIndex: number): string {
 function VolumeLegend({ types }: { types: string[] }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-2 text-xs sm:text-sm">
-      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+      <span className="inline-flex items-center gap-1.5 text-slate-500">
         <span className="h-2.5 w-6 rounded-full bg-emerald-600" />
         Total
       </span>
       {types.map((type, index) => {
         const color = getVolumeTypeColor(type, index)
         return (
-          <span key={type} className="inline-flex items-center gap-1.5 text-muted-foreground">
+          <span key={type} className="inline-flex items-center gap-1.5 text-slate-500">
             <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: color }} />
             {formatSeriesLabel(type)}
           </span>
@@ -132,8 +132,8 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <Card className="overflow-hidden border-border/80 shadow-sm">
-      <CardHeader className="space-y-1 border-b bg-muted/20 px-4 py-4 sm:px-5">
+    <Card className="overflow-hidden border-slate-200 shadow-sm">
+      <CardHeader className="space-y-1 border-b border-slate-200 bg-slate-50 px-4 py-4 sm:px-5">
         <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
         <CardDescription className="text-xs leading-relaxed sm:text-sm">{description}</CardDescription>
       </CardHeader>
@@ -150,7 +150,7 @@ export function ReportVolumeChart({ data }: { data: VolumeByWeek[] }) {
         title="Volume Ticket"
         description="Total tickets and breakdown by type per ISO week (created_at)."
       >
-        <p className="text-sm text-muted-foreground">No tickets in this range.</p>
+        <p className="text-sm text-slate-500">No tickets in this range.</p>
       </ChartCard>
     )
   }
@@ -182,11 +182,11 @@ export function ReportVolumeChart({ data }: { data: VolumeByWeek[] }) {
             barCategoryGap={WEEK_GROUP_GAP}
             barGap={WEEK_BAR_GAP}
           >
-            <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="4 4" vertical={false} />
+            <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} />
             <XAxis dataKey="name" tick={AXIS_TICK} tickLine={false} axisLine={false} />
             <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={44} />
             <Tooltip
-              cursor={{ fill: "hsl(var(--muted) / 0.45)" }}
+              cursor={{ fill: "#f1f5f9" }}
               contentStyle={TOOLTIP_STYLE}
               formatter={(value: number | undefined, name: string | undefined) => [
                 value ?? 0,
@@ -203,7 +203,7 @@ export function ReportVolumeChart({ data }: { data: VolumeByWeek[] }) {
               strokeWidth={2.5}
               dot={{ r: 2.5, strokeWidth: 1, fill: "#16a34a" }}
               activeDot={{ r: 4.5, fill: "#15803d" }}
-              label={{ position: "top", fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              label={{ position: "top", fontSize: 10, fill: "#64748b" }}
             />
             {types.map((type, i) => (
               <Bar
@@ -213,7 +213,7 @@ export function ReportVolumeChart({ data }: { data: VolumeByWeek[] }) {
                 fill={getVolumeTypeColor(type, i)}
                 barSize={WEEK_BAR_SIZE}
                 radius={[4, 4, 0, 0]}
-                label={{ position: "top", fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                label={{ position: "top", fontSize: 10, fill: "#64748b" }}
               />
             ))}
           </ComposedChart>
@@ -247,7 +247,7 @@ export function ReportRequesterChart({ data }: { data: RequesterCount[] }) {
         title="Requester Analysis"
         description="Ticket count per requester (created_at in range)."
       >
-        <p className="text-sm text-muted-foreground">No data in this range.</p>
+        <p className="text-sm text-slate-500">No data in this range.</p>
       </ChartCard>
     )
   }
@@ -262,7 +262,7 @@ export function ReportRequesterChart({ data }: { data: RequesterCount[] }) {
       <div className="w-full" style={{ height: `${chartHeight}px` }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical" margin={{ top: 8, right: 24, left: 84, bottom: 8 }}>
-            <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="4 4" horizontal={false} />
+            <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" horizontal={false} />
             <XAxis type="number" tick={AXIS_TICK} tickLine={false} axisLine={false} />
             <YAxis
               type="category"
@@ -273,7 +273,7 @@ export function ReportRequesterChart({ data }: { data: RequesterCount[] }) {
               axisLine={false}
             />
             <Tooltip
-              cursor={{ fill: "hsl(var(--muted) / 0.5)" }}
+              cursor={{ fill: "#f1f5f9" }}
               contentStyle={TOOLTIP_STYLE}
               formatter={(value: number | undefined) => [value ?? 0, "Tickets"]}
               labelFormatter={(_, payload) => {
@@ -286,7 +286,7 @@ export function ReportRequesterChart({ data }: { data: RequesterCount[] }) {
               name="Tickets"
               radius={[0, 4, 4, 0]}
               maxBarSize={26}
-              label={{ position: "right", fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              label={{ position: "right", fontSize: 10, fill: "#64748b" }}
             >
               {chartData.map((_, i) => (
                 <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
@@ -337,15 +337,15 @@ export function ReportStatusCards({ data }: { data: StatusCounts }) {
           const percentage = total > 0 ? Math.round((item.value / total) * 100) : 0
           const visibleWidth = item.value > 0 ? Math.max(percentage, 8) : 0
           return (
-            <div key={item.key} className="rounded-lg border bg-background p-4">
+            <div key={item.key} className="rounded-lg border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{item.label}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{item.label}</p>
                 <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${item.badgeClass}`}>
                   {percentage}%
                 </span>
               </div>
               <p className="mt-2 text-3xl font-semibold tabular-nums">{item.value}</p>
-              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                 <div className={`h-full rounded-full ${item.fillClass}`} style={{ width: `${visibleWidth}%` }} />
               </div>
             </div>
@@ -375,7 +375,7 @@ export function ReportResponseTimeChart({ data }: { data: AvgResponseTimeByWeekI
         title="Average Response Time"
         description="assigned_at - created_at by week and priority (excluding unassigned)."
       >
-        <p className="text-sm text-muted-foreground">No tickets with assigned_at in range.</p>
+        <p className="text-sm text-slate-500">No tickets with assigned_at in range.</p>
       </ChartCard>
     )
   }
@@ -393,7 +393,7 @@ export function ReportResponseTimeChart({ data }: { data: AvgResponseTimeByWeekI
             barCategoryGap={WEEK_GROUP_GAP}
             barGap={WEEK_BAR_GAP}
           >
-            <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="4 4" vertical={false} />
+            <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} />
             <XAxis dataKey="name" tick={AXIS_TICK} tickLine={false} axisLine={false} />
             <YAxis
               tick={AXIS_TICK}
@@ -403,7 +403,7 @@ export function ReportResponseTimeChart({ data }: { data: AvgResponseTimeByWeekI
               width={52}
             />
             <Tooltip
-              cursor={{ fill: "hsl(var(--muted) / 0.45)" }}
+              cursor={{ fill: "#f1f5f9" }}
               contentStyle={TOOLTIP_STYLE}
               formatter={(value: number | undefined, name: string | undefined) => [
                 formatDays(Number(value ?? 0)),
@@ -423,7 +423,7 @@ export function ReportResponseTimeChart({ data }: { data: AvgResponseTimeByWeekI
                 label={{
                   position: "top",
                   fontSize: 10,
-                  fill: "hsl(var(--muted-foreground))",
+                  fill: "#64748b",
                   formatter: (value: unknown) => formatCompactDays(Number(value ?? 0)),
                 }}
               />
@@ -454,7 +454,7 @@ export function ReportLeadTimeChart({ data }: { data: AvgLeadTimeByWeekItem[] })
         title="Average Lead Time"
         description="completed_at - created_at by week and priority."
       >
-        <p className="text-sm text-muted-foreground">No completed tickets in range.</p>
+        <p className="text-sm text-slate-500">No completed tickets in range.</p>
       </ChartCard>
     )
   }
@@ -469,7 +469,7 @@ export function ReportLeadTimeChart({ data }: { data: AvgLeadTimeByWeekItem[] })
             barCategoryGap={WEEK_GROUP_GAP}
             barGap={WEEK_BAR_GAP}
           >
-            <CartesianGrid stroke="hsl(var(--border))" strokeDasharray="4 4" vertical={false} />
+            <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} />
             <XAxis dataKey="name" tick={AXIS_TICK} tickLine={false} axisLine={false} />
             <YAxis
               tick={AXIS_TICK}
@@ -479,7 +479,7 @@ export function ReportLeadTimeChart({ data }: { data: AvgLeadTimeByWeekItem[] })
               width={52}
             />
             <Tooltip
-              cursor={{ fill: "hsl(var(--muted) / 0.45)" }}
+              cursor={{ fill: "#f1f5f9" }}
               contentStyle={TOOLTIP_STYLE}
               formatter={(value: number | undefined, name: string | undefined) => [
                 formatDays(Number(value ?? 0)),
@@ -499,7 +499,7 @@ export function ReportLeadTimeChart({ data }: { data: AvgLeadTimeByWeekItem[] })
                 label={{
                   position: "top",
                   fontSize: 10,
-                  fill: "hsl(var(--muted-foreground))",
+                  fill: "#64748b",
                   formatter: (value: unknown) => formatCompactDays(Number(value ?? 0)),
                 }}
               />

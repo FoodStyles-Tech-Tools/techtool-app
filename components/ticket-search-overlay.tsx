@@ -152,7 +152,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
       {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 z-[100] bg-black/75 dark:bg-black/70",
+          "fixed inset-0 z-[100] bg-slate-900/70 transition-opacity",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={() => onOpenChange(false)}
@@ -161,14 +161,14 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
       {/* Overlay */}
       <div 
         className={cn(
-          "fixed left-1/2 top-1/2 z-[100] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2",
+          "fixed left-1/2 top-1/2 z-[100] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 transition-opacity",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
-        <div className="mx-4 rounded-lg border bg-background shadow-lg">
+        <div className="mx-4 rounded-lg border border-slate-200 bg-white shadow-lg">
           {/* Search Input */}
-          <div className="flex items-center gap-2 border-b px-4 py-3">
-            <Search className="h-4 w-4 text-muted-foreground" />
+          <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3">
+            <Search className="h-4 w-4 text-slate-500" />
             <Input
               ref={inputRef}
               type="text"
@@ -179,7 +179,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
             />
             <button
               onClick={() => onOpenChange(false)}
-              className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              className="rounded-sm text-slate-500 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
             >
               <X className="h-4 w-4" />
               <span className="sr-only">Close</span>
@@ -189,11 +189,11 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
           {/* Results */}
           <div className="max-h-[400px] overflow-y-auto p-2">
             {isLoading ? (
-              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              <div className="px-4 py-8 text-center text-sm text-slate-500">
                 Loading tickets...
               </div>
             ) : filteredTickets.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              <div className="px-4 py-8 text-center text-sm text-slate-500">
                 {searchQuery ? "No tickets found" : "Start typing to search tickets"}
               </div>
             ) : (
@@ -205,13 +205,13 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
                     className={cn(
                       "flex cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 transition-colors",
                       index === selectedIndex
-                        ? "bg-accent"
-                        : "hover:bg-accent/50"
+                        ? "bg-slate-100"
+                        : "hover:bg-slate-50"
                     )}
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-mono text-muted-foreground">
+                        <span className="text-xs font-mono text-slate-500">
                           {ticket.displayId || ticket.id.slice(0, 8)}
                         </span>
                         <Badge variant="outline" className="text-xs flex items-center gap-1">
@@ -229,7 +229,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
                         </Badge>
                       </div>
                       <h4 className="text-sm font-medium truncate">{ticket.title}</h4>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="mt-1 text-xs text-slate-500">
                         {ticket.project?.name || "No Project"}
                       </p>
                     </div>

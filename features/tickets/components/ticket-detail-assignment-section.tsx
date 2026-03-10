@@ -11,7 +11,9 @@ import type { ParentTicketOption } from "@/features/tickets/components/ticket-de
 const UNASSIGNED_VALUE = "unassigned"
 const NO_PARENT_TICKET_VALUE = "no_parent_ticket"
 const nativeSelectClassName =
-  "h-8 w-full rounded-md border border-border/45 bg-background/60 px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50"
+  "h-8 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+const fieldLabelClassName =
+  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"
 
 type TicketDetailAssignmentSectionProps = {
   ticket: Ticket
@@ -97,13 +99,17 @@ export function TicketDetailAssignmentSection({
   return (
     <>
       <div className="flex items-start gap-3">
-        <label className="w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Assignee</label>
+        <label className={fieldLabelClassName}>Assignee</label>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
               <select
                 value={ticket.assignee?.id || UNASSIGNED_VALUE}
-                onChange={(event) => void onAssigneeChange(event.target.value === UNASSIGNED_VALUE ? null : event.target.value)}
+                onChange={(event) =>
+                  void onAssigneeChange(
+                    event.target.value === UNASSIGNED_VALUE ? null : event.target.value
+                  )
+                }
                 disabled={!canEditTickets || updatingFields["assigneeId"]}
                 className={nativeSelectClassName}
               >
@@ -118,7 +124,7 @@ export function TicketDetailAssignmentSection({
             {!ticket.assignee && currentUser ? (
               <button
                 type="button"
-                className="whitespace-nowrap text-[11px] text-blue-600 hover:underline disabled:opacity-50"
+                className="whitespace-nowrap text-[11px] text-slate-700 hover:underline disabled:opacity-50"
                 onClick={() => void onAssigneeChange(currentUser.id)}
                 disabled={updatingFields["assigneeId"] || !canEditTickets}
               >
@@ -130,7 +136,7 @@ export function TicketDetailAssignmentSection({
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Reporter</label>
+        <label className={fieldLabelClassName}>Reporter</label>
         <div className="min-w-0 flex-1">
           <select
             value={ticket.requestedBy?.id || ""}
@@ -149,12 +155,20 @@ export function TicketDetailAssignmentSection({
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">SQA</label>
+        <label className={fieldLabelClassName}>SQA</label>
         <div className="min-w-0 flex-1">
           <select
             value={ticket.sqaAssignee?.id || UNASSIGNED_VALUE}
-            onChange={(event) => void onSqaAssigneeChange(event.target.value === UNASSIGNED_VALUE ? null : event.target.value)}
-            disabled={!canEditTickets || updatingFields["sqaAssigneeId"] || (isAssignmentLocked && !isSqaEditLocked)}
+            onChange={(event) =>
+              void onSqaAssigneeChange(
+                event.target.value === UNASSIGNED_VALUE ? null : event.target.value
+              )
+            }
+            disabled={
+              !canEditTickets ||
+              updatingFields["sqaAssigneeId"] ||
+              (isAssignmentLocked && !isSqaEditLocked)
+            }
             className={nativeSelectClassName}
           >
             <option value={UNASSIGNED_VALUE}>Unassigned</option>
@@ -168,7 +182,7 @@ export function TicketDetailAssignmentSection({
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Type</label>
+        <label className={fieldLabelClassName}>Type</label>
         <div className="min-w-0 flex-1">
           <TicketTypeSelect
             value={ticket.type || "task"}
@@ -181,7 +195,7 @@ export function TicketDetailAssignmentSection({
 
       {ticket.type === "subtask" ? (
         <div className="flex items-start gap-3">
-          <label className="w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Parent</label>
+          <label className={fieldLabelClassName}>Parent</label>
           <div className="min-w-0 flex-1">
             <div ref={parentPickerRef} className="relative">
               <Button
@@ -200,15 +214,15 @@ export function TicketDetailAssignmentSection({
                   })
                 }}
               >
-                <span className="truncate text-xs text-foreground">
+                <span className="truncate text-xs text-slate-900">
                   {selectedParentTicketOption
-                    ? `${(selectedParentTicketOption.displayId || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()} · ${selectedParentTicketOption.title}`
+                    ? `${(selectedParentTicketOption.displayId || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()} • ${selectedParentTicketOption.title}`
                     : "No parent ticket"}
                 </span>
               </Button>
 
               {isParentPickerOpen ? (
-                <div className="absolute left-0 top-full z-40 mt-2 w-80 rounded-md border border-border/45 bg-background p-3 shadow-md">
+                <div className="absolute left-0 top-full z-40 mt-2 w-80 rounded-md border border-slate-200 bg-white p-3 shadow-md">
                   <Input
                     placeholder="Search parent ticket..."
                     value={parentSearch}
@@ -219,7 +233,7 @@ export function TicketDetailAssignmentSection({
                   <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
                     <button
                       type="button"
-                      className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                      className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-50"
                       onClick={() => {
                         void onParentTicketChange(NO_PARENT_TICKET_VALUE)
                         setIsParentPickerOpen(false)
@@ -229,7 +243,7 @@ export function TicketDetailAssignmentSection({
                       <span className="text-xs">No parent ticket</span>
                     </button>
                     {parentFilteredOptions.length === 0 ? (
-                      <p className="px-2 py-3 text-center text-xs text-muted-foreground">No tickets found</p>
+                      <p className="px-2 py-3 text-center text-xs text-slate-500">No tickets found</p>
                     ) : (
                       parentFilteredOptions.map((candidate) => {
                         const isSelected = candidate.id === selectedParentTicketId
@@ -237,7 +251,10 @@ export function TicketDetailAssignmentSection({
                           <button
                             key={candidate.id}
                             type="button"
-                            className={["flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted", isSelected ? "bg-muted" : ""].join(" ")}
+                            className={[
+                              "flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs hover:bg-slate-50",
+                              isSelected ? "bg-slate-100" : "",
+                            ].join(" ")}
                             onClick={() => {
                               void onParentTicketChange(candidate.id)
                               setIsParentPickerOpen(false)
@@ -245,7 +262,7 @@ export function TicketDetailAssignmentSection({
                             }}
                           >
                             <span className="truncate">
-                              {(candidate.displayId || candidate.id.slice(0, 8)).toUpperCase()} · {candidate.title}
+                              {(candidate.displayId || candidate.id.slice(0, 8)).toUpperCase()} • {candidate.title}
                             </span>
                           </button>
                         )
@@ -258,7 +275,7 @@ export function TicketDetailAssignmentSection({
             {parentNavigationSlug ? (
               <a
                 href={`/tickets/${parentNavigationSlug}`}
-                className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
+                className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 hover:underline"
               >
                 Open parent ticket
                 <ExternalLink className="h-3 w-3" />

@@ -64,8 +64,8 @@ export function SignInContent() {
         <CardContent>
           <div className="grid gap-4">
             {error && (
-              <div className="rounded-md bg-destructive/10 border border-destructive/30 p-4">
-                <p className="text-sm text-destructive">{error}</p>
+              <div className="rounded-md border border-red-200 bg-red-50 p-4">
+                <p className="text-sm text-red-600">{error}</p>
               </div>
             )}
 

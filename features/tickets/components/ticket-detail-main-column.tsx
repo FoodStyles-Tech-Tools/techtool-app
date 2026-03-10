@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { BrandLinkIcon } from "@/components/brand-link-icon"
 import { Subtasks } from "@/components/subtasks"
 import { TicketActivity } from "@/components/ticket-activity"
 import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
@@ -95,8 +94,8 @@ export function TicketDetailMainColumn({
   subtasksPanelId,
 }: TicketDetailMainColumnProps) {
   return (
-    <div className="space-y-4 min-w-0">
-      <Card className="border-0 shadow-none">
+    <div className="min-w-0 space-y-4">
+      <Card className="shadow-none">
         <CardContent className="p-4 pt-4">
           {isEditingTitle ? (
             <Input
@@ -111,8 +110,8 @@ export function TicketDetailMainColumn({
           ) : (
             <h1
               className={[
-                "text-2xl font-semibold -mx-2 px-2 py-2 rounded-md transition-colors leading-tight",
-                canEditTickets ? "cursor-pointer hover:bg-muted/50" : "",
+                "-mx-2 rounded-md px-2 py-2 text-2xl font-semibold leading-tight transition-colors",
+                canEditTickets ? "cursor-pointer hover:bg-slate-50" : "",
               ].join(" ")}
               onClick={() => {
                 if (canEditTickets) {
@@ -125,13 +124,13 @@ export function TicketDetailMainColumn({
           )}
 
           {isEditingDescription ? (
-            <div className="space-y-2 mt-3">
-              <label className="text-sm font-semibold text-foreground">Description</label>
+            <div className="mt-3 space-y-2">
+              <label className="text-sm font-semibold text-slate-900">Description</label>
               <RichTextEditor
                 value={descriptionValue}
                 onChange={onDescriptionValueChange}
                 placeholder="Describe this ticket"
-                className="border-border/50"
+                className="border-slate-200"
                 activateOnClick
                 onContentKeyDown={(event: KeyboardEvent) => {
                   if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
@@ -154,8 +153,8 @@ export function TicketDetailMainColumn({
           ) : (
             <div
               className={[
-                "space-y-2 -mx-2 px-2 py-2 rounded-md transition-colors mt-3",
-                canEditTickets ? "cursor-pointer hover:bg-muted/50" : "",
+                "-mx-2 mt-3 space-y-2 rounded-md px-2 py-2 transition-colors",
+                canEditTickets ? "cursor-pointer hover:bg-slate-50" : "",
               ].join(" ")}
               onClick={() => {
                 if (canEditTickets) {
@@ -163,16 +162,16 @@ export function TicketDetailMainColumn({
                 }
               }}
             >
-              <label className="text-sm font-semibold text-foreground">Description</label>
+              <label className="text-sm font-semibold text-slate-900">Description</label>
               {isRichTextEmpty(ticket.description) ? (
-                <p className="text-sm text-muted-foreground min-h-[140px] leading-relaxed">
-                  <span className="italic text-muted-foreground/70">
+                <p className="min-h-[140px] text-sm leading-relaxed text-slate-500">
+                  <span className="italic text-slate-400">
                     No description provided. Click to add one.
                   </span>
                 </p>
               ) : (
                 <div
-                  className="rich-text-content min-h-[140px] text-sm text-foreground leading-relaxed"
+                  className="rich-text-content min-h-[140px] text-sm text-slate-900 leading-relaxed"
                   dangerouslySetInnerHTML={
                     getSanitizedHtmlProps(toDisplayHtml(ticket.description)) ?? { __html: "" }
                   }
@@ -182,8 +181,8 @@ export function TicketDetailMainColumn({
           )}
 
           <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-semibold text-foreground">Links</label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-semibold text-slate-900">Links</label>
               <div className="flex items-center gap-2">
                 {ticket.links?.length ? (
                   <Badge variant="outline" className="text-[11px]">
@@ -205,7 +204,7 @@ export function TicketDetailMainColumn({
               </div>
             </div>
             {isAddingLink ? (
-              <div className="flex gap-2 mb-2">
+              <div className="mb-2 flex gap-2">
                 <Input
                   placeholder="https://example.com"
                   value={newLinkUrl}
@@ -234,11 +233,11 @@ export function TicketDetailMainColumn({
               </div>
             ) : null}
             {ticket.links?.length ? (
-              <div className="space-y-2 mt-2">
+              <div className="mt-2 space-y-2">
                 {ticket.links.map((url, index) => (
                   <div
                     key={`${url}-${index}`}
-                    className="flex items-center justify-between gap-3 rounded-md border px-3 py-1.5 text-sm hover:bg-muted transition-colors"
+                    className="flex items-center justify-between gap-3 rounded-md border border-slate-200 px-3 py-2 text-sm transition-colors hover:bg-slate-50"
                   >
                     {editingLinkIndex === index ? (
                       <div className="flex items-center gap-2 flex-1">
@@ -277,12 +276,11 @@ export function TicketDetailMainColumn({
                           className="flex items-center gap-2 min-w-0 flex-1"
                           onClick={(event) => event.stopPropagation()}
                         >
-                          <BrandLinkIcon url={url} className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           <div className="min-w-0 flex-1">
                             <p className="truncate">{url}</p>
-                            <p className="text-[11px] text-muted-foreground truncate">{formatLinkLabel(url)}</p>
+                            <p className="truncate text-[11px] text-slate-500">{formatLinkLabel(url)}</p>
                           </div>
-                          <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
+                          <ExternalLink className="ml-2 h-4 w-4 flex-shrink-0 text-slate-500" />
                         </a>
                         {canEditTickets ? (
                           <div className="flex items-center gap-1">
@@ -300,7 +298,7 @@ export function TicketDetailMainColumn({
                               variant="ghost"
                               size="sm"
                               onClick={() => void onRemoveLink(index)}
-                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                              className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -312,14 +310,14 @@ export function TicketDetailMainColumn({
                 ))}
               </div>
             ) : !isAddingLink ? (
-              <p className="text-sm text-muted-foreground mt-2">No links attached.</p>
+              <p className="mt-2 text-sm text-slate-500">No links attached.</p>
             ) : null}
           </div>
         </CardContent>
       </Card>
 
       {ticket.type !== "subtask" ? (
-        <Card className="border-0 shadow-none">
+        <Card className="shadow-none">
           <CardHeader className="px-4 pt-4 pb-2">
             <button
               type="button"
@@ -329,9 +327,9 @@ export function TicketDetailMainColumn({
               aria-controls={subtasksPanelId}
             >
               {isSubtasksCollapsed ? (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                <ChevronRight className="h-4 w-4 text-slate-500" />
               ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                <ChevronDown className="h-4 w-4 text-slate-500" />
               )}
               <CardTitle className="text-base">Subtasks</CardTitle>
             </button>

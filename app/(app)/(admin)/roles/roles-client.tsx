@@ -380,7 +380,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                                         checked={checked}
                                         onChange={() => togglePermission(role.id, resource, action)}
                                         disabled={isDisabled}
-                                        className="h-4 w-4 rounded border-border text-foreground"
+                                        className="h-4 w-4 rounded border-slate-300 text-slate-900"
                                       />
                                     </div>
                                   </TableCell>

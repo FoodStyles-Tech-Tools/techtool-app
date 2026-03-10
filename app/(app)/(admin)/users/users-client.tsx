@@ -191,7 +191,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
                       {user.role || "member"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="py-2 text-xs text-muted-foreground">
+                  <TableCell className="py-2 text-xs text-slate-500">
                     {user.created_at ? new Date(user.created_at).toLocaleDateString() : "-"}
                   </TableCell>
                   <TableCell className="py-2 text-right">

@@ -152,7 +152,7 @@ export function WorkspaceEpicsPanel() {
     return (
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Epic</h3>
-        <p className="text-sm text-muted-foreground">You do not have permission to manage epics.</p>
+        <p className="text-sm text-slate-500">You do not have permission to manage epics.</p>
       </div>
     )
   }
@@ -205,13 +205,13 @@ export function WorkspaceEpicsPanel() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={5} className="py-8 text-center text-sm text-slate-500">
                   Loading epics...
                 </TableCell>
               </TableRow>
             ) : epics.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={5} className="py-8 text-center text-sm text-slate-500">
                   No epics found.
                 </TableCell>
               </TableRow>
@@ -313,7 +313,7 @@ export function WorkspaceEpicsPanel() {
               }}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">Select a project to continue.</p>
+            <p className="text-sm text-slate-500">Select a project to continue.</p>
           )}
         </DialogContent>
       </Dialog>

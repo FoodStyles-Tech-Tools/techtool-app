@@ -91,7 +91,7 @@ const scheduleOptions = [
 const CLOCKIFY_CUSTOM_FIELD_ID = "64f739d670d77d39061e8b05"
 const CLOCKIFY_CUSTOM_FIELD_VALUE = "TechTool"
 const nativeSelectClassName =
-  "h-10 rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+  "h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400"
 
 const getCustomFieldValue = (entry: any) => {
   const customFields = entry?.customFields || entry?.customField || []
@@ -693,7 +693,7 @@ export default function ClockifyClient() {
               type="button"
               onClick={handleReuploadReport}
               disabled={createSession.isPending}
-              className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
               Re-upload
             </button>
@@ -701,7 +701,7 @@ export default function ClockifyClient() {
               type="button"
               onClick={handleFetchReport}
               disabled={createSession.isPending}
-              className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RefreshCw className="h-4 w-4" />
               {createSession.isPending ? "Fetching..." : "Fetch Report"}
@@ -721,7 +721,7 @@ export default function ClockifyClient() {
           <CardContent>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Selected range</p>
+                <p className="text-sm text-slate-500">Selected range</p>
                 <p className="text-lg font-medium">{rangeLabel}</p>
               </div>
               <div className="flex items-center gap-2">
@@ -779,10 +779,10 @@ export default function ClockifyClient() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <p className="text-sm text-muted-foreground">Loading sessions...</p>
+              <p className="text-sm text-slate-500">Loading sessions...</p>
             ) : sessions.length === 0 ? (
               <div className="rounded-lg border p-6 text-center">
-                <p className="text-sm text-muted-foreground">No report sessions yet.</p>
+                <p className="text-sm text-slate-500">No report sessions yet.</p>
               </div>
             ) : (
               <div className="rounded-md border">
@@ -825,7 +825,7 @@ export default function ClockifyClient() {
                               onClick={() => handleDeleteSession(session.id)}
                               aria-label="Delete report session"
                             >
-                              <Trash2 className="h-4 w-4 text-destructive" />
+                              <Trash2 className="h-4 w-4 text-red-600" />
                             </Button>
                           </div>
                         </TableCell>
@@ -854,15 +854,15 @@ export default function ClockifyClient() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Status</p>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <div>
+                  <p className="text-slate-500">Status</p>
                   <p className="font-medium capitalize">{selectedSession.status}</p>
                 </div>
                 {selectedSession.error_message && (
                   <div>
-                    <p className="text-muted-foreground">Error</p>
-                    <p className="font-medium text-destructive">
+                    <p className="text-slate-500">Error</p>
+                    <p className="font-medium text-red-600">
                       {selectedSession.error_message}
                     </p>
                   </div>
@@ -873,8 +873,8 @@ export default function ClockifyClient() {
                 <div className="space-y-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Filter by user</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm text-slate-500">Filter by user</p>
+                    <p className="text-xs text-slate-500">
                       Defaulted to your account.
                     </p>
                   </div>
@@ -893,10 +893,10 @@ export default function ClockifyClient() {
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-slate-500">
                         {reportEntries.length} time entries
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-slate-500">
                         Total duration: {totalDurationHours} hrs
                       </p>
                     </div>
@@ -979,13 +979,13 @@ export default function ClockifyClient() {
                                       className="h-8 w-28"
                                     />
                                     {activeTicketEntryId === entryId && (
-                                      <div className="absolute z-20 mt-1 max-h-48 w-72 overflow-y-auto rounded-md border bg-background shadow-sm">
+                                      <div className="absolute z-20 mt-1 max-h-48 w-72 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-sm">
                                         {isTicketSearchLoading ? (
-                                          <div className="px-3 py-2 text-xs text-muted-foreground">
+                                          <div className="px-3 py-2 text-xs text-slate-500">
                                             Loading tickets...
                                           </div>
                                         ) : ticketSearchResults.length === 0 ? (
-                                          <div className="px-3 py-2 text-xs text-muted-foreground">
+                                          <div className="px-3 py-2 text-xs text-slate-500">
                                             No tickets found.
                                           </div>
                                         ) : (
@@ -993,7 +993,7 @@ export default function ClockifyClient() {
                                             <button
                                               key={ticket.id}
                                               type="button"
-                                              className="block w-full px-3 py-2 text-left text-xs hover:bg-accent"
+                                              className="block w-full px-3 py-2 text-left text-xs hover:bg-slate-50"
                                               onMouseDown={(event) => event.preventDefault()}
                                               onClick={() =>
                                                 handleTicketSelect(entryId, ticket.displayId)
@@ -1031,7 +1031,7 @@ export default function ClockifyClient() {
                                           ? "text-emerald-600"
                                           : matchStatus === "not_found"
                                             ? "text-red-600"
-                                            : "text-muted-foreground"
+                                            : "text-slate-500"
                                       }
                                     >
                                       {matchStatus}
@@ -1068,13 +1068,13 @@ export default function ClockifyClient() {
                     </div>
                   ) : (
                     <div className="rounded-md border p-4">
-                      <p className="text-sm text-muted-foreground">No time entries found.</p>
+                      <p className="text-sm text-slate-500">No time entries found.</p>
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="rounded-md border p-4">
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-slate-500">
                     No report data saved for this session.
                   </p>
                 </div>
@@ -1134,7 +1134,7 @@ export default function ClockifyClient() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Loader2 className="h-8 w-8 animate-spin text-slate-900" />
           </div>
         </DialogContent>
       </Dialog>

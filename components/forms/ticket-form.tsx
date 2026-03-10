@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Bug, CheckSquare, ChevronDown, ChevronUp, ChevronsUp, GitBranch, Minus, Sparkles, X } from "lucide-react"
+import { X } from "lucide-react"
 import { DepartmentForm } from "@/components/forms/department-form"
 import { useDepartments } from "@/hooks/use-departments"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
@@ -28,7 +28,6 @@ import { EpicSelect } from "@/components/epic-select"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useSprints } from "@/hooks/use-sprints"
 import { SprintSelect } from "@/components/sprint-select"
-import { cn } from "@/lib/utils"
 import { Switch } from "@/components/ui/switch"
 import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import { normalizeRichTextInput } from "@/lib/rich-text"
@@ -39,7 +38,7 @@ const RichTextEditor = dynamic(
   { ssr: false }
 )
 const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-border/40 bg-background/55 px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50"
+  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
 
 const ticketSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -101,44 +100,6 @@ interface User {
   image?: string | null
   role?: string | null
 }
-
-const CREATE_TYPE_OPTIONS = [
-  {
-    value: "bug",
-    label: "Bug",
-    description: "Report a problem",
-    icon: Bug,
-    iconClassName: "text-rose-500",
-  },
-  {
-    value: "request",
-    label: "Feature",
-    description: "Ask for a feature",
-    icon: Sparkles,
-    iconClassName: "text-blue-500",
-  },
-  {
-    value: "task",
-    label: "Task",
-    description: "Track a deliverable",
-    icon: CheckSquare,
-    iconClassName: "text-emerald-500",
-  },
-  {
-    value: "subtask",
-    label: "Subtask",
-    description: "Link work under another ticket",
-    icon: GitBranch,
-    iconClassName: "text-teal-500",
-  },
-] as const
-
-const PRIORITY_OPTIONS = [
-  { value: "low", label: "Low", icon: ChevronDown, iconClassName: "text-blue-500" },
-  { value: "medium", label: "Medium", icon: Minus, iconClassName: "text-amber-500" },
-  { value: "high", label: "High", icon: ChevronUp, iconClassName: "text-orange-500" },
-  { value: "urgent", label: "Urgent", icon: ChevronsUp, iconClassName: "text-rose-500" },
-] as const
 
 export function TicketForm({
   projectId,
@@ -318,128 +279,75 @@ export function TicketForm({
           disabled={isReadOnly || isSubmitting}
           className={isReadOnly || isSubmitting ? "space-y-4 opacity-70" : "space-y-4"}
         >
-        {!isEditing && (
-          <div className="space-y-5 rounded-xl bg-muted/10 p-4 ring-1 ring-border/35">
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                    Type
-                  </FormLabel>
-                  <FormControl>
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      {CREATE_TYPE_OPTIONS
-                        .filter((option) => option.value !== "subtask")
-                        .map((option) => {
-                        const Icon = option.icon
-                        const isActive = field.value === option.value
-
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => field.onChange(option.value)}
-                            className={cn(
-                              "rounded-xl border p-4 text-left transition-all",
-                              isActive
-                                ? "selected-ui text-foreground shadow-none"
-                                : "border-border/45 bg-background/50 hover:border-border/70 hover:bg-muted/35"
-                            )}
-                          >
-                            <Icon className={cn("mb-3 h-4 w-4", option.iconClassName)} />
-                            <p className="text-sm font-semibold">{option.label}</p>
-                            <p className="mt-1 text-xs text-muted-foreground">{option.description}</p>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                    Priority
-                  </FormLabel>
-                  <FormControl>
-                    <div className="grid grid-cols-4 gap-1 rounded-xl bg-background/45 p-1 ring-1 ring-border/40">
-                      {PRIORITY_OPTIONS.map((option) => {
-                        const Icon = option.icon
-                        const isActive = field.value === option.value
-
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => field.onChange(option.value)}
-                            className={cn(
-                              "flex items-center justify-center gap-1.5 rounded-lg border border-transparent px-3 py-2 text-sm transition-colors",
-                              isActive
-                                ? "selected-ui text-foreground shadow-none"
-                                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                            )}
-                          >
-                            <Icon
-                              className={cn(
-                                "h-3.5 w-3.5",
-                                option.iconClassName
-                              )}
-                            />
-                            <span>{option.label}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {!projectId && projectOptions.length > 0 && (
-              <FormField
-                control={form.control}
-                name="project_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                      Project
-                    </FormLabel>
-                    <FormControl>
-                      <select
-                        value={field.value || NO_PROJECT_VALUE}
-                        onChange={(event) => field.onChange(event.target.value)}
-                        className={nativeSelectClassName}
-                      >
-                        <option value={NO_PROJECT_VALUE}>No Project</option>
-                        {filteredProjectOptions.map((project) => (
-                          <option key={project.id} value={project.id}>
-                            {project.name}
-                          </option>
-                        ))}
-                      </select>
-                    </FormControl>
-                    <div className="mt-2 flex items-center justify-end gap-2">
-                      <span className="text-xs text-muted-foreground">Include Inactive</span>
-                      <Switch
-                        checked={includeInactiveProjects}
-                        onCheckedChange={setIncludeInactiveProjects}
-                        aria-label="Include inactive projects"
-                      />
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <FormField
+          control={form.control}
+          name="type"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Type</FormLabel>
+              <FormControl>
+                <TicketTypeSelect
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  className="w-full"
+                  triggerClassName="h-10 w-full"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="priority"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Priority</FormLabel>
+              <FormControl>
+                <TicketPrioritySelect
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  className="w-full"
+                  triggerClassName="h-10 w-full"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        {!projectId && projectOptions.length > 0 && (
+          <FormField
+            control={form.control}
+            name="project_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project</FormLabel>
+                <FormControl>
+                  <select
+                    value={field.value || NO_PROJECT_VALUE}
+                    onChange={(event) => field.onChange(event.target.value)}
+                    className={nativeSelectClassName}
+                  >
+                    <option value={NO_PROJECT_VALUE}>No Project</option>
+                    {filteredProjectOptions.map((project) => (
+                      <option key={project.id} value={project.id}>
+                        {project.name}
+                      </option>
+                    ))}
+                  </select>
+                </FormControl>
+                <div className="mt-2 flex items-center justify-end gap-2">
+                  <span className="text-xs text-slate-500">Include inactive</span>
+                  <Switch
+                    checked={includeInactiveProjects}
+                    onCheckedChange={setIncludeInactiveProjects}
+                    aria-label="Include inactive projects"
+                  />
+                </div>
+                <FormMessage />
+              </FormItem>
             )}
-          </div>
+          />
         )}
 
         <FormField
@@ -449,7 +357,7 @@ export function TicketForm({
             <FormItem>
               <FormLabel>Title</FormLabel>
               <FormControl>
-                <Input placeholder="Ticket title" className="border-border/40 bg-background/55" {...field} />
+                <Input placeholder="Ticket title" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -463,7 +371,7 @@ export function TicketForm({
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <RichTextEditor
-                  className="border-border/40 bg-background/55"
+                  className="border-slate-200"
                   placeholder="Ticket description"
                   value={field.value || ""}
                   onChange={field.onChange}
@@ -474,42 +382,6 @@ export function TicketForm({
             </FormItem>
           )}
         />
-        {isEditing && (
-          <>
-            <FormField
-              control={form.control}
-              name="type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Type</FormLabel>
-                  <FormControl>
-                    <TicketTypeSelect
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="priority"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Priority</FormLabel>
-                  <FormControl>
-                    <TicketPrioritySelect
-                      value={field.value}
-                      onValueChange={field.onChange}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </>
-        )}
         <FormField
           control={form.control}
           name="assignee_id"
@@ -610,7 +482,7 @@ export function TicketForm({
                       field.onChange("")
                     }}
                   >
-                    <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                    <X className="h-4 w-4 text-slate-500 hover:text-slate-900" />
                   </Button>
                 )}
               </div>
@@ -669,7 +541,7 @@ export function TicketForm({
               </div>
               <div className="space-y-3">
                 {linkFields.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No links added yet.</p>
+                  <p className="text-sm text-slate-500">No links added yet.</p>
                 )}
                 {linkFields.map((linkField, index) => (
                   <FormField
@@ -705,7 +577,7 @@ export function TicketForm({
           </Button>
         )}
         {isReadOnly && (
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-center text-xs text-slate-500">
             You do not have permission to {isEditing ? "update" : "create"} tickets.
           </p>
         )}

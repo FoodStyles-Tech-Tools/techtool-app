@@ -399,11 +399,11 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
       <div key={item.id}>
         <div
           className={cn(
-            "flex border-b border-border/50 hover:bg-muted/30 transition-colors group",
+            "group flex border-b border-slate-200 transition-colors hover:bg-slate-50",
             item.type === "ticket" ? "items-start py-1" : "items-center",
-            item.type === "sprint" && "bg-muted/20 font-semibold",
-            item.type === "epic" && "bg-muted/10",
-            overdue && "bg-red-500/10 hover:bg-red-500/20 text-red-700 dark:bg-red-500/15 dark:hover:bg-red-500/25 dark:text-red-200"
+            item.type === "sprint" && "bg-slate-50 font-semibold",
+            item.type === "epic" && "bg-slate-50/60",
+            overdue && "bg-red-50 text-red-700 hover:bg-red-100"
           )}
           style={{ height: rowHeight }}
           onClick={(e) => {
@@ -417,7 +417,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
             <Button
               variant="ghost"
               size="icon"
-              className="h-5 w-5 p-0 hover:bg-muted/50"
+              className="h-5 w-5 p-0 hover:bg-slate-100"
               onClick={(e) => {
                 e.stopPropagation()
                 toggleExpand(item.id)
@@ -434,7 +434,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           )}
           {item.type === "epic" && item.color && (
             <div
-              className="w-3 h-3 rounded-full flex-shrink-0 mr-1.5 border border-border/30"
+              className="mr-1.5 h-3 w-3 flex-shrink-0 rounded-full border border-slate-300"
               style={{ backgroundColor: item.color }}
             />
           )}
@@ -445,7 +445,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
               item.type === "epic" && "text-sm font-medium",
               item.type === "ticket" && "text-xs leading-4 whitespace-normal break-words",
               (item.type === "ticket" && onTicketClick) || (item.type === "sprint" && onSprintClick)
-                ? "cursor-pointer hover:text-primary transition-colors"
+                ? "cursor-pointer transition-colors hover:text-slate-900"
                 : "cursor-default"
             )}
             title={`${item.displayId ? `${item.displayId} ` : ""}${item.name}`}
@@ -461,7 +461,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           >
             {item.displayId && (
               <span className={cn(
-                "font-mono text-muted-foreground mr-1.5 text-[10px]"
+                "mr-1.5 font-mono text-[10px] text-slate-500"
               )}>
                 {item.displayId}
               </span>
@@ -500,10 +500,10 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
       <div key={item.id}>
         <div
           className={cn(
-            "relative border-b border-border/50",
-            item.type === "sprint" && "bg-muted/20",
-            item.type === "epic" && "bg-muted/10",
-            overdue && "bg-red-500/10 dark:bg-red-500/15"
+            "relative border-b border-slate-200",
+            item.type === "sprint" && "bg-slate-50",
+            item.type === "epic" && "bg-slate-50/60",
+            overdue && "bg-red-50"
           )}
           style={{ height: rowHeight }}
           onClick={(e) => {
@@ -514,9 +514,9 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
           {barPosition.width > 0 && (
             <div
               className={cn(
-                "absolute rounded-md top-1/2 -translate-y-1/2 flex items-center px-2 text-[11px] text-white font-medium transition-all border border-white/20",
-                item.type === "sprint" && "opacity-80 hover:opacity-95 shadow-sm",
-                item.type === "epic" && "opacity-85 hover:opacity-100 shadow-sm",
+                "absolute top-1/2 flex -translate-y-1/2 items-center rounded-md border border-white/20 px-2 text-[11px] font-medium text-white transition-all",
+                item.type === "sprint" && "opacity-80 shadow-sm hover:opacity-95",
+                item.type === "epic" && "opacity-85 shadow-sm hover:opacity-100",
                 item.type === "ticket" && "hover:shadow-md",
                 (item.type === "ticket" && onTicketClick) || (item.type === "sprint" && onSprintClick)
                   ? "cursor-pointer"
@@ -616,15 +616,15 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
     hasAutoScrolledToTodayRef.current = true
   }, [todayPosition, timelineWidth])
 
-  return (
+    return (
     <div
-      className="flex flex-col border rounded-lg overflow-hidden bg-background shadow-sm self-start w-full"
+      className="self-start flex w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
       style={{ height: chartHeight, maxHeight: "100%" }}
     >
       {/* Header */}
-      <div className="flex border-b border-border bg-muted/40 flex-shrink-0">
-        <div className="flex-shrink-0 border-r border-border px-3 py-2.5" style={{ width: LEFT_COLUMN_WIDTH }}>
-          <span className="text-sm font-semibold text-foreground">Task</span>
+      <div className="flex flex-shrink-0 border-b border-slate-200 bg-slate-50">
+        <div className="flex-shrink-0 border-r border-slate-200 px-3 py-2.5" style={{ width: LEFT_COLUMN_WIDTH }}>
+          <span className="text-sm font-semibold text-slate-900">Task</span>
         </div>
         <div 
           className="horizontal-scroll flex-1 overflow-x-auto overflow-y-hidden relative" 
@@ -646,20 +646,20 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
                 <div
                   key={index}
                   className={cn(
-                    "flex-shrink-0 border-r border-border/30 text-center py-1",
-                    isWeekend && "bg-muted/20",
-                    isWeekStart && "bg-muted/20",
-                    isMonthStart && "bg-muted/35"
+                    "flex-shrink-0 border-r border-slate-200 text-center py-1",
+                    isWeekend && "bg-slate-50",
+                    isWeekStart && "bg-slate-50",
+                    isMonthStart && "bg-slate-100"
                   )}
                   style={{ width: DAY_WIDTH }}
                 >
                   {isMonthStart ? (
                     <div>
-                      <div className="font-semibold text-foreground text-[10px] leading-tight">{format(date, "MMM")}</div>
-                      <div className="text-[10px] text-muted-foreground leading-tight">{format(date, "d")}</div>
+                      <div className="text-[10px] font-semibold leading-tight text-slate-900">{format(date, "MMM")}</div>
+                      <div className="text-[10px] leading-tight text-slate-500">{format(date, "d")}</div>
                     </div>
                   ) : (
-                    <div className="text-[10px] text-muted-foreground leading-tight">{format(date, "d")}</div>
+                    <div className="text-[10px] leading-tight text-slate-500">{format(date, "d")}</div>
                   )}
                 </div>
               )
@@ -675,11 +675,11 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-hidden bg-background">
+      <div className="flex-1 overflow-hidden bg-white">
         <div className="flex h-full">
           {/* List side - fixed width, scrollable vertically */}
           <div
-            className="flex-shrink-0 border-r border-border/50 overflow-y-auto bg-background"
+            className="flex-shrink-0 overflow-y-auto border-r border-slate-200 bg-white"
             style={{ width: LEFT_COLUMN_WIDTH }}
             ref={taskListRef}
             onScroll={(e) => {
@@ -695,7 +695,7 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
 
           {/* Timeline side - scrollable horizontally and vertically */}
           <div
-            className="no-scrollbar flex-1 overflow-x-hidden overflow-y-auto bg-muted/10"
+            className="no-scrollbar flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/30"
             ref={timelineBodyRef}
             onScroll={(e) => {
               if (verticalSyncSourceRef.current === "task") {

@@ -33,7 +33,7 @@ interface SprintFormProps {
 }
 
 const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400"
 
 export function SprintForm({ projectId, onSuccess, initialData }: SprintFormProps) {
   const createSprint = useCreateSprint()

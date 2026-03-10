@@ -5,6 +5,10 @@ import { DateTimePicker } from "@/components/ui/datetime-picker"
 import type { Ticket } from "@/lib/types"
 import type { TimestampValidation } from "@/features/tickets/components/ticket-detail-sidebar-types"
 
+const sectionTitleClassName = "mb-2 text-xs font-medium uppercase tracking-wide text-slate-500"
+const fieldLabelClassName =
+  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"
+
 type TicketDetailTimestampsSectionProps = {
   ticket: Ticket
   canEditTickets: boolean
@@ -31,96 +35,111 @@ export function TicketDetailTimestampsSection({
 }: TicketDetailTimestampsSectionProps) {
   return (
     <div>
-      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Timestamps</h3>
+      <h3 className={sectionTitleClassName}>Timestamps</h3>
       <div className="space-y-2.5">
         <div className="flex items-start gap-3">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Created</label>
-          <div className="flex-1 min-w-0">
+          <label className={fieldLabelClassName}>Created</label>
+          <div className="min-w-0 flex-1">
             <DateTimePicker
               value={parseTimestamp(ticket.createdAt)}
               onChange={(value) => void onTimestampChange("created_at", value)}
               disabled={!canEditTickets || isAssignmentLocked || updatingFields["createdAt"]}
               placeholder="Not set"
-              className="w-full h-8"
+              className="h-8 w-full"
               hideIcon
             />
           </div>
         </div>
 
         <div className="flex items-start gap-3">
-          <div className="flex items-center gap-1.5 flex-shrink-0 w-[6.5rem]">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Assigned</label>
+          <div className="flex w-[6.5rem] flex-shrink-0 items-center gap-1.5">
+            <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Assigned</label>
             {!ticket.assignedAt && timestampValidation.assigned_at ? (
               <span title={getTimestampWarningMessage("assigned_at") || ""} className="cursor-help pt-2">
-                <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+                <AlertTriangle className="h-4 w-4 flex-shrink-0 text-red-600" />
               </span>
             ) : null}
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <DateTimePicker
               value={parseTimestamp(ticket.assignedAt)}
               onChange={(value) => void onTimestampChange("assigned_at", value)}
-              disabled={!canEditTickets || isAssignmentLocked || !ticket.assignee || updatingFields["assignedAt"]}
+              disabled={
+                !canEditTickets ||
+                isAssignmentLocked ||
+                !ticket.assignee ||
+                updatingFields["assignedAt"]
+              }
               placeholder="Not set"
-              className="w-full h-8"
+              className="h-8 w-full"
               hideIcon
             />
           </div>
         </div>
 
         <div className="flex items-start gap-3">
-          <div className="flex items-center gap-1.5 flex-shrink-0 w-[6.5rem]">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Started</label>
+          <div className="flex w-[6.5rem] flex-shrink-0 items-center gap-1.5">
+            <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Started</label>
             {!ticket.startedAt && timestampValidation.started_at ? (
               <span title={getTimestampWarningMessage("started_at") || ""} className="cursor-help pt-2">
-                <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+                <AlertTriangle className="h-4 w-4 flex-shrink-0 text-red-600" />
               </span>
             ) : null}
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <DateTimePicker
               value={parseTimestamp(ticket.startedAt)}
               onChange={(value) => void onTimestampChange("started_at", value)}
-              disabled={!canEditTickets || isAssignmentLocked || ticket.status === "open" || updatingFields["startedAt"]}
+              disabled={
+                !canEditTickets ||
+                isAssignmentLocked ||
+                ticket.status === "open" ||
+                updatingFields["startedAt"]
+              }
               placeholder="Not set"
-              className="w-full h-8"
+              className="h-8 w-full"
               hideIcon
             />
           </div>
         </div>
 
         <div className="flex items-start gap-3">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">
-            SQA Assigned
-          </label>
-          <div className="flex-1 min-w-0">
+          <label className={fieldLabelClassName}>SQA Assigned</label>
+          <div className="min-w-0 flex-1">
             <DateTimePicker
               value={parseTimestamp(ticket.sqaAssignedAt)}
               onChange={(value) => void onTimestampChange("sqa_assigned_at", value)}
               disabled={!canEditTickets || isAssignmentLocked || updatingFields["sqaAssignedAt"]}
               placeholder="Not set"
-              className="w-full h-8"
+              className="h-8 w-full"
               hideIcon
             />
           </div>
         </div>
 
         <div className="flex items-start gap-3">
-          <div className="flex items-center gap-1.5 flex-shrink-0 w-[6.5rem]">
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Completed</label>
+          <div className="flex w-[6.5rem] flex-shrink-0 items-center gap-1.5">
+            <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Completed</label>
             {!ticket.completedAt && timestampValidation.completed_at ? (
               <span title={getTimestampWarningMessage("completed_at") || ""} className="cursor-help pt-2">
-                <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+                <AlertTriangle className="h-4 w-4 flex-shrink-0 text-red-600" />
               </span>
             ) : null}
           </div>
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <DateTimePicker
               value={parseTimestamp(ticket.completedAt)}
               onChange={(value) => void onTimestampChange("completed_at", value)}
-              disabled={!canEditTickets || isAssignmentLocked || (ticket.status !== "completed" && ticket.status !== "cancelled" && ticket.status !== "rejected") || updatingFields["completedAt"]}
+              disabled={
+                !canEditTickets ||
+                isAssignmentLocked ||
+                (ticket.status !== "completed" &&
+                  ticket.status !== "cancelled" &&
+                  ticket.status !== "rejected") ||
+                updatingFields["completedAt"]
+              }
               placeholder="Not set"
-              className="w-full h-8"
+              className="h-8 w-full"
               hideIcon
             />
           </div>

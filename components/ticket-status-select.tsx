@@ -58,7 +58,7 @@ export function TicketStatusSelect({
         onChange={(event) => onValueChange(event.target.value)}
         disabled={disabled}
         className={cn(
-          "h-7 w-full rounded-md border border-border/45 bg-background/60 pl-7 pr-2 text-xs text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "h-7 w-full rounded-md border border-slate-300 bg-white pl-7 pr-2 text-xs text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
           triggerClassName
         )}
       >
@@ -69,7 +69,7 @@ export function TicketStatusSelect({
         ))}
       </select>
       {!value ? (
-        <span className="pointer-events-none absolute left-7 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+        <span className="pointer-events-none absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-500">
           {currentLabel}
         </span>
       ) : null}

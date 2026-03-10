@@ -40,7 +40,7 @@ const RichTextEditor = dynamic(
 )
 
 const nativeSelectClassName =
-  "h-10 rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+  "h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400"
 
 type CreateSessionBody = {
   name?: string | null
@@ -325,13 +325,13 @@ export default function GuildLeadReportClient() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold">Guild Lead Report</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
+        <p className="mt-0.5 text-sm text-slate-500">
           Ticket analytics by date range: volume, requesters, status, response time, and lead time.
         </p>
       </div>
 
-      <Card className="border-border/60 shadow-none">
-        <CardHeader className="border-b border-border/50 bg-muted/10">
+      <Card className="border-slate-200 shadow-none">
+        <CardHeader className="border-b border-slate-200 bg-slate-50">
           <CardTitle>Report Session</CardTitle>
           <CardDescription>
             Create a report session to analyze tickets by date range. Each session has its own date
@@ -342,9 +342,9 @@ export default function GuildLeadReportClient() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium">Session</span>
             {sessionsLoading ? (
-              <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-2 text-sm text-slate-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading...
+                Loading sessions...
               </span>
             ) : (
               <>
@@ -369,14 +369,14 @@ export default function GuildLeadReportClient() {
           </div>
 
           {!hasSession && !sessionsLoading && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-500">
               No report sessions yet. Create one to get a default range of the latest 5 completed
               weeks (ISO week), or customize the range before creating.
             </p>
           )}
 
           {showSessionView && (
-            <div className="rounded-md border border-border/60 bg-background p-3 sm:p-4">
+            <div className="rounded-md border border-slate-200 bg-white p-3 sm:p-4">
               <div className="space-y-3">
                 <div className="space-y-1 sm:max-w-md">
                   <Label htmlFor="session-name">Session name</Label>
@@ -430,7 +430,7 @@ export default function GuildLeadReportClient() {
                 </Button>
                 </div>
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">
+              <p className="mt-2 text-xs text-slate-500">
                 Update name/date range and save to refresh all charts in this session.
               </p>
             </div>
@@ -440,9 +440,9 @@ export default function GuildLeadReportClient() {
 
       {showSessionView && (
         <>
-          <div className="rounded-md border border-border/60 bg-background px-4 py-3 sm:px-5">
+          <div className="rounded-md border border-slate-200 bg-white px-4 py-3 sm:px-5">
             <h2 className="text-base font-semibold">Charts</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-1 text-sm text-slate-500">
               Date range: {format(new Date(session.date_range_start), "yyyy-MM-dd")} -{" "}
               {format(new Date(session.date_range_end), "yyyy-MM-dd")} (session range, ISO week
               grouped)
@@ -450,8 +450,8 @@ export default function GuildLeadReportClient() {
           </div>
 
           {dataLoading ? (
-            <div className="flex items-center justify-center rounded-md border border-border/60 bg-background py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center rounded-md border border-slate-200 bg-white py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
             </div>
           ) : reportData ? (
             <div className="space-y-6">
@@ -599,10 +599,10 @@ function ChartWithInsight({
   return (
     <section className="space-y-3">
       {children}
-      <div className="rounded-md border border-border/60 bg-background p-3 sm:p-4">
+      <div className="rounded-md border border-slate-200 bg-white p-3 sm:p-4">
         <div className="mb-3">
           <h4 className="text-sm font-medium">Insights - {title}</h4>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-slate-500">
             Summarize trends, anomalies, and actions based on the chart.
           </p>
         </div>
@@ -657,7 +657,7 @@ function InsightEditor({
         showToolbarOnFocus
       />
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">{dirty ? "Unsaved changes" : "No pending changes"}</p>
+        <p className="text-xs text-slate-500">{dirty ? "Unsaved changes" : "No pending changes"}</p>
         <Button size="sm" onClick={handleSave} disabled={!dirty || saving} className="min-w-[112px]">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save insight"}
         </Button>

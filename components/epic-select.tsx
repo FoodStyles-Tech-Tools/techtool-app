@@ -40,7 +40,7 @@ export function EpicSelect({
       onChange={(event) => onValueChange(event.target.value === NO_EPIC_VALUE ? null : event.target.value)} 
       disabled={disabled}
       className={cn(
-        "h-7 w-full rounded-md border border-border/45 bg-background/60 px-2 text-xs text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50",
+        "h-7 w-full rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
         selectedEpic ? "pl-7" : "",
         triggerClassName
       )}

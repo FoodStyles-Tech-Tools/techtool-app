@@ -22,6 +22,7 @@ import { TicketDetailFooter } from "@/features/tickets/components/ticket-detail-
 import { TicketDetailHeader } from "@/features/tickets/components/ticket-detail-header"
 import { TicketDetailMainColumn } from "@/features/tickets/components/ticket-detail-main-column"
 import { TicketDetailSidebar } from "@/features/tickets/components/ticket-detail-sidebar"
+import { DataState } from "@/components/ui/data-state"
 import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import type { TicketDetailDialogProps } from "@/features/tickets/types"
 
@@ -187,109 +188,114 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          {loading ? (
-            <p className="text-sm text-slate-500">Loading...</p>
-          ) : !ticket ? (
-            <p className="text-sm text-slate-500">Ticket not found</p>
-          ) : (
-            <div className="grid gap-4 lg:grid-cols-[1fr_minmax(280px,340px)]">
-              <TicketDetailMainColumn
-                ticketId={ticketId}
-                ticket={ticket}
-                canEditTickets={canEditTickets}
-                detailComments={detailComments}
-                isEditingTitle={actions.isEditingTitle}
-                titleValue={actions.titleValue}
-                onTitleValueChange={actions.setTitleValue}
-                onTitleSave={actions.handleTitleSave}
-                onTitleKeyDown={actions.handleTitleKeyDown}
-                onStartTitleEdit={() => actions.setIsEditingTitle(true)}
-                isEditingDescription={actions.isEditingDescription}
-                descriptionValue={actions.descriptionValue}
-                onDescriptionValueChange={actions.setDescriptionValue}
-                onDescriptionSave={actions.handleDescriptionSave}
-                onCancelDescriptionEdit={() => {
-                  actions.setDescriptionValue(ticket.description || "")
-                  actions.setIsEditingDescription(false)
-                }}
-                onStartDescriptionEdit={() => actions.setIsEditingDescription(true)}
-                isAddingLink={actions.isAddingLink}
-                onStartAddLink={() => {
-                  actions.setIsAddingLink(true)
-                  actions.setNewLinkUrl("")
-                }}
-                onCancelAddLink={() => {
-                  actions.setIsAddingLink(false)
-                  actions.setNewLinkUrl("")
-                }}
-                newLinkUrl={actions.newLinkUrl}
-                onNewLinkUrlChange={actions.setNewLinkUrl}
-                onAddLink={actions.handleAddLink}
-                editingLinkIndex={actions.editingLinkIndex}
-                onStartEditLink={(index, url) => {
-                  actions.setEditingLinkIndex(index)
-                  actions.setNewLinkUrl(url)
-                }}
-                onCancelEditLink={() => {
-                  actions.setEditingLinkIndex(null)
-                  actions.setNewLinkUrl("")
-                }}
-                onUpdateLink={actions.handleUpdateLink}
-                onRemoveLink={actions.handleRemoveLink}
-                isSubtasksCollapsed={actions.isSubtasksCollapsed}
-                onToggleSubtasks={() =>
-                  actions.setIsSubtasksCollapsed((previous) => !previous)
-                }
-                subtasksPanelId={`ticket-subtasks-panel-${ticketId}`}
-              />
+          <DataState
+            loading={loading}
+            isEmpty={!loading && !ticket}
+            loadingTitle="Loading ticket"
+            loadingDescription="The ticket details are being prepared."
+            emptyTitle="Ticket not found"
+            emptyDescription="The requested ticket could not be loaded."
+          >
+            {ticket ? (
+              <div className="grid gap-4 lg:grid-cols-[1fr_minmax(280px,340px)]">
+                <TicketDetailMainColumn
+                  ticketId={ticketId}
+                  ticket={ticket}
+                  canEditTickets={canEditTickets}
+                  detailComments={detailComments}
+                  isEditingTitle={actions.isEditingTitle}
+                  titleValue={actions.titleValue}
+                  onTitleValueChange={actions.setTitleValue}
+                  onTitleSave={actions.handleTitleSave}
+                  onTitleKeyDown={actions.handleTitleKeyDown}
+                  onStartTitleEdit={() => actions.setIsEditingTitle(true)}
+                  isEditingDescription={actions.isEditingDescription}
+                  descriptionValue={actions.descriptionValue}
+                  onDescriptionValueChange={actions.setDescriptionValue}
+                  onDescriptionSave={actions.handleDescriptionSave}
+                  onCancelDescriptionEdit={() => {
+                    actions.setDescriptionValue(ticket.description || "")
+                    actions.setIsEditingDescription(false)
+                  }}
+                  onStartDescriptionEdit={() => actions.setIsEditingDescription(true)}
+                  isAddingLink={actions.isAddingLink}
+                  onStartAddLink={() => {
+                    actions.setIsAddingLink(true)
+                    actions.setNewLinkUrl("")
+                  }}
+                  onCancelAddLink={() => {
+                    actions.setIsAddingLink(false)
+                    actions.setNewLinkUrl("")
+                  }}
+                  newLinkUrl={actions.newLinkUrl}
+                  onNewLinkUrlChange={actions.setNewLinkUrl}
+                  onAddLink={actions.handleAddLink}
+                  editingLinkIndex={actions.editingLinkIndex}
+                  onStartEditLink={(index, url) => {
+                    actions.setEditingLinkIndex(index)
+                    actions.setNewLinkUrl(url)
+                  }}
+                  onCancelEditLink={() => {
+                    actions.setEditingLinkIndex(null)
+                    actions.setNewLinkUrl("")
+                  }}
+                  onUpdateLink={actions.handleUpdateLink}
+                  onRemoveLink={actions.handleRemoveLink}
+                  isSubtasksCollapsed={actions.isSubtasksCollapsed}
+                  onToggleSubtasks={() =>
+                    actions.setIsSubtasksCollapsed((previous) => !previous)
+                  }
+                  subtasksPanelId={`ticket-subtasks-panel-${ticketId}`}
+                />
 
-              <TicketDetailSidebar
-                ticket={ticket}
-                canEditTickets={canEditTickets}
-                isAssignmentLocked={isAssignmentLocked}
-                isSqaEditLocked={isSqaEditLocked}
-                updatingFields={actions.updatingFields}
-                currentUser={currentUser}
-                users={users}
-                assigneeEligibleUsers={assigneeEligibleUsers}
-                sqaEligibleUsers={sqaEligibleUsers}
-                departments={departments}
-                epics={epics}
-                sprints={sprints}
-                projectOptions={projectOptions}
-                includeInactiveProjects={actions.includeInactiveProjects}
-                onIncludeInactiveProjectsChange={actions.setIncludeInactiveProjects}
-                relations={relations}
-                parentTicketOptions={parentTicketOptions}
-                selectedParentTicketId={selectedParentTicketId}
-                selectedParentTicketOption={selectedParentTicketOption}
-                parentNavigationSlug={parentNavigationSlug}
-                timestampValidation={actions.timestampValidation}
-                parseTimestamp={actions.parseTimestamp}
-                getTimestampWarningMessage={actions.getTimestampWarningMessage}
-                onAssigneeChange={actions.handleAssigneeChange}
-                onRequestedByChange={actions.handleRequestedByChange}
-                onSqaAssigneeChange={actions.handleSqaAssigneeChange}
-                onTypeChange={actions.handleTypeChange}
-                onParentTicketChange={(nextParentTicketId) =>
-                  void actions.handleParentTicketChange(nextParentTicketId, NO_PARENT_TICKET_VALUE)
-                }
-                onPriorityChange={actions.handlePriorityChange}
-                onDueDateChange={actions.handleDueDateChange}
-                onDepartmentChange={(nextDepartmentId) =>
-                  actions.handleDepartmentChange(nextDepartmentId, NO_DEPARTMENT_VALUE)
-                }
-                onEpicChange={actions.handleEpicChange}
-                onSprintChange={actions.handleSprintChange}
-                onProjectChange={(nextProjectId) =>
-                  actions.handleProjectChange(nextProjectId, NO_PROJECT_VALUE)
-                }
-                onTimestampChange={(field, value) =>
-                  void actions.handleTimestampChange(field, value)
-                }
-              />
-            </div>
-          )}
+                <TicketDetailSidebar
+                  ticket={ticket}
+                  canEditTickets={canEditTickets}
+                  isAssignmentLocked={isAssignmentLocked}
+                  isSqaEditLocked={isSqaEditLocked}
+                  updatingFields={actions.updatingFields}
+                  currentUser={currentUser}
+                  users={users}
+                  assigneeEligibleUsers={assigneeEligibleUsers}
+                  sqaEligibleUsers={sqaEligibleUsers}
+                  departments={departments}
+                  epics={epics}
+                  sprints={sprints}
+                  projectOptions={projectOptions}
+                  includeInactiveProjects={actions.includeInactiveProjects}
+                  onIncludeInactiveProjectsChange={actions.setIncludeInactiveProjects}
+                  relations={relations}
+                  parentTicketOptions={parentTicketOptions}
+                  selectedParentTicketId={selectedParentTicketId}
+                  selectedParentTicketOption={selectedParentTicketOption}
+                  parentNavigationSlug={parentNavigationSlug}
+                  timestampValidation={actions.timestampValidation}
+                  parseTimestamp={actions.parseTimestamp}
+                  getTimestampWarningMessage={actions.getTimestampWarningMessage}
+                  onAssigneeChange={actions.handleAssigneeChange}
+                  onRequestedByChange={actions.handleRequestedByChange}
+                  onSqaAssigneeChange={actions.handleSqaAssigneeChange}
+                  onTypeChange={actions.handleTypeChange}
+                  onParentTicketChange={(nextParentTicketId) =>
+                    void actions.handleParentTicketChange(nextParentTicketId, NO_PARENT_TICKET_VALUE)
+                  }
+                  onPriorityChange={actions.handlePriorityChange}
+                  onDueDateChange={actions.handleDueDateChange}
+                  onDepartmentChange={(nextDepartmentId) =>
+                    actions.handleDepartmentChange(nextDepartmentId, NO_DEPARTMENT_VALUE)
+                  }
+                  onEpicChange={actions.handleEpicChange}
+                  onSprintChange={actions.handleSprintChange}
+                  onProjectChange={(nextProjectId) =>
+                    actions.handleProjectChange(nextProjectId, NO_PROJECT_VALUE)
+                  }
+                  onTimestampChange={(field, value) =>
+                    void actions.handleTimestampChange(field, value)
+                  }
+                />
+              </div>
+            ) : null}
+          </DataState>
         </div>
 
         <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 flex items-center justify-between">

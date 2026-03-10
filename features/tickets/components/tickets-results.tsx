@@ -59,8 +59,8 @@ export function TicketsResults({
 
   if (filteredTickets.length === 0) {
     return (
-      <div className="rounded-lg border p-8 text-center">
-        <p className="text-sm text-muted-foreground">
+        <div className="rounded-lg border p-8 text-center">
+        <p className="text-sm text-slate-500">
           {hasSearchQuery ? "No tickets found" : "No tickets yet."}
         </p>
       </div>
@@ -75,7 +75,7 @@ export function TicketsResults({
     if (projectFilter === "all") {
       return (
         <div className="rounded-lg border p-8 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-slate-500">
             Select a project to view the Gantt chart.
           </p>
         </div>

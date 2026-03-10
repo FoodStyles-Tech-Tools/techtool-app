@@ -273,7 +273,7 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
         loadingDescription="Please wait while statuses are loaded."
       >
         <EntityTableShell>
-          <div className="px-4 py-3 text-xs text-muted-foreground">
+          <div className="px-4 py-3 text-xs text-slate-500">
             Drag the handle to reorder statuses. Order updates are saved automatically.
           </div>
           <Table>
@@ -292,9 +292,9 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
                 <TableRow
                   key={status.key}
                   className={[
-                    "hover:bg-muted/50",
+                    "hover:bg-slate-50",
                     dragOverKey === status.key && draggedKey !== status.key
-                      ? "border-t-2 border-primary"
+                      ? "border-t-2 border-slate-900"
                       : "",
                   ].join(" ")}
                   onDragOver={(event) => {
@@ -323,10 +323,10 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
                     void reorderStatuses(nextKeys)
                   }}
                 >
-                  <TableCell className="py-2 text-muted-foreground">
+                  <TableCell className="py-2 text-slate-500">
                     <button
                       type="button"
-                      className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+                      className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-slate-50"
                       draggable
                       onDragStart={(event) => {
                         event.dataTransfer.effectAllowed = "move"
@@ -344,16 +344,16 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
                   <TableCell className="py-2">
                     <div className="flex items-center gap-2">
                       <span
-                        className="h-3 w-3 rounded-full border border-border/60"
+                        className="h-3 w-3 rounded-full border border-slate-300"
                         style={{ backgroundColor: status.color }}
                       />
-                      <span className="text-xs font-mono text-muted-foreground">
+                      <span className="text-xs font-mono text-slate-500">
                         {status.color}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="py-2 text-sm">{status.label}</TableCell>
-                  <TableCell className="py-2 text-sm font-mono text-muted-foreground">
+                  <TableCell className="py-2 text-sm font-mono text-slate-500">
                     {status.key}
                   </TableCell>
                   <TableCell className="py-2 text-sm">{status.sort_order}</TableCell>
@@ -373,7 +373,7 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
                         onClick={() => setDeletingStatus(status)}
                         aria-label={`Delete ${status.label}`}
                       >
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                        <Trash2 className="h-4 w-4 text-red-600" />
                       </Button>
                     </div>
                   </TableCell>

@@ -21,7 +21,7 @@ export function TicketDetailFooter({
     <>
       <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row sm:items-center">
         {ticket && canEditTickets ? (
-          <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={onRequestDelete}>
+          <Button variant="ghost" className="text-red-600 hover:text-red-700" onClick={onRequestDelete}>
             <Trash2 className="mr-2 h-3.5 w-3.5" />
             Delete Ticket
           </Button>

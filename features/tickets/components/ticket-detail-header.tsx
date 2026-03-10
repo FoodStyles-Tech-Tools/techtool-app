@@ -39,7 +39,7 @@ export function TicketDetailHeader({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            className="h-7 px-2 text-xs text-slate-500 hover:text-slate-900"
             onClick={onGoToParentTicket}
             title="Back to parent ticket"
           >
@@ -51,7 +51,7 @@ export function TicketDetailHeader({
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            className="h-7 w-7 text-slate-500 hover:text-slate-900"
             onClick={onCopyTicketLabel}
             title="Copy ticket info"
           >
@@ -60,7 +60,7 @@ export function TicketDetailHeader({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+            className="h-7 gap-1.5 px-2 text-xs text-slate-500 hover:text-slate-900"
             title="Copy share URL"
             onClick={onCopyShareUrl}
           >
@@ -70,13 +70,13 @@ export function TicketDetailHeader({
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            className="h-7 px-2 text-xs text-slate-500 hover:text-slate-900"
             title="Copy hyperlinked URL"
             onClick={onCopyHyperlinkedUrl}
           >
             Link
           </Button>
-          <span className="rounded-md bg-background px-2.5 py-1 font-mono text-sm text-muted-foreground">
+          <span className="rounded-md bg-slate-100 px-2.5 py-1 font-mono text-sm text-slate-500">
             {ticket?.displayId || ticketId.slice(0, 8)}
           </span>
         </div>

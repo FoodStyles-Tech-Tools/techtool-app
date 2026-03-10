@@ -308,7 +308,7 @@ export function Sidebar() {
               {pinnedExpanded && (
                 <>
                   {pinnedProjectsLoading ? (
-                    <p className="px-2 py-1 text-xs leading-4 text-slate-500">Loading...</p>
+                    <p className="px-2 py-1 text-xs leading-4 text-slate-500">Loading pinned projects...</p>
                   ) : pinnedProjectIds.length === 0 ? (
                     <p className="px-2 py-1 text-xs leading-4 text-slate-500">No pinned projects</p>
                   ) : (

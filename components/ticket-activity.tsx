@@ -6,6 +6,7 @@ import { ArrowRight, ChevronDown, ChevronRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { DataState } from "@/components/ui/data-state"
 import { TicketComments } from "@/components/ticket-comments"
 import { useTicketActivity, type TicketActivityItem } from "@/hooks/use-ticket-activity"
 import type { TicketComment } from "@/hooks/use-ticket-comments"
@@ -162,7 +163,7 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
   const text = formatHistoryValueText(fieldName, value)
 
   if (text === "None") {
-    return <span className="text-sm text-muted-foreground">None</span>
+    return <span className="text-sm text-slate-500">None</span>
   }
 
   const isStatus = fieldName === "status"
@@ -174,8 +175,8 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
         className={cn(
           "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium leading-4",
           isNewValue
-            ? "border-blue-500/60 bg-blue-500/10 text-blue-600 dark:text-blue-300"
-            : "border-border bg-muted/40 text-foreground",
+            ? "border-slate-300 bg-slate-100 text-slate-900"
+            : "border-slate-200 bg-white text-slate-900",
           isStatus ? "tracking-wide uppercase" : ""
         )}
       >
@@ -187,7 +188,7 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
     )
   }
 
-  return <span className="text-sm text-foreground">{text}</span>
+  return <span className="text-sm text-slate-900">{text}</span>
 }
 
 export function TicketActivity({ ticketId, displayId, initialComments }: TicketActivityProps) {
@@ -206,7 +207,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
   const activityItems = activeTab === "history" ? historyItems : activities
 
   return (
-    <Card className="border-0 shadow-none">
+    <Card className="shadow-none">
       <CardHeader className="px-4 pt-4 pb-2">
         <button
           type="button"
@@ -216,9 +217,9 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
           aria-controls={panelId}
         >
           {isCollapsed ? (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            <ChevronRight className="h-4 w-4 text-slate-500" />
           ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            <ChevronDown className="h-4 w-4 text-slate-500" />
           )}
           <CardTitle className="text-base">Activity</CardTitle>
         </button>
@@ -226,7 +227,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
 
       {!isCollapsed && (
         <CardContent id={panelId} className="px-4 pb-4 pt-0">
-          <div className="mb-3 inline-flex items-center rounded-md border border-border/60 bg-muted/30 p-0.5">
+          <div className="mb-3 inline-flex items-center rounded-md border border-slate-200 bg-slate-50 p-0.5">
             <Button
               variant={activeTab === "all" ? "selected" : "ghost"}
               size="sm"
@@ -261,51 +262,53 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
               showHeader={false}
               composerFirst
             />
-          ) : isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading activity...</p>
-          ) : error ? (
-            <p className="text-sm text-destructive">Failed to load activity.</p>
-          ) : activityItems.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {activeTab === "history" ? "No history yet." : "No activity yet."}
-            </p>
           ) : (
-            <div className="space-y-5">
-              {activityItems.map((item) => {
-                const actorName = getActorName(item)
-                const showValueTransition =
-                  item.event_type === "ticket_field_changed" || item.event_type === "subtask_renamed"
+            <DataState
+              loading={isLoading}
+              error={error ? "Failed to load activity." : null}
+              isEmpty={!isLoading && activityItems.length === 0}
+              loadingTitle="Loading activity"
+              loadingDescription="The ticket timeline is being prepared."
+              emptyTitle={activeTab === "history" ? "No history yet" : "No activity yet"}
+              emptyDescription="Updates and changes for this ticket will appear here."
+            >
+              <div className="space-y-5">
+                {activityItems.map((item) => {
+                  const actorName = getActorName(item)
+                  const showValueTransition =
+                    item.event_type === "ticket_field_changed" || item.event_type === "subtask_renamed"
 
-                return (
-                  <div key={item.id} className="flex items-start gap-3">
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={item.actor?.avatar_url || undefined} alt={actorName} />
-                      <AvatarFallback className="text-[11px]">
-                        {getActorInitials(actorName)}
-                      </AvatarFallback>
-                    </Avatar>
+                  return (
+                    <div key={item.id} className="flex items-start gap-3">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={item.actor?.avatar_url || undefined} alt={actorName} />
+                        <AvatarFallback className="text-[11px]">
+                          {getActorInitials(actorName)}
+                        </AvatarFallback>
+                      </Avatar>
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm leading-5 text-foreground">
-                        <span className="font-semibold">{actorName}</span> {formatHistoryAction(item)}
-                      </p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm leading-5 text-slate-900">
+                          <span className="font-semibold">{actorName}</span> {formatHistoryAction(item)}
+                        </p>
 
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
-                      </p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
+                        </p>
 
-                      {showValueTransition && (
-                        <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                          {renderHistoryValue(item.field_name, item.old_value, false)}
-                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                          {renderHistoryValue(item.field_name, item.new_value, true)}
-                        </div>
-                      )}
+                        {showValueTransition && (
+                          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                            {renderHistoryValue(item.field_name, item.old_value, false)}
+                            <ArrowRight className="h-3.5 w-3.5 text-slate-500" />
+                            {renderHistoryValue(item.field_name, item.new_value, true)}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </div>
+            </DataState>
           )}
         </CardContent>
       )}

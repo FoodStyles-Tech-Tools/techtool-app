@@ -23,13 +23,13 @@ export function TicketTypeSelect({
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "bug":
-        return <Bug className="h-3.5 w-3.5 text-red-500" />
+        return <Bug className="h-3.5 w-3.5 text-slate-500" />
       case "request":
-        return <FileText className="h-3.5 w-3.5 text-blue-500" />
+        return <FileText className="h-3.5 w-3.5 text-slate-500" />
       case "task":
-        return <CheckSquare className="h-3.5 w-3.5 text-purple-500" />
+        return <CheckSquare className="h-3.5 w-3.5 text-slate-500" />
       case "subtask":
-        return <GitBranch className="h-3.5 w-3.5 text-emerald-500" />
+        return <GitBranch className="h-3.5 w-3.5 text-slate-500" />
       default:
         return null
     }
@@ -45,7 +45,7 @@ export function TicketTypeSelect({
         onChange={(event) => onValueChange(event.target.value)}
         disabled={disabled}
         className={cn(
-          "h-7 w-full rounded-md border border-border/45 bg-background/60 pl-7 pr-2 text-xs capitalize text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "h-7 w-full rounded-md border border-slate-300 bg-white pl-7 pr-2 text-xs capitalize text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
           triggerClassName
         )}
       >
@@ -61,13 +61,13 @@ export function TicketTypeSelect({
 export function TicketTypeIcon({ type, className }: { type: string; className?: string }) {
   switch (type) {
     case "bug":
-      return <Bug className={cn("h-3.5 w-3.5 text-red-500", className)} />
+      return <Bug className={cn("h-3.5 w-3.5 text-slate-500", className)} />
     case "request":
-      return <FileText className={cn("h-3.5 w-3.5 text-blue-500", className)} />
+      return <FileText className={cn("h-3.5 w-3.5 text-slate-500", className)} />
     case "task":
-      return <CheckSquare className={cn("h-3.5 w-3.5 text-purple-500", className)} />
+      return <CheckSquare className={cn("h-3.5 w-3.5 text-slate-500", className)} />
     case "subtask":
-      return <GitBranch className={cn("h-3.5 w-3.5 text-emerald-500", className)} />
+      return <GitBranch className={cn("h-3.5 w-3.5 text-slate-500", className)} />
     default:
       return null
   }

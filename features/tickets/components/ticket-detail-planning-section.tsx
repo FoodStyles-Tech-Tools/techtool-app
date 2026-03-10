@@ -13,7 +13,9 @@ import type { TicketProjectOption } from "@/features/tickets/components/ticket-d
 const NO_DEPARTMENT_VALUE = "no_department"
 const NO_PROJECT_VALUE = "no_project"
 const nativeSelectClassName =
-  "h-8 w-full rounded-md border border-border/45 bg-background/60 px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50"
+  "h-8 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+const fieldLabelClassName =
+  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"
 
 type TicketDetailPlanningSectionProps = {
   ticket: Ticket
@@ -59,8 +61,8 @@ export function TicketDetailPlanningSection({
   return (
     <>
       <div className="flex items-start gap-3">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Priority</label>
-        <div className="flex-1 min-w-0">
+        <label className={fieldLabelClassName}>Priority</label>
+        <div className="min-w-0 flex-1">
           <TicketPrioritySelect
             value={ticket.priority}
             onValueChange={(value) => void onPriorityChange(value)}
@@ -71,22 +73,22 @@ export function TicketDetailPlanningSection({
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Due Date</label>
-        <div className="flex-1 min-w-0">
+        <label className={fieldLabelClassName}>Due Date</label>
+        <div className="min-w-0 flex-1">
           <DateTimePicker
             value={parseTimestamp(ticket.dueDate)}
             onChange={(value) => void onDueDateChange(value)}
             disabled={!canEditTickets || isAssignmentLocked || updatingFields["dueDate"]}
             placeholder="No due date"
-            className="w-full h-8"
+            className="h-8 w-full"
             hideIcon
           />
         </div>
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Department</label>
-        <div className="flex-1 min-w-0">
+        <label className={fieldLabelClassName}>Department</label>
+        <div className="min-w-0 flex-1">
           <select
             value={ticket.department?.id || NO_DEPARTMENT_VALUE}
             onChange={(event) => void onDepartmentChange(event.target.value)}
@@ -94,18 +96,18 @@ export function TicketDetailPlanningSection({
             className={nativeSelectClassName}
           >
             <option value={NO_DEPARTMENT_VALUE}>No Department</option>
-              {departments.map((department) => (
-                <option key={department.id} value={department.id}>
-                  {department.name}
-                </option>
-              ))}
+            {departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Epic</label>
-        <div className="flex-1 min-w-0">
+        <label className={fieldLabelClassName}>Epic</label>
+        <div className="min-w-0 flex-1">
           <EpicSelect
             value={ticket.epic?.id || null}
             onValueChange={(value) => void onEpicChange(value)}
@@ -117,8 +119,8 @@ export function TicketDetailPlanningSection({
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Sprint</label>
-        <div className="flex-1 min-w-0">
+        <label className={fieldLabelClassName}>Sprint</label>
+        <div className="min-w-0 flex-1">
           <SprintSelect
             value={ticket.sprint?.id || null}
             onValueChange={(value) => void onSprintChange(value)}
@@ -130,8 +132,8 @@ export function TicketDetailPlanningSection({
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Project</label>
-        <div className="flex-1 min-w-0">
+        <label className={fieldLabelClassName}>Project</label>
+        <div className="min-w-0 flex-1">
           <select
             value={ticket.project?.id || NO_PROJECT_VALUE}
             onChange={(event) => void onProjectChange(event.target.value)}
@@ -139,14 +141,14 @@ export function TicketDetailPlanningSection({
             className={nativeSelectClassName}
           >
             <option value={NO_PROJECT_VALUE}>No Project</option>
-              {projectOptions.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
+            {projectOptions.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
           </select>
           <div className="mt-3 flex items-center justify-end gap-2">
-            <span className="text-xs text-muted-foreground">Include Inactive</span>
+            <span className="text-xs text-slate-500">Include inactive</span>
             <Switch
               checked={includeInactiveProjects}
               onCheckedChange={onIncludeInactiveProjectsChange}

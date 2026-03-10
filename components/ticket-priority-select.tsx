@@ -21,13 +21,13 @@ export function TicketPrioritySelect({
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case "low":
-        return <ChevronDown className="h-3.5 w-3.5 text-blue-500" />
+        return <ChevronDown className="h-3.5 w-3.5 text-slate-500" />
       case "medium":
-        return <Minus className="h-3.5 w-3.5 text-yellow-500" />
+        return <Minus className="h-3.5 w-3.5 text-slate-500" />
       case "high":
-        return <ChevronUp className="h-3.5 w-3.5 text-red-500" />
+        return <ChevronUp className="h-3.5 w-3.5 text-slate-500" />
       case "urgent":
-        return <ChevronsUp className="h-3.5 w-3.5 text-red-500" />
+        return <ChevronsUp className="h-3.5 w-3.5 text-slate-500" />
       default:
         return null
     }
@@ -43,7 +43,7 @@ export function TicketPrioritySelect({
         onChange={(event) => onValueChange(event.target.value)}
         disabled={disabled}
         className={cn(
-          "h-7 w-full rounded-md border border-border/45 bg-background/60 pl-7 pr-2 text-xs capitalize text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "h-7 w-full rounded-md border border-slate-300 bg-white pl-7 pr-2 text-xs capitalize text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
           triggerClassName
         )}
       >
@@ -59,13 +59,13 @@ export function TicketPrioritySelect({
 export function TicketPriorityIcon({ priority, className }: { priority: string; className?: string }) {
   switch (priority) {
     case "low":
-      return <ChevronDown className={cn("h-3.5 w-3.5 text-blue-500", className)} />
+      return <ChevronDown className={cn("h-3.5 w-3.5 text-slate-500", className)} />
     case "medium":
-      return <Minus className={cn("h-3.5 w-3.5 text-yellow-500", className)} />
+      return <Minus className={cn("h-3.5 w-3.5 text-slate-500", className)} />
     case "high":
-      return <ChevronUp className={cn("h-3.5 w-3.5 text-red-500", className)} />
+      return <ChevronUp className={cn("h-3.5 w-3.5 text-slate-500", className)} />
     case "urgent":
-      return <ChevronsUp className={cn("h-3.5 w-3.5 text-red-500", className)} />
+      return <ChevronsUp className={cn("h-3.5 w-3.5 text-slate-500", className)} />
     default:
       return null
   }
