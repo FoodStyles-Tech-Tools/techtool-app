@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -204,11 +203,10 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             {showCloseButton ? (
               <button
                 type="button"
-                className="absolute right-4 top-4 rounded-md p-1 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none disabled:pointer-events-none"
+                className="absolute right-4 top-4 rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none disabled:pointer-events-none"
                 onClick={() => setOpen(false)}
               >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
+                Close
               </button>
             ) : null}
           </div>

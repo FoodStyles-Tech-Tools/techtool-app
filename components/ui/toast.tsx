@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { X, CheckCircle2, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Toast {
@@ -127,11 +126,15 @@ export function Toaster() {
             toast.type === "error" && "border-red-200"
           )}
         >
-          {toast.type === "success" ? (
-            <CheckCircle2 className="h-5 w-5 text-slate-900" />
-          ) : (
-            <AlertCircle className="h-5 w-5 text-red-600" />
-          )}
+          <span
+            className={cn(
+              "text-xs font-semibold uppercase tracking-wide",
+              toast.type === "success" && "text-slate-900",
+              toast.type === "error" && "text-red-700"
+            )}
+          >
+            {toast.type === "success" ? "Success" : "Error"}
+          </span>
           <p
             className={cn(
               "text-sm font-medium leading-5",
@@ -143,9 +146,9 @@ export function Toaster() {
           </p>
           <button
             onClick={() => removeToast(toast.id)}
-            className="ml-auto rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            className="ml-auto rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900"
           >
-            <X className="h-4 w-4" />
+            Close
           </button>
         </div>
       ))}

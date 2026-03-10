@@ -12,22 +12,6 @@ import { Table } from "@tiptap/extension-table"
 import TableRow from "@tiptap/extension-table-row"
 import TableCell from "@tiptap/extension-table-cell"
 import TableHeader from "@tiptap/extension-table-header"
-import {
-  Bold,
-  Italic,
-  Underline as UnderlineIcon,
-  Strikethrough,
-  List,
-  ListOrdered,
-  Quote,
-  Code,
-  SquareCode,
-  Link as LinkIcon,
-  Table as TableIcon,
-  Palette,
-  Image as ImageIcon,
-  Type,
-} from "lucide-react"
 import { cn } from "@/lib/utils"
 
 declare module "@tiptap/core" {
@@ -455,7 +439,7 @@ export function RichTextEditor({
           )}
           onClick={() => editor?.chain().focus().toggleBold().run()}
         >
-          <Bold className="h-3.5 w-3.5" />
+          B
         </button>
         <button
           type="button"
@@ -466,7 +450,7 @@ export function RichTextEditor({
           )}
           onClick={() => editor?.chain().focus().toggleItalic().run()}
         >
-          <Italic className="h-3.5 w-3.5" />
+          I
         </button>
         <button
           type="button"
@@ -477,7 +461,7 @@ export function RichTextEditor({
           )}
           onClick={() => editor?.chain().focus().toggleUnderline().run()}
         >
-          <UnderlineIcon className="h-3.5 w-3.5" />
+          U
         </button>
         <button
           type="button"
@@ -488,7 +472,7 @@ export function RichTextEditor({
           )}
           onClick={() => editor?.chain().focus().toggleStrike().run()}
         >
-          <Strikethrough className="h-3.5 w-3.5" />
+          S
         </button>
         <span className="mx-1 h-5 w-px bg-slate-200" />
         <button
@@ -540,7 +524,7 @@ export function RichTextEditor({
           )}
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
         >
-          <List className="h-3.5 w-3.5" />
+          List
         </button>
         <button
           type="button"
@@ -551,7 +535,7 @@ export function RichTextEditor({
           )}
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
         >
-          <ListOrdered className="h-3.5 w-3.5" />
+          1.
         </button>
         <button
           type="button"
@@ -562,7 +546,7 @@ export function RichTextEditor({
           )}
           onClick={() => editor?.chain().focus().toggleBlockquote().run()}
         >
-          <Quote className="h-3.5 w-3.5" />
+          Quote
         </button>
         <button
           type="button"
@@ -573,7 +557,7 @@ export function RichTextEditor({
           )}
           onClick={() => editor?.chain().focus().toggleCode().run()}
         >
-          <Code className="h-3.5 w-3.5" />
+          Code
         </button>
         <button
           type="button"
@@ -585,7 +569,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
           title="Code block"
         >
-          <SquareCode className="h-3.5 w-3.5" />
+          Block
         </button>
         <span className="mx-1 h-5 w-px bg-slate-200" />
         <button
@@ -597,7 +581,7 @@ export function RichTextEditor({
           )}
           onClick={toggleLink}
         >
-          <LinkIcon className="h-3.5 w-3.5" />
+          Link
         </button>
         <button
           type="button"
@@ -609,7 +593,7 @@ export function RichTextEditor({
           onClick={setColor}
           title="Clear text color"
         >
-          <Type className="h-3.5 w-3.5" />
+          Clear
         </button>
         <label
           onMouseDown={(event) => event.preventDefault()}
@@ -619,7 +603,7 @@ export function RichTextEditor({
           )}
           title="Pick text color"
         >
-          <Palette className="h-3.5 w-3.5" />
+          Color
           <span
             className="absolute bottom-1 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full border border-slate-300"
             style={{ backgroundColor: activeTextColor || "transparent" }}
@@ -639,7 +623,7 @@ export function RichTextEditor({
           onClick={insertImage}
           title="Insert image"
         >
-          <ImageIcon className="h-3.5 w-3.5" />
+          Image
         </button>
         <button
           type="button"
@@ -649,7 +633,7 @@ export function RichTextEditor({
             editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
           }
         >
-          <TableIcon className="h-3.5 w-3.5" />
+          Table
         </button>
       </div>
       )}

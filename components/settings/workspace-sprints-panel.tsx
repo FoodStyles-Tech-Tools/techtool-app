@@ -23,7 +23,6 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { useProjects } from "@/hooks/use-projects"
 import { useDeleteSprint } from "@/hooks/use-sprints"
 import { SprintForm } from "@/components/forms/sprint-form"
-import { Pencil, Plus, Trash2 } from "lucide-react"
 
 type WorkspaceProject = {
   id: string
@@ -183,7 +182,6 @@ export function WorkspaceSprintsPanel() {
             </select>
           </div>
           <Button type="button" size="sm" variant="outline" onClick={openCreateDialog}>
-            <Plus className="h-4 w-4 mr-1.5" />
             Create Sprint
           </Button>
         </div>
@@ -236,7 +234,7 @@ export function WorkspaceSprintsPanel() {
                         aria-label={`Edit ${sprint.name}`}
                         title="Edit sprint"
                       >
-                        <Pencil className="h-4 w-4" />
+                        Edit
                       </button>
                       <button
                         type="button"
@@ -246,7 +244,7 @@ export function WorkspaceSprintsPanel() {
                         aria-label={`Delete ${sprint.name}`}
                         title="Delete sprint"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        Delete
                       </button>
                     </div>
                   </TableCell>

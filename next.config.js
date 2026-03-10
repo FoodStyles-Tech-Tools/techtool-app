@@ -7,10 +7,7 @@ const nextConfig = {
   },
   // Enable prefetching for better navigation performance
   experimental: {
-    optimizePackageImports: [
-      'lucide-react', 
-      '@tanstack/react-query',
-    ],
+    optimizePackageImports: ['@tanstack/react-query'],
   },
   // Optimize images and static assets
   images: {

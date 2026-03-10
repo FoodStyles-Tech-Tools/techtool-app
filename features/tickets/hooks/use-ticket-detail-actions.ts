@@ -66,7 +66,6 @@ export function useTicketDetailActions({
   const [descriptionValue, setDescriptionValue] = useState("")
   const [updatingFields, setUpdatingFields] = useState<Record<string, boolean>>({})
   const [isSubtasksCollapsed, setIsSubtasksCollapsed] = useState(true)
-  const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
 
   useEffect(() => {
     if (ticket) {
@@ -367,8 +366,6 @@ export function useTicketDetailActions({
     updatingFields,
     isSubtasksCollapsed,
     setIsSubtasksCollapsed,
-    includeInactiveProjects,
-    setIncludeInactiveProjects,
     timestampValidation,
     parseTimestamp,
     getTimestampWarningMessage: (field: "assigned_at" | "started_at" | "completed_at") =>

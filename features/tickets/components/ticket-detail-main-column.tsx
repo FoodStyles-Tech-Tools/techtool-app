@@ -1,7 +1,6 @@
 "use client"
 
 import dynamic from "next/dynamic"
-import type { KeyboardEvent as ReactKeyboardEvent } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +11,6 @@ import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
 import { isRichTextEmpty, toDisplayHtml } from "@/lib/rich-text"
 import type { Ticket } from "@/lib/types"
 import type { TicketComment } from "@/hooks/use-ticket-comments"
-import { ChevronDown, ChevronRight, ExternalLink, Pencil, Plus, Trash2, X } from "lucide-react"
 
 const RichTextEditor = dynamic(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
@@ -24,12 +22,6 @@ type TicketDetailMainColumnProps = {
   ticket: Ticket
   canEditTickets: boolean
   detailComments?: TicketComment[]
-  isEditingTitle: boolean
-  titleValue: string
-  onTitleValueChange: (value: string) => void
-  onTitleSave: () => void | Promise<void>
-  onTitleKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void
-  onStartTitleEdit: () => void
   isEditingDescription: boolean
   descriptionValue: string
   onDescriptionValueChange: (value: string) => void
@@ -66,12 +58,6 @@ export function TicketDetailMainColumn({
   ticket,
   canEditTickets,
   detailComments,
-  isEditingTitle,
-  titleValue,
-  onTitleValueChange,
-  onTitleSave,
-  onTitleKeyDown,
-  onStartTitleEdit,
   isEditingDescription,
   descriptionValue,
   onDescriptionValueChange,
@@ -96,36 +82,12 @@ export function TicketDetailMainColumn({
   return (
     <div className="min-w-0 space-y-4">
       <Card className="shadow-none">
-        <CardContent className="p-4 pt-4">
-          {isEditingTitle ? (
-            <Input
-              value={titleValue}
-              onChange={(event) => onTitleValueChange(event.target.value)}
-              onBlur={() => void onTitleSave()}
-              onKeyDown={onTitleKeyDown}
-              className="h-10 text-xl font-semibold border-2"
-              disabled={!canEditTickets}
-              autoFocus
-            />
-          ) : (
-            <h1
-              className={[
-                "-mx-2 rounded-md px-2 py-2 text-2xl font-semibold leading-tight transition-colors",
-                canEditTickets ? "cursor-pointer hover:bg-slate-50" : "",
-              ].join(" ")}
-              onClick={() => {
-                if (canEditTickets) {
-                  onStartTitleEdit()
-                }
-              }}
-            >
-              {ticket.title}
-            </h1>
-          )}
-
+        <CardHeader className="px-4 pb-2 pt-4">
+          <CardTitle className="text-base">Description</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 pt-0">
           {isEditingDescription ? (
-            <div className="mt-3 space-y-2">
-              <label className="text-sm font-semibold text-slate-900">Description</label>
+            <div className="space-y-2">
               <RichTextEditor
                 value={descriptionValue}
                 onChange={onDescriptionValueChange}
@@ -153,7 +115,7 @@ export function TicketDetailMainColumn({
           ) : (
             <div
               className={[
-                "-mx-2 mt-3 space-y-2 rounded-md px-2 py-2 transition-colors",
+                "-mx-2 space-y-2 rounded-md px-2 py-2 transition-colors",
                 canEditTickets ? "cursor-pointer hover:bg-slate-50" : "",
               ].join(" ")}
               onClick={() => {
@@ -162,7 +124,6 @@ export function TicketDetailMainColumn({
                 }
               }}
             >
-              <label className="text-sm font-semibold text-slate-900">Description</label>
               {isRichTextEmpty(ticket.description) ? (
                 <p className="min-h-[140px] text-sm leading-relaxed text-slate-500">
                   <span className="italic text-slate-400">
@@ -180,7 +141,7 @@ export function TicketDetailMainColumn({
             </div>
           )}
 
-          <div className="mt-4">
+          <div className="mt-4 border-t border-slate-200 pt-4">
             <div className="mb-2 flex items-center justify-between">
               <label className="text-sm font-semibold text-slate-900">Links</label>
               <div className="flex items-center gap-2">
@@ -197,7 +158,6 @@ export function TicketDetailMainColumn({
                     onClick={onStartAddLink}
                     className="h-6 px-2 text-xs"
                   >
-                    <Plus className="h-3 w-3 mr-1" />
                     Add URL
                   </Button>
                 ) : null}
@@ -228,7 +188,7 @@ export function TicketDetailMainColumn({
                   Add
                 </Button>
                 <Button type="button" variant="ghost" size="sm" onClick={onCancelAddLink}>
-                  <X className="h-4 w-4" />
+                  Cancel
                 </Button>
               </div>
             ) : null}
@@ -264,7 +224,7 @@ export function TicketDetailMainColumn({
                           Save
                         </Button>
                         <Button type="button" variant="ghost" size="sm" onClick={onCancelEditLink}>
-                          <X className="h-4 w-4" />
+                          Cancel
                         </Button>
                       </div>
                     ) : (
@@ -280,7 +240,7 @@ export function TicketDetailMainColumn({
                             <p className="truncate">{url}</p>
                             <p className="truncate text-[11px] text-slate-500">{formatLinkLabel(url)}</p>
                           </div>
-                          <ExternalLink className="ml-2 h-4 w-4 flex-shrink-0 text-slate-500" />
+                          <span className="ml-2 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Open</span>
                         </a>
                         {canEditTickets ? (
                           <div className="flex items-center gap-1">
@@ -289,18 +249,18 @@ export function TicketDetailMainColumn({
                               variant="ghost"
                               size="sm"
                               onClick={() => onStartEditLink(index, url)}
-                              className="h-7 w-7 p-0"
+                              className="h-7 px-2 text-xs"
                             >
-                              <Pencil className="h-3 w-3" />
+                              Edit
                             </Button>
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
                               onClick={() => void onRemoveLink(index)}
-                              className="h-7 w-7 p-0 text-red-600 hover:text-red-700"
+                              className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
                             >
-                              <Trash2 className="h-3 w-3" />
+                              Delete
                             </Button>
                           </div>
                         ) : null}
@@ -316,6 +276,8 @@ export function TicketDetailMainColumn({
         </CardContent>
       </Card>
 
+      <TicketActivity ticketId={ticketId} displayId={ticket.displayId} initialComments={detailComments} />
+
       {ticket.type !== "subtask" ? (
         <Card className="shadow-none">
           <CardHeader className="px-4 pt-4 pb-2">
@@ -326,11 +288,9 @@ export function TicketDetailMainColumn({
               aria-expanded={!isSubtasksCollapsed}
               aria-controls={subtasksPanelId}
             >
-              {isSubtasksCollapsed ? (
-                <ChevronRight className="h-4 w-4 text-slate-500" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-slate-500" />
-              )}
+              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                {isSubtasksCollapsed ? "Show" : "Hide"}
+              </span>
               <CardTitle className="text-base">Subtasks</CardTitle>
             </button>
           </CardHeader>
@@ -348,8 +308,6 @@ export function TicketDetailMainColumn({
           ) : null}
         </Card>
       ) : null}
-
-      <TicketActivity ticketId={ticketId} displayId={ticket.displayId} initialComments={detailComments} />
     </div>
   )
 }

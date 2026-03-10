@@ -23,7 +23,6 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { useProjects } from "@/hooks/use-projects"
 import { useDeleteEpic } from "@/hooks/use-epics"
 import { EpicForm } from "@/components/forms/epic-form"
-import { Circle, Pencil, Plus, Trash2 } from "lucide-react"
 
 type WorkspaceProject = {
   id: string
@@ -182,7 +181,6 @@ export function WorkspaceEpicsPanel() {
             </select>
           </div>
           <Button type="button" size="sm" variant="outline" onClick={openCreateDialog}>
-            <Plus className="h-4 w-4 mr-1.5" />
             Create Epic
           </Button>
         </div>
@@ -222,7 +220,6 @@ export function WorkspaceEpicsPanel() {
                   <TableCell>{epic.project_name}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Circle className="h-3 w-3" style={{ fill: epic.color, color: epic.color }} />
                       <span className="font-mono text-xs">{epic.color}</span>
                     </div>
                   </TableCell>
@@ -236,7 +233,7 @@ export function WorkspaceEpicsPanel() {
                         aria-label={`Edit ${epic.name}`}
                         title="Edit epic"
                       >
-                        <Pencil className="h-4 w-4" />
+                        Edit
                       </button>
                       <button
                         type="button"
@@ -246,7 +243,7 @@ export function WorkspaceEpicsPanel() {
                         aria-label={`Delete ${epic.name}`}
                         title="Delete epic"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        Delete
                       </button>
                     </div>
                   </TableCell>

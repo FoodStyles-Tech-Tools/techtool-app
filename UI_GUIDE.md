@@ -34,7 +34,7 @@
     - `outline`: `border border-slate-300 bg-white hover:bg-slate-50`.
     - `ghost`: `hover:bg-slate-100 hover:text-slate-900`.
   - Sizes:
-    - `sm`, `md` (default), `lg`, `icon`.
+    - `sm`, `md` (default), `lg`.
 
 - **Inputs and textareas**
   - Use `Input` and `Textarea` from `components/ui/input` and `components/ui/textarea`.
@@ -92,4 +92,3 @@
 - If something looks “designed” rather than “plain and clear”, simplify:
   - Remove extra shadows and borders.
   - Use standard spacing and typography from Tailwind.
-

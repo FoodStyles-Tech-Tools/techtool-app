@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react"
 import Link from "next/link"
-import { Plus } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -232,7 +231,6 @@ export function Subtasks({
             onClick={handleCreateSubtask}
             disabled={!newSubtaskTitle.trim() || creating}
           >
-            <Plus className="mr-1 h-3.5 w-3.5" />
             Add
           </Button>
         </div>

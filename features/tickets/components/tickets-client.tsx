@@ -2,24 +2,14 @@
 
 import { useState, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { toast } from "@/components/ui/toast"
-import { useDepartments } from "@/hooks/use-departments"
 import { useProjects } from "@/hooks/use-projects"
-import { useUsers } from "@/hooks/use-users"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useTicketsFilters } from "@/hooks/use-tickets-filters"
-import { useKanbanDrag } from "@/hooks/use-kanban-drag"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
-import { useTicketSubtaskCounts } from "@/hooks/use-ticket-subtask-counts"
-import { useEpics } from "@/hooks/use-epics"
-import { useSprints } from "@/hooks/use-sprints"
-import { useUserPreferences } from "@/hooks/use-user-preferences"
 import { useTicketBoardActions } from "@/features/tickets/hooks/use-ticket-board-actions"
 import { useOpenSubtasksDialog } from "@/features/tickets/hooks/use-open-subtasks-dialog"
 import { isArchivedStatus } from "@/lib/ticket-statuses"
 import {
-  ASSIGNEE_ALLOWED_ROLES,
-  SQA_ALLOWED_ROLES,
   ROWS_PER_PAGE,
   type SortColumn,
 } from "@/lib/ticket-constants"
@@ -37,6 +27,7 @@ import { TicketsDialogs } from "@/features/tickets/components/tickets-dialogs"
 import { TicketsResults } from "@/features/tickets/components/tickets-results"
 import { PageHeader } from "@/components/ui/page-header"
 import { EntityPageLayout } from "@/components/ui/entity-page-layout"
+import { Button } from "@/components/ui/button"
 
 const SERVER_SORT_COLUMNS = new Set<SortColumn>([
   "id",
@@ -57,13 +48,11 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
 
   const { user, flags } = usePermissions()
   const { openSubtasksDialog, askHowToHandleOpenSubtasks, resolveOpenSubtasksDialog } = useOpenSubtasksDialog()
-  const { preferences } = useUserPreferences()
   const { data: projectsData } = useProjects()
   const projects = useMemo(() => projectsData || [], [projectsData])
 
   const filters = useTicketsFilters({
     user: user ?? null,
-    preferencesView: preferences.tickets_view ?? null,
     projects: projects.map((p) => ({ id: p.id, name: p.name ?? "", status: p.status })),
     initialProjectId: initialProjectId ?? null,
   })
@@ -73,58 +62,38 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     searchQuery,
     setSearchQuery,
     statusFilter,
+    setStatusFilter,
     projectFilter,
     setProjectFilter,
-    includeInactiveProjects,
-    setIncludeInactiveProjects,
-    departmentFilter,
-    requestedByFilter,
     assigneeFilter,
     setAssigneeFilter,
-    sprintFilter,
-    setSprintFilter,
     excludeDone,
     setExcludeDone,
     currentPage,
     setCurrentPage,
-    view,
-    setView,
     resetToolbarFilters,
     selectedProjectLabel,
   } = filters
 
-  const listModeRequiresFullDataset = view === "kanban" || view === "gantt"
   const serverSortBy = SERVER_SORT_COLUMNS.has(sortConfig.column) ? sortConfig.column : undefined
   const serverSortDirection = SERVER_SORT_COLUMNS.has(sortConfig.column) ? sortConfig.direction : undefined
 
   const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
     status: statusFilter !== "all" ? statusFilter : undefined,
     projectId: projectFilter !== "all" ? projectFilter : undefined,
-    departmentId:
-      departmentFilter !== "all" && departmentFilter !== "no_department"
-        ? departmentFilter
-        : departmentFilter === "no_department"
-          ? "no_department"
-          : undefined,
     assigneeId: assigneeFilter !== "all" ? assigneeFilter : undefined,
-    requestedById: requestedByFilter !== "all" ? requestedByFilter : undefined,
-    sprintId: sprintFilter !== "all" ? sprintFilter : undefined,
     excludeDone,
     excludeSubtasks: true,
     q: deferredSearchQuery.trim() || undefined,
-    limit: listModeRequiresFullDataset ? undefined : ROWS_PER_PAGE,
-    page: listModeRequiresFullDataset ? undefined : currentPage,
+    limit: ROWS_PER_PAGE,
+    page: currentPage,
     sortBy: serverSortBy,
     sortDirection: serverSortDirection,
   })
 
-  const { data: usersData } = useUsers()
-  const { departments } = useDepartments()
   const updateTicket = useUpdateTicket()
   const updateTicketWithReasonComment = useUpdateTicketWithReasonComment()
   const { statuses: ticketStatuses } = useTicketStatuses()
-  const { epics } = useEpics(projectFilter === "all" ? null : projectFilter)
-  const { sprints } = useSprints(projectFilter === "all" ? null : projectFilter)
 
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
   const filteredTickets = useMemo(
@@ -132,35 +101,26 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     [allTickets]
   )
   const sortedTickets = filteredTickets
-  const parentTicketIds = useMemo(() => allTickets.map((ticket) => ticket.id), [allTickets])
-  const { data: subtaskCountMap = {} } = useTicketSubtaskCounts(parentTicketIds)
-  const users = useMemo(() => usersData || [], [usersData])
   const projectOptions = useMemo(
     () => {
-      const visible = includeInactiveProjects
-        ? projects
-        : projects.filter((p) => p.status?.toLowerCase() !== "inactive")
+      const visible = projects.filter((p) => p.status?.toLowerCase() !== "inactive")
       return [...visible].sort((a, b) =>
         (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
       )
     },
-    [projects, includeInactiveProjects]
+    [projects]
   )
-  const kanbanColumns = useMemo(
+  const statusOptions = useMemo(
     () =>
       ticketStatuses
         .filter((status) => !isArchivedStatus(status.key))
-        .map((s) => ({ id: s.key, label: s.label, color: s.color })),
+        .map((status) => ({ id: status.key, label: status.label })),
     [ticketStatuses]
   )
-  const statusKeys = useMemo(() => kanbanColumns.map((c) => c.id), [kanbanColumns])
 
   const loading = !ticketsData && ticketsLoading
   const canCreateTickets = flags?.canCreateTickets ?? false
-  const canEditTickets = flags?.canEditTickets ?? false
-  const canEditProjects = flags?.canEditProjects ?? false
   const {
-    updatingFields,
     selectedTicketId,
     setSelectedTicketId,
     isTicketDialogOpen,
@@ -171,15 +131,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     showReturnedReasonDialog,
     returnedReason,
     setReturnedReason,
-    isEpicDialogOpen,
-    setIsEpicDialogOpen,
-    isSprintDialogOpen,
-    setIsSprintDialogOpen,
-    handleOpenCreateEpic,
-    handleOpenCreateSprint,
-    handleKanbanDrop,
-    handleCopyTicketLabel,
-    updateTicketField,
     pendingStatusKind,
     handleCancelReasonCancel,
     handleCancelReasonConfirm,
@@ -193,54 +144,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     updateTicketWithReasonComment,
   })
 
-  const kanban = useKanbanDrag({
-    view: view === "kanban" ? "kanban" : "table",
-    canEditTickets,
-    onDrop: handleKanbanDrop,
-  })
-
-  const {
-    draggedTicket,
-    dragOverColumn,
-    dropIndicator,
-    justDroppedTicketId,
-    kanbanScrollRef,
-    kanbanTopScrollRef,
-    kanbanScrollTrackWidth,
-    refreshKanbanTrackWidth,
-    syncKanbanScroll,
-    handleDragStart,
-    handleDragEnd,
-    handleDragOver,
-    handleDragLeave,
-    handleDrop,
-  } = kanban
-
-  const assigneeEligibleUsers = useMemo(
-    () => users.filter((user) =>
-      user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false
-    ),
-    [users]
-  )
-  const sqaEligibleUsers = useMemo(
-    () =>
-      users.filter((u) =>
-        u.role ? SQA_ALLOWED_ROLES.has(u.role.toLowerCase()) : false
-      ),
-    [users]
-  )
-
-  const handleShareView = useCallback(() => {
-    if (!navigator?.clipboard?.writeText) {
-      toast("Clipboard not available", "error")
-      return
-    }
-    navigator.clipboard
-      .writeText(window.location.href)
-      .then(() => toast("Link copied"))
-      .catch(() => toast("Failed to copy link", "error"))
-  }, [])
-
   const handleSort = useCallback((column: SortColumn) => {
     setSortConfig((previous) =>
       previous.column === column
@@ -248,23 +151,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         : { column, direction: "asc" }
     )
   }, [])
-
-  // Group tickets by status for kanban
-  const ticketsByStatus = useMemo(() => {
-    const grouped: Record<string, typeof filteredTickets> = statusKeys.reduce(
-      (acc, key) => {
-        acc[key] = []
-        return acc
-      },
-      {} as Record<string, typeof filteredTickets>
-    )
-    filteredTickets.forEach(ticket => {
-      if (grouped[ticket.status]) {
-        grouped[ticket.status].push(ticket)
-      }
-    })
-    return grouped
-  }, [filteredTickets, statusKeys])
 
   // Memoize callbacks before early return to maintain hook order
   const hasSearchQuery = deferredSearchQuery.trim().length > 0
@@ -288,35 +174,31 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
       header={
         <PageHeader
           title="Tickets"
-          description={`Browse tickets in ${selectedProjectLabel}. Switch views without losing the current filters.`}
+          description={`Track and update work in ${selectedProjectLabel}. Keep the queue clean and move quickly.`}
+          actions={
+            canCreateTickets ? (
+              <Button type="button" onClick={() => setTicketDialogOpen(true)}>
+                Create Ticket
+              </Button>
+            ) : null
+          }
         />
       }
       toolbar={
         <TicketsToolbar
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
-          selectedProjectLabel={selectedProjectLabel}
           projectFilter={projectFilter}
           setProjectFilter={setProjectFilter}
           projectOptions={projectOptions}
-          sprintFilter={sprintFilter}
-          setSprintFilter={setSprintFilter}
-          sprintOptions={sprints.map((sprint) => ({ id: sprint.id, name: sprint.name }))}
-          includeInactiveProjects={includeInactiveProjects}
-          setIncludeInactiveProjects={setIncludeInactiveProjects}
-          view={view}
-          setView={setView}
-          onShareView={handleShareView}
+          statusFilter={statusFilter}
+          setStatusFilter={setStatusFilter}
+          statusOptions={statusOptions}
           excludeDone={excludeDone}
           setExcludeDone={setExcludeDone}
           assigneeFilter={assigneeFilter}
           setAssigneeFilter={setAssigneeFilter}
           resetToolbarFilters={resetToolbarFilters}
-          canCreateTickets={canCreateTickets}
-          onOpenCreateTicket={() => setTicketDialogOpen(true)}
-          canEditProjects={canEditProjects}
-          onOpenCreateEpic={handleOpenCreateEpic}
-          onOpenCreateSprint={handleOpenCreateSprint}
           currentUserId={user?.id ?? null}
         />
       }
@@ -325,55 +207,17 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         loading={loading}
         filteredTickets={filteredTickets}
         hasSearchQuery={hasSearchQuery}
-        view={view}
-        projectFilter={projectFilter}
-        sortedTickets={sortedTickets}
-        sprints={sprints}
-        epics={epics}
-        onSelectTicket={handleSelectTicket}
-        kanbanProps={{
-          columns: kanbanColumns,
-          ticketsByStatus,
-          subtaskCountMap,
-          draggedTicket,
-          dragOverColumn,
-          dropIndicator,
-          justDroppedTicketId,
-          canEditTickets,
-          onSelectTicket: handleSelectTicket,
-          onDragStart: handleDragStart,
-          onDragEnd: handleDragEnd,
-          onDragOver: handleDragOver,
-          onDragLeave: handleDragLeave,
-          onDrop: handleDrop,
-          kanbanScrollRef,
-          kanbanTopScrollRef,
-          kanbanScrollTrackWidth,
-          onScrollBoard: (left) => syncKanbanScroll("board", left),
-          onScrollTop: (left) => syncKanbanScroll("top", left),
-          onRefreshTrackWidth: refreshKanbanTrackWidth,
-        }}
         tableProps={{
           sortConfig,
           onSort: handleSort,
           tickets: paginatedTickets,
-          subtaskCountMap,
           totalCount: ticketsPagination?.total || sortedTickets.length,
           currentPage,
           totalPages: totalPages || 1,
           onPageChange: setCurrentPage,
           startIndex,
           endIndex,
-          onCopyTicket: handleCopyTicketLabel,
           onSelectTicket: handleSelectTicket,
-          departments,
-          users,
-          assigneeEligibleUsers,
-          sqaEligibleUsers,
-          updateTicketField,
-          updatingFields,
-          excludeDone,
-          canEdit: canEditTickets,
         }}
       />
 
@@ -400,11 +244,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         setReturnedReason={setReturnedReason}
         onReturnedReasonCancel={handleReturnedReasonCancel}
         onReturnedReasonConfirm={handleReturnedReasonConfirm}
-        projectFilter={projectFilter}
-        isEpicDialogOpen={isEpicDialogOpen}
-        isSprintDialogOpen={isSprintDialogOpen}
-        setIsEpicDialogOpen={setIsEpicDialogOpen}
-        setIsSprintDialogOpen={setIsSprintDialogOpen}
       />
     </EntityPageLayout>
   )

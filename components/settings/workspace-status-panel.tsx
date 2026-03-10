@@ -25,7 +25,6 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import { normalizeStatusKey, type TicketStatus } from "@/lib/ticket-statuses"
 import { toast } from "@/components/ui/toast"
-import { Pencil, Plus, Trash2 } from "lucide-react"
 
 type StatusDraft = {
   label: string
@@ -166,7 +165,6 @@ export function WorkspaceStatusPanel() {
           <p className="text-sm text-slate-500">Global ticket statuses used across projects.</p>
         </div>
         <Button type="button" size="sm" variant="outline" onClick={openCreate}>
-          <Plus className="h-4 w-4 mr-1.5" />
           Create Status
         </Button>
       </div>
@@ -221,7 +219,7 @@ export function WorkspaceStatusPanel() {
                         aria-label={`Edit ${status.label}`}
                         title="Edit status"
                       >
-                        <Pencil className="h-4 w-4" />
+                        Edit
                       </button>
                       <button
                         type="button"
@@ -230,7 +228,7 @@ export function WorkspaceStatusPanel() {
                         aria-label={`Delete ${status.label}`}
                         title="Delete status"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        Delete
                       </button>
                     </div>
                   </TableCell>

@@ -11,14 +11,12 @@ export interface ProjectsFilterOption {
 
 interface UseTicketsFiltersOptions {
   user: { id: string; role?: string | null } | null
-  preferencesView?: "table" | "kanban" | "gantt" | null
   projects: ProjectsFilterOption[]
   initialProjectId?: string | null
 }
 
 export function useTicketsFilters({
   user,
-  preferencesView,
   projects,
   initialProjectId,
 }: UseTicketsFiltersOptions) {
@@ -26,21 +24,12 @@ export function useTicketsFilters({
   const deferredSearchQuery = useDeferredValue(searchQuery)
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [projectFilter, setProjectFilter] = useState<string>(initialProjectId ?? "all")
-  const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [requestedByFilter, setRequestedByFilter] = useState<string>("all")
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [sprintFilter, setSprintFilter] = useState<string>("all")
   const [excludeDone, setExcludeDone] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
-  const [view, setView] = useState<"table" | "kanban" | "gantt">(preferencesView || "table")
-
-  // Sync view from preferences
-  useEffect(() => {
-    if (preferencesView) {
-      setView(preferencesView)
-    }
-  }, [preferencesView])
 
   // Default assignee/requestedBy by role (run once when user is ready)
   useEffect(() => {
@@ -64,12 +53,12 @@ export function useTicketsFilters({
 
   // Clear project filter if selected project becomes inactive (unless including inactive)
   useEffect(() => {
-    if (includeInactiveProjects || projectFilter === "all") return
+    if (projectFilter === "all") return
     const selected = projects.find((p) => p.id === projectFilter)
     if (selected?.status?.toLowerCase() === "inactive") {
       setProjectFilter("all")
     }
-  }, [includeInactiveProjects, projectFilter, projects])
+  }, [projectFilter, projects])
 
   const resetPage = useCallback(() => setCurrentPage(1), [])
 
@@ -149,8 +138,6 @@ export function useTicketsFilters({
     setStatusFilter: setStatusFilterAndResetPage,
     projectFilter,
     setProjectFilter: setProjectFilterAndResetPage,
-    includeInactiveProjects,
-    setIncludeInactiveProjects,
     departmentFilter,
     setDepartmentFilter: setDepartmentFilterAndResetPage,
     requestedByFilter,
@@ -164,8 +151,6 @@ export function useTicketsFilters({
     currentPage,
     setCurrentPage,
     resetPage,
-    view,
-    setView,
     resetToolbarFilters,
     activeFilterCount,
     selectedProjectLabel,

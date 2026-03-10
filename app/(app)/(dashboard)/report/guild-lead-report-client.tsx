@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect, useMemo, type ReactNode } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
-import { Loader2, PlusCircle, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { getDefaultReportDateRange } from "@/lib/report-date-range"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -343,7 +342,7 @@ export default function GuildLeadReportClient() {
             <span className="text-sm font-medium">Session</span>
             {sessionsLoading ? (
               <span className="inline-flex items-center gap-2 text-sm text-slate-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-xs font-semibold uppercase tracking-wide animate-pulse">Loading</span>
                 Loading sessions...
               </span>
             ) : (
@@ -361,7 +360,6 @@ export default function GuildLeadReportClient() {
                     ))}
                 </select>
                 <Button variant="outline" size="sm" onClick={openCreateSessionDialog}>
-                  <PlusCircle className="mr-1.5 h-4 w-4" />
                   New session
                 </Button>
               </>
@@ -411,7 +409,7 @@ export default function GuildLeadReportClient() {
                   onClick={handleSaveSessionConfig}
                   disabled={!rangeDirty || updateMutation.isPending}
                 >
-                  {updateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save session"}
+                  {updateMutation.isPending ? "Saving..." : "Save session"}
                 </Button>
                 <Button
                   variant="destructive"
@@ -419,14 +417,7 @@ export default function GuildLeadReportClient() {
                   onClick={handleDeleteSession}
                   disabled={deleteMutation.isPending}
                 >
-                  {deleteMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </>
-                  )}
+                  {deleteMutation.isPending ? "Deleting..." : "Delete"}
                 </Button>
                 </div>
               </div>
@@ -451,7 +442,9 @@ export default function GuildLeadReportClient() {
 
           {dataLoading ? (
             <div className="flex items-center justify-center rounded-md border border-slate-200 bg-white py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+              <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 animate-pulse">
+                Loading
+              </span>
             </div>
           ) : reportData ? (
             <div className="space-y-6">
@@ -570,11 +563,7 @@ export default function GuildLeadReportClient() {
               Cancel
             </Button>
             <Button onClick={handleCreateSession} disabled={createMutation.isPending}>
-              {createMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                "Create session"
-              )}
+              {createMutation.isPending ? "Creating..." : "Create session"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -659,7 +648,7 @@ function InsightEditor({
       <div className="flex items-center justify-between">
         <p className="text-xs text-slate-500">{dirty ? "Unsaved changes" : "No pending changes"}</p>
         <Button size="sm" onClick={handleSave} disabled={!dirty || saving} className="min-w-[112px]">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save insight"}
+          {saving ? "Saving..." : "Save insight"}
         </Button>
       </div>
     </div>

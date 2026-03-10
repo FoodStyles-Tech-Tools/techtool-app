@@ -21,8 +21,6 @@ type TicketDetailFieldsSectionProps = {
   epics: Epic[]
   sprints: Sprint[]
   projectOptions: TicketProjectOption[]
-  includeInactiveProjects: boolean
-  onIncludeInactiveProjectsChange: (value: boolean) => void
   parentTicketOptions: ParentTicketOption[]
   selectedParentTicketId: string | null
   selectedParentTicketOption: ParentTicketOption | null
@@ -73,8 +71,6 @@ export function TicketDetailFieldsSection(props: TicketDetailFieldsSectionProps)
         epics={props.epics}
         sprints={props.sprints}
         projectOptions={props.projectOptions}
-        includeInactiveProjects={props.includeInactiveProjects}
-        onIncludeInactiveProjectsChange={props.onIncludeInactiveProjectsChange}
         parseTimestamp={props.parseTimestamp}
         onPriorityChange={props.onPriorityChange}
         onDueDateChange={props.onDueDateChange}

@@ -1,7 +1,5 @@
-import { requirePagePermission } from "@/lib/server/require-page-permission"
-import { WorkspaceSprintsPanel } from "@/components/settings/workspace-sprints-panel"
+import { redirect } from "next/navigation"
 
 export default async function WorkspaceSprintPage() {
-  await requirePagePermission("projects", "edit")
-  return <WorkspaceSprintsPanel />
+  redirect("/sprints")
 }

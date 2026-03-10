@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo } from "react"
-import { Circle } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import {
@@ -45,20 +44,15 @@ export function TicketStatusSelect({
   const normalizedValue = useMemo(() => normalizeStatusKey(value || ""), [value])
   const currentStatus = statusMap.get(normalizedValue) || statusMap.get(value)
   const currentLabel = currentStatus?.label || formatStatusLabel(value || "")
-  const currentColor = currentStatus?.color || "#9ca3af"
 
   return (
     <div className={cn("relative w-[120px]", className)}>
-      <Circle
-        className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2"
-        style={{ color: currentColor, fill: currentColor }}
-      />
       <select
         value={value}
         onChange={(event) => onValueChange(event.target.value)}
         disabled={disabled}
         className={cn(
-          "h-7 w-full rounded-md border border-slate-300 bg-white pl-7 pr-2 text-xs text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
+          "h-7 w-full rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
           triggerClassName
         )}
       >
@@ -69,7 +63,7 @@ export function TicketStatusSelect({
         ))}
       </select>
       {!value ? (
-        <span className="pointer-events-none absolute left-7 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">
           {currentLabel}
         </span>
       ) : null}
@@ -79,26 +73,13 @@ export function TicketStatusSelect({
 
 export function TicketStatusIcon({
   status,
-  className,
-  statusMap,
+  className: _className,
+  statusMap: _statusMap,
 }: {
   status: string
   className?: string
   statusMap?: Map<string, TicketStatus>
 }) {
-  const { statusMap: fetchedStatusMap } = useTicketStatuses({
-    enabled: !statusMap,
-    realtime: false,
-  })
-  const resolvedStatusMap = statusMap ?? fetchedStatusMap
-  const normalizedStatus = normalizeStatusKey(status)
-  const statusEntry = resolvedStatusMap.get(normalizedStatus) || resolvedStatusMap.get(status)
-  const color = statusEntry?.color || "#9ca3af"
-
-  return (
-    <Circle
-      className={cn("h-3 w-3", className)}
-      style={{ color, fill: color }}
-    />
-  )
+  void status
+  return null
 }

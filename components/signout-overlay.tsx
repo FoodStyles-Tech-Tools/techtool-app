@@ -1,6 +1,5 @@
 "use client"
 
-import { Loader2 } from "lucide-react"
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { usePathname } from "next/navigation"
 
@@ -30,7 +29,9 @@ export function SignOutOverlayProvider({ children }: { children: React.ReactNode
       {visible && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/70">
           <div className="flex flex-col items-center gap-3 text-white">
-            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 animate-pulse">
+              Working
+            </span>
             <p className="text-lg font-semibold tracking-wide">Logging you out...</p>
           </div>
         </div>

@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { X } from "lucide-react"
 import { DepartmentForm } from "@/components/forms/department-form"
 import { useDepartments } from "@/hooks/use-departments"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
@@ -28,7 +27,6 @@ import { EpicSelect } from "@/components/epic-select"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useSprints } from "@/hooks/use-sprints"
 import { SprintSelect } from "@/components/sprint-select"
-import { Switch } from "@/components/ui/switch"
 import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import { normalizeRichTextInput } from "@/lib/rich-text"
 
@@ -113,7 +111,6 @@ export function TicketForm({
   hideSubmitButton = false,
 }: TicketFormProps) {
   const [users, setUsers] = useState<User[]>([])
-  const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
   const { departments, refresh } = useDepartments()
   const { user, flags } = usePermissions()
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
@@ -159,16 +156,14 @@ export function TicketForm({
   const effectiveProjectId =
     projectId || (selectedProjectId && selectedProjectId !== NO_PROJECT_VALUE ? selectedProjectId : "")
   const filteredProjectOptions = useMemo(() => {
-    const visibleProjects = includeInactiveProjects
-      ? projectOptions
-      : projectOptions.filter(
+    const visibleProjects = projectOptions.filter(
       (project) =>
         project.status?.toLowerCase() !== "inactive" || project.id === selectedProjectId
     )
     return [...visibleProjects].sort((a, b) =>
       (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
     )
-  }, [projectOptions, includeInactiveProjects, selectedProjectId])
+  }, [projectOptions, selectedProjectId])
   const assigneeUsers = useMemo(
     () => users.filter((u) => (u.role ? ASSIGNEE_ALLOWED_ROLES.has(u.role.toLowerCase()) : false)),
     [users]
@@ -336,14 +331,6 @@ export function TicketForm({
                     ))}
                   </select>
                 </FormControl>
-                <div className="mt-2 flex items-center justify-end gap-2">
-                  <span className="text-xs text-slate-500">Include inactive</span>
-                  <Switch
-                    checked={includeInactiveProjects}
-                    onCheckedChange={setIncludeInactiveProjects}
-                    aria-label="Include inactive projects"
-                  />
-                </div>
                 <FormMessage />
               </FormItem>
             )}
@@ -476,13 +463,13 @@ export function TicketForm({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="absolute right-10 top-1/2 -translate-y-1/2 h-6 w-6 p-0 hover:bg-transparent z-10"
+                    className="absolute right-10 top-1/2 z-10 h-6 -translate-y-1/2 px-1.5 text-xs hover:bg-transparent"
                     onClick={(e) => {
                       e.stopPropagation()
                       field.onChange("")
                     }}
                   >
-                    <X className="h-4 w-4 text-slate-500 hover:text-slate-900" />
+                    Clear
                   </Button>
                 )}
               </div>

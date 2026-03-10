@@ -12,6 +12,12 @@ interface ProjectCollaborator {
   image: string | null
 }
 
+interface ProjectTicketStats {
+  total: number
+  open: number
+  done: number
+}
+
 interface Project {
   id: string
   name: string
@@ -34,6 +40,8 @@ interface Project {
   requester_ids: string[]
   requesters: ProjectCollaborator[]
   created_at: string
+  tickets?: Array<{ count: number }>
+  ticket_stats?: ProjectTicketStats
 }
 
 interface ProjectsResponse {

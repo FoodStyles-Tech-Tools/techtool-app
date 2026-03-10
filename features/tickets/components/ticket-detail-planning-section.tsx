@@ -3,7 +3,6 @@
 import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { EpicSelect } from "@/components/epic-select"
 import { SprintSelect } from "@/components/sprint-select"
-import { Switch } from "@/components/ui/switch"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import type { Epic } from "@/hooks/use-epics"
 import type { Sprint } from "@/hooks/use-sprints"
@@ -26,8 +25,6 @@ type TicketDetailPlanningSectionProps = {
   epics: Epic[]
   sprints: Sprint[]
   projectOptions: TicketProjectOption[]
-  includeInactiveProjects: boolean
-  onIncludeInactiveProjectsChange: (value: boolean) => void
   parseTimestamp: (timestamp: string | null | undefined) => Date | null
   onPriorityChange: (value: string) => void | Promise<void>
   onDueDateChange: (value: Date | null) => void | Promise<void>
@@ -46,8 +43,6 @@ export function TicketDetailPlanningSection({
   epics,
   sprints,
   projectOptions,
-  includeInactiveProjects,
-  onIncludeInactiveProjectsChange,
   parseTimestamp,
   onPriorityChange,
   onDueDateChange,
@@ -147,14 +142,6 @@ export function TicketDetailPlanningSection({
               </option>
             ))}
           </select>
-          <div className="mt-3 flex items-center justify-end gap-2">
-            <span className="text-xs text-slate-500">Include inactive</span>
-            <Switch
-              checked={includeInactiveProjects}
-              onCheckedChange={onIncludeInactiveProjectsChange}
-              aria-label="Include inactive projects"
-            />
-          </div>
         </div>
       </div>
     </>

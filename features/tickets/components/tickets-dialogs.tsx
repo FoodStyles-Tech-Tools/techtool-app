@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic"
 import { TicketCancelReasonDialog } from "@/features/tickets/components/ticket-cancel-reason-dialog"
 import { TicketOpenSubtasksDialog } from "@/features/tickets/components/ticket-open-subtasks-dialog"
-import { TicketProjectEntityDialogs } from "@/features/tickets/components/ticket-project-entity-dialogs"
 import { TicketReturnedReasonDialog } from "@/features/tickets/components/ticket-returned-reason-dialog"
 import type { TicketSubtaskRow } from "@/features/tickets/types"
 
@@ -39,11 +38,6 @@ type TicketsDialogsProps = {
   setReturnedReason: (value: string) => void
   onReturnedReasonCancel: () => void
   onReturnedReasonConfirm: () => void | Promise<void>
-  projectFilter: string
-  isEpicDialogOpen: boolean
-  isSprintDialogOpen: boolean
-  setIsEpicDialogOpen: (open: boolean) => void
-  setIsSprintDialogOpen: (open: boolean) => void
 }
 
 export function TicketsDialogs({
@@ -69,11 +63,6 @@ export function TicketsDialogs({
   setReturnedReason,
   onReturnedReasonCancel,
   onReturnedReasonConfirm,
-  projectFilter,
-  isEpicDialogOpen,
-  isSprintDialogOpen,
-  setIsEpicDialogOpen,
-  setIsSprintDialogOpen,
 }: TicketsDialogsProps) {
   return (
     <>
@@ -113,13 +102,6 @@ export function TicketsDialogs({
         onCancel={onReturnedReasonCancel}
         onConfirm={onReturnedReasonConfirm}
         onShortcutSubmit={onReturnedReasonConfirm}
-      />
-      <TicketProjectEntityDialogs
-        projectId={projectFilter === "all" ? null : projectFilter}
-        epicOpen={isEpicDialogOpen}
-        sprintOpen={isSprintDialogOpen}
-        onEpicOpenChange={setIsEpicDialogOpen}
-        onSprintOpenChange={setIsSprintDialogOpen}
       />
     </>
   )

@@ -5,7 +5,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 export interface UserPreferences {
   user_id: string
   group_by_epic: boolean
-  tickets_view: "table" | "kanban"
   pinned_project_ids: string[]
 }
 
@@ -26,7 +25,7 @@ export function useUserPreferences() {
 
   const updatePreferences = useMutation({
     mutationFn: async (
-      updates: Partial<Pick<UserPreferences, "group_by_epic" | "tickets_view" | "pinned_project_ids">>
+      updates: Partial<Pick<UserPreferences, "group_by_epic" | "pinned_project_ids">>
     ) => {
       const response = await fetch("/api/user-preferences", {
         method: "PATCH",
@@ -50,7 +49,6 @@ export function useUserPreferences() {
     preferences: data?.preferences || {
       user_id: "",
       group_by_epic: false,
-      tickets_view: "table" as const,
       pinned_project_ids: [],
     },
     loading: isLoading,

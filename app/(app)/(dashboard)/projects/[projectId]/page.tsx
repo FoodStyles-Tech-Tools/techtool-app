@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation"
 import { requirePagePermission } from "@/lib/server/require-page-permission"
+import ProjectDetailClient from "./project-detail-client"
 
 interface ProjectDetailPageProps {
   params: {
@@ -9,5 +9,5 @@ interface ProjectDetailPageProps {
 
 export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   await requirePagePermission("projects", "view")
-  redirect(`/tickets?projectId=${encodeURIComponent(params.projectId)}`)
+  return <ProjectDetailClient projectId={params.projectId} />
 }

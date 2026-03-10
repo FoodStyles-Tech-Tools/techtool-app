@@ -33,7 +33,6 @@ import {
 import { FormDialogShell } from "@/components/ui/form-dialog-shell"
 import { TicketForm } from "@/components/forms/ticket-form"
 import { toast } from "@/components/ui/toast"
-import { ChevronLeft, ChevronRight, Eye, Loader2, RefreshCw, Trash2 } from "lucide-react"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useProjects } from "@/hooks/use-projects"
 import {
@@ -703,7 +702,6 @@ export default function ClockifyClient() {
               disabled={createSession.isPending}
               className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <RefreshCw className="h-4 w-4" />
               {createSession.isPending ? "Fetching..." : "Fetch Report"}
             </button>
           </div>
@@ -727,20 +725,20 @@ export default function ClockifyClient() {
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
-                  size="icon"
+                  size="sm"
                   onClick={() => setWeekOffset((prev) => prev + 1)}
                   aria-label="View older week"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  Older
                 </Button>
                 <Button
                   variant="outline"
-                  size="icon"
+                  size="sm"
                   onClick={() => setWeekOffset((prev) => Math.max(1, prev - 1))}
                   disabled={weekOffset <= 1}
                   aria-label="View newer week"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  Newer
                 </Button>
               </div>
             </div>
@@ -811,21 +809,21 @@ export default function ClockifyClient() {
                         </TableCell>
                         <TableCell className="py-2 text-right">
                           <div className="flex justify-end gap-2">
-                            <Button size="icon" variant="ghost" asChild>
+                            <Button size="sm" variant="ghost" asChild>
                               <Link
                                 href={`/clockify?sessionId=${session.id}`}
                                 aria-label="View report session"
                               >
-                                <Eye className="h-4 w-4" />
+                                View
                               </Link>
                             </Button>
                             <Button
-                              size="icon"
+                              size="sm"
                               variant="ghost"
                               onClick={() => handleDeleteSession(session.id)}
                               aria-label="Delete report session"
                             >
-                              <Trash2 className="h-4 w-4 text-red-600" />
+                              Delete
                             </Button>
                           </div>
                         </TableCell>
@@ -1134,7 +1132,9 @@ export default function ClockifyClient() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-900" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 animate-pulse">
+              Working
+            </span>
           </div>
         </DialogContent>
       </Dialog>

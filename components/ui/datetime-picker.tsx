@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { format } from "date-fns"
-import { Calendar as CalendarIcon, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -153,7 +152,7 @@ export function DateTimePicker({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
-        {!hideIcon && <CalendarIcon className="mr-2 h-3 w-3 text-slate-400" />}
+        {!hideIcon ? <span className="mr-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Date</span> : null}
         {renderTriggerContent
           ? renderTriggerContent(value)
           : value
@@ -174,10 +173,7 @@ export function DateTimePicker({
               />
             </div>
             <div className="space-y-2">
-              <label className="flex items-center gap-2 text-xs font-medium">
-                <Clock className="h-3 w-3 text-slate-400" />
-                Time
-              </label>
+              <label className="text-xs font-medium">Time</label>
               <Input
                 type="time"
                 value={time}

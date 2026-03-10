@@ -1,5 +1,5 @@
 /**
- * Shared constants for tickets UI (list, filters, table, kanban).
+ * Shared constants for tickets UI.
  */
 
 export const ASSIGNEE_ALLOWED_ROLES = new Set(["admin", "member"])

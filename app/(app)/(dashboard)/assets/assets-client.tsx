@@ -20,7 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Trash2, Pencil } from "lucide-react"
 import { AssetForm } from "@/components/forms/asset-form"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -108,7 +107,6 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
           actions={
             canCreateAssets ? (
               <Button type="button" onClick={handleAddAsset}>
-                <Plus className="h-4 w-4" />
                 Create Asset
               </Button>
             ) : null
@@ -246,19 +244,19 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                         {canEditAssets && (
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="sm"
                             onClick={() => handleEdit(asset)}
                           >
-                            <Pencil className="h-4 w-4" />
+                            Edit
                           </Button>
                         )}
                         {canDeleteAssets && (
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="sm"
                             onClick={() => setDeletingAsset(asset)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            Delete
                           </Button>
                         )}
                       </div>

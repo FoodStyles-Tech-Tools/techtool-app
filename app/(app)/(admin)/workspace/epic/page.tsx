@@ -1,7 +1,5 @@
-import { requirePagePermission } from "@/lib/server/require-page-permission"
-import { WorkspaceEpicsPanel } from "@/components/settings/workspace-epics-panel"
+import { redirect } from "next/navigation"
 
 export default async function WorkspaceEpicPage() {
-  await requirePagePermission("projects", "edit")
-  return <WorkspaceEpicsPanel />
+  redirect("/epics")
 }

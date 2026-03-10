@@ -19,7 +19,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Trash2, Pencil } from "lucide-react"
 import { UserForm } from "@/components/forms/user-form"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -137,7 +136,6 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
           actions={
             canCreateUsers ? (
               <Button type="button" onClick={handleAddUser}>
-                <Plus className="h-4 w-4" />
                 Create User
               </Button>
             ) : null
@@ -200,19 +198,19 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
                         {canEditUsers && (
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="sm"
                             onClick={() => handleEdit(user)}
                           >
-                            <Pencil className="h-4 w-4" />
+                            Edit
                           </Button>
                         )}
                         {canDeleteUsers && (
                           <Button
                             variant="ghost"
-                            size="icon"
+                            size="sm"
                             onClick={() => setDeletingUser(user)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            Delete
                           </Button>
                         )}
                       </div>

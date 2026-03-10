@@ -18,13 +18,11 @@ import {
   useUpdateTicketWithReasonComment,
 } from "@/features/tickets/hooks/use-tickets"
 import { TicketDetailDialogs } from "@/features/tickets/components/ticket-detail-dialogs"
-import { TicketDetailFooter } from "@/features/tickets/components/ticket-detail-footer"
 import { TicketDetailHeader } from "@/features/tickets/components/ticket-detail-header"
 import { TicketDetailMainColumn } from "@/features/tickets/components/ticket-detail-main-column"
 import { TicketDetailSidebar } from "@/features/tickets/components/ticket-detail-sidebar"
 import { DataState } from "@/components/ui/data-state"
 import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@/lib/ticket-constants"
-import type { TicketDetailDialogProps } from "@/features/tickets/types"
 
 const NO_DEPARTMENT_VALUE = "no_department"
 const NO_PROJECT_VALUE = "no_project"
@@ -146,17 +144,15 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
 
   const projectOptions = useMemo(() => {
     const selectedProjectId = ticket?.project?.id
-    const visibleProjects = actions.includeInactiveProjects
-      ? projects
-      : projects.filter(
-          (project) =>
-            project.status?.toLowerCase() !== "inactive" || project.id === selectedProjectId
-        )
+    const visibleProjects = projects.filter(
+      (project) =>
+        project.status?.toLowerCase() !== "inactive" || project.id === selectedProjectId
+    )
 
     return [...visibleProjects].sort((left, right) =>
       (left.name || "").localeCompare(right.name || "", undefined, { sensitivity: "base" })
     )
-  }, [actions.includeInactiveProjects, projects, ticket?.project?.id])
+  }, [projects, ticket?.project?.id])
 
   const handleGoToParentTicket = () => {
     if (!parentNavigationSlug) return
@@ -167,27 +163,32 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
 
   return (
     <>
-      <div className="flex flex-col gap-0 h-full min-h-[calc(100vh-4rem)]">
-        <div className="border-b border-slate-200 bg-white px-4 pb-3 pt-4">
-          <TicketDetailHeader
-            ticketId={ticketId}
-            ticket={ticket}
-            parentNavigationSlug={parentNavigationSlug}
-            canEditTickets={canEditTickets}
-            isAssignmentLocked={isAssignmentLocked}
-            isUpdatingStatus={!!actions.updatingFields.status}
-            onGoToParentTicket={handleGoToParentTicket}
-            onCopyTicketLabel={actions.handleCopyTicketLabel}
-            onCopyShareUrl={actions.handleCopyShareUrl}
-            onCopyHyperlinkedUrl={actions.handleCopyHyperlinkedUrl}
-            onStatusChange={(status) => {
-              void actions.handleStatusChange(status)
-            }}
-            // onClose is handled by page navigation, so no close icon here
-          />
-        </div>
+      <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col gap-4">
+        <TicketDetailHeader
+          ticketId={ticketId}
+          ticket={ticket}
+          parentNavigationSlug={parentNavigationSlug}
+          canEditTickets={canEditTickets}
+          isAssignmentLocked={isAssignmentLocked}
+          isUpdatingStatus={!!actions.updatingFields.status}
+          isEditingTitle={actions.isEditingTitle}
+          titleValue={actions.titleValue}
+          onTitleValueChange={actions.setTitleValue}
+          onTitleSave={actions.handleTitleSave}
+          onTitleKeyDown={actions.handleTitleKeyDown}
+          onStartTitleEdit={() => actions.setIsEditingTitle(true)}
+          onBackToTickets={() => router.push("/tickets")}
+          onGoToParentTicket={handleGoToParentTicket}
+          onCopyTicketLabel={actions.handleCopyTicketLabel}
+          onCopyShareUrl={actions.handleCopyShareUrl}
+          onCopyHyperlinkedUrl={actions.handleCopyHyperlinkedUrl}
+          onRequestDelete={actions.openDeleteDialog}
+          onStatusChange={(status) => {
+            void actions.handleStatusChange(status)
+          }}
+        />
 
-        <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="flex-1 overflow-y-auto">
           <DataState
             loading={loading}
             isEmpty={!loading && !ticket}
@@ -203,12 +204,6 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
                   ticket={ticket}
                   canEditTickets={canEditTickets}
                   detailComments={detailComments}
-                  isEditingTitle={actions.isEditingTitle}
-                  titleValue={actions.titleValue}
-                  onTitleValueChange={actions.setTitleValue}
-                  onTitleSave={actions.handleTitleSave}
-                  onTitleKeyDown={actions.handleTitleKeyDown}
-                  onStartTitleEdit={() => actions.setIsEditingTitle(true)}
                   isEditingDescription={actions.isEditingDescription}
                   descriptionValue={actions.descriptionValue}
                   onDescriptionValueChange={actions.setDescriptionValue}
@@ -262,8 +257,6 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
                   epics={epics}
                   sprints={sprints}
                   projectOptions={projectOptions}
-                  includeInactiveProjects={actions.includeInactiveProjects}
-                  onIncludeInactiveProjectsChange={actions.setIncludeInactiveProjects}
                   relations={relations}
                   parentTicketOptions={parentTicketOptions}
                   selectedParentTicketId={selectedParentTicketId}
@@ -296,15 +289,6 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
               </div>
             ) : null}
           </DataState>
-        </div>
-
-        <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 flex items-center justify-between">
-          <TicketDetailFooter
-            ticket={ticket}
-            canEditTickets={canEditTickets}
-            onRequestDelete={actions.openDeleteDialog}
-            onClose={() => router.push("/tickets")}
-          />
         </div>
       </div>
 

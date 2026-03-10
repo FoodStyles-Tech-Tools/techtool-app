@@ -150,17 +150,15 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
 
   const projectOptions = useMemo(() => {
     const selectedProjectId = ticket?.project?.id
-    const visibleProjects = actions.includeInactiveProjects
-      ? projects
-      : projects.filter(
-          (project) =>
-            project.status?.toLowerCase() !== "inactive" || project.id === selectedProjectId
-        )
+    const visibleProjects = projects.filter(
+      (project) =>
+        project.status?.toLowerCase() !== "inactive" || project.id === selectedProjectId
+    )
 
     return [...visibleProjects].sort((left, right) =>
       (left.name || "").localeCompare(right.name || "", undefined, { sensitivity: "base" })
     )
-  }, [actions.includeInactiveProjects, projects, ticket?.project?.id])
+  }, [projects, ticket?.project?.id])
 
   const handleGoToParentTicket = () => {
     if (!parentNavigationSlug) return
@@ -189,10 +187,18 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
               canEditTickets={canEditTickets}
               isAssignmentLocked={isAssignmentLocked}
               isUpdatingStatus={!!actions.updatingFields.status}
+              isEditingTitle={actions.isEditingTitle}
+              titleValue={actions.titleValue}
+              onTitleValueChange={actions.setTitleValue}
+              onTitleSave={actions.handleTitleSave}
+              onTitleKeyDown={actions.handleTitleKeyDown}
+              onStartTitleEdit={() => actions.setIsEditingTitle(true)}
+              onBackToTickets={() => onOpenChange(false)}
               onGoToParentTicket={handleGoToParentTicket}
               onCopyTicketLabel={actions.handleCopyTicketLabel}
               onCopyShareUrl={actions.handleCopyShareUrl}
               onCopyHyperlinkedUrl={actions.handleCopyHyperlinkedUrl}
+              onRequestDelete={actions.openDeleteDialog}
               onStatusChange={(status) => {
                 void actions.handleStatusChange(status)
               }}
@@ -215,12 +221,6 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                     ticket={ticket}
                     canEditTickets={canEditTickets}
                     detailComments={detailComments}
-                    isEditingTitle={actions.isEditingTitle}
-                    titleValue={actions.titleValue}
-                    onTitleValueChange={actions.setTitleValue}
-                    onTitleSave={actions.handleTitleSave}
-                    onTitleKeyDown={actions.handleTitleKeyDown}
-                    onStartTitleEdit={() => actions.setIsEditingTitle(true)}
                     isEditingDescription={actions.isEditingDescription}
                     descriptionValue={actions.descriptionValue}
                     onDescriptionValueChange={actions.setDescriptionValue}
@@ -274,8 +274,6 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
                     epics={epics}
                     sprints={sprints}
                     projectOptions={projectOptions}
-                    includeInactiveProjects={actions.includeInactiveProjects}
-                    onIncludeInactiveProjectsChange={actions.setIncludeInactiveProjects}
                     relations={relations}
                     parentTicketOptions={parentTicketOptions}
                     selectedParentTicketId={selectedParentTicketId}

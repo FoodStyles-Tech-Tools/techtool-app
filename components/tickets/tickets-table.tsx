@@ -9,49 +9,33 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table"
-import { Copy, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react"
-import type { Ticket, Department, User as BasicUser } from "@/lib/types"
-import {
-  type SortColumn,
-  type TicketMutationField,
-} from "@/lib/ticket-constants"
+import type { Ticket } from "@/lib/types"
+import { type SortColumn } from "@/lib/ticket-constants"
+import { formatRelativeDate, getDueDateDisplay } from "@/lib/format-dates"
+import { normalizeStatusKey, isDoneStatus } from "@/lib/ticket-statuses"
+import { TicketStatusIcon } from "@/components/ticket-status-select"
 
 const SERVER_SORTABLE_COLUMNS = new Set<SortColumn>([
   "id",
   "title",
+  "due_date",
   "type",
   "status",
   "priority",
-  "requested_by",
   "assignee",
-  "sqa_assignee",
 ])
 
 interface TicketsTableProps {
   sortConfig: { column: SortColumn; direction: "asc" | "desc" }
   onSort: (column: SortColumn) => void
   tickets: Ticket[]
-  subtaskCountMap: Record<string, number>
   totalCount: number
   currentPage: number
   totalPages: number
   onPageChange: (page: number) => void
   startIndex: number
   endIndex: number
-  onCopyTicket: (ticket: Ticket) => void
   onSelectTicket: (ticketId: string) => void
-  departments: Department[]
-  users: BasicUser[]
-  assigneeEligibleUsers: BasicUser[]
-  sqaEligibleUsers: BasicUser[]
-  updateTicketField: (
-    ticketId: string,
-    field: TicketMutationField,
-    value: string | null | undefined
-  ) => Promise<void> | void
-  updatingFields: Record<string, string>
-  excludeDone: boolean
-  canEdit: boolean
 }
 
 function renderSortableHeader(
@@ -65,7 +49,6 @@ function renderSortableHeader(
   }
 
   const isActive = sortConfig.column === column
-  const Icon = !isActive ? ArrowUpDown : sortConfig.direction === "asc" ? ChevronUp : ChevronDown
   return (
     <button
       type="button"
@@ -73,7 +56,7 @@ function renderSortableHeader(
       className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 hover:text-slate-900"
     >
       <span>{label}</span>
-      <Icon className="h-3.5 w-3.5" />
+      <span className="text-[10px]">{!isActive ? "Sort" : sortConfig.direction === "asc" ? "Asc" : "Desc"}</span>
     </button>
   )
 }
@@ -81,18 +64,14 @@ function renderSortableHeader(
 interface TicketRowProps {
   ticket: Ticket
   onSelectTicket: (ticketId: string) => void
-  // The remaining props are still accepted via TicketsTableProps but unused here,
-  // kept for compatibility with the existing caller.
-  departments?: Department[]
-  users?: BasicUser[]
-  assigneeEligibleUsers?: BasicUser[]
-  sqaEligibleUsers?: BasicUser[]
 }
 
 const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowProps) {
-  const requesterLabel = ticket.requestedBy?.name || ticket.requestedBy?.email || "-"
   const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
-  const sqaLabel = ticket.sqaAssignee?.name || ticket.sqaAssignee?.email || "-"
+  const dueDate = getDueDateDisplay(
+    ticket.dueDate,
+    isDoneStatus(normalizeStatusKey(ticket.status))
+  )
 
   return (
     <TableRow>
@@ -109,22 +88,26 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
         </button>
       </TableCell>
       <TableCell className="py-2">
-        <span className="text-xs text-slate-900">{ticket.type || "-"}</span>
+        <div className="flex items-center gap-2 text-xs text-slate-900">
+          <span>{ticket.status}</span>
+        </div>
       </TableCell>
       <TableCell className="py-2">
-        <span className="text-xs text-slate-900">{ticket.status}</span>
-      </TableCell>
-      <TableCell className="py-2">
-        <span className="text-xs text-slate-900">{ticket.priority}</span>
-      </TableCell>
-      <TableCell className="py-2">
-        <span className="text-xs text-slate-900">{requesterLabel}</span>
+        <span className="text-xs capitalize text-slate-900">{ticket.priority}</span>
       </TableCell>
       <TableCell className="py-2">
         <span className="text-xs text-slate-900">{assigneeLabel}</span>
       </TableCell>
       <TableCell className="py-2">
-        <span className="text-xs text-slate-900">{sqaLabel}</span>
+        <span className="text-xs text-slate-900">{ticket.project?.name || "No project"}</span>
+      </TableCell>
+      <TableCell className="py-2">
+        <span className={["inline-flex rounded-md px-2 py-1 text-[11px] font-medium", dueDate.className].join(" ")}>
+          {dueDate.label}
+        </span>
+      </TableCell>
+      <TableCell className="py-2">
+        <span className="text-xs text-slate-500">{formatRelativeDate(ticket.createdAt)}</span>
       </TableCell>
     </TableRow>
   )
@@ -155,22 +138,22 @@ export function TicketsTable({
                 {renderSortableHeader("title", "Title", sortConfig, onSort)}
               </TableHead>
               <TableHead className="h-9 py-2 px-4 text-left align-middle">
-                {renderSortableHeader("type", "Type", sortConfig, onSort)}
-              </TableHead>
-              <TableHead className="h-9 py-2 px-4 text-left align-middle">
                 {renderSortableHeader("status", "Status", sortConfig, onSort)}
               </TableHead>
               <TableHead className="h-9 py-2 px-4 text-left align-middle">
                 {renderSortableHeader("priority", "Priority", sortConfig, onSort)}
               </TableHead>
               <TableHead className="h-9 py-2 px-4 text-left align-middle">
-                {renderSortableHeader("requested_by", "Requested By", sortConfig, onSort)}
-              </TableHead>
-              <TableHead className="h-9 py-2 px-4 text-left align-middle">
                 {renderSortableHeader("assignee", "Assignee", sortConfig, onSort)}
               </TableHead>
               <TableHead className="h-9 py-2 px-4 text-left align-middle">
-                {renderSortableHeader("sqa_assignee", "SQA Assignee", sortConfig, onSort)}
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Project</span>
+              </TableHead>
+              <TableHead className="h-9 py-2 px-4 text-left align-middle">
+                {renderSortableHeader("due_date", "Due", sortConfig, onSort)}
+              </TableHead>
+              <TableHead className="h-9 py-2 px-4 text-left align-middle">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Created</span>
               </TableHead>
             </TableRow>
           </thead>

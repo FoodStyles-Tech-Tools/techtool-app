@@ -1,6 +1,5 @@
 "use client"
 
-import { AlertTriangle } from "lucide-react"
 import { DateTimePicker } from "@/components/ui/datetime-picker"
 import type { Ticket } from "@/lib/types"
 import type { TimestampValidation } from "@/features/tickets/components/ticket-detail-sidebar-types"
@@ -56,7 +55,7 @@ export function TicketDetailTimestampsSection({
             <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Assigned</label>
             {!ticket.assignedAt && timestampValidation.assigned_at ? (
               <span title={getTimestampWarningMessage("assigned_at") || ""} className="cursor-help pt-2">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0 text-red-600" />
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-red-700">Warning</span>
               </span>
             ) : null}
           </div>
@@ -82,7 +81,7 @@ export function TicketDetailTimestampsSection({
             <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Started</label>
             {!ticket.startedAt && timestampValidation.started_at ? (
               <span title={getTimestampWarningMessage("started_at") || ""} className="cursor-help pt-2">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0 text-red-600" />
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-red-700">Warning</span>
               </span>
             ) : null}
           </div>
@@ -122,7 +121,7 @@ export function TicketDetailTimestampsSection({
             <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Completed</label>
             {!ticket.completedAt && timestampValidation.completed_at ? (
               <span title={getTimestampWarningMessage("completed_at") || ""} className="cursor-help pt-2">
-                <AlertTriangle className="h-4 w-4 flex-shrink-0 text-red-600" />
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-red-700">Warning</span>
               </span>
             ) : null}
           </div>

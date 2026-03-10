@@ -17,7 +17,6 @@ A modern, Notion-style ticket management web application for IT teams, built wit
 - **UI**: Tailwind CSS + shadcn/ui components
 - **Authentication**: Supabase Auth with Google OAuth
 - **Database**: Supabase (PostgreSQL)
-- **Icons**: Lucide React
 
 ## Prerequisites
 

@@ -15,7 +15,6 @@ import { useUsers } from "@/hooks/use-users"
 import { useSession } from "@/lib/auth-client"
 import { usePermissions } from "@/hooks/use-permissions"
 import { toast } from "@/components/ui/toast"
-import { MessageSquare, Reply, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText, toDisplayHtml } from "@/lib/rich-text"
@@ -254,7 +253,6 @@ const CommentRow = memo(function CommentRow({
                 className="h-6 gap-1 px-2 text-xs text-slate-500 hover:text-slate-900"
                 onClick={() => onStartEdit(comment)}
               >
-                <Pencil className="h-3 w-3" />
                 Edit
               </Button>
               <Button
@@ -263,7 +261,6 @@ const CommentRow = memo(function CommentRow({
                 className="h-6 gap-1 px-2 text-xs text-red-600 hover:text-red-700"
                 onClick={() => onDelete(comment)}
               >
-                <Trash2 className="h-3 w-3" />
                 Delete
               </Button>
             </div>
@@ -284,7 +281,6 @@ const CommentRow = memo(function CommentRow({
               className="h-6 text-xs"
               onClick={() => onReply(comment, replyTargetId)}
             >
-              <Reply className="h-3 w-3 mr-1" />
               Reply
             </Button>
           </div>
@@ -1053,7 +1049,6 @@ export function TicketComments({
       {showHeader && (
         <CardHeader className="px-4 pt-4 pb-1.5">
           <CardTitle className="text-base flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
             Comments
             {comments.length > 0 && (
               <span className="text-sm font-normal text-slate-500">

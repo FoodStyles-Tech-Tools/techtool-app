@@ -6,6 +6,12 @@ import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
 export const runtime = 'nodejs'
 const PROJECT_STATUSES = new Set(["active", "inactive"])
 
+type ProjectTicketStats = {
+  total: number
+  open: number
+  done: number
+}
+
 async function attachCollaboratorsToProjects(
   supabase: ReturnType<typeof createServerClient>,
   projects: any[]
@@ -68,6 +74,32 @@ async function attachCollaboratorsToProjects(
   })
 }
 
+async function getProjectTicketStats(
+  supabase: ReturnType<typeof createServerClient>,
+  projectId: string
+): Promise<ProjectTicketStats> {
+  const { data: tickets, error } = await supabase
+    .from("tickets")
+    .select("status")
+    .eq("project_id", projectId)
+
+  if (error) {
+    console.error("Error fetching project ticket stats:", error)
+    return { total: 0, open: 0, done: 0 }
+  }
+
+  const total = tickets?.length || 0
+  const done = (tickets || []).filter(
+    (ticket) => ticket.status === "completed" || ticket.status === "cancelled"
+  ).length
+
+  return {
+    total,
+    done,
+    open: Math.max(0, total - done),
+  }
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: { id: string } }
@@ -95,9 +127,11 @@ export async function GET(
     }
 
     const [projectWithCollaborators] = await attachCollaboratorsToProjects(supabase, [project])
+    const ticketStats = await getProjectTicketStats(supabase, params.id)
 
     const enrichedProject = {
       ...projectWithCollaborators,
+      ticket_stats: ticketStats,
       links: sanitizeLinkArray(projectWithCollaborators.links),
       owner: projectWithCollaborators.owner
         ? {
@@ -193,9 +227,11 @@ export async function PATCH(
     }
 
     const [projectWithCollaborators] = await attachCollaboratorsToProjects(supabase, [project])
+    const ticketStats = await getProjectTicketStats(supabase, params.id)
 
     const enrichedProject = {
       ...projectWithCollaborators,
+      ticket_stats: ticketStats,
       links: sanitizeLinkArray(projectWithCollaborators.links),
       owner: projectWithCollaborators.owner
         ? {

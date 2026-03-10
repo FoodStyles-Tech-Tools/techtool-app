@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
@@ -278,7 +277,6 @@ export function TicketDetailAssignmentSection({
                 className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 hover:underline"
               >
                 Open parent ticket
-                <ExternalLink className="h-3 w-3" />
               </a>
             ) : null}
           </div>

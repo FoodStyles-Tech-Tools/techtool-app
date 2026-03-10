@@ -2,7 +2,6 @@
 
 import { useId, useMemo, useState } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { ArrowRight, ChevronDown, ChevronRight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -216,11 +215,9 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
           aria-expanded={!isCollapsed}
           aria-controls={panelId}
         >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4 text-slate-500" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-slate-500" />
-          )}
+          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+            {isCollapsed ? "Show" : "Hide"}
+          </span>
           <CardTitle className="text-base">Activity</CardTitle>
         </button>
       </CardHeader>
@@ -299,7 +296,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
                         {showValueTransition && (
                           <div className="mt-1.5 flex flex-wrap items-center gap-2">
                             {renderHistoryValue(item.field_name, item.old_value, false)}
-                            <ArrowRight className="h-3.5 w-3.5 text-slate-500" />
+                            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">to</span>
                             {renderHistoryValue(item.field_name, item.new_value, true)}
                           </div>
                         )}

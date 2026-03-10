@@ -19,7 +19,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { toast } from "@/components/ui/toast"
-import { GripVertical, Plus, Pencil, Trash2 } from "lucide-react"
 import { normalizeStatusKey, type TicketStatus } from "@/lib/ticket-statuses"
 
 type StatusFormState = {
@@ -256,7 +255,6 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
           description="Manage the global ticket workflow states."
           actions={
             <Button type="button" onClick={openAddDialog}>
-              <Plus className="h-4 w-4" />
               Create Status
             </Button>
           }
@@ -338,7 +336,7 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
                       }}
                       aria-label={`Reorder ${status.label}`}
                     >
-                      <GripVertical className="h-4 w-4" />
+                      Drag
                     </button>
                   </TableCell>
                   <TableCell className="py-2">
@@ -361,19 +359,19 @@ export default function StatusClient({ initialStatuses }: StatusClientProps) {
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={() => openEditDialog(status)}
                         aria-label={`Edit ${status.label}`}
                       >
-                        <Pencil className="h-4 w-4" />
+                        Edit
                       </Button>
                       <Button
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         onClick={() => setDeletingStatus(status)}
                         aria-label={`Delete ${status.label}`}
                       >
-                        <Trash2 className="h-4 w-4 text-red-600" />
+                        Delete
                       </Button>
                     </div>
                   </TableCell>

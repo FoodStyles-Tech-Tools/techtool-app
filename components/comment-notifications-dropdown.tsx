@@ -3,10 +3,10 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
-import { AtSign, Bell, CheckCheck, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useCommentNotifications, type CommentNotification } from "@/hooks/use-comment-notifications"
 import { cn } from "@/lib/utils"
+import { TextToken } from "@/components/ui/text-token"
 import { richTextToPlainText } from "@/lib/rich-text"
 
 function NotificationItem({
@@ -42,11 +42,7 @@ function NotificationItem({
       )}
     >
       <div className="mt-0.5 shrink-0">
-        {notification.type === "mention" ? (
-          <AtSign className="h-4 w-4 text-slate-900" />
-        ) : (
-          <MessageSquare className="h-4 w-4 text-slate-500" />
-        )}
+        <TextToken>{notification.type === "mention" ? "Mention" : "Reply"}</TextToken>
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -75,7 +71,10 @@ function NotificationItem({
         <p className="mt-1 text-[11px] text-slate-500">
           {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
           {notification.read_at ? (
-            <span className="ml-1">· Viewed {formatDistanceToNow(new Date(notification.read_at), { addSuffix: true })}</span>
+            <span className="ml-1">
+              {" "}
+              - Viewed {formatDistanceToNow(new Date(notification.read_at), { addSuffix: true })}
+            </span>
           ) : null}
         </p>
       </div>
@@ -97,14 +96,13 @@ export function CommentNotificationsDropdown() {
   return (
     <details className="relative">
       <summary className="list-none [&::-webkit-details-marker]:hidden">
-        <Button variant="ghost" size="icon" className="relative h-9 w-9" title="Comment notifications">
-          <Bell className="h-4 w-4" />
+        <Button variant="ghost" size="sm" className="relative h-9 px-3" title="Comment notifications">
+          Alerts
           {unreadCount > 0 ? (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-medium text-white">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           ) : null}
-          <span className="sr-only">Notifications</span>
         </Button>
       </summary>
       <div className="absolute right-0 z-30 mt-2 ml-2 w-[360px] rounded-lg border border-slate-200 bg-white p-0 shadow-md">
@@ -112,7 +110,6 @@ export function CommentNotificationsDropdown() {
           <span className="text-sm font-semibold">Notifications</span>
           {unreadCount > 0 ? (
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => markAllRead.mutateAsync()}>
-              <CheckCheck className="mr-1 h-3.5 w-3.5" />
               Mark all read
             </Button>
           ) : null}
@@ -122,7 +119,7 @@ export function CommentNotificationsDropdown() {
             <div className="py-6 text-center text-sm text-slate-500">Loading...</div>
           ) : notifications.length === 0 ? (
             <div className="py-6 text-center text-sm text-slate-500">
-              No notifications yet. You'll see replies and @mentions here.
+              No notifications yet. You will see replies and @mentions here.
             </div>
           ) : (
             <div className="py-1">

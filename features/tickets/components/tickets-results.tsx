@@ -1,28 +1,14 @@
 "use client"
 
 import type { ComponentProps } from "react"
-import dynamic from "next/dynamic"
 import { Skeleton } from "@/components/ui/skeleton"
-import { TicketsKanban } from "@/components/tickets/tickets-kanban"
 import { TicketsTable } from "@/components/tickets/tickets-table"
 import type { Ticket } from "@/lib/types"
-
-const GanttChart = dynamic(
-  () => import("@/components/gantt-chart").then((mod) => mod.GanttChart),
-  { ssr: false }
-)
 
 type TicketsResultsProps = {
   loading: boolean
   filteredTickets: Ticket[]
   hasSearchQuery: boolean
-  view: "table" | "kanban" | "gantt"
-  projectFilter: string
-  sortedTickets: Ticket[]
-  sprints: Array<{ id: string; name: string; status: string }>
-  epics: Array<{ id: string; name: string; color: string }>
-  onSelectTicket: (ticketId: string) => void
-  kanbanProps: ComponentProps<typeof TicketsKanban>
   tableProps: ComponentProps<typeof TicketsTable>
 }
 
@@ -30,13 +16,6 @@ export function TicketsResults({
   loading,
   filteredTickets,
   hasSearchQuery,
-  view,
-  projectFilter,
-  sortedTickets,
-  sprints,
-  epics,
-  onSelectTicket,
-  kanbanProps,
   tableProps,
 }: TicketsResultsProps) {
   if (loading) {
@@ -66,33 +45,5 @@ export function TicketsResults({
       </div>
     )
   }
-
-  if (view === "kanban") {
-    return <TicketsKanban {...kanbanProps} />
-  }
-
-  if (view === "gantt") {
-    if (projectFilter === "all") {
-      return (
-        <div className="rounded-lg border p-8 text-center">
-          <p className="text-sm text-slate-500">
-            Select a project to view the Gantt chart.
-          </p>
-        </div>
-      )
-    }
-
-    return (
-      <div className="flex flex-col min-h-0">
-        <GanttChart
-          tickets={sortedTickets}
-          sprints={sprints}
-          epics={epics}
-          onTicketClick={onSelectTicket}
-        />
-      </div>
-    )
-  }
-
   return <TicketsTable {...tableProps} />
 }

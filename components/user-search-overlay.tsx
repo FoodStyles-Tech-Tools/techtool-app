@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback, useDeferredValue, useMemo } f
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { useUsers } from "@/hooks/use-users"
-import { Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -132,7 +131,7 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
         <div className="mx-4 rounded-lg border border-slate-200 bg-white shadow-lg">
           {/* Search Input */}
           <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3">
-            <Search className="h-4 w-4 text-slate-500" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Find</span>
             <Input
               ref={inputRef}
               type="text"
@@ -143,10 +142,9 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
             />
             <button
               onClick={() => onOpenChange(false)}
-              className="rounded-sm text-slate-500 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
+              className="rounded-sm px-2 py-1 text-xs font-medium text-slate-500 opacity-70 transition-opacity hover:bg-slate-100 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
             >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Close</span>
+              Close
             </button>
           </div>
 

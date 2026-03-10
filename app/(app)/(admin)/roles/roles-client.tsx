@@ -18,7 +18,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Trash2, Pencil, Save } from "lucide-react"
 import { RoleForm } from "@/components/forms/role-form"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/components/ui/toast"
@@ -267,7 +266,6 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
           actions={
             canCreateRoles ? (
               <Button type="button" onClick={handleAddRole}>
-                <Plus className="h-4 w-4" />
                 Create Role
               </Button>
             ) : null
@@ -304,19 +302,19 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                           {canEditRoles && (
                             <Button
                               variant="outline"
-                              size="icon"
+                              size="sm"
                               onClick={() => handleEdit(role)}
                             >
-                              <Pencil className="h-4 w-4" />
+                              Edit
                             </Button>
                           )}
                           {canDeleteRoles && (
                             <Button
                               variant="outline"
-                              size="icon"
+                              size="sm"
                               onClick={() => setDeletingRole(role)}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              Delete
                             </Button>
                           )}
                         </>
@@ -399,7 +397,6 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                           disabled={saving[role.id] || !hasUnsavedChanges(role.id)}
                           variant={hasUnsavedChanges(role.id) ? "default" : "outline"}
                         >
-                          <Save className="mr-2 h-4 w-4" />
                           {saving[role.id] ? "Saving..." : hasUnsavedChanges(role.id) ? "Save Permissions" : "No Changes"}
                         </Button>
                       </div>

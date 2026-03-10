@@ -1,7 +1,6 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { TicketDetailFieldsSection } from "@/features/tickets/components/ticket-detail-fields-section"
 import { TicketDetailRelationsSection } from "@/features/tickets/components/ticket-detail-relations-section"
 import { TicketDetailTimestampsSection } from "@/features/tickets/components/ticket-detail-timestamps-section"
@@ -33,8 +32,6 @@ type TicketDetailSidebarProps = {
   epics: Epic[]
   sprints: Sprint[]
   projectOptions: TicketProjectOption[]
-  includeInactiveProjects: boolean
-  onIncludeInactiveProjectsChange: (value: boolean) => void
   relations: TicketDetailRelations
   parentTicketOptions: ParentTicketOption[]
   selectedParentTicketId: string | null
@@ -74,8 +71,6 @@ export function TicketDetailSidebar({
   epics,
   sprints,
   projectOptions,
-  includeInactiveProjects,
-  onIncludeInactiveProjectsChange,
   relations,
   parentTicketOptions,
   selectedParentTicketId,
@@ -104,7 +99,7 @@ export function TicketDetailSidebar({
           <CardTitle className="text-base">Details</CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4 pt-0">
-          <div className="space-y-3">
+          <div className="space-y-4">
             <TicketDetailFieldsSection
               ticket={ticket}
               canEditTickets={canEditTickets}
@@ -119,8 +114,6 @@ export function TicketDetailSidebar({
               epics={epics}
               sprints={sprints}
               projectOptions={projectOptions}
-              includeInactiveProjects={includeInactiveProjects}
-              onIncludeInactiveProjectsChange={onIncludeInactiveProjectsChange}
               parentTicketOptions={parentTicketOptions}
               selectedParentTicketId={selectedParentTicketId}
               selectedParentTicketOption={selectedParentTicketOption}
@@ -138,18 +131,25 @@ export function TicketDetailSidebar({
               onSprintChange={onSprintChange}
               onProjectChange={onProjectChange}
             />
-            <TicketDetailRelationsSection ticket={ticket} relations={relations} />
-            <Separator className="my-3" />
-            <TicketDetailTimestampsSection
-              ticket={ticket}
-              canEditTickets={canEditTickets}
-              isAssignmentLocked={isAssignmentLocked}
-              updatingFields={updatingFields}
-              timestampValidation={timestampValidation}
-              parseTimestamp={parseTimestamp}
-              getTimestampWarningMessage={getTimestampWarningMessage}
-              onTimestampChange={onTimestampChange}
-            />
+            <details className="rounded-md border border-slate-200">
+              <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-medium text-slate-900 [&::-webkit-details-marker]:hidden">
+                <span>Advanced details</span>
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Open</span>
+              </summary>
+              <div className="space-y-4 border-t border-slate-200 p-3">
+                <TicketDetailRelationsSection ticket={ticket} relations={relations} />
+                <TicketDetailTimestampsSection
+                  ticket={ticket}
+                  canEditTickets={canEditTickets}
+                  isAssignmentLocked={isAssignmentLocked}
+                  updatingFields={updatingFields}
+                  timestampValidation={timestampValidation}
+                  parseTimestamp={parseTimestamp}
+                  getTimestampWarningMessage={getTimestampWarningMessage}
+                  onTimestampChange={onTimestampChange}
+                />
+              </div>
+            </details>
           </div>
         </CardContent>
       </Card>

@@ -7,6 +7,16 @@ export const dynamic = "force-dynamic"
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+function sanitizePreferences(preferences: Record<string, unknown>) {
+  return {
+    user_id: typeof preferences.user_id === "string" ? preferences.user_id : "",
+    group_by_epic: preferences.group_by_epic === true,
+    pinned_project_ids: Array.isArray(preferences.pinned_project_ids)
+      ? preferences.pinned_project_ids
+      : [],
+  }
+}
+
 export async function GET() {
   try {
     const { supabase, user } = await getCurrentUserWithSupabase()
@@ -27,16 +37,10 @@ export async function GET() {
     }
 
     const normalizedPreferences = preferences
-      ? {
-          ...preferences,
-          pinned_project_ids: Array.isArray((preferences as any).pinned_project_ids)
-            ? (preferences as any).pinned_project_ids
-            : [],
-        }
+      ? sanitizePreferences(preferences as Record<string, unknown>)
       : {
           user_id: user.id,
           group_by_epic: false,
-          tickets_view: "table",
           pinned_project_ids: [],
         }
 
@@ -58,7 +62,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const { supabase, user } = await getCurrentUserWithSupabase()
     const body = await request.json()
-    const { group_by_epic, tickets_view, pinned_project_ids } = body
+    const { group_by_epic, pinned_project_ids } = body
     const normalizedPinnedProjectIds =
       pinned_project_ids === undefined
         ? undefined
@@ -81,7 +85,6 @@ export async function PATCH(request: NextRequest) {
       // Update existing preferences
       const updates: any = {}
       if (group_by_epic !== undefined) updates.group_by_epic = group_by_epic
-      if (tickets_view !== undefined) updates.tickets_view = tickets_view
       if (normalizedPinnedProjectIds !== undefined) {
         updates.pinned_project_ids = normalizedPinnedProjectIds
       }
@@ -100,7 +103,7 @@ export async function PATCH(request: NextRequest) {
           { status: 500 }
         )
       }
-      result = data
+      result = sanitizePreferences(data as Record<string, unknown>)
     } else {
       // Create new preferences
       const { data, error } = await supabase
@@ -108,7 +111,6 @@ export async function PATCH(request: NextRequest) {
         .insert({
           user_id: user.id,
           group_by_epic: group_by_epic ?? false,
-          tickets_view: tickets_view ?? "table",
           pinned_project_ids: normalizedPinnedProjectIds ?? [],
         })
         .select()
@@ -121,7 +123,7 @@ export async function PATCH(request: NextRequest) {
           { status: 500 }
         )
       }
-      result = data
+      result = sanitizePreferences(data as Record<string, unknown>)
     }
 
     return NextResponse.json({ preferences: result })
