@@ -198,7 +198,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
     enabled: !!ticketId && !isCollapsed && activeTab !== "comments",
   })
 
-  const activities = data?.activities || []
+  const activities = useMemo(() => data?.activities ?? [], [data?.activities])
   const historyItems = useMemo(
     () => activities.filter((item) => !item.event_type.startsWith("comment_")),
     [activities]

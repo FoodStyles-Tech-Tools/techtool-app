@@ -23,7 +23,7 @@ export interface CommentNotification {
   }
   ticket?: {
     id: string
-    display_id: string | null
+    displayId: string | null
     title: string
   }
 }
@@ -87,7 +87,7 @@ export function useCommentNotifications(options?: { unreadOnly?: boolean }) {
     table: "comment_notifications",
     enabled: true,
     onInsert: (payload) => {
-      const created = payload.new as CommentNotification
+      const created = normalizeNotification(payload.new as CommentNotification)
       updateNotificationQueries(queryClient, (current, unreadOnly) => {
         const nextNotifications = mergeRealtimeNotification(
           current.notifications,
@@ -101,7 +101,7 @@ export function useCommentNotifications(options?: { unreadOnly?: boolean }) {
       })
     },
     onUpdate: (payload) => {
-      const updated = payload.new as CommentNotification
+      const updated = normalizeNotification(payload.new as CommentNotification)
       updateNotificationQueries(queryClient, (current, unreadOnly) => {
         const nextNotifications = mergeRealtimeNotification(
           current.notifications,
@@ -138,7 +138,7 @@ export function useCommentNotifications(options?: { unreadOnly?: boolean }) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || "Failed to load notifications")
       }
-      return res.json()
+      return normalizeNotificationsResponse(await res.json())
     },
     staleTime: 30 * 1000,
   })
@@ -155,7 +155,7 @@ export function useCommentNotifications(options?: { unreadOnly?: boolean }) {
       return res.json()
     },
     onSuccess: (data) => {
-      const updated = data?.notification as CommentNotification | undefined
+      const updated = data?.notification ? normalizeNotification(data.notification as CommentNotification) : undefined
       if (!updated) return
       updateNotificationQueries(queryClient, (current, unreadOnly) => {
         const nextNotifications = mergeRealtimeNotification(
@@ -248,5 +248,26 @@ export function useCommentNotifications(options?: { unreadOnly?: boolean }) {
     markRead,
     markAllRead,
     markTicketRead,
+  }
+}
+function normalizeNotification(notification: CommentNotification & {
+  ticket?: { id: string; display_id?: string | null; displayId?: string | null; title: string }
+}): CommentNotification {
+  return {
+    ...notification,
+    ticket: notification.ticket
+      ? {
+          id: notification.ticket.id,
+          displayId: notification.ticket.displayId ?? notification.ticket.display_id ?? null,
+          title: notification.ticket.title,
+        }
+      : undefined,
+  }
+}
+
+function normalizeNotificationsResponse(response: NotificationsResponse): NotificationsResponse {
+  return {
+    ...response,
+    notifications: response.notifications.map((notification) => normalizeNotification(notification)),
   }
 }

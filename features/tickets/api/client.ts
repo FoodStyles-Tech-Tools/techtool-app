@@ -8,7 +8,7 @@ import type {
 
 type TicketDetailSubtasksResponse = {
   relations?: {
-    subtasks?: TicketSubtaskRow[]
+    subtasks?: Array<TicketSubtaskRow & { display_id?: string | null }>
   }
 }
 

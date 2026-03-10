@@ -32,7 +32,7 @@ export interface TicketComment {
 
 export interface CommentsResponse {
   comments: TicketComment[]
-  ticket: { id: string; display_id: string | null }
+  ticket: { id: string; displayId: string | null }
 }
 
 function getCommentsQueryKey(ticketId: string) {
@@ -78,6 +78,19 @@ function commentExistsInTree(comments: TicketComment[], commentId: string): bool
     }
   }
   return false
+}
+
+function normalizeCommentsResponse(response: {
+  comments: TicketComment[]
+  ticket: { id: string; display_id?: string | null; displayId?: string | null }
+}): CommentsResponse {
+  return {
+    comments: response.comments,
+    ticket: {
+      id: response.ticket.id,
+      displayId: response.ticket.displayId ?? response.ticket.display_id ?? null,
+    },
+  }
 }
 
 export function useTicketComments(
@@ -136,7 +149,7 @@ export function useTicketComments(
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || "Failed to load comments")
       }
-      return res.json()
+      return normalizeCommentsResponse(await res.json())
     },
     enabled,
     initialData: options?.initialData,

@@ -28,7 +28,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
   const ticketsQuery = useQuery<{
     items?: Array<{
       id: string
-      display_id: string | null
+      displayId: string | null
       title: string
       status: string
       priority: string
@@ -37,7 +37,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
     }>
     data: Array<{
       id: string
-      display_id: string | null
+      displayId: string | null
       title: string
       status: string
       priority: string
@@ -59,7 +59,16 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
       if (!response.ok) {
         throw new Error("Failed to load tickets")
       }
-      return response.json()
+      const payload = await response.json()
+      const normalize = (ticket: { id: string; display_id?: string | null; displayId?: string | null; title: string; status: string; priority: string; type: string | null; project: { id: string; name: string } | null }) => ({
+        ...ticket,
+        displayId: ticket.displayId ?? ticket.display_id ?? null,
+      })
+      return {
+        ...payload,
+        items: (payload.items ?? []).map(normalize),
+        data: (payload.data ?? payload.items ?? []).map(normalize),
+      }
     },
     enabled: open,
     staleTime: 30 * 1000,
@@ -203,7 +212,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-mono text-muted-foreground">
-                          {ticket.display_id || ticket.id.slice(0, 8)}
+                          {ticket.displayId || ticket.id.slice(0, 8)}
                         </span>
                         <Badge variant="outline" className="text-xs flex items-center gap-1">
                           <TicketStatusIcon status={ticket.status} statusMap={statusMap} />

@@ -81,8 +81,8 @@ export function Subtasks({
         .filter((ticket) => ticket.type === "subtask")
         .sort(
           (left, right) =>
-            new Date(left.createdAt || left.created_at).getTime() -
-            new Date(right.createdAt || right.created_at).getTime()
+            new Date(left.createdAt ?? 0).getTime() -
+            new Date(right.createdAt ?? 0).getTime()
         ),
     [subtasksData]
   )
@@ -160,10 +160,10 @@ export function Subtasks({
             {subtasks.map((subtask) => (
               <div key={subtask.id} className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] items-center gap-2 px-3 py-2">
                 <Link
-                  href={`/tickets/${String(subtask.displayId || subtask.display_id || subtask.id).toLowerCase()}`}
+                  href={`/tickets/${String(subtask.displayId || subtask.id).toLowerCase()}`}
                   className="min-w-0 truncate text-sm hover:underline"
                 >
-                  {(subtask.displayId || subtask.display_id || subtask.id.slice(0, 8)).toUpperCase()} {subtask.title}
+                  {(subtask.displayId || subtask.id.slice(0, 8)).toUpperCase()} {subtask.title}
                 </Link>
                 <TicketPrioritySelect
                   value={subtask.priority}

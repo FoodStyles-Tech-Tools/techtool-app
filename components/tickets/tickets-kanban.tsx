@@ -116,7 +116,7 @@ export function TicketsKanban({
                     />
                   )}
                   {columnTickets.map((ticket) => {
-                    const dueDateDisplay = getDueDateDisplay(ticket.dueDate ?? ticket.due_date, isDoneStatus(normalizeStatusKey(ticket.status)))
+                    const dueDateDisplay = getDueDateDisplay(ticket.dueDate, isDoneStatus(normalizeStatusKey(ticket.status)))
                     const subtaskCount = subtaskCountMap[ticket.id] || 0
                     if (isArchivedStatus(ticket.status)) return null
                     return (
@@ -139,9 +139,9 @@ export function TicketsKanban({
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5 mb-1">
-                                {(ticket.displayId || ticket.display_id) && (
+                                {ticket.displayId && (
                                   <span className="text-xs font-mono text-muted-foreground">
-                                    {ticket.displayId || ticket.display_id}
+                                    {ticket.displayId}
                                   </span>
                                 )}
                                 <TicketTypeIcon type={ticket.type || "task"} />

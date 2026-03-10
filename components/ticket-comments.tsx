@@ -353,7 +353,7 @@ function CommentComposer({
   initialMentionIds?: string[]
   seedInitialMentionAsBadge?: boolean
   users: { id: string; name: string | null; email: string; image?: string | null }[]
-  tickets: { id: string; display_id: string | null; title: string; status: string }[]
+  tickets: { id: string; displayId: string | null; title: string; status: string }[]
 }) {
   const [body, setBody] = useState(initialBody)
   const [mentionUserIds, setMentionUserIds] = useState<string[]>(initialMentionIds)
@@ -391,9 +391,9 @@ function CommentComposer({
 
     const ticketBySlug = new Map<string, { displayId: string; status: string }>()
     tickets.forEach((ticket) => {
-      if (!ticket.display_id) return
-      ticketBySlug.set(String(ticket.display_id).toLowerCase(), {
-        displayId: String(ticket.display_id).toUpperCase(),
+      if (!ticket.displayId) return
+      ticketBySlug.set(String(ticket.displayId).toLowerCase(), {
+        displayId: String(ticket.displayId).toUpperCase(),
         status: ticket.status,
       })
     })
@@ -453,8 +453,8 @@ function CommentComposer({
   useEffect(() => {
     const localTicketBySlug = new Map(
       tickets
-        .filter((ticket) => Boolean(ticket.display_id))
-        .map((ticket) => [String(ticket.display_id).toLowerCase(), ticket] as const)
+        .filter((ticket) => Boolean(ticket.displayId))
+        .map((ticket) => [String(ticket.displayId).toLowerCase(), ticket] as const)
     )
     const slugsInBody = Array.from(
       new Set(
@@ -479,11 +479,12 @@ function CommentComposer({
         .then(async (response) => {
           if (!response.ok) return null
           const payload = await response.json().catch(() => null)
-          const ticket = payload?.ticket as { display_id?: string | null; status?: string | null } | undefined
-          if (!ticket?.display_id || !ticket?.status) return null
+          const ticket = payload?.ticket as { displayId?: string | null; display_id?: string | null; status?: string | null } | undefined
+          const displayId = ticket?.displayId ?? ticket?.display_id ?? null
+          if (!displayId || !ticket?.status) return null
           return {
             slug,
-            displayId: String(ticket.display_id).toUpperCase(),
+            displayId: String(displayId).toUpperCase(),
             status: String(ticket.status),
           }
         })
@@ -618,10 +619,10 @@ function CommentComposer({
 
         const localTicketBySlug = new Map(
           tickets
-            .filter((ticket) => Boolean(ticket.display_id))
+            .filter((ticket) => Boolean(ticket.displayId))
             .map((ticket) => [
-              String(ticket.display_id).toLowerCase(),
-              { displayId: String(ticket.display_id).toUpperCase(), status: ticket.status },
+              String(ticket.displayId).toLowerCase(),
+              { displayId: String(ticket.displayId).toUpperCase(), status: ticket.status },
             ] as const)
         )
 
@@ -631,10 +632,11 @@ function CommentComposer({
           const response = await fetch(`/api/tickets/by-display-id/${encodeURIComponent(slug)}`)
           if (!response.ok) return null
           const payload = await response.json().catch(() => null)
-          const ticket = payload?.ticket as { display_id?: string | null; status?: string | null } | undefined
-          if (!ticket?.display_id || !ticket?.status) return null
+          const ticket = payload?.ticket as { displayId?: string | null; display_id?: string | null; status?: string | null } | undefined
+          const displayId = ticket?.displayId ?? ticket?.display_id ?? null
+          if (!displayId || !ticket?.status) return null
           const info = {
-            displayId: String(ticket.display_id).toUpperCase(),
+            displayId: String(displayId).toUpperCase(),
             status: String(ticket.status),
           }
           setResolvedTicketBySlug((prev) => ({
@@ -825,14 +827,14 @@ export function TicketComments({
   })
   const mentionTickets = (mentionTicketsData || []).map((ticket) => ({
     id: ticket.id,
-    display_id: ticket.display_id,
+    displayId: ticket.displayId ?? null,
     title: ticket.title,
     status: ticket.status,
   }))
-  if (displayId && !mentionTickets.some((ticket) => (ticket.display_id || "").toLowerCase() === displayId.toLowerCase())) {
+  if (displayId && !mentionTickets.some((ticket) => (ticket.displayId || "").toLowerCase() === displayId.toLowerCase())) {
     mentionTickets.unshift({
       id: ticketId,
-      display_id: displayId,
+      displayId,
       title: "Current ticket",
       status: "",
     })
@@ -841,7 +843,7 @@ export function TicketComments({
 
   const initialData =
     initialComments != null
-      ? { comments: initialComments, ticket: { id: ticketId, display_id: displayId ?? null } }
+      ? { comments: initialComments, ticket: { id: ticketId, displayId: displayId ?? null } }
       : undefined
 
   const {
@@ -871,9 +873,9 @@ export function TicketComments({
   const ticketInfoBySlug = useMemo<TicketInfoBySlug>(() => {
     const infoBySlug: TicketInfoBySlug = {}
     mentionTickets.forEach((ticket) => {
-      if (!ticket.display_id || !ticket.status) return
-      infoBySlug[String(ticket.display_id).toLowerCase()] = {
-        displayId: String(ticket.display_id).toUpperCase(),
+      if (!ticket.displayId || !ticket.status) return
+      infoBySlug[String(ticket.displayId).toLowerCase()] = {
+        displayId: String(ticket.displayId).toUpperCase(),
         status: String(ticket.status),
       }
     })
@@ -893,7 +895,10 @@ export function TicketComments({
     }
   }
 
-  const findRootCommentById = (commentId: string) => comments.find((comment) => comment.id === commentId)
+  const findRootCommentById = useCallback(
+    (commentId: string) => comments.find((comment) => comment.id === commentId),
+    [comments]
+  )
 
   useEffect(() => {
     const allBodies: string[] = []
@@ -929,11 +934,12 @@ export function TicketComments({
         .then(async (response) => {
           if (!response.ok) return null
           const payload = await response.json().catch(() => null)
-          const ticket = payload?.ticket as { display_id?: string | null; status?: string | null } | undefined
-          if (!ticket?.display_id || !ticket?.status) return null
+          const ticket = payload?.ticket as { displayId?: string | null; display_id?: string | null; status?: string | null } | undefined
+          const displayId = ticket?.displayId ?? ticket?.display_id ?? null
+          if (!displayId || !ticket?.status) return null
           return {
             slug,
-            displayId: String(ticket.display_id).toUpperCase(),
+            displayId: String(displayId).toUpperCase(),
             status: String(ticket.status),
           }
         })
@@ -969,7 +975,7 @@ export function TicketComments({
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [hoveredCommentId, comments])
+  }, [findRootCommentById, hoveredCommentId])
 
   const handleReply = (comment: TicketComment, replyTargetId?: string) => {
     setReplyingToId(replyTargetId ?? comment.id)

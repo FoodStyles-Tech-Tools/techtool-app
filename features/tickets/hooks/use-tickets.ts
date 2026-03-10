@@ -69,7 +69,7 @@ export function useTickets(options?: UseTicketsOptions) {
     (ticketId: string, updater: (ticket: Ticket) => Ticket) => {
       queryClient.setQueriesData<TicketsResponse>({ queryKey: ticketQueryKeys.lists() }, (current) => {
         if (!current) return current
-        const sourceItems = current?.items || current?.tickets || current?.data || []
+        const sourceItems = current.items || current.data || []
         if (!sourceItems.length) return current
 
         let changed = false
@@ -128,12 +128,12 @@ export function useTickets(options?: UseTicketsOptions) {
       if (deletedId) {
         queryClient.setQueriesData<TicketsResponse>({ queryKey: ticketQueryKeys.lists() }, (current) => {
           if (!current) return current
-          const sourceItems = current?.items || current?.tickets || current?.data || []
+          const sourceItems = current.items || current.data || []
           if (!sourceItems.length) return current
           const nextItems = sourceItems.filter((ticket) => ticket.id !== deletedId)
           if (nextItems.length === sourceItems.length) return current
 
-          const pageInfoSource = current.pageInfo || current.pagination
+          const pageInfoSource = current.pageInfo
           const pageInfo = pageInfoSource
             ? {
                 ...pageInfoSource,
@@ -361,7 +361,7 @@ export function useUpdateTicket() {
       )
       queryClient.setQueriesData<TicketsResponse>({ queryKey: ticketQueryKeys.lists() }, (current) => {
         if (!current) return current
-        const sourceItems = current?.items || current?.tickets || current?.data || []
+        const sourceItems = current.items || current.data || []
         if (!sourceItems.length) return current
         let changed = false
         const nextItems = sourceItems.map((ticket) => {
@@ -427,7 +427,7 @@ export function useUpdateTicketWithReasonComment() {
       )
       queryClient.setQueriesData<TicketsResponse>({ queryKey: ticketQueryKeys.lists() }, (current) => {
         if (!current) return current
-        const sourceItems = current?.items || current?.tickets || current?.data || []
+        const sourceItems = current.items || current.data || []
         if (!sourceItems.length) return current
         let changed = false
         const nextItems = sourceItems.map((ticket) => {

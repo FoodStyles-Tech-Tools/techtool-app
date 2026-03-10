@@ -13,6 +13,8 @@ export function TicketDetailRelationsSection({
   ticket,
   relations,
 }: TicketDetailRelationsSectionProps) {
+  const mentionedInComments = relations.mentionedInComments ?? []
+
   return (
     <>
       <div className="flex items-start gap-3">
@@ -29,19 +31,22 @@ export function TicketDetailRelationsSection({
               <ExternalLink className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
             </a>
           ) : null}
-          {(relations.mentionedInComments || relations.mentioned_in_comments || []).map((mention) => (
-            <a
-              key={mention.ticket.id}
-              href={`/tickets/${String(mention.ticket.displayId || mention.ticket.id).toLowerCase()}`}
-              className="flex items-center justify-between rounded-md border px-2.5 py-1.5 text-sm hover:bg-muted/50"
-            >
-              <span className="truncate">
-                Mentioned in {(mention.mentionedInCommentIds || mention.comment_ids).length} comment{(mention.mentionedInCommentIds || mention.comment_ids).length === 1 ? "" : "s"} on {(mention.ticket.displayId || mention.ticket.id.slice(0, 8)).toUpperCase()} · {mention.ticket.title}
-              </span>
-              <ExternalLink className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
-            </a>
-          ))}
-          {!relations.parent && (relations.mentionedInComments || relations.mentioned_in_comments || []).length === 0 ? (
+          {mentionedInComments.map((mention) => {
+            const mentionCount = mention.mentionedInCommentIds?.length ?? 0
+            return (
+              <a
+                key={mention.ticket.id}
+                href={`/tickets/${String(mention.ticket.displayId || mention.ticket.id).toLowerCase()}`}
+                className="flex items-center justify-between rounded-md border px-2.5 py-1.5 text-sm hover:bg-muted/50"
+              >
+                <span className="truncate">
+                  Mentioned in {mentionCount} comment{mentionCount === 1 ? "" : "s"} on {(mention.ticket.displayId || mention.ticket.id.slice(0, 8)).toUpperCase()} · {mention.ticket.title}
+                </span>
+                <ExternalLink className="ml-2 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
+              </a>
+            )
+          })}
+          {!relations.parent && mentionedInComments.length === 0 ? (
             <p className="text-xs text-muted-foreground">No relations yet.</p>
           ) : null}
         </div>

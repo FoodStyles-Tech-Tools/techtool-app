@@ -129,7 +129,7 @@ export function useTicketBoardActions({
 
   const handleCopyTicketLabel = useCallback((ticket: Ticket) => {
     const projectName = ticket.project?.name || "No Project"
-    const label = `[${projectName}] ${ticket.displayId || ticket.display_id || ticket.id.slice(0, 8)}_${ticket.title}`
+    const label = `[${projectName}] ${ticket.displayId || ticket.id.slice(0, 8)}_${ticket.title}`
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard
         .writeText(label)

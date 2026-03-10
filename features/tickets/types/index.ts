@@ -2,8 +2,8 @@ import type { SortColumn } from "@/lib/ticket-constants"
 
 export type TicketSubtaskRow = {
   id: string
-  display_id: string | null
-  displayId?: string | null
+  displayId: string | null
+  display_id?: string | null
   title: string
   status: string
 }

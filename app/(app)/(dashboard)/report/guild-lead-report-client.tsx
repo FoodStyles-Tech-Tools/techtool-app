@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect, type ReactNode } from "react"
+import { useState, useCallback, useEffect, useMemo, type ReactNode } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
 import { Loader2, PlusCircle, Trash2 } from "lucide-react"
@@ -207,7 +207,7 @@ export default function GuildLeadReportClient() {
     setEditName(session.name ?? "")
     setEditStartDate(toDateInputValue(session.date_range_start))
     setEditEndDate(toDateInputValue(session.date_range_end))
-  }, [session?.id, session?.name, session?.date_range_start, session?.date_range_end])
+  }, [session])
 
   const { data: reportData, isLoading: dataLoading } = useQuery({
     queryKey: ["report-data", selectedSessionId],
@@ -253,7 +253,10 @@ export default function GuildLeadReportClient() {
     onError: (error: Error) => toast(error.message, "error"),
   })
 
-  const insights = session ? parseInsights(session.insights) : {}
+  const insights = useMemo(
+    () => (session ? parseInsights(session.insights) : {}),
+    [session]
+  )
 
   const sessionStartDate = session ? toDateInputValue(session.date_range_start) : ""
   const sessionEndDate = session ? toDateInputValue(session.date_range_end) : ""

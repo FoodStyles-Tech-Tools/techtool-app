@@ -121,16 +121,16 @@ export function TicketDetailAssignmentSection({
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Reporter</label>
         <div className="flex-1 min-w-0">
           <Select
-            value={ticket.requestedBy?.id || ticket.requested_by?.id || undefined}
+            value={ticket.requestedBy?.id || undefined}
             onValueChange={(value) => void onRequestedByChange(value)}
             disabled={!canEditTickets || isAssignmentLocked || updatingFields["requestedById"]}
           >
             <SelectTrigger className="h-8 w-full relative overflow-hidden">
-              {ticket.requestedBy?.id || ticket.requested_by?.id ? (
+              {ticket.requestedBy?.id ? (
                 <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
                   <UserSelectValue
                     users={users}
-                    value={ticket.requestedBy?.id || ticket.requested_by?.id || undefined}
+                    value={ticket.requestedBy?.id || undefined}
                     placeholder="Select user"
                   />
                 </div>
@@ -151,16 +151,16 @@ export function TicketDetailAssignmentSection({
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">SQA</label>
         <div className="flex-1 min-w-0">
           <Select
-            value={ticket.sqaAssignee?.id || ticket.sqa_assignee?.id || UNASSIGNED_VALUE}
+            value={ticket.sqaAssignee?.id || UNASSIGNED_VALUE}
             onValueChange={(value) => void onSqaAssigneeChange(value === UNASSIGNED_VALUE ? null : value)}
             disabled={!canEditTickets || updatingFields["sqaAssigneeId"] || (isAssignmentLocked && !isSqaEditLocked)}
           >
             <SelectTrigger className="h-8 w-full relative overflow-hidden">
-              {ticket.sqaAssignee?.id || ticket.sqa_assignee?.id ? (
+              {ticket.sqaAssignee?.id ? (
                 <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
                   <UserSelectValue
                     users={sqaEligibleUsers}
-                    value={ticket.sqaAssignee?.id || ticket.sqa_assignee?.id || null}
+                    value={ticket.sqaAssignee?.id || null}
                     placeholder="Unassigned"
                     unassignedValue={UNASSIGNED_VALUE}
                     unassignedLabel="Unassigned"

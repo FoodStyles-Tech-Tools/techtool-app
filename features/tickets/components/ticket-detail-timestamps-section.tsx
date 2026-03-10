@@ -37,7 +37,7 @@ export function TicketDetailTimestampsSection({
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Created</label>
           <div className="flex-1 min-w-0">
             <DateTimePicker
-              value={parseTimestamp(ticket.createdAt || ticket.created_at)}
+              value={parseTimestamp(ticket.createdAt)}
               onChange={(value) => void onTimestampChange("created_at", value)}
               disabled={!canEditTickets || isAssignmentLocked || updatingFields["createdAt"]}
               placeholder="Not set"
@@ -50,7 +50,7 @@ export function TicketDetailTimestampsSection({
         <div className="flex items-start gap-3">
           <div className="flex items-center gap-1.5 flex-shrink-0 w-[6.5rem]">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Assigned</label>
-            {!(ticket.assignedAt || ticket.assigned_at) && timestampValidation.assigned_at ? (
+            {!ticket.assignedAt && timestampValidation.assigned_at ? (
               <span title={getTimestampWarningMessage("assigned_at") || ""} className="cursor-help pt-2">
                 <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
               </span>
@@ -58,7 +58,7 @@ export function TicketDetailTimestampsSection({
           </div>
           <div className="flex-1 min-w-0">
             <DateTimePicker
-              value={parseTimestamp(ticket.assignedAt || ticket.assigned_at)}
+              value={parseTimestamp(ticket.assignedAt)}
               onChange={(value) => void onTimestampChange("assigned_at", value)}
               disabled={!canEditTickets || isAssignmentLocked || !ticket.assignee || updatingFields["assignedAt"]}
               placeholder="Not set"
@@ -71,7 +71,7 @@ export function TicketDetailTimestampsSection({
         <div className="flex items-start gap-3">
           <div className="flex items-center gap-1.5 flex-shrink-0 w-[6.5rem]">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Started</label>
-            {!(ticket.startedAt || ticket.started_at) && timestampValidation.started_at ? (
+            {!ticket.startedAt && timestampValidation.started_at ? (
               <span title={getTimestampWarningMessage("started_at") || ""} className="cursor-help pt-2">
                 <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
               </span>
@@ -79,7 +79,7 @@ export function TicketDetailTimestampsSection({
           </div>
           <div className="flex-1 min-w-0">
             <DateTimePicker
-              value={parseTimestamp(ticket.startedAt || ticket.started_at)}
+              value={parseTimestamp(ticket.startedAt)}
               onChange={(value) => void onTimestampChange("started_at", value)}
               disabled={!canEditTickets || isAssignmentLocked || ticket.status === "open" || updatingFields["startedAt"]}
               placeholder="Not set"
@@ -95,7 +95,7 @@ export function TicketDetailTimestampsSection({
           </label>
           <div className="flex-1 min-w-0">
             <DateTimePicker
-              value={parseTimestamp(ticket.sqaAssignedAt || ticket.sqa_assigned_at)}
+              value={parseTimestamp(ticket.sqaAssignedAt)}
               onChange={(value) => void onTimestampChange("sqa_assigned_at", value)}
               disabled={!canEditTickets || isAssignmentLocked || updatingFields["sqaAssignedAt"]}
               placeholder="Not set"
@@ -108,7 +108,7 @@ export function TicketDetailTimestampsSection({
         <div className="flex items-start gap-3">
           <div className="flex items-center gap-1.5 flex-shrink-0 w-[6.5rem]">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2">Completed</label>
-            {!(ticket.completedAt || ticket.completed_at) && timestampValidation.completed_at ? (
+            {!ticket.completedAt && timestampValidation.completed_at ? (
               <span title={getTimestampWarningMessage("completed_at") || ""} className="cursor-help pt-2">
                 <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
               </span>
@@ -116,7 +116,7 @@ export function TicketDetailTimestampsSection({
           </div>
           <div className="flex-1 min-w-0">
             <DateTimePicker
-              value={parseTimestamp(ticket.completedAt || ticket.completed_at)}
+              value={parseTimestamp(ticket.completedAt)}
               onChange={(value) => void onTimestampChange("completed_at", value)}
               disabled={!canEditTickets || isAssignmentLocked || (ticket.status !== "completed" && ticket.status !== "cancelled" && ticket.status !== "rejected") || updatingFields["completedAt"]}
               placeholder="Not set"

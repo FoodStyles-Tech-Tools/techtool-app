@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import { formatStatusLabel, isArchivedStatus, normalizeStatusKey, isDoneStatus } from "@/lib/ticket-statuses"
+import type { Ticket } from "@/lib/types"
 
 interface GanttItem {
   id: string
@@ -25,20 +26,14 @@ interface GanttItem {
 }
 
 interface GanttChartProps {
-  tickets: Array<{
-    id: string
-    title: string
-    status: string
-    sprint_id?: string | null
-    sprint?: { id: string; name: string; status: string; start_date?: string | null; end_date?: string | null } | null
-    epic_id?: string | null
-    epic?: { id: string; name: string; color: string } | null
-    created_at: string
-    started_at?: string | null
-    completed_at?: string | null
-    due_date?: string | null
-    display_id?: string | null
-  }>
+  tickets: Array<
+    Ticket & {
+      sprint_id?: string | null
+      sprint?: { id: string; name: string; status: string; start_date?: string | null; end_date?: string | null } | null
+      epic_id?: string | null
+      epic?: { id: string; name: string; color: string } | null
+    }
+  >
   sprints: Array<{
     id: string
     name: string
@@ -162,14 +157,14 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
       let startDate: Date | null = null
       let endDate: Date | null = null
 
-      if (ticket.started_at) {
-        startDate = parseISO(ticket.started_at)
-      } else if (ticket.created_at) {
-        startDate = parseISO(ticket.created_at)
+      if (ticket.startedAt) {
+        startDate = parseISO(ticket.startedAt)
+      } else if (ticket.createdAt) {
+        startDate = parseISO(ticket.createdAt)
       }
 
-      if (ticket.completed_at) {
-        endDate = parseISO(ticket.completed_at)
+      if (ticket.completedAt) {
+        endDate = parseISO(ticket.completedAt)
       } else if (startDate) {
         // If started but not completed, use today as end date
         endDate = new Date()
@@ -183,8 +178,8 @@ export function GanttChart({ tickets, sprints, epics, onTicketClick, onSprintCli
         status: ticket.status,
         startDate,
         endDate,
-        dueDate: ticket.due_date ? parseISO(ticket.due_date) : null,
-        displayId: ticket.display_id,
+        dueDate: ticket.dueDate ? parseISO(ticket.dueDate) : null,
+        displayId: ticket.displayId,
         level: 2,
       }
 

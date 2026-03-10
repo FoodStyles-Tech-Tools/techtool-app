@@ -75,8 +75,7 @@ export interface TicketSprint {
 /** Related ticket for parent/subtask/mention relation display */
 export interface RelatedTicket {
   id: string
-  display_id: string | null
-  displayId?: string | null
+  displayId: string | null
   title: string
   status: string
   type: string | null
@@ -85,16 +84,14 @@ export interface RelatedTicket {
 /** Mention relation grouped by target ticket */
 export interface MentionedTicketRelation {
   ticket: RelatedTicket
-  mentionedInCommentIds?: string[]
-  comment_ids: string[]
+  mentionedInCommentIds: string[]
 }
 
 /** Ticket detail relations payload */
 export interface TicketDetailRelations {
   parent: RelatedTicket | null
   subtasks: RelatedTicket[]
-  mentioned_in_comments: MentionedTicketRelation[]
-  mentionedInComments?: MentionedTicketRelation[]
+  mentionedInComments: MentionedTicketRelation[]
 }
 
 /** Cancelled / archived reason stored on ticket.reason */
@@ -114,24 +111,19 @@ export interface TicketCancelledReason {
 }
 
 /**
- * Full ticket shape as returned by API / useTickets.
- * Optional started_at, completed_at, assigned_at may be present from API.
+ * Full normalized ticket shape used across the app.
  */
 export interface Ticket {
   id: string
-  display_id: string | null
-  displayId?: string | null
-  parent_ticket_id?: string | null
-  parentTicketId?: string | null
+  displayId: string | null
+  parentTicketId: string | null
   title: string
   description: string | null
   status: string
   priority: string
   type: string
-  due_date: string | null
-  dueDate?: string | null
-  sqa_assigned_at?: string | null
-  sqaAssignedAt?: string | null
+  dueDate: string | null
+  sqaAssignedAt: string | null
   links: string[]
   reason?: TicketCancelledReason | null
   department: TicketDepartment | null
@@ -139,28 +131,22 @@ export interface Ticket {
   sprint: TicketSprint | null
   project: TicketProject | null
   assignee: TicketUser | null
-  sqa_assignee: TicketUser | null
-  sqaAssignee?: TicketUser | null
-  requested_by: TicketUser
-  requestedBy?: TicketUser
-  created_at: string
-  createdAt?: string
-  started_at?: string | null
-  startedAt?: string | null
-  completed_at?: string | null
-  completedAt?: string | null
-  assigned_at?: string | null
-  assignedAt?: string | null
+  sqaAssignee: TicketUser | null
+  requestedBy: TicketUser
+  createdAt: string
+  startedAt: string | null
+  completedAt: string | null
+  assignedAt: string | null
 }
 
 /** Minimal ticket for lists (e.g. dashboard carousel) */
 export interface TicketSummary {
   id: string
-  display_id: string | null
+  displayId: string | null
   title: string
   status: string
   priority: string
-  created_at: string
+  createdAt: string
   project?: TicketProject | null
 }
 
@@ -171,9 +157,9 @@ export interface QuickAddTicketData {
   type: "bug" | "request" | "task" | "subtask"
   priority: "low" | "medium" | "high" | "urgent"
   status: string
-  department_id?: string
-  assignee_id?: string
-  sqa_assignee_id?: string
-  requested_by_id?: string
-  due_date?: string | null
+  departmentId?: string
+  assigneeId?: string
+  sqaAssigneeId?: string
+  requestedById?: string
+  dueDate?: string | null
 }

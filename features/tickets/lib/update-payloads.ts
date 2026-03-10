@@ -30,7 +30,7 @@ export function buildAssignmentPayload(
     }
   }
 
-  const previousValue = currentTicket?.sqa_assignee?.id || null
+  const previousValue = currentTicket?.sqaAssignee?.id || null
   return {
     sqaAssigneeId: nextValue,
     sqaAssignedAt: !nextValue ? null : !previousValue || previousValue !== nextValue ? now : undefined,
@@ -39,7 +39,7 @@ export function buildAssignmentPayload(
 
 export function buildStatusPayload(currentTicket: Ticket | null | undefined, nextStatus: string) {
   const previousStatus = currentTicket?.status ?? "open"
-  const startedAt = currentTicket?.started_at ?? null
+  const startedAt = currentTicket?.startedAt ?? null
 
   return toCamelCaseStatusPayload({
     status: nextStatus,

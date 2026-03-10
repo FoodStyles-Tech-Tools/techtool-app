@@ -62,9 +62,9 @@ export function getTimestampValidation(ticket: Ticket | null | undefined): Ticke
   }
 
   const status = ticket.status
-  const hasStarted = !!ticket.started_at
-  const hasCompleted = !!ticket.completed_at
-  const hasAssigned = !!ticket.assigned_at
+  const hasStarted = !!ticket.startedAt
+  const hasCompleted = !!ticket.completedAt
+  const hasAssigned = !!ticket.assignedAt
   const hasAssignee = !!ticket.assignee
 
   return {

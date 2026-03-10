@@ -73,15 +73,14 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
 
   const selectedParentTicketId = ticket?.parentTicketId || null
   const parentTicketOptions = useMemo(() => {
-    const optionsMap = new Map<string, { id: string; display_id: string | null; displayId?: string | null; title: string }>()
+    const optionsMap = new Map<string, { id: string; displayId: string | null; title: string }>()
 
     ;(relationTicketsData || []).forEach((candidate) => {
       if (!candidate.id || candidate.id === ticketId) return
       if (candidate.type === "subtask") return
       optionsMap.set(candidate.id, {
         id: candidate.id,
-        display_id: candidate.display_id || null,
-        displayId: candidate.displayId || candidate.display_id || null,
+        displayId: candidate.displayId || null,
         title: candidate.title || "Untitled ticket",
       })
     })
@@ -94,8 +93,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     ) {
       optionsMap.set(relations.parent.id, {
         id: relations.parent.id,
-        display_id: relations.parent.display_id || null,
-        displayId: relations.parent.displayId || relations.parent.display_id || null,
+        displayId: relations.parent.displayId || null,
         title: relations.parent.title || "Untitled ticket",
       })
     }

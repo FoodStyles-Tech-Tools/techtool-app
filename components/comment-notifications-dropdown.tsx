@@ -24,7 +24,7 @@ function NotificationItem({
   onNavigate: (notification: CommentNotification) => void
 }) {
   const isUnread = !notification.read_at
-  const displayId = notification.ticket?.display_id || notification.ticket_id?.slice(0, 8)
+  const displayId = notification.ticket?.displayId || notification.ticket_id?.slice(0, 8)
   const authorName = notification.comment?.author?.name || notification.comment?.author?.email || "Someone"
   const typeLabel = notification.type === "mention" ? "mentioned you" : "replied"
   const bodyText = richTextToPlainText(notification.comment?.body)
@@ -96,7 +96,7 @@ export function CommentNotificationsDropdown() {
   } = useCommentNotifications()
 
   const handleNavigate = (notification: CommentNotification) => {
-    const displayId = notification.ticket?.display_id
+    const displayId = notification.ticket?.displayId
     if (displayId) {
       router.push(`/tickets/${displayId}`)
     }

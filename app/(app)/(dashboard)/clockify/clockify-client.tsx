@@ -344,20 +344,20 @@ export default function ClockifyClient() {
 
   const handleClockifyTicketCreated = async (ticket: {
     id: string
-    display_id: string | null
+    displayId: string | null
     title: string
   }) => {
     if (!createTicketDialog?.entryId) {
       return
     }
 
-    if (!ticket.display_id) {
+    if (!ticket.displayId) {
       toast("Ticket created but display ID is missing. Link it manually.", "error")
       return
     }
 
     try {
-      const updatedMap = await handleTicketSelect(createTicketDialog.entryId, ticket.display_id)
+      const updatedMap = await handleTicketSelect(createTicketDialog.entryId, ticket.displayId)
       await persistReconciliation(updatedMap)
       toast("Ticket created and linked.", "success")
     } catch (error) {
@@ -469,12 +469,12 @@ export default function ClockifyClient() {
   const [isSavingReconcile, setIsSavingReconcile] = useState(false)
   const [isReconciling, setIsReconciling] = useState(false)
   const [ticketLookup, setTicketLookup] = useState<
-    Record<string, { id: string; display_id: string; title?: string }>
+    Record<string, { id: string; displayId: string; title?: string }>
   >({})
   const [activeTicketEntryId, setActiveTicketEntryId] = useState<string | null>(null)
   const [ticketSearchTerm, setTicketSearchTerm] = useState<string>("")
   const [ticketSearchResults, setTicketSearchResults] = useState<
-    Array<{ id: string; display_id: string; title?: string }>
+    Array<{ id: string; displayId: string; title?: string }>
   >([])
   const [isTicketSearchLoading, setIsTicketSearchLoading] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -524,10 +524,14 @@ export default function ClockifyClient() {
     }
 
     const data = await response.json()
-    const lookup: Record<string, { id: string; display_id: string; title?: string }> = {}
+    const lookup: Record<string, { id: string; displayId: string; title?: string }> = {}
     ;(data.tickets || []).forEach((ticket: any) => {
-      if (ticket?.display_id) {
-        lookup[String(ticket.display_id).toUpperCase()] = ticket
+      const displayId = ticket?.displayId ?? ticket?.display_id
+      if (displayId) {
+        lookup[String(displayId).toUpperCase()] = {
+          ...ticket,
+          displayId: String(displayId),
+        }
       }
     })
 
@@ -1004,11 +1008,11 @@ export default function ClockifyClient() {
                                               className="block w-full px-3 py-2 text-left text-xs hover:bg-accent"
                                               onMouseDown={(event) => event.preventDefault()}
                                               onClick={() =>
-                                                handleTicketSelect(entryId, ticket.display_id)
+                                                handleTicketSelect(entryId, ticket.displayId)
                                               }
                                             >
                                               <span className="font-medium">
-                                                {ticket.display_id}
+                                                {ticket.displayId}
                                               </span>
                                               {ticket.title ? ` - ${ticket.title}` : ""}
                                             </button>

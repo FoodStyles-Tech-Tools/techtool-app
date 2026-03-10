@@ -73,7 +73,7 @@ export function TicketDetailPlanningSection({
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Due Date</label>
         <div className="flex-1 min-w-0">
           <DateTimePicker
-            value={parseTimestamp(ticket.dueDate || ticket.due_date)}
+            value={parseTimestamp(ticket.dueDate)}
             onChange={(value) => void onDueDateChange(value)}
             disabled={!canEditTickets || isAssignmentLocked || updatingFields["dueDate"]}
             placeholder="No due date"

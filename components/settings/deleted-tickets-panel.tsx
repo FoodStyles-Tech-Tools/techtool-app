@@ -21,7 +21,7 @@ export function DeletedTicketsPanel() {
         const archivedInfo = ticket.reason?.archived
         return {
           id: ticket.id,
-          displayId: ticket.display_id || ticket.id.slice(0, 8).toUpperCase(),
+          displayId: ticket.displayId || ticket.id.slice(0, 8).toUpperCase(),
           title: ticket.title,
           project: ticket.project?.name || "No Project",
           archivedAt: archivedInfo?.archivedAt || null,
@@ -95,4 +95,3 @@ export function DeletedTicketsPanel() {
     </div>
   )
 }
-

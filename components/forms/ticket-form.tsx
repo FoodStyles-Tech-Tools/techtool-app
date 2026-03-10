@@ -92,7 +92,7 @@ interface TicketFormProps {
   projectId?: string
   projectOptions?: Array<{ id: string; name: string; status?: string }>
   onSuccess?: () => void
-  onCreated?: (ticket: { id: string; display_id: string | null; title: string }) => void | Promise<void>
+  onCreated?: (ticket: { id: string; displayId: string | null; title: string }) => void | Promise<void>
   onSubmittingChange?: (isSubmitting: boolean) => void
   createOverrides?: { created_at?: string | null }
   initialData?: Partial<TicketFormValues> & { id?: string }
@@ -321,7 +321,7 @@ export function TicketForm({
         if (created?.ticket?.id && created?.ticket?.title) {
           await onCreated?.({
             id: created.ticket.id,
-            display_id: created.ticket.display_id || null,
+            displayId: created.ticket.displayId || null,
             title: created.ticket.title,
           })
         }

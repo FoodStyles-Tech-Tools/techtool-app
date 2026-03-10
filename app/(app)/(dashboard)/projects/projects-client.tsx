@@ -138,7 +138,10 @@ export default function ProjectsClient({
   const loading = false
   const canCreateProjects = flags?.canCreateProjects ?? false
   const canEditProjects = flags?.canEditProjects ?? false
-  const pinnedProjectIds = preferences.pinned_project_ids || []
+  const pinnedProjectIds = useMemo(
+    () => preferences.pinned_project_ids ?? [],
+    [preferences.pinned_project_ids]
+  )
   const pinnedProjectIdSet = useMemo(() => new Set(pinnedProjectIds), [pinnedProjectIds])
 
   // Calculate ticket stats per project

@@ -38,7 +38,6 @@ export function useTicketDetail(ticketId: string, options?: { enabled?: boolean 
   const relations = query.data?.relations ?? {
     parent: null,
     subtasks: [],
-    mentioned_in_comments: [],
     mentionedInComments: [],
   }
 

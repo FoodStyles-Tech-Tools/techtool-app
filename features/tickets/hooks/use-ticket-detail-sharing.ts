@@ -13,7 +13,7 @@ export function useTicketDetailSharing({ ticket }: UseTicketDetailSharingParams)
   const handleCopyTicketLabel = () => {
     if (!ticket) return
     const projectName = ticket.project?.name || "No Project"
-    const label = `[${projectName}] ${ticket.displayId || ticket.display_id || ticket.id.slice(0, 8)}_${ticket.title}`
+    const label = `[${projectName}] ${ticket.displayId || ticket.id.slice(0, 8)}_${ticket.title}`
     if (!navigator?.clipboard?.writeText) {
       toast("Clipboard not available", "error")
       return
@@ -26,7 +26,7 @@ export function useTicketDetailSharing({ ticket }: UseTicketDetailSharingParams)
 
   const getTicketShareUrl = () => {
     if (!ticket) return null
-    const slug = String(ticket.displayId || ticket.display_id || ticket.id).toLowerCase()
+    const slug = String(ticket.displayId || ticket.id).toLowerCase()
     return `${TICKET_SHARE_BASE_URL}/${slug}`
   }
 
@@ -47,7 +47,7 @@ export function useTicketDetailSharing({ ticket }: UseTicketDetailSharingParams)
     if (!ticket) return
     const shareUrl = getTicketShareUrl()
     if (!shareUrl) return
-    const displayIdLabel = ticket.displayId || ticket.display_id || ticket.id.slice(0, 8).toUpperCase()
+    const displayIdLabel = ticket.displayId || ticket.id.slice(0, 8).toUpperCase()
     const hyperlink = `[[${displayIdLabel}] - ${ticket.title}](${shareUrl})`
     if (!navigator?.clipboard?.writeText) {
       toast("Clipboard not available", "error")

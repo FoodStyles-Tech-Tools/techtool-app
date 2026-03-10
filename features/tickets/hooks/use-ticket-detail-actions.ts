@@ -189,7 +189,7 @@ export function useTicketDetailActions({
     if (!ticket) return
 
     const nextParentId = newParentTicketId === noParentTicketValue ? null : newParentTicketId
-    const currentParentId = ticket.parentTicketId || ticket.parent_ticket_id || null
+    const currentParentId = ticket.parentTicketId || null
     if (nextParentId === currentParentId) return
 
     const updates: Record<string, any> = { parentTicketId: nextParentId }
@@ -292,14 +292,14 @@ export function useTicketDetailActions({
       status === "completed" || status === "cancelled" || status === "rejected"
         ? field === "completed_at"
           ? dateValue
-          : ticket.completedAt || ticket.completed_at || null
+          : ticket.completedAt || null
         : null
 
     const timestampMap: Record<string, string | null> = {
-      created_at: field === "created_at" ? dateValue : ticket.createdAt || ticket.created_at || null,
-      assigned_at: field === "assigned_at" ? dateValue : ticket.assignedAt || ticket.assigned_at || null,
-      sqa_assigned_at: field === "sqa_assigned_at" ? dateValue : ticket.sqaAssignedAt || ticket.sqa_assigned_at || null,
-      started_at: field === "started_at" ? dateValue : ticket.startedAt || ticket.started_at || null,
+      created_at: field === "created_at" ? dateValue : ticket.createdAt || null,
+      assigned_at: field === "assigned_at" ? dateValue : ticket.assignedAt || null,
+      sqa_assigned_at: field === "sqa_assigned_at" ? dateValue : ticket.sqaAssignedAt || null,
+      started_at: field === "started_at" ? dateValue : ticket.startedAt || null,
       completed_at: effectiveCompletedAt,
     }
 
@@ -315,7 +315,7 @@ export function useTicketDetailActions({
     if (
       field === "started_at" &&
       (status === "in_progress" || status === "blocked") &&
-      (ticket.completedAt || ticket.completed_at)
+      ticket.completedAt
     ) {
       updates.completedAt = null
     }

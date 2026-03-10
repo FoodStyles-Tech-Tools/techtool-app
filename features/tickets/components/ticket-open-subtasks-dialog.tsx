@@ -50,7 +50,7 @@ export function TicketOpenSubtasksDialog({
           {subtasks.map((subtask) => (
             <div key={subtask.id} className="rounded border px-2.5 py-1.5 text-sm">
               <span className="font-mono text-xs text-muted-foreground">
-                {(subtask.displayId || subtask.display_id || subtask.id.slice(0, 8)).toUpperCase()}
+                {(subtask.displayId || subtask.id.slice(0, 8)).toUpperCase()}
               </span>{" "}
               {subtask.title}
             </div>

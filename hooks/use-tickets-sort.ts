@@ -33,8 +33,8 @@ export function useTicketsSort(filteredTickets: Ticket[]) {
       const time = date.getTime()
       return Number.isNaN(time) ? null : time
     }
-    const timeA = getTime(a.due_date)
-    const timeB = getTime(b.due_date)
+    const timeA = getTime(a.dueDate)
+    const timeB = getTime(b.dueDate)
     if (timeA === null && timeB === null) return 0
     if (timeA === null) return 1
     if (timeB === null) return -1
@@ -51,8 +51,8 @@ export function useTicketsSort(filteredTickets: Ticket[]) {
       let result = 0
       switch (sortConfig.column) {
         case "id":
-          result = (a.display_id || a.id).localeCompare(
-            b.display_id || b.id,
+          result = (a.displayId || a.id).localeCompare(
+            b.displayId || b.id,
             undefined,
             { numeric: true, sensitivity: "base" }
           )
@@ -77,8 +77,8 @@ export function useTicketsSort(filteredTickets: Ticket[]) {
           result = comparePriority(a, b)
           break
         case "requested_by":
-          result = (a.requested_by?.name || a.requested_by?.email || "").localeCompare(
-            b.requested_by?.name || b.requested_by?.email || ""
+          result = (a.requestedBy?.name || a.requestedBy?.email || "").localeCompare(
+            b.requestedBy?.name || b.requestedBy?.email || ""
           )
           break
         case "assignee":
@@ -87,13 +87,13 @@ export function useTicketsSort(filteredTickets: Ticket[]) {
           )
           break
         case "sqa_assignee":
-          result = (a.sqa_assignee?.name || a.sqa_assignee?.email || "").localeCompare(
-            b.sqa_assignee?.name || b.sqa_assignee?.email || ""
+          result = (a.sqaAssignee?.name || a.sqaAssignee?.email || "").localeCompare(
+            b.sqaAssignee?.name || b.sqaAssignee?.email || ""
           )
           break
         case "sqa_assigned_at": {
-          const aTime = a.sqa_assigned_at ? new Date(a.sqa_assigned_at).getTime() : null
-          const bTime = b.sqa_assigned_at ? new Date(b.sqa_assigned_at).getTime() : null
+          const aTime = a.sqaAssignedAt ? new Date(a.sqaAssignedAt).getTime() : null
+          const bTime = b.sqaAssignedAt ? new Date(b.sqaAssignedAt).getTime() : null
           if (aTime === null && bTime === null) result = 0
           else if (aTime === null) result = 1
           else if (bTime === null) result = -1

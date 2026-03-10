@@ -80,7 +80,7 @@ export function TicketDetailHeader({
             </DropdownMenuContent>
           </DropdownMenu>
           <span className="rounded-md bg-background px-2.5 py-1 font-mono text-sm text-muted-foreground">
-            {ticket?.displayId || ticket?.display_id || ticketId.slice(0, 8)}
+            {ticket?.displayId || ticketId.slice(0, 8)}
           </span>
         </div>
         {ticket ? (
