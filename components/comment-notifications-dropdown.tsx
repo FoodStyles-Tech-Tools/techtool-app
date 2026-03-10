@@ -3,11 +3,6 @@
 import { useRouter } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { useCommentNotifications, type CommentNotification } from "@/hooks/use-comment-notifications"
 import { Bell, MessageSquare, AtSign, CheckCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -103,24 +98,24 @@ export function CommentNotificationsDropdown() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <details className="relative">
+      <summary className="list-none [&::-webkit-details-marker]:hidden">
         <Button
           variant="ghost"
           size="icon"
-          className="h-9 w-9 relative"
+          className="relative h-9 w-9"
           title="Comment notifications"
         >
           <Bell className="h-4 w-4" />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground px-1">
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-medium text-destructive-foreground">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}
           <span className="sr-only">Notifications</span>
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8} className="w-[360px] p-0 ml-2">
+      </summary>
+      <div className="absolute right-0 z-30 mt-2 ml-2 w-[360px] rounded-lg border border-border/60 bg-background p-0 shadow-md">
         <div className="flex items-center justify-between px-4 py-2 border-b">
           <span className="font-semibold text-sm">Notifications</span>
           {unreadCount > 0 && (
@@ -167,7 +162,7 @@ export function CommentNotificationsDropdown() {
             </Link>
           </div>
         )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </div>
+    </details>
   )
 }

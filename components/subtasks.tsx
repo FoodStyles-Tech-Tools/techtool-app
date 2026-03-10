@@ -6,7 +6,6 @@ import { Plus } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useCreateTicket, useTickets, useUpdateTicket } from "@/hooks/use-tickets"
 import { useRealtimeSubscription } from "@/hooks/use-realtime"
@@ -14,7 +13,6 @@ import { useUsers } from "@/hooks/use-users"
 import { toast } from "@/components/ui/toast"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
-import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import { isDoneStatus } from "@/lib/ticket-statuses"
 
@@ -28,6 +26,8 @@ interface SubtasksProps {
 }
 
 const UNASSIGNED_VALUE = "unassigned"
+const subtaskSelectClassName =
+  "h-7 w-full rounded-md border border-border/45 bg-background/60 px-2 text-xs text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50"
 
 export function Subtasks({
   ticketId,
@@ -171,35 +171,25 @@ export function Subtasks({
                   disabled={!canEditTickets || updatingId === subtask.id}
                   triggerClassName="h-7 w-full"
                 />
-                <Select
+                <select
                   value={subtask.assignee?.id || UNASSIGNED_VALUE}
-                  onValueChange={(value) =>
-                    handleUpdateField(subtask.id, "assigneeId", value === UNASSIGNED_VALUE ? null : value)
+                  onChange={(event) =>
+                    handleUpdateField(
+                      subtask.id,
+                      "assigneeId",
+                      event.target.value === UNASSIGNED_VALUE ? null : event.target.value
+                    )
                   }
                   disabled={!canEditTickets || updatingId === subtask.id}
+                  className={subtaskSelectClassName}
                 >
-                  <SelectTrigger className="h-7 w-full relative overflow-hidden">
-                    {subtask.assignee?.id ? (
-                      <div className="absolute left-3 right-8 top-0 bottom-0 flex items-center overflow-hidden">
-                        <UserSelectValue
-                          users={assigneeEligibleUsers}
-                          value={subtask.assignee.id}
-                          placeholder="Unassigned"
-                          unassignedValue={UNASSIGNED_VALUE}
-                          unassignedLabel="Unassigned"
-                        />
-                      </div>
-                    ) : (
-                      <SelectValue placeholder="Unassigned" />
-                    )}
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+                    <option value={UNASSIGNED_VALUE}>Unassigned</option>
                     {assigneeEligibleUsers.map((user) => (
-                      <UserSelectItem key={user.id} user={user} value={user.id} />
+                      <option key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </option>
                     ))}
-                  </SelectContent>
-                </Select>
+                </select>
                 <TicketStatusSelect
                   value={subtask.status}
                   onValueChange={(value) => handleUpdateField(subtask.id, "status", value)}

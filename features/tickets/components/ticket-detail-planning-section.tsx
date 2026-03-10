@@ -2,7 +2,6 @@
 
 import { DateTimePicker } from "@/components/ui/datetime-picker"
 import { EpicSelect } from "@/components/epic-select"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SprintSelect } from "@/components/sprint-select"
 import { Switch } from "@/components/ui/switch"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
@@ -13,6 +12,8 @@ import type { TicketProjectOption } from "@/features/tickets/components/ticket-d
 
 const NO_DEPARTMENT_VALUE = "no_department"
 const NO_PROJECT_VALUE = "no_project"
+const nativeSelectClassName =
+  "h-8 w-full rounded-md border border-border/45 bg-background/60 px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50"
 
 type TicketDetailPlanningSectionProps = {
   ticket: Ticket
@@ -86,23 +87,19 @@ export function TicketDetailPlanningSection({
       <div className="flex items-start gap-3">
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Department</label>
         <div className="flex-1 min-w-0">
-          <Select
+          <select
             value={ticket.department?.id || NO_DEPARTMENT_VALUE}
-            onValueChange={(value) => void onDepartmentChange(value)}
+            onChange={(event) => void onDepartmentChange(event.target.value)}
             disabled={!canEditTickets || isAssignmentLocked || updatingFields["departmentId"]}
+            className={nativeSelectClassName}
           >
-            <SelectTrigger className="h-8 w-full">
-              <SelectValue placeholder="No Department" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_DEPARTMENT_VALUE}>No Department</SelectItem>
+            <option value={NO_DEPARTMENT_VALUE}>No Department</option>
               {departments.map((department) => (
-                <SelectItem key={department.id} value={department.id}>
+                <option key={department.id} value={department.id}>
                   {department.name}
-                </SelectItem>
+                </option>
               ))}
-            </SelectContent>
-          </Select>
+          </select>
         </div>
       </div>
 
@@ -135,23 +132,19 @@ export function TicketDetailPlanningSection({
       <div className="flex items-start gap-3">
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Project</label>
         <div className="flex-1 min-w-0">
-          <Select
+          <select
             value={ticket.project?.id || NO_PROJECT_VALUE}
-            onValueChange={(value) => void onProjectChange(value)}
+            onChange={(event) => void onProjectChange(event.target.value)}
             disabled={!canEditTickets || isAssignmentLocked || updatingFields["projectId"]}
+            className={nativeSelectClassName}
           >
-            <SelectTrigger className="h-8 w-full">
-              <SelectValue placeholder="No Project" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NO_PROJECT_VALUE}>No Project</SelectItem>
+            <option value={NO_PROJECT_VALUE}>No Project</option>
               {projectOptions.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
+                <option key={project.id} value={project.id}>
                   {project.name}
-                </SelectItem>
+                </option>
               ))}
-            </SelectContent>
-          </Select>
+          </select>
           <div className="mt-3 flex items-center justify-end gap-2">
             <span className="text-xs text-muted-foreground">Include Inactive</span>
             <Switch

@@ -14,13 +14,6 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { useCreateSprint, useUpdateSprint } from "@/hooks/use-sprints"
 
 const sprintSchema = z.object({
@@ -38,6 +31,9 @@ interface SprintFormProps {
   onSuccess?: () => void
   initialData?: Partial<SprintFormValues> & { id?: string }
 }
+
+const nativeSelectClassName =
+  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
 
 export function SprintForm({ projectId, onSuccess, initialData }: SprintFormProps) {
   const createSprint = useCreateSprint()
@@ -119,19 +115,18 @@ export function SprintForm({ projectId, onSuccess, initialData }: SprintFormProp
           render={({ field }) => (
             <FormItem>
               <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="planned">Planned</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <select
+                  value={field.value}
+                  onChange={(event) => field.onChange(event.target.value)}
+                  className={nativeSelectClassName}
+                >
+                  <option value="planned">Planned</option>
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

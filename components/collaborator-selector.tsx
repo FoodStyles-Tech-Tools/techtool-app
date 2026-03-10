@@ -1,10 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 
@@ -33,7 +30,6 @@ export function CollaboratorSelector({
   buttonClassName,
   disabled,
 }: CollaboratorSelectorProps) {
-  const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
 
   const selectedIds = useMemo(() => value || [], [value])
@@ -63,65 +59,54 @@ export function CollaboratorSelector({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          className={cn(
-            "h-8 w-full justify-start gap-2 overflow-hidden",
-            buttonClassName,
-            disabled && "opacity-70"
-          )}
-        >
-          {selectedUsers.length === 0 ? (
-            <span className="text-xs text-muted-foreground truncate">{placeholder}</span>
-          ) : (
-            <div className="flex items-center gap-1 overflow-hidden">
-              <div className="flex -space-x-2">
-                {selectedUsers.slice(0, 3).map((user) => (
-                  <Avatar key={user.id} className="h-5 w-5 border border-background">
-                    <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
-                    <AvatarFallback className="text-[10px]">
-                      {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                ))}
-              </div>
-              {selectedUsers.length > 3 && (
-                <span className="text-[10px] text-muted-foreground">+{selectedUsers.length - 3}</span>
-              )}
+    <details className={cn("w-full rounded-md border border-border/60 bg-background", disabled && "opacity-70", buttonClassName)}>
+      <summary className="flex h-8 cursor-pointer list-none items-center justify-between gap-2 px-2 text-left">
+        {selectedUsers.length === 0 ? (
+          <span className="truncate text-xs text-muted-foreground">{placeholder}</span>
+        ) : (
+          <div className="flex items-center gap-1 overflow-hidden">
+            <div className="flex -space-x-2">
+              {selectedUsers.slice(0, 3).map((user) => (
+                <Avatar key={user.id} className="h-5 w-5 border border-background">
+                  <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
+                  <AvatarFallback className="text-[10px]">
+                    {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              ))}
             </div>
-          )}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-3" align="start">
+            {selectedUsers.length > 3 && (
+              <span className="text-[10px] text-muted-foreground">+{selectedUsers.length - 3}</span>
+            )}
+          </div>
+        )}
+        <span className="text-[10px] text-muted-foreground">Select</span>
+      </summary>
+      <div className="border-t border-border/50 p-3">
         <Input
           placeholder="Search collaborators"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-8"
+          disabled={disabled}
         />
-        <div className="mt-2 max-h-64 overflow-y-auto space-y-1">
+        <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
           {filteredUsers.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-4">No users found</p>
+            <p className="py-4 text-center text-xs text-muted-foreground">No users found</p>
           )}
           {filteredUsers.map((user) => {
-                const checked = selectedIds.includes(user.id)
+            const checked = selectedIds.includes(user.id)
             return (
-              <button
+              <label
                 key={user.id}
-                type="button"
-                onClick={() => toggleUser(user.id)}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
               >
-                <Checkbox
+                <input
+                  type="checkbox"
                   checked={checked}
-                  onCheckedChange={() => toggleUser(user.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-4 w-4"
+                  onChange={() => toggleUser(user.id)}
+                  disabled={disabled}
+                  className="h-4 w-4 rounded border-border text-foreground"
                   aria-label={`Toggle ${user.name || user.email}`}
                 />
                 <Avatar className="h-6 w-6">
@@ -130,26 +115,25 @@ export function CollaboratorSelector({
                     {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm truncate">{user.name || user.email}</p>
-                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm">{user.name || user.email}</p>
+                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                 </div>
-              </button>
+              </label>
             )
           })}
         </div>
         {selectedIds.length > 0 && (
-          <Button
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
-            className="mt-2 w-full"
+            className="mt-2 w-full rounded-md border border-border/50 px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             onClick={() => onChange([])}
+            disabled={disabled}
           >
             Clear selection
-          </Button>
+          </button>
         )}
-      </PopoverContent>
-    </Popover>
+      </div>
+    </details>
   )
 }

@@ -20,17 +20,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import { normalizeStatusKey, type TicketStatus } from "@/lib/ticket-statuses"
 import { toast } from "@/components/ui/toast"
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 
 type StatusDraft = {
   label: string
@@ -42,6 +36,8 @@ type StatusRow = TicketStatus & {
 }
 
 const DEFAULT_COLOR = "#9ca3af"
+const actionButtonClassName =
+  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted/40 hover:text-foreground"
 
 export function WorkspaceStatusPanel() {
   const { flags } = usePermissions()
@@ -162,7 +158,7 @@ export function WorkspaceStatusPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3 border-b pb-3">
+      <div className="flex items-start justify-between gap-3 rounded-lg border border-border/50 bg-background p-4">
         <div className="space-y-1">
           <h3 className="text-base font-semibold">Status</h3>
           <p className="text-sm text-muted-foreground">Global ticket statuses used across projects.</p>
@@ -214,28 +210,27 @@ export function WorkspaceStatusPanel() {
                   </TableCell>
                   <TableCell>{status.sort_order}</TableCell>
                   <TableCell>{status.updated_at ? new Date(status.updated_at).toLocaleDateString() : "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md border border-transparent hover:border-border">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEdit(status)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => void handleDelete(status)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        className={actionButtonClassName}
+                        onClick={() => openEdit(status)}
+                        aria-label={`Edit ${status.label}`}
+                        title="Edit status"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className={actionButtonClassName}
+                        onClick={() => void handleDelete(status)}
+                        aria-label={`Delete ${status.label}`}
+                        title="Delete status"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))

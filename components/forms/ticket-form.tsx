@@ -15,18 +15,10 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Bug, CheckSquare, ChevronDown, ChevronUp, ChevronsUp, GitBranch, Minus, Sparkles, X } from "lucide-react"
 import { DepartmentForm } from "@/components/forms/department-form"
 import { useDepartments } from "@/hooks/use-departments"
-import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import { useCreateTicket, useUpdateTicket } from "@/hooks/use-tickets"
@@ -46,6 +38,8 @@ const RichTextEditor = dynamic(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
   { ssr: false }
 )
+const nativeSelectClassName =
+  "h-10 w-full rounded-md border border-border/40 bg-background/55 px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50"
 
 const ticketSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -159,10 +153,6 @@ export function TicketForm({
 }: TicketFormProps) {
   const [users, setUsers] = useState<User[]>([])
   const [includeInactiveProjects, setIncludeInactiveProjects] = useState(false)
-  const [projectSearch, setProjectSearch] = useState("")
-  const [assigneeSearch, setAssigneeSearch] = useState("")
-  const [reporterSearch, setReporterSearch] = useState("")
-  const [departmentSearch, setDepartmentSearch] = useState("")
   const { departments, refresh } = useDepartments()
   const { user, flags } = usePermissions()
   const [isDepartmentDialogOpen, setDepartmentDialogOpen] = useState(false)
@@ -218,38 +208,10 @@ export function TicketForm({
       (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
     )
   }, [projectOptions, includeInactiveProjects, selectedProjectId])
-  const filteredProjectSearchOptions = useMemo(() => {
-    if (!projectSearch.trim()) return filteredProjectOptions
-    const search = projectSearch.trim().toLowerCase()
-    return filteredProjectOptions.filter((project) =>
-      (project.name || "").toLowerCase().includes(search)
-    )
-  }, [filteredProjectOptions, projectSearch])
   const assigneeUsers = useMemo(
     () => users.filter((u) => (u.role ? ASSIGNEE_ALLOWED_ROLES.has(u.role.toLowerCase()) : false)),
     [users]
   )
-  const filteredAssigneeUsers = useMemo(() => {
-    if (!assigneeSearch.trim()) return assigneeUsers
-    const search = assigneeSearch.trim().toLowerCase()
-    return assigneeUsers.filter((u) =>
-      (u.name || "").toLowerCase().includes(search) || u.email.toLowerCase().includes(search)
-    )
-  }, [assigneeSearch, assigneeUsers])
-  const filteredReporterUsers = useMemo(() => {
-    if (!reporterSearch.trim()) return users
-    const search = reporterSearch.trim().toLowerCase()
-    return users.filter((u) =>
-      (u.name || "").toLowerCase().includes(search) || u.email.toLowerCase().includes(search)
-    )
-  }, [reporterSearch, users])
-  const filteredDepartments = useMemo(() => {
-    if (!departmentSearch.trim()) return departments
-    const search = departmentSearch.trim().toLowerCase()
-    return departments.filter((department) =>
-      (department.name || "").toLowerCase().includes(search)
-    )
-  }, [departmentSearch, departments])
   const { epics } = useEpics(effectiveProjectId)
   const { sprints } = useSprints(effectiveProjectId)
 
@@ -450,40 +412,20 @@ export function TicketForm({
                     <FormLabel className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                       Project
                     </FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || NO_PROJECT_VALUE}
-                      onOpenChange={(open) => {
-                        if (!open) setProjectSearch("")
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-10 border-border/40 bg-background/55">
-                          <SelectValue placeholder="No Project" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <div className="px-2 py-1.5">
-                          <Input
-                            value={projectSearch}
-                            onChange={(event) => setProjectSearch(event.target.value)}
-                            onKeyDown={(event) => event.stopPropagation()}
-                            placeholder="Search projects..."
-                            className="h-8"
-                            aria-label="Search projects"
-                          />
-                        </div>
-                        <SelectItem value={NO_PROJECT_VALUE}>No Project</SelectItem>
-                        {filteredProjectSearchOptions.map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
+                    <FormControl>
+                      <select
+                        value={field.value || NO_PROJECT_VALUE}
+                        onChange={(event) => field.onChange(event.target.value)}
+                        className={nativeSelectClassName}
+                      >
+                        <option value={NO_PROJECT_VALUE}>No Project</option>
+                        {filteredProjectOptions.map((project) => (
+                          <option key={project.id} value={project.id}>
                             {project.name}
-                          </SelectItem>
+                          </option>
                         ))}
-                        {filteredProjectSearchOptions.length === 0 && (
-                          <div className="px-2 py-1.5 text-xs text-muted-foreground">No projects found.</div>
-                        )}
-                      </SelectContent>
-                    </Select>
+                      </select>
+                    </FormControl>
                     <div className="mt-2 flex items-center justify-end gap-2">
                       <span className="text-xs text-muted-foreground">Include Inactive</span>
                       <Switch
@@ -574,51 +516,20 @@ export function TicketForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Assignee (Optional)</FormLabel>
-              <Select
-                onValueChange={(value) => {
-                  // Convert "unassigned" to empty string, which will become null
-                  field.onChange(value === "unassigned" ? "" : value)
-                }}
-                value={field.value || "unassigned"}
-                onOpenChange={(open) => {
-                  if (!open) setAssigneeSearch("")
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger className="relative border-border/40 bg-background/55">
-                    {field.value && field.value !== "unassigned" ? (
-                      <UserSelectValue
-                        users={assigneeUsers}
-                        value={field.value || null}
-                        placeholder="Select an assignee"
-                        unassignedValue="unassigned"
-                        unassignedLabel="Unassigned"
-                      />
-                    ) : (
-                      <SelectValue placeholder="Select an assignee" />
-                    )}
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <div className="px-2 py-1.5">
-                    <Input
-                      value={assigneeSearch}
-                      onChange={(event) => setAssigneeSearch(event.target.value)}
-                      onKeyDown={(event) => event.stopPropagation()}
-                      placeholder="Search assignees..."
-                      className="h-8"
-                      aria-label="Search assignees"
-                    />
-                  </div>
-                  <SelectItem value="unassigned">Unassigned</SelectItem>
-                  {filteredAssigneeUsers.map((user) => (
-                      <UserSelectItem key={user.id} user={user} value={user.id} />
+              <FormControl>
+                <select
+                  value={field.value || "unassigned"}
+                  onChange={(event) => field.onChange(event.target.value === "unassigned" ? "" : event.target.value)}
+                  className={nativeSelectClassName}
+                >
+                  <option value="unassigned">Unassigned</option>
+                  {assigneeUsers.map((assignee) => (
+                    <option key={assignee.id} value={assignee.id}>
+                      {assignee.name || assignee.email}
+                    </option>
                   ))}
-                  {filteredAssigneeUsers.length === 0 && (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No assignees found.</div>
-                  )}
-                </SelectContent>
-              </Select>
+                </select>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -629,45 +540,20 @@ export function TicketForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Reporter</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                value={field.value || ""}
-                onOpenChange={(open) => {
-                  if (!open) setReporterSearch("")
-                }}
-              >
-                <FormControl>
-                  <SelectTrigger className="relative border-border/40 bg-background/55">
-                    {field.value ? (
-                      <UserSelectValue
-                        users={users}
-                        value={field.value || null}
-                        placeholder="Select reporter"
-                      />
-                    ) : (
-                      <SelectValue placeholder="Select reporter" />
-                    )}
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <div className="px-2 py-1.5">
-                    <Input
-                      value={reporterSearch}
-                      onChange={(event) => setReporterSearch(event.target.value)}
-                      onKeyDown={(event) => event.stopPropagation()}
-                      placeholder="Search reporters..."
-                      className="h-8"
-                      aria-label="Search reporters"
-                    />
-                  </div>
-                  {filteredReporterUsers.map((user) => (
-                    <UserSelectItem key={user.id} user={user} value={user.id} />
+              <FormControl>
+                <select
+                  value={field.value || ""}
+                  onChange={(event) => field.onChange(event.target.value)}
+                  className={nativeSelectClassName}
+                >
+                  <option value="">Select reporter</option>
+                  {users.map((reporter) => (
+                    <option key={reporter.id} value={reporter.id}>
+                      {reporter.name || reporter.email}
+                    </option>
                   ))}
-                  {filteredReporterUsers.length === 0 && (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">No reporters found.</div>
-                  )}
-                </SelectContent>
-              </Select>
+                </select>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -699,39 +585,20 @@ export function TicketForm({
               </Dialog>
               </div>
               <div className="relative">
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value || ""}
-                  onOpenChange={(open) => {
-                    if (!open) setDepartmentSearch("")
-                  }}
-                >
-                  <FormControl>
-                    <SelectTrigger className="border-border/40 bg-background/55">
-                      <SelectValue placeholder="Select a department (optional)" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <div className="px-2 py-1.5">
-                      <Input
-                        value={departmentSearch}
-                        onChange={(event) => setDepartmentSearch(event.target.value)}
-                        onKeyDown={(event) => event.stopPropagation()}
-                        placeholder="Search departments..."
-                        className="h-8"
-                        aria-label="Search departments"
-                      />
-                    </div>
-                    {filteredDepartments.map((department) => (
-                      <SelectItem key={department.id} value={department.id}>
+                <FormControl>
+                  <select
+                    value={field.value || ""}
+                    onChange={(event) => field.onChange(event.target.value)}
+                    className={nativeSelectClassName}
+                  >
+                    <option value="">Select a department (optional)</option>
+                    {departments.map((department) => (
+                      <option key={department.id} value={department.id}>
                         {department.name}
-                      </SelectItem>
+                      </option>
                     ))}
-                    {filteredDepartments.length === 0 && (
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground">No departments found.</div>
-                    )}
-                  </SelectContent>
-                </Select>
+                  </select>
+                </FormControl>
                 {field.value && (
                   <Button
                     type="button"

@@ -13,13 +13,6 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -40,6 +33,9 @@ interface UserFormProps {
   initialData?: Partial<UserFormValues> & { id?: string }
   roles: Role[]
 }
+
+const nativeSelectClassName =
+  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
 
 export function UserForm({ onSuccess, initialData, roles }: UserFormProps) {
   const form = useForm<UserFormValues>({
@@ -128,20 +124,19 @@ export function UserForm({ onSuccess, initialData, roles }: UserFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Role</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
+              <FormControl>
+                <select
+                  value={field.value}
+                  onChange={(event) => field.onChange(event.target.value)}
+                  className={nativeSelectClassName}
+                >
                   {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.name}>
+                    <option key={role.id} value={role.name}>
                       {role.name}
-                    </SelectItem>
+                    </option>
                   ))}
-                </SelectContent>
-              </Select>
+                </select>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

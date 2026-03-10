@@ -7,12 +7,6 @@ import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { useTicketComments, type TicketComment } from "@/hooks/use-ticket-comments"
 import { useCommentNotifications } from "@/hooks/use-comment-notifications"
 import { useTickets } from "@/hooks/use-tickets"
@@ -20,7 +14,7 @@ import { useUsers } from "@/hooks/use-users"
 import { useSession } from "@/lib/auth-client"
 import { usePermissions } from "@/hooks/use-permissions"
 import { toast } from "@/components/ui/toast"
-import { MessageSquare, Reply, Pencil, Trash2, MoreHorizontal } from "lucide-react"
+import { MessageSquare, Reply, Pencil, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText, toDisplayHtml } from "@/lib/rich-text"
@@ -252,31 +246,26 @@ const CommentRow = memo(function CommentRow({
             </span>
           </div>
           {isOwn && canEdit && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground shrink-0"
-                  aria-label="Comment options"
-                >
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onStartEdit(comment)}>
-                  <Pencil className="h-3.5 w-3.5 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive"
-                  onClick={() => onDelete(comment)}
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => onStartEdit(comment)}
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 gap-1 px-2 text-xs text-destructive hover:text-destructive"
+                onClick={() => onDelete(comment)}
+              >
+                <Trash2 className="h-3 w-3" />
+                Delete
+              </Button>
+            </div>
           )}
         </div>
         <div className="mt-0.5 text-sm text-foreground">

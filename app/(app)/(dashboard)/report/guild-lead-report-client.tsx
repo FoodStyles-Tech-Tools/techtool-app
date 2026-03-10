@@ -20,13 +20,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   ReportVolumeChart,
   ReportStatusCards,
   ReportRequesterChart,
@@ -44,6 +37,9 @@ const RichTextEditor = dynamic(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
   { ssr: false }
 )
+
+const nativeSelectClassName =
+  "h-10 rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
 
 type CreateSessionBody = {
   name?: string | null
@@ -326,7 +322,7 @@ export default function GuildLeadReportClient() {
   const showSessionView = !!selectedSessionId && !!session
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div>
         <h1 className="text-xl font-semibold">Guild Lead Report</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
@@ -334,8 +330,8 @@ export default function GuildLeadReportClient() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="border-border/60 shadow-none">
+        <CardHeader className="border-b border-border/50 bg-muted/10">
           <CardTitle>Report Session</CardTitle>
           <CardDescription>
             Create a report session to analyze tickets by date range. Each session has its own date
@@ -352,21 +348,18 @@ export default function GuildLeadReportClient() {
               </span>
             ) : (
               <>
-                <Select
+                <select
                   value={selectedSessionId ?? ""}
-                  onValueChange={(value) => setSelectedSessionId(value || null)}
+                  onChange={(event) => setSelectedSessionId(event.target.value || null)}
+                  className={`${nativeSelectClassName} w-[min(100%,360px)]`}
                 >
-                  <SelectTrigger className="w-[min(100%,360px)]">
-                    <SelectValue placeholder="Select or create a session" />
-                  </SelectTrigger>
-                  <SelectContent>
+                  <option value="">Select or create a session</option>
                     {sessions.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
+                      <option key={item.id} value={item.id}>
                         {formatSessionLabel(item)}
-                      </SelectItem>
+                      </option>
                     ))}
-                  </SelectContent>
-                </Select>
+                </select>
                 <Button variant="outline" size="sm" onClick={openCreateSessionDialog}>
                   <PlusCircle className="mr-1.5 h-4 w-4" />
                   New session
@@ -383,7 +376,7 @@ export default function GuildLeadReportClient() {
           )}
 
           {showSessionView && (
-            <div className="rounded-lg border bg-muted/15 p-3 sm:p-4">
+            <div className="rounded-md border border-border/60 bg-background p-3 sm:p-4">
               <div className="space-y-3">
                 <div className="space-y-1 sm:max-w-md">
                   <Label htmlFor="session-name">Session name</Label>
@@ -447,8 +440,8 @@ export default function GuildLeadReportClient() {
 
       {showSessionView && (
         <>
-          <div className="rounded-lg border bg-gradient-to-br from-card to-muted/30 px-4 py-3 sm:px-5">
-            <h2 className="text-lg font-semibold tracking-tight">Charts</h2>
+          <div className="rounded-md border border-border/60 bg-background px-4 py-3 sm:px-5">
+            <h2 className="text-base font-semibold">Charts</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Date range: {format(new Date(session.date_range_start), "yyyy-MM-dd")} -{" "}
               {format(new Date(session.date_range_end), "yyyy-MM-dd")} (session range, ISO week
@@ -457,7 +450,7 @@ export default function GuildLeadReportClient() {
           </div>
 
           {dataLoading ? (
-            <div className="flex items-center justify-center rounded-lg border bg-muted/30 py-12">
+            <div className="flex items-center justify-center rounded-md border border-border/60 bg-background py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : reportData ? (
@@ -591,7 +584,7 @@ function ChartWithInsight({
   return (
     <section className="space-y-3">
       {children}
-      <div className="rounded-lg border bg-muted/10 p-3 sm:p-4">
+      <div className="rounded-md border border-border/60 bg-background p-3 sm:p-4">
         <div className="mb-3">
           <h4 className="text-sm font-medium">Insights - {title}</h4>
           <p className="text-xs text-muted-foreground">

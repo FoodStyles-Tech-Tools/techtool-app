@@ -16,13 +16,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { useCreateAsset, useUpdateAsset } from "@/hooks/use-assets"
 import { CollaboratorSelector } from "@/components/collaborator-selector"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 
 const RichTextEditor = dynamic(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
@@ -52,6 +45,9 @@ interface AssetFormProps {
   canManageOwner?: boolean
   users: Array<{ id: string; name: string | null; email: string; image: string | null; role?: string | null }>
 }
+
+const nativeSelectClassName =
+  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
 
 export function AssetForm({
   onSuccess,
@@ -231,20 +227,20 @@ export function AssetForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Owner</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value || ""}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an owner" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
+                <FormControl>
+                  <select
+                    value={field.value || ""}
+                    onChange={(event) => field.onChange(event.target.value)}
+                    className={nativeSelectClassName}
+                  >
+                    <option value="">Select an owner</option>
                     {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
+                      <option key={user.id} value={user.id}>
                         {user.name || user.email}
-                      </SelectItem>
+                      </option>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </select>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

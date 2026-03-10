@@ -3,7 +3,6 @@
 import * as React from "react"
 import { format } from "date-fns"
 import { Calendar as CalendarIcon, Clock } from "lucide-react"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -39,16 +38,38 @@ export function DateTimePicker({
     }
     return "00:00"
   })
+  const panelRef = React.useRef<HTMLDivElement | null>(null)
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = e.target.value ? new Date(e.target.value) : null
+  const resetDraft = React.useCallback(() => {
+    setDate(value)
+    if (value) {
+      const hours = String(value.getHours()).padStart(2, "0")
+      const minutes = String(value.getMinutes()).padStart(2, "0")
+      setTime(`${hours}:${minutes}`)
+      return
+    }
+
+    setTime("00:00")
+  }, [value])
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      if (!nextOpen && open) {
+        resetDraft()
+        onCancel?.()
+      }
+      setOpen(nextOpen)
+    },
+    [onCancel, open, resetDraft]
+  )
+
+  const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = event.target.value ? new Date(event.target.value) : null
     if (newDate && !isNaN(newDate.getTime())) {
-      // Preserve time if date already exists
       if (date) {
         newDate.setHours(date.getHours())
         newDate.setMinutes(date.getMinutes())
       } else {
-        // Set time from time input
         const [hours, minutes] = time.split(":").map(Number)
         newDate.setHours(hours || 0)
         newDate.setMinutes(minutes || 0)
@@ -57,8 +78,8 @@ export function DateTimePicker({
     }
   }
 
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = e.target.value
+  const handleTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = event.target.value
     setTime(newTime)
     if (date) {
       const [hours, minutes] = newTime.split(":").map(Number)
@@ -82,43 +103,35 @@ export function DateTimePicker({
     setOpen(false)
   }
 
-  // Initialize with current value when popover opens
   React.useEffect(() => {
     if (open) {
-      setDate(value)
-      if (value) {
-        const hours = String(value.getHours()).padStart(2, "0")
-        const minutes = String(value.getMinutes()).padStart(2, "0")
-        setTime(`${hours}:${minutes}`)
-      } else {
-        setTime("00:00")
-      }
+      resetDraft()
     }
-  }, [open, value])
+  }, [open, resetDraft])
 
-  // Handle Escape key to cancel
   React.useEffect(() => {
     if (!open) return
 
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        // Reset to original value
-        setDate(value)
-        if (value) {
-          const hours = String(value.getHours()).padStart(2, "0")
-          const minutes = String(value.getMinutes()).padStart(2, "0")
-          setTime(`${hours}:${minutes}`)
-        } else {
-          setTime("00:00")
-        }
-        setOpen(false)
-        onCancel?.()
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!panelRef.current?.contains(event.target as Node)) {
+        handleOpenChange(false)
       }
     }
 
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        handleOpenChange(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown)
     document.addEventListener("keydown", handleEscape)
-    return () => document.removeEventListener("keydown", handleEscape)
-  }, [open, value, onCancel])
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }, [handleOpenChange, open])
 
   const handleClear = () => {
     setDate(null)
@@ -127,85 +140,73 @@ export function DateTimePicker({
     setOpen(false)
   }
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen && open) {
-      // When closing without applying (clicking outside), reset to original value
-      setDate(value)
-      if (value) {
-        const hours = String(value.getHours()).padStart(2, "0")
-        const minutes = String(value.getMinutes()).padStart(2, "0")
-        setTime(`${hours}:${minutes}`)
-      } else {
-        setTime("00:00")
-      }
-      // Only call onCancel if we're actually closing (not opening)
-      onCancel?.()
-    }
-    setOpen(newOpen)
-  }
-
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          className={cn(
-            "w-[180px] justify-start text-left font-normal h-7 text-xs",
-            !value && !renderTriggerContent && "text-muted-foreground",
-            className
-          )}
-          disabled={disabled}
-        >
-          {!hideIcon && <CalendarIcon className="mr-2 h-3 w-3 text-muted-foreground" />}
-          {renderTriggerContent
-            ? renderTriggerContent(value)
-            : value
+    <div ref={panelRef} className="relative inline-flex">
+      <Button
+        type="button"
+        variant="outline"
+        className={cn(
+          "h-7 w-[180px] justify-start text-left text-xs font-normal",
+          !value && !renderTriggerContent && "text-muted-foreground",
+          className
+        )}
+        disabled={disabled}
+        onClick={() => setOpen((current) => !current)}
+      >
+        {!hideIcon && <CalendarIcon className="mr-2 h-3 w-3 text-muted-foreground" />}
+        {renderTriggerContent
+          ? renderTriggerContent(value)
+          : value
             ? format(value, "MMM d, yyyy HH:mm")
             : <span>{placeholder}</span>}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-3" align="start">
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <label className="text-xs font-medium">Date</label>
-            <Input
-              type="date"
-              value={date ? format(date, "yyyy-MM-dd") : ""}
-              onChange={handleDateChange}
-              className="h-8 text-xs dark:[color-scheme:dark]"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-medium flex items-center gap-2">
-              <Clock className="h-3 w-3 text-muted-foreground" />
-              Time
-            </label>
-            <Input
-              type="time"
-              value={time}
-              onChange={handleTimeChange}
-              className="h-8 text-xs dark:[color-scheme:dark]"
-            />
-          </div>
-          <div className="flex items-center justify-end gap-2 pt-2 border-t">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClear}
-              className="h-7 px-2 text-xs"
-            >
-              Clear
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleApply}
-              className="h-7 px-3 text-xs"
-            >
-              Apply
-            </Button>
+      </Button>
+
+      {open ? (
+        <div className="absolute left-0 top-full z-50 mt-2 rounded-md border border-border/45 bg-background p-3 shadow-md">
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <label className="text-xs font-medium">Date</label>
+              <Input
+                type="date"
+                value={date ? format(date, "yyyy-MM-dd") : ""}
+                onChange={handleDateChange}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-xs font-medium">
+                <Clock className="h-3 w-3 text-muted-foreground" />
+                Time
+              </label>
+              <Input
+                type="time"
+                value={time}
+                onChange={handleTimeChange}
+                className="h-8 text-xs"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleClear}
+                className="h-7 px-2 text-xs"
+              >
+                Clear
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleApply}
+                className="h-7 px-3 text-xs"
+              >
+                Apply
+              </Button>
+            </div>
           </div>
         </div>
-      </PopoverContent>
-    </Popover>
+      ) : null}
+    </div>
   )
 }

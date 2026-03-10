@@ -32,13 +32,6 @@ import {
 } from "@/components/ui/dialog"
 import { TicketForm } from "@/components/forms/ticket-form"
 import { toast } from "@/components/ui/toast"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { ChevronLeft, ChevronRight, Eye, Loader2, RefreshCw, Trash2 } from "lucide-react"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useProjects } from "@/hooks/use-projects"
@@ -96,6 +89,8 @@ const scheduleOptions = [
 
 const CLOCKIFY_CUSTOM_FIELD_ID = "64f739d670d77d39061e8b05"
 const CLOCKIFY_CUSTOM_FIELD_VALUE = "TechTool"
+const nativeSelectClassName =
+  "h-10 rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
 
 const getCustomFieldValue = (entry: any) => {
   const customFields = entry?.customFields || entry?.customField || []
@@ -758,22 +753,18 @@ export default function ClockifyClient() {
               <CardDescription>Select how often the report should run.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Select
+              <select
                 value={settings?.schedule || "weekly"}
-                onValueChange={handleScheduleChange}
+                onChange={(event) => handleScheduleChange(event.target.value)}
                 disabled={settingsLoading}
+                className={nativeSelectClassName}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select schedule" />
-                </SelectTrigger>
-                <SelectContent>
-                  {scheduleOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                {scheduleOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </CardContent>
           </Card>
         )}
@@ -880,28 +871,24 @@ export default function ClockifyClient() {
               {selectedSession.report_data ? (
                 <div className="space-y-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Filter by user</p>
-                      <p className="text-xs text-muted-foreground">
-                        Defaulted to your account.
-                      </p>
-                    </div>
-                    <Select
+                  <div>
+                    <p className="text-sm text-muted-foreground">Filter by user</p>
+                    <p className="text-xs text-muted-foreground">
+                      Defaulted to your account.
+                    </p>
+                  </div>
+                    <select
                       value={selectedUser || "all"}
-                      onValueChange={setSelectedUser}
+                      onChange={(event) => setSelectedUser(event.target.value)}
+                      className={`${nativeSelectClassName} sm:w-56`}
                     >
-                      <SelectTrigger className="sm:w-56">
-                        <SelectValue placeholder="All users" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All users</SelectItem>
+                        <option value="all">All users</option>
                         {userOptions.map((name) => (
-                          <SelectItem key={name} value={name}>
+                          <option key={name} value={name}>
                             {name}
-                          </SelectItem>
+                          </option>
                         ))}
-                      </SelectContent>
-                    </Select>
+                    </select>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">

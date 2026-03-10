@@ -3,25 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Check, ChevronDown, PanelLeft } from "lucide-react"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
 import { useProjects } from "@/hooks/use-projects"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Switch } from "@/components/ui/switch"
 
 const PAGE_LABELS: Record<string, string> = {
   dashboard: "Dashboard",
@@ -100,87 +82,84 @@ export function AppShellHeader() {
   )
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-2">
-      <div className="flex items-center gap-2 px-4">
+    <header className="flex h-14 shrink-0 items-center border-b border-border/50 bg-background px-4">
+      <div className="flex min-w-0 items-center gap-3">
         <button
           type="button"
           aria-label="Sidebar"
-          className="-ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="inline-flex h-8 w-8 items-center justify-center rounded border border-transparent text-muted-foreground hover:border-border/60 hover:bg-muted/40 hover:text-foreground"
         >
           <PanelLeft className="h-4 w-4" />
         </button>
-        <Separator
-          orientation="vertical"
-          className="mr-2 data-[orientation=vertical]:h-4"
-        />
-        <Breadcrumb>
-          <BreadcrumbList>
-            <BreadcrumbItem>
+        <div className="h-4 w-px bg-border/70" />
+        <nav aria-label="Breadcrumb" className="min-w-0">
+          <ol className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+            <li className="min-w-0">
               {nestedLabel ? (
-                <BreadcrumbLink href={baseHref}>{baseLabel}</BreadcrumbLink>
+                <a href={baseHref} className="transition-colors hover:text-foreground">
+                  {baseLabel}
+                </a>
               ) : (
-                <BreadcrumbPage>{baseLabel}</BreadcrumbPage>
+                <span className="font-medium text-foreground">{baseLabel}</span>
               )}
-            </BreadcrumbItem>
-            {nestedLabel ? <BreadcrumbSeparator /> : null}
+            </li>
+            {nestedLabel ? <li aria-hidden="true" className="text-border">/</li> : null}
             {nestedLabel ? (
-              <BreadcrumbItem>
+              <li className="min-w-0">
                 {isProjectDetail && projectId ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex max-w-[320px] items-center gap-1 rounded-md px-1 py-0.5 text-sm font-medium leading-5 tracking-[-0.008em] text-foreground transition-colors hover:bg-accent"
-                        aria-label="Switch project"
-                      >
-                        <span className="truncate">{activeProjectName}</span>
-                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-72">
-                      <DropdownMenuLabel>Switch Project</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="justify-between gap-2"
-                        onSelect={(event) => event.preventDefault()}
-                      >
-                        <span>Include Inactive</span>
-                        <Switch
+                  <details className="relative">
+                    <summary className="inline-flex max-w-[320px] list-none items-center gap-1 rounded px-1 py-0.5 text-sm font-medium text-foreground hover:bg-muted/40 [&::-webkit-details-marker]:hidden">
+                      <span className="truncate">{activeProjectName}</span>
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                    </summary>
+                    <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-lg border border-border/60 bg-background p-2 shadow-md">
+                      <div className="border-b border-border/50 px-2 pb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Projects
+                      </div>
+                      <label className="mt-2 flex items-center justify-between gap-3 rounded-md px-2 py-2 text-sm hover:bg-muted/40">
+                        <span>Include inactive</span>
+                        <input
+                          type="checkbox"
                           checked={includeInactiveProjects}
-                          onCheckedChange={setIncludeInactiveProjects}
+                          onChange={(event) => setIncludeInactiveProjects(event.target.checked)}
+                          className="h-4 w-4 rounded border-border text-foreground"
                           aria-label="Include inactive projects"
                         />
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <div className="max-h-72 overflow-y-auto">
+                      </label>
+                      <div className="mt-2 max-h-72 overflow-y-auto">
                         {projectsLoading ? (
-                          <DropdownMenuItem disabled>Loading projects...</DropdownMenuItem>
+                          <div className="rounded-md px-2 py-2 text-sm text-muted-foreground">
+                            Loading projects...
+                          </div>
                         ) : projectOptions.length === 0 ? (
-                          <DropdownMenuItem disabled>No projects</DropdownMenuItem>
+                          <div className="rounded-md px-2 py-2 text-sm text-muted-foreground">
+                            No projects
+                          </div>
                         ) : (
                           projectOptions.map((project) => (
-                            <DropdownMenuItem
+                            <button
                               key={project.id}
-                              onSelect={() => router.push(`/projects/${project.id}`)}
-                              className="flex items-center justify-between gap-2"
+                              type="button"
+                              onClick={() => router.push(`/projects/${project.id}`)}
+                              className="flex w-full items-center justify-between gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-muted/40"
                             >
                               <span className="truncate">{project.name}</span>
                               {project.id === projectId ? (
                                 <Check className="h-3.5 w-3.5 text-primary" />
                               ) : null}
-                            </DropdownMenuItem>
+                            </button>
                           ))
                         )}
                       </div>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                    </div>
+                  </details>
                 ) : (
-                  <BreadcrumbPage>{nestedLabel}</BreadcrumbPage>
+                  <span className="truncate font-medium text-foreground">{nestedLabel}</span>
                 )}
-              </BreadcrumbItem>
+              </li>
             ) : null}
-          </BreadcrumbList>
-        </Breadcrumb>
+          </ol>
+        </nav>
       </div>
     </header>
   )

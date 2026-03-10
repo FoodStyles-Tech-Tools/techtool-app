@@ -3,12 +3,6 @@
 import { ArrowLeft, Copy, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import type { Ticket } from "@/lib/types"
 
 type TicketDetailHeaderProps = {
@@ -63,22 +57,25 @@ export function TicketDetailHeader({
           >
             <Copy className="h-3.5 w-3.5" />
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                title="Share ticket"
-              >
-                <Share2 className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem onClick={onCopyShareUrl}>Share URL</DropdownMenuItem>
-              <DropdownMenuItem onClick={onCopyHyperlinkedUrl}>Hyperlinked URL</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+            title="Copy share URL"
+            onClick={onCopyShareUrl}
+          >
+            <Share2 className="h-3.5 w-3.5" />
+            URL
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            title="Copy hyperlinked URL"
+            onClick={onCopyHyperlinkedUrl}
+          >
+            Link
+          </Button>
           <span className="rounded-md bg-background px-2.5 py-1 font-mono text-sm text-muted-foreground">
             {ticket?.displayId || ticketId.slice(0, 8)}
           </span>

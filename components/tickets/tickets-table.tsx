@@ -9,7 +9,6 @@ import {
   TableHead,
   TableRow,
 } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Copy, ArrowUpDown, ChevronUp, ChevronDown } from "lucide-react"
 import Link from "next/link"
 import { DateTimePicker } from "@/components/ui/datetime-picker"
@@ -22,7 +21,6 @@ import {
   type SortColumn,
   type TicketMutationField,
 } from "@/lib/ticket-constants"
-import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
 import { TicketPrioritySelect } from "@/components/ticket-priority-select"
 import { TicketStatusSelect } from "@/components/ticket-status-select"
@@ -38,6 +36,8 @@ const SERVER_SORTABLE_COLUMNS = new Set<SortColumn>([
   "priority",
   "sqa_assigned_at",
 ])
+const cellSelectClassName =
+  "h-7 w-full rounded-md border border-border/45 bg-background/60 px-2 text-xs text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50"
 
 interface TicketsTableProps {
   sortConfig: { column: SortColumn; direction: "asc" | "desc" }
@@ -213,29 +213,25 @@ const TicketRow = memo(function TicketRow({
         />
       </TableCell>
       <TableCell className="py-2">
-        <Select
+        <select
           value={ticket.department?.id || NO_DEPARTMENT_VALUE}
-          onValueChange={(value) =>
+          onChange={(event) =>
             updateTicketField(
               ticket.id,
               "departmentId",
-              value === NO_DEPARTMENT_VALUE ? null : value
+              event.target.value === NO_DEPARTMENT_VALUE ? null : event.target.value
             )
           }
           disabled={!canEdit || !!updatingFields[`${ticket.id}-departmentId`]}
+          className={cn(cellSelectClassName, "w-[140px]")}
         >
-          <SelectTrigger className="h-7 w-[140px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NO_DEPARTMENT_VALUE}>No Department</SelectItem>
+          <option value={NO_DEPARTMENT_VALUE}>No Department</option>
             {departments.map((d) => (
-              <SelectItem key={d.id} value={d.id}>
+              <option key={d.id} value={d.id}>
                 {d.name}
-              </SelectItem>
+              </option>
             ))}
-          </SelectContent>
-        </Select>
+        </select>
       </TableCell>
       <TableCell className="py-2">
         <TicketStatusSelect
@@ -254,96 +250,61 @@ const TicketRow = memo(function TicketRow({
         />
       </TableCell>
       <TableCell className="py-2">
-        <Select
-          value={requestedById ?? undefined}
-          onValueChange={(value) => updateTicketField(ticket.id, "requestedById", value)}
+        <select
+          value={requestedById || ""}
+          onChange={(event) => updateTicketField(ticket.id, "requestedById", event.target.value)}
           disabled={!canEdit || !!updatingFields[`${ticket.id}-requestedById`]}
+          className={cn(cellSelectClassName, "w-[150px]")}
         >
-          <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
-            {requestedById ? (
-              <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
-                <UserSelectValue users={users} value={requestedById} placeholder="Select user" />
-              </div>
-            ) : (
-              <SelectValue placeholder="Select user" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
+          <option value="">Select user</option>
             {users.map((u) => (
-              <UserSelectItem key={u.id} user={u} value={u.id} className="text-xs" />
+              <option key={u.id} value={u.id}>
+                {u.name || u.email}
+              </option>
             ))}
-          </SelectContent>
-        </Select>
+        </select>
       </TableCell>
       <TableCell className="py-2">
-        <Select
+        <select
           value={ticket.assignee?.id || UNASSIGNED_VALUE}
-          onValueChange={(value) =>
+          onChange={(event) =>
             updateTicketField(
               ticket.id,
               "assigneeId",
-              value === UNASSIGNED_VALUE ? null : value
+              event.target.value === UNASSIGNED_VALUE ? null : event.target.value
             )
           }
           disabled={!canEdit || !!updatingFields[`${ticket.id}-assigneeId`]}
+          className={cn(cellSelectClassName, "w-[150px]")}
         >
-          <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
-            {ticket.assignee?.id ? (
-              <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
-                <UserSelectValue
-                  users={assigneeEligibleUsers}
-                  value={ticket.assignee.id}
-                  placeholder="Unassigned"
-                  unassignedValue={UNASSIGNED_VALUE}
-                  unassignedLabel="Unassigned"
-                />
-              </div>
-            ) : (
-              <SelectValue placeholder="Unassigned" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+          <option value={UNASSIGNED_VALUE}>Unassigned</option>
             {assigneeEligibleUsers.map((u) => (
-              <UserSelectItem key={u.id} user={u} value={u.id} className="text-xs" />
+              <option key={u.id} value={u.id}>
+                {u.name || u.email}
+              </option>
             ))}
-          </SelectContent>
-        </Select>
+        </select>
       </TableCell>
       <TableCell className="py-2">
-        <Select
+        <select
           value={ticket.sqaAssignee?.id || UNASSIGNED_VALUE}
-          onValueChange={(value) =>
+          onChange={(event) =>
             updateTicketField(
               ticket.id,
               "sqaAssigneeId",
-              value === UNASSIGNED_VALUE ? null : value
+              event.target.value === UNASSIGNED_VALUE ? null : event.target.value
             )
           }
           disabled={!canEdit || !!updatingFields[`${ticket.id}-sqaAssigneeId`]}
+          className={cn(cellSelectClassName, "w-[150px]")}
         >
-          <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden">
-            {ticket.sqaAssignee?.id ? (
-              <div className="absolute left-2 right-8 top-0 bottom-0 flex items-center overflow-hidden">
-                <UserSelectValue
-                  users={sqaEligibleUsers}
-                  value={ticket.sqaAssignee?.id || null}
-                  placeholder="Unassigned"
-                  unassignedValue={UNASSIGNED_VALUE}
-                  unassignedLabel="Unassigned"
-                />
-              </div>
-            ) : (
-              <SelectValue placeholder="Unassigned" />
-            )}
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
+          <option value={UNASSIGNED_VALUE}>Unassigned</option>
             {sqaEligibleUsers.map((u) => (
-              <UserSelectItem key={u.id} user={u} value={u.id} className="text-xs" />
+              <option key={u.id} value={u.id}>
+                {u.name || u.email}
+              </option>
             ))}
-          </SelectContent>
-        </Select>
+        </select>
       </TableCell>
     </TableRow>
   )

@@ -16,26 +16,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/toast"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useProjects } from "@/hooks/use-projects"
 import { useDeleteSprint } from "@/hooks/use-sprints"
 import { SprintForm } from "@/components/forms/sprint-form"
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react"
+import { Pencil, Plus, Trash2 } from "lucide-react"
 
 type WorkspaceProject = {
   id: string
@@ -54,6 +41,11 @@ type WorkspaceSprint = {
   updated_at: string
   project_name: string
 }
+
+const nativeSelectClassName =
+  "h-9 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
+const actionButtonClassName =
+  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-muted/40 hover:text-foreground disabled:opacity-50"
 
 export function WorkspaceSprintsPanel() {
   const { flags } = usePermissions()
@@ -167,7 +159,7 @@ export function WorkspaceSprintsPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3 border-b pb-3">
+      <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-border/50 bg-background p-4">
         <div className="space-y-1">
           <h3 className="text-base font-semibold">Sprint</h3>
           <p className="text-sm text-muted-foreground">Sprints are always specific to a project.</p>
@@ -175,19 +167,19 @@ export function WorkspaceSprintsPanel() {
         <div className="flex items-end gap-2">
           <div className="w-[260px] space-y-1">
             <Label htmlFor="sprint-project-filter">Project</Label>
-            <Select value={projectFilter} onValueChange={setProjectFilter}>
-              <SelectTrigger id="sprint-project-filter" className="h-9">
-                <SelectValue placeholder="Filter by project" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Projects</SelectItem>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select
+              id="sprint-project-filter"
+              value={projectFilter}
+              onChange={(event) => setProjectFilter(event.target.value)}
+              className={nativeSelectClassName}
+            >
+              <option value="all">All Projects</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
           </div>
           <Button type="button" size="sm" variant="outline" onClick={openCreateDialog}>
             <Plus className="h-4 w-4 mr-1.5" />
@@ -234,29 +226,28 @@ export function WorkspaceSprintsPanel() {
                     {sprint.start_date || "-"} to {sprint.end_date || "-"}
                   </TableCell>
                   <TableCell>{sprint.updated_at ? new Date(sprint.updated_at).toLocaleDateString() : "-"}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md border border-transparent hover:border-border">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openEditDialog(sprint)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => void handleDeleteSprint(sprint)}
-                          disabled={deleteSprint.isPending}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        className={actionButtonClassName}
+                        onClick={() => openEditDialog(sprint)}
+                        aria-label={`Edit ${sprint.name}`}
+                        title="Edit sprint"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className={actionButtonClassName}
+                        onClick={() => void handleDeleteSprint(sprint)}
+                        disabled={deleteSprint.isPending}
+                        aria-label={`Delete ${sprint.name}`}
+                        title="Delete sprint"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -282,18 +273,21 @@ export function WorkspaceSprintsPanel() {
           {!editingSprint ? (
             <div className="space-y-2">
               <Label htmlFor="target-sprint-project">Project</Label>
-              <Select value={targetProjectId} onValueChange={setTargetProjectId}>
-                <SelectTrigger id="target-sprint-project">
-                  <SelectValue placeholder="Select project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select
+                id="target-sprint-project"
+                value={targetProjectId}
+                onChange={(event) => setTargetProjectId(event.target.value)}
+                className={nativeSelectClassName}
+              >
+                <option value="" disabled>
+                  Select project
+                </option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
             </div>
           ) : null}
 

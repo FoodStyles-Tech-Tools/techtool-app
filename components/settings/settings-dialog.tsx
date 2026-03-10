@@ -9,17 +9,6 @@ import {
 } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { signOut, useSession } from "@/lib/auth-client"
 import { useRouter } from "next/navigation"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -44,6 +33,13 @@ type SettingsSection =
   | "account"
   | "preferences"
   | "deleted_tickets"
+
+const navButtonClassName =
+  "w-full rounded-md border px-3 py-2 text-left text-sm transition-colors"
+const sectionClassName = "rounded-lg border border-border/50 bg-background p-4"
+const sectionTitleClassName = "text-sm font-medium text-foreground"
+const nativeSelectClassName =
+  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-70"
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { data: session } = useSession()
@@ -74,43 +70,45 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col gap-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle className="text-xl">Preferences</DialogTitle>
+        <DialogHeader className="border-b px-6 py-5">
+          <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
         </DialogHeader>
-        
+
         <div className="flex flex-1 overflow-hidden">
-          {/* Left Navigation Pane */}
-          <div className="w-64 border-r bg-muted/30 flex flex-col">
-            <div className="px-4 pt-6 pb-4 space-y-1">
-              <div className="px-3 py-2 text-xs text-muted-foreground uppercase tracking-wider">
+          <div className="flex w-64 flex-col border-r bg-muted/15">
+            <div className="space-y-1 px-4 pb-4 pt-6">
+              <div className="px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground">
                 Account
               </div>
               <button
+                type="button"
                 onClick={() => setActiveSection("account")}
-                className={`w-full border border-transparent px-3 py-2 rounded-md text-sm text-left transition-colors ${
+                className={`${navButtonClassName} ${
                   activeSection === "account"
-                    ? "selected-ui"
-                    : "hover:bg-accent/50"
+                    ? "border-border/60 bg-background text-foreground"
+                    : "border-transparent text-muted-foreground hover:border-border/40 hover:bg-background"
                 }`}
               >
                 Account
               </button>
               <button
+                type="button"
                 onClick={() => setActiveSection("preferences")}
-                className={`w-full border border-transparent px-3 py-2 rounded-md text-sm text-left transition-colors ${
+                className={`${navButtonClassName} ${
                   activeSection === "preferences"
-                    ? "selected-ui"
-                    : "hover:bg-accent/50"
+                    ? "border-border/60 bg-background text-foreground"
+                    : "border-transparent text-muted-foreground hover:border-border/40 hover:bg-background"
                 }`}
               >
                 Preferences
               </button>
               <button
+                type="button"
                 onClick={() => setActiveSection("deleted_tickets")}
-                className={`w-full border border-transparent px-3 py-2 rounded-md text-sm text-left transition-colors ${
+                className={`${navButtonClassName} ${
                   activeSection === "deleted_tickets"
-                    ? "selected-ui"
-                    : "hover:bg-accent/50"
+                    ? "border-border/60 bg-background text-foreground"
+                    : "border-transparent text-muted-foreground hover:border-border/40 hover:bg-background"
                 }`}
               >
                 Deleted
@@ -118,15 +116,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </div>
           </div>
 
-          {/* Right Content Pane */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-6 space-y-6">
               {activeSection === "account" && (
                 <>
-                  {/* Account Section */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Account</h3>
-                    <div className="flex items-center space-x-4">
+                  <section className={sectionClassName}>
+                    <h3 className={sectionTitleClassName}>Account</h3>
+                    <div className="mt-4 flex items-center gap-4">
                       <Avatar className="h-16 w-16">
                         <AvatarImage src={user?.image || ""} alt={user?.name || ""} />
                         <AvatarFallback className="text-lg">
@@ -136,33 +132,29 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       <div className="flex-1">
                         <p className="text-sm font-medium">{user?.name || "User"}</p>
                         <p className="text-sm text-muted-foreground">{user?.email}</p>
-                        <Badge className="mt-2 capitalize">{user?.role}</Badge>
+                        <div className="mt-2 inline-flex rounded-full border border-border/60 px-2.5 py-1 text-xs capitalize text-muted-foreground">
+                          {user?.role || "member"}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </section>
 
-                  <Separator />
-
-                  {/* Account Information */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Account Information</h3>
-                    <div className="space-y-3">
+                  <section className={sectionClassName}>
+                    <h3 className={sectionTitleClassName}>Account Information</h3>
+                    <div className="mt-4 space-y-4">
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">Email</p>
+                        <p className="mb-1 text-sm text-muted-foreground">Email</p>
                         <p className="text-sm">{user?.email || "-"}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground mb-1">Role</p>
+                        <p className="mb-1 text-sm text-muted-foreground">Role</p>
                         <p className="text-sm capitalize">{user?.role || "-"}</p>
                       </div>
                     </div>
-                  </div>
+                  </section>
 
-                  <Separator />
-
-                  {/* Actions */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Actions</h3>
+                  <section className={sectionClassName}>
+                    <h3 className={sectionTitleClassName}>Actions</h3>
                     <Button variant="destructive" onClick={handleSignOut} disabled={signingOut}>
                       {signingOut ? (
                         <>
@@ -173,63 +165,60 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         "Sign Out"
                       )}
                     </Button>
-                  </div>
+                  </section>
                 </>
               )}
 
               {activeSection === "preferences" && (
                 <>
-                  {/* Settings Section */}
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-medium">Settings</h3>
-                    <div className="space-y-6">
-                      {/* Group by Epic Setting */}
-                      <div className="space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
+                  <section className={sectionClassName}>
+                    <h3 className={sectionTitleClassName}>Preferences</h3>
+                    <div className="mt-4 space-y-6">
+                      <div className="rounded-md border border-border/50 p-4">
+                        <label htmlFor="group-by-epic-default" className="flex items-start gap-3">
+                          <input
                             id="group-by-epic-default"
+                            type="checkbox"
                             checked={preferences.group_by_epic}
-                            onCheckedChange={(checked) => {
-                              updatePreferences({ group_by_epic: checked === true })
+                            onChange={(event) => {
+                              updatePreferences({ group_by_epic: event.target.checked })
                             }}
                             disabled={isUpdating}
+                            className="mt-0.5 h-4 w-4 rounded border-border text-foreground"
                           />
-                          <Label
-                            htmlFor="group-by-epic-default"
-                            className="text-sm font-normal cursor-pointer"
-                          >
-                            Default &quot;Group by Epic&quot; for Projects
-                          </Label>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          When enabled, projects will default to grouping tickets by Epic
-                        </p>
+                          <span className="space-y-1">
+                            <span className="block text-sm font-medium text-foreground">
+                              Default &quot;Group by Epic&quot; for Projects
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              When enabled, projects will default to grouping tickets by Epic
+                            </span>
+                          </span>
+                        </label>
                       </div>
 
-                      {/* Tickets View Setting */}
-                      <div className="space-y-2">
-                        <Label htmlFor="tickets-view-default">Default Tickets View</Label>
-                        <Select
+                      <div className="rounded-md border border-border/50 p-4">
+                        <label htmlFor="tickets-view-default" className="block text-sm font-medium text-foreground">
+                          Default Tickets View
+                        </label>
+                        <select
+                          id="tickets-view-default"
                           value={preferences.tickets_view || "table"}
-                          onValueChange={(value) => {
-                            updatePreferences({ tickets_view: value as "table" | "kanban" })
+                          onChange={(event) => {
+                            updatePreferences({ tickets_view: event.target.value as "table" | "kanban" })
                           }}
                           disabled={isUpdating}
+                          className={nativeSelectClassName}
                         >
-                          <SelectTrigger id="tickets-view-default" className="w-[180px]">
-                            <SelectValue placeholder="Select view" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="table">Table</SelectItem>
-                            <SelectItem value="kanban">Kanban</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
+                          <option value="table">Table</option>
+                          <option value="kanban">Kanban</option>
+                        </select>
+                        <p className="mt-2 text-xs text-muted-foreground">
                           Choose the default view for the Tickets page
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </section>
                 </>
               )}
               {activeSection === "deleted_tickets" && (

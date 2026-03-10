@@ -24,7 +24,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/components/ui/toast"
 
 interface Permission {
@@ -403,13 +402,13 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                                 return (
                                   <TableCell key={action} className="text-center align-middle">
                                     <div className="flex items-center justify-center">
-                                      <Checkbox
+                                      <input
                                         id={`${role.id}-${resource}-${action}`}
+                                        type="checkbox"
                                         checked={checked}
-                                        onCheckedChange={() =>
-                                          togglePermission(role.id, resource, action)
-                                        }
+                                        onChange={() => togglePermission(role.id, resource, action)}
                                         disabled={isDisabled}
+                                        className="h-4 w-4 rounded border-border text-foreground"
                                       />
                                     </div>
                                   </TableCell>

@@ -2,7 +2,6 @@
 
 import { useMemo } from "react"
 import { Circle } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { useTicketStatuses } from "@/hooks/use-ticket-statuses"
 import {
@@ -49,31 +48,32 @@ export function TicketStatusSelect({
   const currentColor = currentStatus?.color || "#9ca3af"
 
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className={cn("h-7 w-[120px] text-xs relative", triggerClassName)}>
-        {value ? (
-          <div className="absolute left-2 flex items-center gap-1.5">
-            <Circle className="h-3 w-3" style={{ color: currentColor, fill: currentColor }} />
-            <span>{currentLabel}</span>
-          </div>
-        ) : (
-          <SelectValue />
+    <div className={cn("relative w-[120px]", className)}>
+      <Circle
+        className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2"
+        style={{ color: currentColor, fill: currentColor }}
+      />
+      <select
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
+        disabled={disabled}
+        className={cn(
+          "h-7 w-full rounded-md border border-border/45 bg-background/60 pl-7 pr-2 text-xs text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50",
+          triggerClassName
         )}
-      </SelectTrigger>
-      <SelectContent className={className}>
+      >
         {selectableStatuses.map((status) => (
-          <SelectItem key={status.key} value={status.key}>
-            <div className="flex items-center gap-1.5">
-              <Circle
-                className="h-3 w-3"
-                style={{ color: status.color, fill: status.color }}
-              />
-              {status.label}
-            </div>
-          </SelectItem>
+          <option key={status.key} value={status.key}>
+            {status.label}
+          </option>
         ))}
-      </SelectContent>
-    </Select>
+      </select>
+      {!value ? (
+        <span className="pointer-events-none absolute left-7 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+          {currentLabel}
+        </span>
+      ) : null}
+    </div>
   )
 }
 

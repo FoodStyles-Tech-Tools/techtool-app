@@ -1,6 +1,5 @@
 "use client"
 
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { Sprint } from "@/hooks/use-sprints"
 
@@ -28,39 +27,24 @@ export function SprintSelect({
     : null
 
   return (
-    <Select 
+    <div className={cn("w-[140px]", className)}>
+      <select
       value={value || NO_SPRINT_VALUE} 
-      onValueChange={(val) => onValueChange(val === NO_SPRINT_VALUE ? null : val)} 
+      onChange={(event) => onValueChange(event.target.value === NO_SPRINT_VALUE ? null : event.target.value)} 
       disabled={disabled}
+      className={cn(
+        "h-7 w-full rounded-md border border-border/45 bg-background/60 px-2 text-xs text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50",
+        triggerClassName
+      )}
     >
-      <SelectTrigger className={cn("h-7 w-[140px] text-xs relative", triggerClassName)}>
-        {selectedSprint ? (
-          <div className="absolute left-2 flex items-center gap-1.5">
-            <span className="truncate">{selectedSprint.name}</span>
-          </div>
-        ) : (
-          <div className="absolute left-2">
-            <span className="text-muted-foreground">No Sprint</span>
-          </div>
-        )}
-      </SelectTrigger>
-      <SelectContent className={className}>
-        <SelectItem value={NO_SPRINT_VALUE}>
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">No Sprint</span>
-          </div>
-        </SelectItem>
+        <option value={NO_SPRINT_VALUE}>No Sprint</option>
         {sprints.map((sprint) => (
-          <SelectItem key={sprint.id} value={sprint.id}>
-            <div className="flex items-center gap-1.5">
-              <span>{sprint.name}</span>
-              {sprint.status && (
-                <span className="text-xs text-muted-foreground">({sprint.status})</span>
-              )}
-            </div>
-          </SelectItem>
+          <option key={sprint.id} value={sprint.id}>
+            {sprint.name}{sprint.status ? ` (${sprint.status})` : ""}
+          </option>
         ))}
-      </SelectContent>
-    </Select>
+      </select>
+      {selectedSprint ? null : null}
+    </div>
   )
 }

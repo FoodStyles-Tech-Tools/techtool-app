@@ -6,36 +6,32 @@ import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useUpdateProject } from "@/hooks/use-projects"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
-import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import { CollaboratorSelector } from "@/components/collaborator-selector"
 import {
   TableCell,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Circle, ListFilter, Search, Pin, MoreHorizontal, Pencil, Archive } from "lucide-react"
+import { Plus, Circle, Search, Pin, Pencil, Archive } from "lucide-react"
 import { BrandLinkIcon } from "@/components/brand-link-icon"
 import Link from "next/link"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/components/ui/toast"
 import { cn, truncateText } from "@/lib/utils"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ProjectForm } from "@/components/forms/project-form"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Switch } from "@/components/ui/switch"
 
 const ROWS_PER_PAGE = 20
 type ProjectTicketStats = { total: number; done: number; percentage: number }
 const DEFAULT_PROJECT_STATS = { total: 0, done: 0, percentage: 0 }
+const toolbarInputClassName =
+  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-foreground/20"
+const toolbarToggleClassName =
+  "flex min-h-10 items-center gap-2 rounded-md border border-border/60 bg-background px-3 text-sm text-foreground"
+const cellSelectClassName =
+  "h-8 w-full rounded-md border border-border/40 bg-background/55 px-2 text-xs text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-70"
+const iconButtonClassName =
+  "inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
 
 interface Department {
   id: string
@@ -296,117 +292,86 @@ export default function ProjectsClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-end gap-0.5 border-b pb-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
-            >
-              <Search className="h-4 w-4" />
-              Search
-              {searchQuery.trim() ? (
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">1</span>
-              ) : null}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Search Projects</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <div className="space-y-2 p-2" onClick={(event) => event.stopPropagation()}>
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search projects..."
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  className="h-8 pl-8"
-                />
-              </div>
-              {searchQuery.trim() ? (
-                <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => setSearchQuery("")}>
-                  Clear Search
-                </Button>
-              ) : null}
-            </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
-            >
-              <ListFilter className="h-4 w-4" />
-              Filter
-              {activeFilterCount > 0 ? (
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground">
-                  {activeFilterCount}
+      <section className="rounded-lg border border-border/50 bg-background">
+        <div className="flex flex-col gap-4 p-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div className="grid flex-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.6fr)_220px_auto_auto]">
+              <label className="space-y-1.5">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Search
                 </span>
-              ) : null}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Filter Projects</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <div className="space-y-3 p-2" onClick={(event) => event.stopPropagation()}>
-              <div className="space-y-1.5">
-                <p className="text-xs text-muted-foreground">Department</p>
-                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-                  <SelectTrigger className="h-8">
-                    <SelectValue placeholder="Department" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Departments</SelectItem>
-                    <SelectItem value="no_department">No Department</SelectItem>
-                    {departments.map((department) => (
-                      <SelectItem key={department.id} value={department.id}>
-                        {department.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
-                <span className="text-sm">Assigned to me</span>
-                <Switch checked={assignedToMeOnly} onCheckedChange={setAssignedToMeOnly} />
-              </div>
-              <div className="flex items-center justify-between gap-2 rounded-md border px-2 py-1.5">
-                <span className="text-sm">Exclude Inactive</span>
-                <Switch checked={excludeDone} onCheckedChange={setExcludeDone} />
-              </div>
-              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={resetProjectFilters}>
-                Reset Filters
-              </Button>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search projects..."
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    className={cn(toolbarInputClassName, "pl-9")}
+                  />
+                </div>
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Department
+                </span>
+                <select
+                  value={departmentFilter}
+                  onChange={(event) => setDepartmentFilter(event.target.value)}
+                  className={toolbarInputClassName}
+                >
+                  <option value="all">All Departments</option>
+                  <option value="no_department">No Department</option>
+                  {departments.map((department) => (
+                    <option key={department.id} value={department.id}>
+                      {department.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={toolbarToggleClassName}>
+                <input
+                  type="checkbox"
+                  checked={assignedToMeOnly}
+                  onChange={(event) => setAssignedToMeOnly(event.target.checked)}
+                  className="h-4 w-4 rounded border-border text-foreground"
+                />
+                <span>Assigned to me</span>
+              </label>
+              <label className={toolbarToggleClassName}>
+                <input
+                  type="checkbox"
+                  checked={excludeDone}
+                  onChange={(event) => setExcludeDone(event.target.checked)}
+                  className="h-4 w-4 rounded border-border text-foreground"
+                />
+                <span>Exclude inactive</span>
+              </label>
             </div>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        {canCreateProjects && (
-          <button
-            type="button"
-            onClick={() => setProjectFormOpen(true)}
-            className="ml-1 inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Create Project</span>
-            <span className="hidden items-center gap-1 sm:inline-flex">
-              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
-                Alt
-              </kbd>
-              <span className="text-[10px] text-muted-foreground">/</span>
-              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
-                Cmd
-              </kbd>
-              <span className="text-[10px] text-muted-foreground">+</span>
-              <kbd className="rounded border border-border/60 bg-background/70 px-1.5 py-0.5 font-mono text-[10px] leading-none text-muted-foreground">
-                P
-              </kbd>
-            </span>
-          </button>
-        )}
-      </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {hasProjectSearch || activeFilterCount > 0 ? (
+                <div className="rounded-md border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                  {hasProjectSearch ? "Search active" : null}
+                  {hasProjectSearch && activeFilterCount > 0 ? " · " : null}
+                  {activeFilterCount > 0 ? `${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} active` : null}
+                </div>
+              ) : null}
+              <Button variant="outline" size="sm" className="h-10" onClick={resetProjectFilters}>
+                Reset
+              </Button>
+              {canCreateProjects && (
+                <button
+                  type="button"
+                  onClick={() => setProjectFormOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-md border border-border/60 bg-background px-3 text-sm text-foreground transition-colors hover:bg-muted"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Create Project</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading...</p>
@@ -638,46 +603,35 @@ const ProjectRow = memo(function ProjectRow({
             <Pin className={cn("h-3.5 w-3.5", isPinned ? "fill-current" : "")} />
           </Button>
           {canEditProjects ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
-                  onClick={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                  }}
-                  aria-label="Project actions"
-                >
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    onEditProject(project)
-                  }}
-                >
-                  <Pencil className="h-3.5 w-3.5 mr-2" />
-                  Edit
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(event) => {
-                    event.preventDefault()
-                    event.stopPropagation()
-                    void onArchiveProject(project)
-                  }}
-                  disabled={project.status === "inactive"}
-                >
-                  <Archive className="h-3.5 w-3.5 mr-2" />
-                  Archive
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                className={iconButtonClassName}
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  onEditProject(project)
+                }}
+                aria-label="Edit project"
+                title="Edit project"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                className={iconButtonClassName}
+                onClick={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  void onArchiveProject(project)
+                }}
+                disabled={project.status === "inactive"}
+                aria-label="Archive project"
+                title="Archive project"
+              >
+                <Archive className="h-3.5 w-3.5" />
+              </button>
+            </div>
           ) : null}
         </div>
       </TableCell>
@@ -693,31 +647,19 @@ const ProjectRow = memo(function ProjectRow({
       </TableCell>
       <TableCell className="py-2">
         {canEditProjects ? (
-          <Select
+          <select
             value={project.owner?.id || ""}
-            onValueChange={(value) => updateProjectField(project.id, "owner_id", value)}
+            onChange={(event) => updateProjectField(project.id, "owner_id", event.target.value || null)}
             disabled={isUpdatingOwner}
+            className={cn(cellSelectClassName, "w-[150px]")}
           >
-            <SelectTrigger className="h-7 w-[150px] text-xs relative overflow-hidden pr-6 border-border/40 bg-background/55">
-              {project.owner?.id ? (
-                <div className="absolute inset-y-0 left-2 right-6 flex items-center pointer-events-none">
-                  <UserSelectValue
-                    users={users}
-                    value={project.owner.id}
-                    placeholder="Select owner"
-                    maxLength={16}
-                  />
-                </div>
-              ) : (
-                <SelectValue placeholder="Select owner" />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              {users.map((user) => (
-                <UserSelectItem key={user.id} user={user} value={user.id} className="text-xs" maxLength={24} />
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">Select owner</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {truncateText(user.name || user.email, 24)}
+              </option>
+            ))}
+          </select>
         ) : (
           <div className="flex items-center space-x-1.5">
             <Avatar className="h-5 w-5">
@@ -794,25 +736,25 @@ const ProjectRow = memo(function ProjectRow({
       </TableCell>
       <TableCell className="py-2">
         {canEditProjects ? (
-          <Select
+          <select
             value={project.department?.id || "no_department"}
-            onValueChange={(value) =>
-              updateProjectField(project.id, "department_id", value === "no_department" ? null : value)
+            onChange={(event) =>
+              updateProjectField(
+                project.id,
+                "department_id",
+                event.target.value === "no_department" ? null : event.target.value
+              )
             }
             disabled={isUpdatingDept}
+            className={cn(cellSelectClassName, "w-[140px]")}
           >
-            <SelectTrigger className="h-7 w-[140px] text-xs border-border/40 bg-background/55">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="no_department">No Department</SelectItem>
-              {departments.map((department) => (
-                <SelectItem key={department.id} value={department.id}>
-                  {department.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="no_department">No Department</option>
+            {departments.map((department) => (
+              <option key={department.id} value={department.id}>
+                {department.name}
+              </option>
+            ))}
+          </select>
         ) : (
           <span className="text-xs text-muted-foreground">
             {project.department?.name || "No Department"}
@@ -821,36 +763,15 @@ const ProjectRow = memo(function ProjectRow({
       </TableCell>
       <TableCell className="py-2">
         {canEditProjects ? (
-          <Select
+          <select
             value={project.status}
-            onValueChange={(value) => updateProjectField(project.id, "status", value)}
+            onChange={(event) => updateProjectField(project.id, "status", event.target.value)}
             disabled={isUpdatingStatus}
+            className={cn(cellSelectClassName, "w-[120px]")}
           >
-            <SelectTrigger className="h-7 w-[120px] text-xs relative border-border/40 bg-background/55">
-              {project.status ? (
-                <div className="absolute left-2 flex items-center gap-1.5">
-                  {getStatusIcon(project.status)}
-                  <span className="capitalize">{project.status.replace("_", " ")}</span>
-                </div>
-              ) : (
-                <SelectValue />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">
-                <div className="flex items-center gap-1.5">
-                  <Circle className="h-3 w-3 fill-green-500 text-green-500" />
-                  Active
-                </div>
-              </SelectItem>
-              <SelectItem value="inactive">
-                <div className="flex items-center gap-1.5">
-                  <Circle className="h-3 w-3 fill-red-500 text-red-500" />
-                  Inactive
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
         ) : (
           <div className="flex items-center gap-1.5">
             {getStatusIcon(project.status)}
@@ -860,10 +781,12 @@ const ProjectRow = memo(function ProjectRow({
       </TableCell>
       <TableCell className="py-2">
         {canEditProjects ? (
-          <Checkbox
+          <input
+            type="checkbox"
             checked={project.require_sqa}
-            onCheckedChange={(checked) => updateProjectField(project.id, "require_sqa", checked === true)}
+            onChange={(event) => updateProjectField(project.id, "require_sqa", event.target.checked)}
             disabled={isUpdatingRequireSqa}
+            className="h-4 w-4 rounded border-border text-foreground"
           />
         ) : (
           <span className="text-xs text-muted-foreground">{project.require_sqa ? "Yes" : "No"}</span>

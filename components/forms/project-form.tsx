@@ -15,15 +15,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DepartmentForm } from "@/components/forms/department-form"
 import { useCreateProject, useUpdateProject } from "@/hooks/use-projects"
@@ -58,6 +50,8 @@ interface ProjectFormProps {
 }
 
 const NO_DEPARTMENT_VALUE = "no_department"
+const nativeSelectClassName =
+  "h-10 w-full rounded-md border border-border/60 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20"
 
 export function ProjectForm({
   onSuccess,
@@ -161,17 +155,16 @@ export function ProjectForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Status</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a status" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
+              <FormControl>
+                <select
+                  value={field.value}
+                  onChange={(event) => field.onChange(event.target.value)}
+                  className={nativeSelectClassName}
+                >
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -190,10 +183,12 @@ export function ProjectForm({
                     </p>
                   </div>
                   <FormControl>
-                    <Checkbox
+                    <input
                       id="project-require-sqa"
+                      type="checkbox"
                       checked={field.value}
-                      onCheckedChange={(checked) => field.onChange(checked === true)}
+                      onChange={(event) => field.onChange(event.target.checked)}
+                      className="h-4 w-4 rounded border-border text-foreground"
                     />
                   </FormControl>
                 </Field>
@@ -259,24 +254,20 @@ export function ProjectForm({
                 </DialogContent>
               </Dialog>
               </div>
-              <Select
-                onValueChange={field.onChange}
-                value={field.value ?? NO_DEPARTMENT_VALUE}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a department (optional)" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value={NO_DEPARTMENT_VALUE}>No Department</SelectItem>
+              <FormControl>
+                <select
+                  value={field.value ?? NO_DEPARTMENT_VALUE}
+                  onChange={(event) => field.onChange(event.target.value)}
+                  className={nativeSelectClassName}
+                >
+                  <option value={NO_DEPARTMENT_VALUE}>No Department</option>
                   {departments.map((department) => (
-                    <SelectItem key={department.id} value={department.id}>
+                    <option key={department.id} value={department.id}>
                       {department.name}
-                    </SelectItem>
+                    </option>
                   ))}
-                </SelectContent>
-              </Select>
+                </select>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}

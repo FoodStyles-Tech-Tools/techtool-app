@@ -1,7 +1,6 @@
 "use client"
 
 import { Circle } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { Epic } from "@/hooks/use-epics"
 
@@ -29,38 +28,30 @@ export function EpicSelect({
     : null
 
   return (
-    <Select 
+    <div className={cn("relative w-[140px]", className)}>
+      {selectedEpic ? (
+        <Circle
+          className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2"
+          style={{ fill: selectedEpic.color, color: selectedEpic.color }}
+        />
+      ) : null}
+      <select
       value={value || NO_EPIC_VALUE} 
-      onValueChange={(val) => onValueChange(val === NO_EPIC_VALUE ? null : val)} 
+      onChange={(event) => onValueChange(event.target.value === NO_EPIC_VALUE ? null : event.target.value)} 
       disabled={disabled}
+      className={cn(
+        "h-7 w-full rounded-md border border-border/45 bg-background/60 px-2 text-xs text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50",
+        selectedEpic ? "pl-7" : "",
+        triggerClassName
+      )}
     >
-      <SelectTrigger className={cn("h-7 w-[140px] text-xs relative", triggerClassName)}>
-        {selectedEpic ? (
-          <div className="absolute left-2 flex items-center gap-1.5">
-            <Circle className="h-3 w-3" style={{ fill: selectedEpic.color, color: selectedEpic.color }} />
-            <span className="truncate">{selectedEpic.name}</span>
-          </div>
-        ) : (
-          <div className="absolute left-2">
-            <span className="text-muted-foreground">No Epic</span>
-          </div>
-        )}
-      </SelectTrigger>
-      <SelectContent className={className}>
-        <SelectItem value={NO_EPIC_VALUE}>
-          <div className="flex items-center gap-1.5">
-            <span className="text-muted-foreground">No Epic</span>
-          </div>
-        </SelectItem>
+        <option value={NO_EPIC_VALUE}>No Epic</option>
         {epics.map((epic) => (
-          <SelectItem key={epic.id} value={epic.id}>
-            <div className="flex items-center gap-1.5">
-              <Circle className="h-3 w-3" style={{ fill: epic.color, color: epic.color }} />
-              <span>{epic.name}</span>
-            </div>
-          </SelectItem>
+          <option key={epic.id} value={epic.id}>
+            {epic.name}
+          </option>
         ))}
-      </SelectContent>
-    </Select>
+      </select>
+    </div>
   )
 }

@@ -1,18 +1,17 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TicketTypeSelect } from "@/components/ticket-type-select"
-import { UserSelectItem, UserSelectValue } from "@/components/user-select-item"
 import type { Ticket, User } from "@/lib/types"
 import type { ParentTicketOption } from "@/features/tickets/components/ticket-detail-sidebar-types"
 
 const UNASSIGNED_VALUE = "unassigned"
 const NO_PARENT_TICKET_VALUE = "no_parent_ticket"
+const nativeSelectClassName =
+  "h-8 w-full rounded-md border border-border/45 bg-background/60 px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50"
 
 type TicketDetailAssignmentSectionProps = {
   ticket: Ticket
@@ -55,8 +54,9 @@ export function TicketDetailAssignmentSection({
   onTypeChange,
   onParentTicketChange,
 }: TicketDetailAssignmentSectionProps) {
-  const [isParentPopoverOpen, setIsParentPopoverOpen] = useState(false)
+  const [isParentPickerOpen, setIsParentPickerOpen] = useState(false)
   const [parentSearch, setParentSearch] = useState("")
+  const parentPickerRef = useRef<HTMLDivElement | null>(null)
 
   const parentFilteredOptions = useMemo(() => {
     if (!parentSearch.trim()) return parentTicketOptions
@@ -68,45 +68,57 @@ export function TicketDetailAssignmentSection({
     })
   }, [parentSearch, parentTicketOptions])
 
+  useEffect(() => {
+    if (!isParentPickerOpen) return
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!parentPickerRef.current?.contains(event.target as Node)) {
+        setIsParentPickerOpen(false)
+        setParentSearch("")
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsParentPickerOpen(false)
+        setParentSearch("")
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown)
+    document.addEventListener("keydown", handleEscape)
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+      document.removeEventListener("keydown", handleEscape)
+    }
+  }, [isParentPickerOpen])
+
   return (
     <>
       <div className="flex items-start gap-3">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Assignee</label>
-        <div className="flex-1 min-w-0">
+        <label className="w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Assignee</label>
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <div className="flex-1 min-w-0">
-              <Select
+            <div className="min-w-0 flex-1">
+              <select
                 value={ticket.assignee?.id || UNASSIGNED_VALUE}
-                onValueChange={(value) => void onAssigneeChange(value === UNASSIGNED_VALUE ? null : value)}
+                onChange={(event) => void onAssigneeChange(event.target.value === UNASSIGNED_VALUE ? null : event.target.value)}
                 disabled={!canEditTickets || updatingFields["assigneeId"]}
+                className={nativeSelectClassName}
               >
-                <SelectTrigger className="h-8 w-full relative overflow-hidden">
-                  {ticket.assignee?.id ? (
-                    <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
-                      <UserSelectValue
-                        users={assigneeEligibleUsers}
-                        value={ticket.assignee?.id || null}
-                        placeholder="Unassigned"
-                        unassignedValue={UNASSIGNED_VALUE}
-                        unassignedLabel="Unassigned"
-                      />
-                    </div>
-                  ) : (
-                    <SelectValue placeholder="Unassigned" />
-                  )}
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-                  {assigneeEligibleUsers.map((user) => (
-                    <UserSelectItem key={user.id} user={user} value={user.id} />
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value={UNASSIGNED_VALUE}>Unassigned</option>
+                {assigneeEligibleUsers.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name || user.email}
+                  </option>
+                ))}
+              </select>
             </div>
             {!ticket.assignee && currentUser ? (
               <button
                 type="button"
-                className="text-[11px] text-blue-600 hover:underline whitespace-nowrap disabled:opacity-50"
+                className="whitespace-nowrap text-[11px] text-blue-600 hover:underline disabled:opacity-50"
                 onClick={() => void onAssigneeChange(currentUser.id)}
                 disabled={updatingFields["assigneeId"] || !canEditTickets}
               >
@@ -118,71 +130,46 @@ export function TicketDetailAssignmentSection({
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Reporter</label>
-        <div className="flex-1 min-w-0">
-          <Select
-            value={ticket.requestedBy?.id || undefined}
-            onValueChange={(value) => void onRequestedByChange(value)}
+        <label className="w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Reporter</label>
+        <div className="min-w-0 flex-1">
+          <select
+            value={ticket.requestedBy?.id || ""}
+            onChange={(event) => void onRequestedByChange(event.target.value)}
             disabled={!canEditTickets || isAssignmentLocked || updatingFields["requestedById"]}
+            className={nativeSelectClassName}
           >
-            <SelectTrigger className="h-8 w-full relative overflow-hidden">
-              {ticket.requestedBy?.id ? (
-                <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
-                  <UserSelectValue
-                    users={users}
-                    value={ticket.requestedBy?.id || undefined}
-                    placeholder="Select user"
-                  />
-                </div>
-              ) : (
-                <SelectValue placeholder="Select user" />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              {users.map((user) => (
-                <UserSelectItem key={user.id} user={user} value={user.id} />
-              ))}
-            </SelectContent>
-          </Select>
+            <option value="">Select user</option>
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.name || user.email}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">SQA</label>
-        <div className="flex-1 min-w-0">
-          <Select
+        <label className="w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">SQA</label>
+        <div className="min-w-0 flex-1">
+          <select
             value={ticket.sqaAssignee?.id || UNASSIGNED_VALUE}
-            onValueChange={(value) => void onSqaAssigneeChange(value === UNASSIGNED_VALUE ? null : value)}
+            onChange={(event) => void onSqaAssigneeChange(event.target.value === UNASSIGNED_VALUE ? null : event.target.value)}
             disabled={!canEditTickets || updatingFields["sqaAssigneeId"] || (isAssignmentLocked && !isSqaEditLocked)}
+            className={nativeSelectClassName}
           >
-            <SelectTrigger className="h-8 w-full relative overflow-hidden">
-              {ticket.sqaAssignee?.id ? (
-                <div className="absolute left-3 right-10 top-0 bottom-0 flex items-center overflow-hidden">
-                  <UserSelectValue
-                    users={sqaEligibleUsers}
-                    value={ticket.sqaAssignee?.id || null}
-                    placeholder="Unassigned"
-                    unassignedValue={UNASSIGNED_VALUE}
-                    unassignedLabel="Unassigned"
-                  />
-                </div>
-              ) : (
-                <SelectValue placeholder="Unassigned" />
-              )}
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={UNASSIGNED_VALUE}>Unassigned</SelectItem>
-              {sqaEligibleUsers.map((user) => (
-                <UserSelectItem key={user.id} user={user} value={user.id} />
-              ))}
-            </SelectContent>
-          </Select>
+            <option value={UNASSIGNED_VALUE}>Unassigned</option>
+            {sqaEligibleUsers.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.name || user.email}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       <div className="flex items-start gap-3">
-        <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Type</label>
-        <div className="flex-1 min-w-0">
+        <label className="w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Type</label>
+        <div className="min-w-0 flex-1">
           <TicketTypeSelect
             value={ticket.type || "task"}
             onValueChange={(value) => void onTypeChange(value)}
@@ -194,79 +181,80 @@ export function TicketDetailAssignmentSection({
 
       {ticket.type === "subtask" ? (
         <div className="flex items-start gap-3">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-2 flex-shrink-0 w-[6.5rem]">Parent</label>
-          <div className="flex-1 min-w-0">
-            <Popover
-              open={isParentPopoverOpen}
-              onOpenChange={(open) => {
-                setIsParentPopoverOpen(open)
-                if (!open) {
-                  setParentSearch("")
-                }
-              }}
-            >
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={!canEditTickets || isAssignmentLocked || updatingFields["parentTicketId"]}
-                  className="h-8 w-full justify-between overflow-hidden"
-                >
-                  <span className="truncate text-xs text-foreground">
-                    {selectedParentTicketOption
-                      ? `${(selectedParentTicketOption.displayId || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()} · ${selectedParentTicketOption.title}`
-                      : "No parent ticket"}
-                  </span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-80 p-3" align="start">
-                <Input
-                  placeholder="Search parent ticket..."
-                  value={parentSearch}
-                  onChange={(event) => setParentSearch(event.target.value)}
-                  className="h-8"
-                  autoFocus
-                />
-                <div className="mt-2 max-h-64 overflow-y-auto space-y-1">
-                  <button
-                    type="button"
-                    className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
-                    onClick={() => {
-                      void onParentTicketChange(NO_PARENT_TICKET_VALUE)
-                      setIsParentPopoverOpen(false)
-                    }}
-                  >
-                    <span className="text-xs">No parent ticket</span>
-                  </button>
-                  {parentFilteredOptions.length === 0 ? (
-                    <p className="text-xs text-muted-foreground px-2 py-3 text-center">No tickets found</p>
-                  ) : (
-                    parentFilteredOptions.map((candidate) => {
-                      const isSelected = candidate.id === selectedParentTicketId
-                      return (
-                        <button
-                          key={candidate.id}
-                          type="button"
-                          className={[
-                            "flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted",
-                            isSelected ? "bg-muted" : "",
-                          ].join(" ")}
-                          onClick={() => {
-                            void onParentTicketChange(candidate.id)
-                            setIsParentPopoverOpen(false)
-                          }}
-                        >
-                          <span className="truncate">
-                            {(candidate.displayId || candidate.id.slice(0, 8)).toUpperCase()} · {candidate.title}
-                          </span>
-                        </button>
-                      )
-                    })
-                  )}
+          <label className="w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Parent</label>
+          <div className="min-w-0 flex-1">
+            <div ref={parentPickerRef} className="relative">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!canEditTickets || isAssignmentLocked || updatingFields["parentTicketId"]}
+                className="h-8 w-full justify-between overflow-hidden"
+                onClick={() => {
+                  setIsParentPickerOpen((current) => {
+                    const next = !current
+                    if (!next) {
+                      setParentSearch("")
+                    }
+                    return next
+                  })
+                }}
+              >
+                <span className="truncate text-xs text-foreground">
+                  {selectedParentTicketOption
+                    ? `${(selectedParentTicketOption.displayId || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()} · ${selectedParentTicketOption.title}`
+                    : "No parent ticket"}
+                </span>
+              </Button>
+
+              {isParentPickerOpen ? (
+                <div className="absolute left-0 top-full z-40 mt-2 w-80 rounded-md border border-border/45 bg-background p-3 shadow-md">
+                  <Input
+                    placeholder="Search parent ticket..."
+                    value={parentSearch}
+                    onChange={(event) => setParentSearch(event.target.value)}
+                    className="h-8"
+                    autoFocus
+                  />
+                  <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+                    <button
+                      type="button"
+                      className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                      onClick={() => {
+                        void onParentTicketChange(NO_PARENT_TICKET_VALUE)
+                        setIsParentPickerOpen(false)
+                        setParentSearch("")
+                      }}
+                    >
+                      <span className="text-xs">No parent ticket</span>
+                    </button>
+                    {parentFilteredOptions.length === 0 ? (
+                      <p className="px-2 py-3 text-center text-xs text-muted-foreground">No tickets found</p>
+                    ) : (
+                      parentFilteredOptions.map((candidate) => {
+                        const isSelected = candidate.id === selectedParentTicketId
+                        return (
+                          <button
+                            key={candidate.id}
+                            type="button"
+                            className={["flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs hover:bg-muted", isSelected ? "bg-muted" : ""].join(" ")}
+                            onClick={() => {
+                              void onParentTicketChange(candidate.id)
+                              setIsParentPickerOpen(false)
+                              setParentSearch("")
+                            }}
+                          >
+                            <span className="truncate">
+                              {(candidate.displayId || candidate.id.slice(0, 8)).toUpperCase()} · {candidate.title}
+                            </span>
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
                 </div>
-              </PopoverContent>
-            </Popover>
+              ) : null}
+            </div>
             {parentNavigationSlug ? (
               <a
                 href={`/tickets/${parentNavigationSlug}`}

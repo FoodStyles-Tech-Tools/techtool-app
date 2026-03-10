@@ -1,7 +1,6 @@
 "use client"
 
 import { ChevronsUp, ChevronUp, Minus, ChevronDown } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 interface TicketPrioritySelectProps {
@@ -35,44 +34,25 @@ export function TicketPrioritySelect({
   }
 
   return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className={cn("h-7 w-[100px] text-xs relative", triggerClassName)}>
-        {value ? (
-          <div className="absolute left-2 flex items-center gap-1.5">
-            {getPriorityIcon(value)}
-            <span className="capitalize">{value}</span>
-          </div>
-        ) : (
-          <SelectValue />
+    <div className={cn("relative w-[100px]", className)}>
+      <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+        {getPriorityIcon(value)}
+      </div>
+      <select
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
+        disabled={disabled}
+        className={cn(
+          "h-7 w-full rounded-md border border-border/45 bg-background/60 pl-7 pr-2 text-xs capitalize text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50",
+          triggerClassName
         )}
-      </SelectTrigger>
-      <SelectContent className={className}>
-        <SelectItem value="low">
-          <div className="flex items-center gap-1.5">
-            <ChevronDown className="h-3.5 w-3.5 text-blue-500" />
-            Low
-          </div>
-        </SelectItem>
-        <SelectItem value="medium">
-          <div className="flex items-center gap-1.5">
-            <Minus className="h-3.5 w-3.5 text-yellow-500" />
-            Medium
-          </div>
-        </SelectItem>
-        <SelectItem value="high">
-          <div className="flex items-center gap-1.5">
-            <ChevronUp className="h-3.5 w-3.5 text-red-500" />
-            High
-          </div>
-        </SelectItem>
-        <SelectItem value="urgent">
-          <div className="flex items-center gap-1.5">
-            <ChevronsUp className="h-3.5 w-3.5 text-red-500" />
-            Urgent
-          </div>
-        </SelectItem>
-      </SelectContent>
-    </Select>
+      >
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+        <option value="urgent">Urgent</option>
+      </select>
+    </div>
   )
 }
 
@@ -90,4 +70,3 @@ export function TicketPriorityIcon({ priority, className }: { priority: string; 
       return null
   }
 }
-

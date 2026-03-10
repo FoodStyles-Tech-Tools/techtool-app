@@ -1,7 +1,6 @@
 "use client"
 
 import { Bug, FileText, CheckSquare, GitBranch } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
 interface TicketTypeSelectProps {
@@ -19,6 +18,8 @@ export function TicketTypeSelect({
   className,
   triggerClassName 
 }: TicketTypeSelectProps) {
+  const resolvedValue = value || "task"
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "bug":
@@ -35,44 +36,25 @@ export function TicketTypeSelect({
   }
 
   return (
-    <Select value={value || "task"} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger className={cn("h-7 w-[100px] text-xs relative", triggerClassName)}>
-        {value ? (
-          <div className="absolute left-2 flex items-center gap-1.5">
-            {getTypeIcon(value || "task")}
-            <span className="capitalize">{value || "task"}</span>
-          </div>
-        ) : (
-          <SelectValue />
+    <div className={cn("relative w-[100px]", className)}>
+      <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2">
+        {getTypeIcon(resolvedValue)}
+      </div>
+      <select
+        value={resolvedValue}
+        onChange={(event) => onValueChange(event.target.value)}
+        disabled={disabled}
+        className={cn(
+          "h-7 w-full rounded-md border border-border/45 bg-background/60 pl-7 pr-2 text-xs capitalize text-foreground outline-none transition-colors focus:border-foreground/20 disabled:cursor-not-allowed disabled:opacity-50",
+          triggerClassName
         )}
-      </SelectTrigger>
-      <SelectContent className={className}>
-        <SelectItem value="bug">
-          <div className="flex items-center gap-1.5">
-            <Bug className="h-3.5 w-3.5 text-red-500" />
-            Bug
-          </div>
-        </SelectItem>
-        <SelectItem value="request">
-          <div className="flex items-center gap-1.5">
-            <FileText className="h-3.5 w-3.5 text-blue-500" />
-            Request
-          </div>
-        </SelectItem>
-        <SelectItem value="task">
-          <div className="flex items-center gap-1.5">
-            <CheckSquare className="h-3.5 w-3.5 text-purple-500" />
-            Task
-          </div>
-        </SelectItem>
-        <SelectItem value="subtask">
-          <div className="flex items-center gap-1.5">
-            <GitBranch className="h-3.5 w-3.5 text-emerald-500" />
-            Subtask
-          </div>
-        </SelectItem>
-      </SelectContent>
-    </Select>
+      >
+        <option value="bug">Bug</option>
+        <option value="request">Request</option>
+        <option value="task">Task</option>
+        <option value="subtask">Subtask</option>
+      </select>
+    </div>
   )
 }
 
