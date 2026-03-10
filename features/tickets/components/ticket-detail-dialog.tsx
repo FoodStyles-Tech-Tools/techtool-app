@@ -1,0 +1,352 @@
+"use client"
+
+import { useMemo } from "react"
+import { useRouter } from "next/navigation"
+import { usePermissions } from "@/hooks/use-permissions"
+import { useDepartments } from "@/hooks/use-departments"
+import { useProjects } from "@/hooks/use-projects"
+import { useEpics } from "@/hooks/use-epics"
+import { useSprints } from "@/hooks/use-sprints"
+import { useUsers } from "@/hooks/use-users"
+import { useUserEmail } from "@/lib/supabase-context"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { useOpenSubtasksDialog } from "@/features/tickets/hooks/use-open-subtasks-dialog"
+import { useTicketDetailActions } from "@/features/tickets/hooks/use-ticket-detail-actions"
+import { useTicketDetail } from "@/features/tickets/hooks/use-ticket-detail"
+import {
+  useTickets,
+  useUpdateTicket,
+  useUpdateTicketWithReasonComment,
+} from "@/features/tickets/hooks/use-tickets"
+import { TicketDetailDialogs } from "@/features/tickets/components/ticket-detail-dialogs"
+import { TicketDetailFooter } from "@/features/tickets/components/ticket-detail-footer"
+import { TicketDetailHeader } from "@/features/tickets/components/ticket-detail-header"
+import { TicketDetailMainColumn } from "@/features/tickets/components/ticket-detail-main-column"
+import { TicketDetailSidebar } from "@/features/tickets/components/ticket-detail-sidebar"
+import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@/lib/ticket-constants"
+import type { TicketDetailDialogProps } from "@/features/tickets/types"
+
+const NO_DEPARTMENT_VALUE = "no_department"
+const NO_PROJECT_VALUE = "no_project"
+const NO_PARENT_TICKET_VALUE = "no_parent_ticket"
+
+export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetailDialogProps) {
+  const router = useRouter()
+  const { flags } = usePermissions()
+  const canEditTickets = flags?.canEditTickets ?? false
+  const { departments } = useDepartments({ realtime: false })
+  const { data: projectsData } = useProjects({ realtime: false })
+  const projects = useMemo(() => projectsData || [], [projectsData])
+  const { openSubtasksDialog, askHowToHandleOpenSubtasks, resolveOpenSubtasksDialog } =
+    useOpenSubtasksDialog()
+  const { ticket, comments: detailComments, relations, isLoading } = useTicketDetail(ticketId || "", {
+    enabled: !!ticketId && open,
+  })
+  const { data: relationTicketsData } = useTickets({
+    enabled: !!ticketId && open,
+    realtime: false,
+    limit: 200,
+    page: 1,
+  })
+  const { data: usersData } = useUsers({ realtime: false })
+  const userEmail = useUserEmail()
+  const updateTicket = useUpdateTicket()
+  const updateTicketWithReasonComment = useUpdateTicketWithReasonComment()
+
+  const currentUser = useMemo(() => {
+    if (!userEmail || !usersData) return null
+    const lower = userEmail.toLowerCase()
+    return usersData.find((user) => user.email.toLowerCase() === lower) || null
+  }, [usersData, userEmail])
+
+  const projectId = ticket?.project?.id || ""
+  const { epics } = useEpics(projectId)
+  const { sprints } = useSprints(projectId)
+  const users = useMemo(() => usersData || [], [usersData])
+
+  const selectedParentTicketId = ticket?.parent_ticket_id || null
+  const parentTicketOptions = useMemo(() => {
+    const optionsMap = new Map<string, { id: string; display_id: string | null; title: string }>()
+
+    ;(relationTicketsData || []).forEach((candidate) => {
+      if (!candidate.id || candidate.id === ticketId) return
+      if (candidate.type === "subtask") return
+      optionsMap.set(candidate.id, {
+        id: candidate.id,
+        display_id: candidate.display_id || null,
+        title: candidate.title || "Untitled ticket",
+      })
+    })
+
+    if (
+      relations?.parent?.id &&
+      relations.parent.id !== ticketId &&
+      relations.parent.type !== "subtask" &&
+      !optionsMap.has(relations.parent.id)
+    ) {
+      optionsMap.set(relations.parent.id, {
+        id: relations.parent.id,
+        display_id: relations.parent.display_id || null,
+        title: relations.parent.title || "Untitled ticket",
+      })
+    }
+
+    return Array.from(optionsMap.values()).sort((left, right) => {
+      const leftLabel = `${left.display_id || ""} ${left.title}`.trim().toLowerCase()
+      const rightLabel = `${right.display_id || ""} ${right.title}`.trim().toLowerCase()
+      return leftLabel.localeCompare(rightLabel)
+    })
+  }, [relationTicketsData, relations?.parent, ticketId])
+
+  const selectedParentTicketOption = useMemo(() => {
+    if (!selectedParentTicketId) return null
+    return parentTicketOptions.find((candidate) => candidate.id === selectedParentTicketId) || null
+  }, [parentTicketOptions, selectedParentTicketId])
+
+  const parentNavigationSlug = useMemo(() => {
+    const relationDisplayId = relations?.parent?.display_id
+    if (relationDisplayId) return String(relationDisplayId).toLowerCase()
+    const optionDisplayId = selectedParentTicketOption?.display_id
+    if (optionDisplayId) return String(optionDisplayId).toLowerCase()
+    return null
+  }, [relations?.parent?.display_id, selectedParentTicketOption?.display_id])
+
+  const loading = !ticket && isLoading
+  const isAssignmentLocked = !!ticket && !ticket.assignee
+  const isSqaUser = (currentUser?.role || "").toLowerCase() === "sqa"
+  const currentTicketSqaAssigneeId = ticket?.sqa_assignee?.id || null
+  const isSqaEditLocked =
+    !!ticket && isSqaUser && !!currentUser?.id && currentTicketSqaAssigneeId !== currentUser.id
+
+  const assigneeEligibleUsers = useMemo(
+    () => users.filter((user) => (user.role ? ASSIGNEE_ALLOWED_ROLES.has(user.role.toLowerCase()) : false)),
+    [users]
+  )
+  const sqaEligibleUsers = useMemo(
+    () => users.filter((user) => (user.role ? SQA_ALLOWED_ROLES.has(user.role.toLowerCase()) : false)),
+    [users]
+  )
+
+  const actions = useTicketDetailActions({
+    ticketId,
+    open,
+    ticket,
+    canEditTickets,
+    isAssignmentLocked,
+    isSqaEditLocked,
+    currentUserId: currentUser?.id,
+    askHowToHandleOpenSubtasks,
+    updateTicket,
+    updateTicketWithReasonComment,
+  })
+
+  const projectOptions = useMemo(() => {
+    const selectedProjectId = ticket?.project?.id
+    const visibleProjects = actions.includeInactiveProjects
+      ? projects
+      : projects.filter(
+          (project) =>
+            project.status?.toLowerCase() !== "inactive" || project.id === selectedProjectId
+        )
+
+    return [...visibleProjects].sort((left, right) =>
+      (left.name || "").localeCompare(right.name || "", undefined, { sensitivity: "base" })
+    )
+  }, [actions.includeInactiveProjects, projects, ticket?.project?.id])
+
+  const handleGoToParentTicket = () => {
+    if (!parentNavigationSlug) return
+    router.push(`/tickets/${parentNavigationSlug}`)
+  }
+
+  if (!ticketId) return null
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="flex max-h-[92vh] max-w-5xl flex-col gap-0 overflow-hidden border-0 p-0">
+          <DialogHeader className="border-b border-border/60 bg-background/95 px-4 pb-3 pt-4">
+            <DialogTitle className="sr-only">
+              {ticket
+                ? `Ticket ${ticket.display_id || ticketId.slice(0, 8)}: ${ticket.title}`
+                : `Ticket ${ticketId.slice(0, 8)}`}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Ticket detail panel with description, relations, and activity.
+            </DialogDescription>
+            <TicketDetailHeader
+              ticketId={ticketId}
+              ticket={ticket}
+              parentNavigationSlug={parentNavigationSlug}
+              canEditTickets={canEditTickets}
+              isAssignmentLocked={isAssignmentLocked}
+              isUpdatingStatus={!!actions.updatingFields.status}
+              onGoToParentTicket={handleGoToParentTicket}
+              onCopyTicketLabel={actions.handleCopyTicketLabel}
+              onCopyShareUrl={actions.handleCopyShareUrl}
+              onCopyHyperlinkedUrl={actions.handleCopyHyperlinkedUrl}
+              onStatusChange={(status) => {
+                void actions.handleStatusChange(status)
+              }}
+            />
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-4 py-4">
+            {loading ? (
+              <p className="text-sm text-muted-foreground">Loading...</p>
+            ) : !ticket ? (
+              <p className="text-sm text-muted-foreground">Ticket not found</p>
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-[1fr_minmax(280px,340px)]">
+                <TicketDetailMainColumn
+                  ticketId={ticketId}
+                  ticket={ticket}
+                  canEditTickets={canEditTickets}
+                  detailComments={detailComments}
+                  isEditingTitle={actions.isEditingTitle}
+                  titleValue={actions.titleValue}
+                  onTitleValueChange={actions.setTitleValue}
+                  onTitleSave={actions.handleTitleSave}
+                  onTitleKeyDown={actions.handleTitleKeyDown}
+                  onStartTitleEdit={() => actions.setIsEditingTitle(true)}
+                  isEditingDescription={actions.isEditingDescription}
+                  descriptionValue={actions.descriptionValue}
+                  onDescriptionValueChange={actions.setDescriptionValue}
+                  onDescriptionSave={actions.handleDescriptionSave}
+                  onCancelDescriptionEdit={() => {
+                    actions.setDescriptionValue(ticket.description || "")
+                    actions.setIsEditingDescription(false)
+                  }}
+                  onStartDescriptionEdit={() => actions.setIsEditingDescription(true)}
+                  isAddingLink={actions.isAddingLink}
+                  onStartAddLink={() => {
+                    actions.setIsAddingLink(true)
+                    actions.setNewLinkUrl("")
+                  }}
+                  onCancelAddLink={() => {
+                    actions.setIsAddingLink(false)
+                    actions.setNewLinkUrl("")
+                  }}
+                  newLinkUrl={actions.newLinkUrl}
+                  onNewLinkUrlChange={actions.setNewLinkUrl}
+                  onAddLink={actions.handleAddLink}
+                  editingLinkIndex={actions.editingLinkIndex}
+                  onStartEditLink={(index, url) => {
+                    actions.setEditingLinkIndex(index)
+                    actions.setNewLinkUrl(url)
+                  }}
+                  onCancelEditLink={() => {
+                    actions.setEditingLinkIndex(null)
+                    actions.setNewLinkUrl("")
+                  }}
+                  onUpdateLink={actions.handleUpdateLink}
+                  onRemoveLink={actions.handleRemoveLink}
+                  isSubtasksCollapsed={actions.isSubtasksCollapsed}
+                  onToggleSubtasks={() =>
+                    actions.setIsSubtasksCollapsed((previous) => !previous)
+                  }
+                  subtasksPanelId={`ticket-subtasks-panel-${ticketId}`}
+                />
+
+                <TicketDetailSidebar
+                  ticket={ticket}
+                  canEditTickets={canEditTickets}
+                  isAssignmentLocked={isAssignmentLocked}
+                  isSqaEditLocked={isSqaEditLocked}
+                  updatingFields={actions.updatingFields}
+                  currentUser={currentUser}
+                  users={users}
+                  assigneeEligibleUsers={assigneeEligibleUsers}
+                  sqaEligibleUsers={sqaEligibleUsers}
+                  departments={departments}
+                  epics={epics}
+                  sprints={sprints}
+                  projectOptions={projectOptions}
+                  includeInactiveProjects={actions.includeInactiveProjects}
+                  onIncludeInactiveProjectsChange={actions.setIncludeInactiveProjects}
+                  relations={relations}
+                  parentTicketOptions={parentTicketOptions}
+                  selectedParentTicketId={selectedParentTicketId}
+                  selectedParentTicketOption={selectedParentTicketOption}
+                  parentNavigationSlug={parentNavigationSlug}
+                  timestampValidation={actions.timestampValidation}
+                  parseTimestamp={actions.parseTimestamp}
+                  getTimestampWarningMessage={actions.getTimestampWarningMessage}
+                  onAssigneeChange={actions.handleAssigneeChange}
+                  onRequestedByChange={actions.handleRequestedByChange}
+                  onSqaAssigneeChange={actions.handleSqaAssigneeChange}
+                  onTypeChange={actions.handleTypeChange}
+                  onParentTicketChange={(nextParentTicketId) =>
+                    void actions.handleParentTicketChange(
+                      nextParentTicketId,
+                      NO_PARENT_TICKET_VALUE
+                    )
+                  }
+                  onPriorityChange={actions.handlePriorityChange}
+                  onDueDateChange={actions.handleDueDateChange}
+                  onDepartmentChange={(nextDepartmentId) =>
+                    actions.handleDepartmentChange(nextDepartmentId, NO_DEPARTMENT_VALUE)
+                  }
+                  onEpicChange={actions.handleEpicChange}
+                  onSprintChange={actions.handleSprintChange}
+                  onProjectChange={(nextProjectId) =>
+                    actions.handleProjectChange(nextProjectId, NO_PROJECT_VALUE)
+                  }
+                  onTimestampChange={(field, value) =>
+                    void actions.handleTimestampChange(field, value)
+                  }
+                />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="shrink-0 border-t border-border/60 bg-background/95 px-4 py-3 sm:justify-between">
+            <TicketDetailFooter
+              ticket={ticket}
+              canEditTickets={canEditTickets}
+              onRequestDelete={actions.openDeleteDialog}
+              onClose={() => onOpenChange(false)}
+            />
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <TicketDetailDialogs
+        canEditTickets={canEditTickets}
+        showCancelReasonDialog={actions.showCancelReasonDialog}
+        pendingStatusChange={actions.pendingStatusChange}
+        cancelReason={actions.cancelReason}
+        onCancelReasonChange={actions.setCancelReason}
+        onCancelReasonClose={actions.closeCancelReasonDialog}
+        onCancelReasonConfirm={() => {
+          void actions.handleCancelReasonSubmit()
+        }}
+        showDeleteReasonDialog={actions.showDeleteReasonDialog}
+        deleteReason={actions.deleteReason}
+        onDeleteReasonChange={actions.setDeleteReason}
+        onDeleteReasonClose={actions.closeDeleteReasonDialog}
+        onDeleteReasonConfirm={() => {
+          void actions.handleDeleteReasonSubmit()
+        }}
+        showReturnedReasonDialog={actions.showReturnedReasonDialog}
+        returnedReason={actions.returnedReason}
+        onReturnedReasonChange={actions.setReturnedReason}
+        onReturnedReasonClose={actions.closeReturnedReasonDialog}
+        onReturnedReasonConfirm={() => {
+          void actions.handleReturnedReasonSubmit()
+        }}
+        openSubtasksDialog={openSubtasksDialog}
+        onSubtasksCancel={() => resolveOpenSubtasksDialog("cancel")}
+        onSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}
+        onSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
+      />
+    </>
+  )
+}

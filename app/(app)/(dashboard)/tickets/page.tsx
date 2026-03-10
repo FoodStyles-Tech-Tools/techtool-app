@@ -1,5 +1,5 @@
 import { requirePagePermission } from "@/lib/server/require-page-permission"
-import TicketsClient from "./tickets-client"
+import TicketsClient from "@/features/tickets/components/tickets-client"
 
 interface TicketsPageProps {
   searchParams?: {

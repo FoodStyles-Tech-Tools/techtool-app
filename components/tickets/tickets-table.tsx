@@ -24,6 +24,16 @@ import { TicketStatusSelect } from "@/components/ticket-status-select"
 import { richTextToPlainText } from "@/lib/rich-text"
 import { isDoneStatus, normalizeStatusKey } from "@/lib/ticket-statuses"
 
+const SERVER_SORTABLE_COLUMNS = new Set<SortColumn>([
+  "id",
+  "title",
+  "due_date",
+  "type",
+  "status",
+  "priority",
+  "sqa_assigned_at",
+])
+
 interface TicketsTableProps {
   sortConfig: { column: SortColumn; direction: "asc" | "desc" }
   onSort: (column: SortColumn) => void
@@ -57,6 +67,10 @@ function renderSortableHeader(
   sortConfig: { column: SortColumn; direction: "asc" | "desc" },
   onSort: (column: SortColumn) => void
 ) {
+  if (!SERVER_SORTABLE_COLUMNS.has(column)) {
+    return <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
+  }
+
   const isActive = sortConfig.column === column
   const Icon = !isActive ? ArrowUpDown : sortConfig.direction === "asc" ? ChevronUp : ChevronDown
   return (
