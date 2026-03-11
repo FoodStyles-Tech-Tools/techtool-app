@@ -53,7 +53,7 @@ export function TicketDetailTimestampsSection({
             <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Assigned</label>
             {!ticket.assignedAt && timestampValidation.assigned_at ? (
               <span title={getTimestampWarningMessage("assigned_at") || ""} className="cursor-help pt-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-red-700">Warning</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-red-700">Warning</span>
               </span>
             ) : null}
           </div>
@@ -79,7 +79,7 @@ export function TicketDetailTimestampsSection({
             <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Started</label>
             {!ticket.startedAt && timestampValidation.started_at ? (
               <span title={getTimestampWarningMessage("started_at") || ""} className="cursor-help pt-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-red-700">Warning</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-red-700">Warning</span>
               </span>
             ) : null}
           </div>
@@ -119,7 +119,7 @@ export function TicketDetailTimestampsSection({
             <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Completed</label>
             {!ticket.completedAt && timestampValidation.completed_at ? (
               <span title={getTimestampWarningMessage("completed_at") || ""} className="cursor-help pt-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-red-700">Warning</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-red-700">Warning</span>
               </span>
             ) : null}
           </div>

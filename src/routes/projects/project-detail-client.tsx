@@ -200,7 +200,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                         className="flex items-center gap-2 text-sm text-slate-900 hover:underline"
                       >
                         <span className="truncate">{url}</span>
-                        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Open</span>
+                        <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">Open</span>
                       </a>
                     ))
                   ) : (

@@ -50,12 +50,12 @@ function NotificationItem({
             <span className="font-mono text-slate-900">{displayId}</span>
           </p>
           {isUnread ? (
-            <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white">
+            <span className="rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-white">
               Unread
             </span>
           ) : (
             <span
-              className="text-[10px] text-slate-500"
+              className="text-xs text-slate-500"
               title={
                 notification.read_at
                   ? `Viewed ${formatDistanceToNow(new Date(notification.read_at), { addSuffix: true })}`
@@ -67,7 +67,7 @@ function NotificationItem({
           )}
         </div>
         {bodySnippet ? <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{bodySnippet}</p> : null}
-        <p className="mt-1 text-[11px] text-slate-500">
+        <p className="mt-1 text-xs text-slate-500">
           {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
           {notification.read_at ? (
             <span className="ml-1">
@@ -98,7 +98,7 @@ export function CommentNotificationsDropdown() {
         <Button variant="ghost" size="sm" className="relative h-9 px-3" title="Comment notifications">
           Alerts
           {unreadCount > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-medium text-white">
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-medium text-white">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           ) : null}
@@ -108,7 +108,7 @@ export function CommentNotificationsDropdown() {
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
           <span className="text-sm font-semibold">Notifications</span>
           {unreadCount > 0 ? (
-            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => markAllRead.mutateAsync()}>
+            <Button variant="ghost" size="sm" className="h-7" onClick={() => markAllRead.mutateAsync()}>
               Mark all read
             </Button>
           ) : null}

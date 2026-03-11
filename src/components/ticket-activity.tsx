@@ -170,7 +170,7 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium leading-4",
+          "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs font-medium leading-4",
           isNewValue
             ? "border-slate-300 bg-slate-100 text-slate-900"
             : "border-slate-200 bg-white text-slate-900",
@@ -207,7 +207,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
         <Button
           variant={activeTab === "comments" ? "selected" : "ghost"}
           size="sm"
-          className={cn("h-7 px-3 text-xs", activeTab === "comments" ? "shadow-none" : "")}
+          className={cn("h-7 px-3", activeTab === "comments" ? "shadow-none" : "")}
           onClick={() => setActiveTab("comments")}
         >
           Comments
@@ -215,7 +215,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
         <Button
           variant={activeTab === "history" ? "selected" : "ghost"}
           size="sm"
-          className={cn("h-7 px-3 text-xs", activeTab === "history" ? "shadow-none" : "")}
+          className={cn("h-7 px-3", activeTab === "history" ? "shadow-none" : "")}
           onClick={() => setActiveTab("history")}
         >
           History
@@ -250,7 +250,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
                     <div key={item.id} className="flex items-start gap-3">
                       <Avatar className="h-8 w-8 shrink-0">
                         <AvatarImage src={item.actor?.avatar_url || undefined} alt={actorName} />
-                        <AvatarFallback className="text-[11px]">
+                        <AvatarFallback className="text-xs">
                           {getActorInitials(actorName)}
                         </AvatarFallback>
                       </Avatar>

@@ -340,7 +340,7 @@ export function ReportStatusCards({ data }: { data: StatusCounts }) {
             <div key={item.key} className="rounded-lg border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{item.label}</p>
-                <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${item.badgeClass}`}>
+                <span className={`rounded px-2 py-0.5 text-xs font-medium ${item.badgeClass}`}>
                   {percentage}%
                 </span>
               </div>

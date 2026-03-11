@@ -137,7 +137,7 @@ export function VersionIndicator({ className }: { className?: string }) {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="rounded-md border border-red-500/60 px-2 py-0.5 text-[11px] font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
+          className="rounded-md border border-red-500/60 px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50"
         >
           {refreshing ? "Refreshing" : "Fetch"}
         </button>

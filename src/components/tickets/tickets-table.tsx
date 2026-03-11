@@ -62,7 +62,7 @@ function SortableHeader({
       className="flex items-center gap-1 hover:text-slate-900"
     >
       <span>{label}</span>
-      <span className="text-[10px]">{!isActive ? "Sort" : sortConfig.direction === "asc" ? "Asc" : "Desc"}</span>
+      <span className="text-xs">{!isActive ? "Sort" : sortConfig.direction === "asc" ? "Asc" : "Desc"}</span>
     </button>
   )
 }
@@ -93,20 +93,20 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
           {ticket.title}
         </button>
       </TableCell>
-      <TableCell className="py-2 text-xs text-slate-900">
+      <TableCell className="py-2 text-sm text-slate-900">
         {ticket.status}
       </TableCell>
-      <TableCell className="py-2 text-xs capitalize text-slate-900">
+      <TableCell className="py-2 text-sm capitalize text-slate-900">
         {ticket.priority}
       </TableCell>
-      <TableCell className="py-2 text-xs text-slate-900">
+      <TableCell className="py-2 text-sm text-slate-900">
         {assigneeLabel}
       </TableCell>
-      <TableCell className="py-2 text-xs text-slate-900">
+      <TableCell className="py-2 text-sm text-slate-900">
         {ticket.project?.name || "No project"}
       </TableCell>
       <TableCell className="py-2">
-        <span className={["inline-flex rounded-md px-2 py-1 text-[11px] font-medium", dueDate.className].join(" ")}>
+        <span className={["inline-flex rounded-md px-2 py-1 text-xs font-medium", dueDate.className].join(" ")}>
           {dueDate.label}
         </span>
       </TableCell>

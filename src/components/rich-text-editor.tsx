@@ -248,7 +248,7 @@ interface RichTextEditorProps {
 const toolbarButtonClassName =
   "rounded-md border border-transparent px-2 py-1 text-xs transition-colors"
 const toolbarHeadingButtonClassName =
-  "rounded-md border border-transparent px-1.5 py-1 text-[11px] font-semibold transition-colors"
+  "rounded-md border border-transparent px-1.5 py-1 text-xs font-semibold transition-colors"
 const toolbarMutedButtonClassName = "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
 const activeToolbarButtonClassName = "bg-slate-900 text-white"
 

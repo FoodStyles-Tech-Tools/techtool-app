@@ -30,7 +30,7 @@ export function TicketDetailRelationsSection({
               <span className="truncate">
                 Parent: {(relations.parent.displayId || relations.parent.id.slice(0, 8)).toUpperCase()} • {relations.parent.title}
               </span>
-              <span className="ml-2 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Open</span>
+              <span className="ml-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">Open</span>
             </a>
           ) : null}
           {mentionedInComments.map((mention) => {
@@ -44,7 +44,7 @@ export function TicketDetailRelationsSection({
                 <span className="truncate">
                   Mentioned in {mentionCount} comment{mentionCount === 1 ? "" : "s"} on {(mention.ticket.displayId || mention.ticket.id.slice(0, 8)).toUpperCase()} • {mention.ticket.title}
                 </span>
-                <span className="ml-2 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Open</span>
+                <span className="ml-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">Open</span>
               </a>
             )
           })}
@@ -61,7 +61,7 @@ export function TicketDetailRelationsSection({
           <div className="min-w-0 flex-1">
             <div className="rounded-md border border-red-200 bg-red-50 p-3">
               <div className="flex items-start gap-2">
-                <span className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-red-700">Warning</span>
+                <span className="mt-0.5 text-xs font-semibold uppercase tracking-wide text-red-700">Warning</span>
                 <div className="min-w-0 flex-1">
                   {(() => {
                     const reasonData =

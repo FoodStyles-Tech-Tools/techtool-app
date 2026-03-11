@@ -83,7 +83,7 @@ export function DeletedTicketsPanel() {
                   ) : (
                     <div>-</div>
                   )}
-                  {row.archivedReason ? <div className="line-clamp-2 text-[11px]">{row.archivedReason}</div> : null}
+                  {row.archivedReason ? <div className="line-clamp-2 text-xs">{row.archivedReason}</div> : null}
                 </div>
             </div>
           ))}

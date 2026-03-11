@@ -738,7 +738,7 @@ function CommentComposer({
                 >
                   <Avatar className="h-7 w-7 shrink-0">
                     <AvatarImage src={user.image || undefined} />
-                    <AvatarFallback className="text-[10px]">{initials}</AvatarFallback>
+                    <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{label}</div>

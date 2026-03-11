@@ -138,7 +138,7 @@ export function TicketDetailMainColumn({
             <p className="text-xs font-medium uppercase text-slate-500">Links</p>
             <div className="flex items-center gap-2">
               {ticket.links?.length ? (
-                <Badge variant="outline" className="text-[11px]">
+                <Badge variant="outline" className="text-xs">
                   {ticket.links.length} link{ticket.links.length === 1 ? "" : "s"}
                 </Badge>
               ) : null}
@@ -230,9 +230,9 @@ export function TicketDetailMainColumn({
                       >
                         <div className="min-w-0 flex-1">
                           <p className="truncate">{url}</p>
-                          <p className="truncate text-[11px] text-slate-500">{formatLinkLabel(url)}</p>
+                          <p className="truncate text-xs text-slate-500">{formatLinkLabel(url)}</p>
                         </div>
-                        <span className="ml-2 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Open</span>
+                        <span className="ml-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">Open</span>
                       </a>
                       {canEditTickets ? (
                         <div className="flex items-center gap-1">

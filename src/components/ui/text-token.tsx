@@ -19,7 +19,7 @@ export function TextToken({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide",
+        "inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide",
         toneClasses[tone],
         className
       )}

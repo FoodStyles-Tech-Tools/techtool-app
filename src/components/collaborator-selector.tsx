@@ -69,18 +69,18 @@ export function CollaboratorSelector({
               {selectedUsers.slice(0, 3).map((user) => (
                 <Avatar key={user.id} className="h-5 w-5 border border-white">
                   <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
-                  <AvatarFallback className="text-[10px]">
+                  <AvatarFallback className="text-xs">
                     {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               ))}
             </div>
             {selectedUsers.length > 3 && (
-              <span className="text-[10px] text-slate-500">+{selectedUsers.length - 3}</span>
+              <span className="text-xs text-slate-500">+{selectedUsers.length - 3}</span>
             )}
           </div>
         )}
-        <span className="text-[10px] text-slate-500">Select</span>
+        <span className="text-xs text-slate-500">Select</span>
       </summary>
       <div className="border-t border-slate-200 p-3">
         <Input

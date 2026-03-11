@@ -27,7 +27,7 @@ interface SubtasksProps {
 
 const UNASSIGNED_VALUE = "unassigned"
 const subtaskSelectClassName =
-  "h-7 w-full rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+  "h-8 w-full rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
 
 export function Subtasks({
   ticketId,
@@ -176,7 +176,7 @@ export function Subtasks({
                   value={subtask.priority}
                   onValueChange={(value) => handleUpdateField(subtask.id, "priority", value)}
                   disabled={!canEditTickets || updatingId === subtask.id}
-                  triggerClassName="h-7 w-full"
+                  triggerClassName="h-8 w-full"
                 />
                 <select
                   value={subtask.assignee?.id || UNASSIGNED_VALUE}
@@ -202,7 +202,7 @@ export function Subtasks({
                   onValueChange={(value) => handleUpdateField(subtask.id, "status", value)}
                   disabled={!canEditTickets || updatingId === subtask.id}
                   allowSqaStatuses={allowSqaStatuses}
-                  triggerClassName="h-7 w-full"
+                  triggerClassName="h-8 w-full"
                 />
               </div>
             ))}

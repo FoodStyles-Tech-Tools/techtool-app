@@ -98,7 +98,7 @@ export function TicketDetailSidebar({
             onValueChange={onStatusChange}
             disabled={!canEditTickets || isAssignmentLocked || !!updatingFields.status}
             allowSqaStatuses={ticket.project?.require_sqa === true}
-            triggerClassName="h-8 text-xs"
+            triggerClassName="h-8"
           />
         </div>
       ) : null}

@@ -152,7 +152,7 @@ export function DateTimePicker({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
-        {!hideIcon ? <span className="mr-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Date</span> : null}
+        {!hideIcon ? <span className="mr-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Date</span> : null}
         {renderTriggerContent
           ? renderTriggerContent(value)
           : value

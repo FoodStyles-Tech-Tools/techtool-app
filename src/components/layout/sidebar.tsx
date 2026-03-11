@@ -162,7 +162,7 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
           {visibleAdmin.length > 0 ? (
             <>
               <div className="my-3 border-t border-slate-200" />
-              <p className="mb-1 px-2 text-[11px] font-medium uppercase tracking-wide text-slate-400">
+              <p className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-slate-400">
                 Workspace
               </p>
               <nav className="space-y-1">

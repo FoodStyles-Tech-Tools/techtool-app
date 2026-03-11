@@ -91,7 +91,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                   onValueChange={(status) => actions.handleStatusChange(status)}
                   disabled={!canEditTickets || isAssignmentLocked || !!actions.updatingFields.status}
                   allowSqaStatuses={ticket.project?.require_sqa === true}
-                  triggerClassName="h-8 text-xs"
+                  triggerClassName="h-8"
                 />
               </div>
             </div>
