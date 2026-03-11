@@ -74,6 +74,8 @@ interface TicketRowProps {
 
 const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowProps) {
   const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
+  const requesterLabel = ticket.requestedBy?.name || ticket.requestedBy?.email || "-"
+  const sqaLabel = ticket.sqaAssignee?.name || ticket.sqaAssignee?.email || "-"
   const dueDate = getDueDateDisplay(
     ticket.dueDate,
     isDoneStatus(normalizeStatusKey(ticket.status))
@@ -101,6 +103,12 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
       </TableCell>
       <TableCell className="py-2 text-sm text-slate-900">
         {assigneeLabel}
+      </TableCell>
+      <TableCell className="py-2 text-sm text-slate-900">
+        {requesterLabel}
+      </TableCell>
+      <TableCell className="py-2 text-sm text-slate-900">
+        {sqaLabel}
       </TableCell>
       <TableCell className="py-2 text-sm text-slate-900">
         {ticket.project?.name || "No project"}
@@ -180,6 +188,8 @@ export function TicketsTable({
             <TableHead className="h-9 py-2">
               <SortableHeader column="assignee" label="Assignee" sortConfig={sortConfig} onSort={onSort} />
             </TableHead>
+            <TableHead className="h-9 py-2">Requester</TableHead>
+            <TableHead className="h-9 py-2">SQA</TableHead>
             <TableHead className="h-9 py-2">Project</TableHead>
             <TableHead className="h-9 py-2">
               <SortableHeader column="due_date" label="Due" sortConfig={sortConfig} onSort={onSort} />
