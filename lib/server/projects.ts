@@ -1,5 +1,3 @@
-import "server-only"
-
 import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
 import { sanitizeLinkArray } from "@/lib/links"
 import { fetchUsersWithImages, type ServerUser } from "@/lib/server/users"
@@ -143,3 +141,4 @@ export async function getProjectsPageData(): Promise<{
     ticketStats,
   }
 }
+

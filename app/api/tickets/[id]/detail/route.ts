@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { fetchTicketDetailPayload } from "@/lib/server/ticket-detail"
 
@@ -45,3 +45,5 @@ export async function GET(
     )
   }
 }
+
+

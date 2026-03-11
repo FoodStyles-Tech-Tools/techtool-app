@@ -1,5 +1,3 @@
-import "server-only"
-
 import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
 import { getISOWeekKey } from "@/lib/report-date-range"
 import type {
@@ -277,3 +275,4 @@ export async function getReportData(
     avgLeadTimeByWeek,
   }
 }
+

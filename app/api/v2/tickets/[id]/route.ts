@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { getOrSetServerCache } from "@/lib/server/cache"
 import { fetchTicketDetailPayload } from "@/lib/server/ticket-detail"
@@ -56,3 +56,5 @@ export async function GET(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+

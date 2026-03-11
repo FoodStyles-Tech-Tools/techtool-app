@@ -1,6 +1,6 @@
 "use client"
 
-import dynamic from "next/dynamic"
+import dynamic from "@/src/compat/dynamic"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -311,3 +311,5 @@ export function TicketDetailMainColumn({
     </div>
   )
 }
+
+

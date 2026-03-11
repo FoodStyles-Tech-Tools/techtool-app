@@ -1,5 +1,3 @@
-import "server-only"
-
 import type { SupabaseClient } from "@supabase/supabase-js"
 import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
 
@@ -41,3 +39,4 @@ export async function fetchUsersWithImages(supabase: SupabaseClient): Promise<Se
     created_at: user.created_at,
   }))
 }
+

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation"
+import { notFound } from "@/src/compat/router"
 import { requirePagePermission } from "@/lib/server/require-page-permission"
 import { createServerClient } from "@/lib/supabase"
 import { TicketDetailPageClient } from "@/features/tickets/components/ticket-detail-page-client"
@@ -31,3 +31,5 @@ export default async function TicketByDisplayIdPage({ params }: TicketByDisplayI
 
   return <TicketDetailPageClient ticketId={ticket.id} />
 }
+
+

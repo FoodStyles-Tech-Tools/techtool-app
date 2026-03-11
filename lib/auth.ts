@@ -1,5 +1,3 @@
-import "server-only"
-
 import { mapSupabaseUserToSession } from "@/lib/auth-session"
 import { createServerClient } from "@/lib/supabase"
 
@@ -28,3 +26,4 @@ export const auth = {
 export function getAuth() {
   return auth
 }
+

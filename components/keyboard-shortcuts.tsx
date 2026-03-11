@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "@/lib/auth-client"
-import { usePathname } from "next/navigation"
-import dynamic from "next/dynamic"
+import { usePathname } from "@/src/compat/router"
+import dynamic from "@/src/compat/dynamic"
 import { usePermissions } from "@/hooks/use-permissions"
 import { FormDialogShell } from "@/components/ui/form-dialog-shell"
 import { useUsers } from "@/hooks/use-users"
@@ -273,3 +273,5 @@ export function KeyboardShortcuts() {
     </>
   )
 }
+
+

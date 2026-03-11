@@ -1,6 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
-
-vi.mock("server-only", () => ({}))
+import { describe, expect, it } from "vitest"
 
 describe("parseTicketListQuery", () => {
   it("prefers camelCase query params and parses booleans, paging, and sorting", async () => {
@@ -103,3 +101,5 @@ describe("parseTicketListQuery", () => {
     })
   })
 })
+
+

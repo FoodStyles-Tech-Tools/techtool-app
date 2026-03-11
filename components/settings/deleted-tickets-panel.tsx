@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/src/compat/link"
 import { useMemo } from "react"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
@@ -88,3 +88,5 @@ export function DeletedTicketsPanel() {
     </div>
   )
 }
+
+

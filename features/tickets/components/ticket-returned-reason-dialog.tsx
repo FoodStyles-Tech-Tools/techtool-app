@@ -1,6 +1,6 @@
 "use client"
 
-import dynamic from "next/dynamic"
+import dynamic from "@/src/compat/dynamic"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -72,3 +72,5 @@ export function TicketReturnedReasonDialog({
     </Dialog>
   )
 }
+
+

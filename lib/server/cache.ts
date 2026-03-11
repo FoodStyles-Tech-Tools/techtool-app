@@ -1,5 +1,3 @@
-import "server-only"
-
 type CacheEnvelope<T> = {
   value: T
   expiresAt: number
@@ -154,3 +152,4 @@ export async function bumpCacheNamespaceVersion(namespace: string): Promise<numb
 
   return nextValue
 }
+

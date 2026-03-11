@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/src/compat/router"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useDeleteAsset, type Asset } from "@/hooks/use-assets"
@@ -341,3 +341,5 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
     </EntityPageLayout>
   )
 }
+
+

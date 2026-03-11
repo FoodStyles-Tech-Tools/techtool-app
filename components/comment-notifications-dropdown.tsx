@@ -1,7 +1,7 @@
 "use client"
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import Link from "@/src/compat/link"
+import { useRouter } from "@/src/compat/router"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { useCommentNotifications, type CommentNotification } from "@/hooks/use-comment-notifications"
@@ -145,3 +145,5 @@ export function CommentNotificationsDropdown() {
     </details>
   )
 }
+
+

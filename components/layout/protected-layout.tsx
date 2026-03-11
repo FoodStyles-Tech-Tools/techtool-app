@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation"
+import { redirect } from "@/src/compat/router"
 import { AppShell } from "./app-shell"
 import { buildPermissionFlags, getCurrentUserPermissions } from "@/lib/server/permissions"
 
@@ -26,3 +26,5 @@ export default async function ProtectedLayout({
 
   return <AppShell permissionsBootstrap={bootstrapPayload}>{children}</AppShell>
 }
+
+

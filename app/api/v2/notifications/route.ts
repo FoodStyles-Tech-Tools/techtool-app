@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
 import type { CursorPage } from "@/types/api/common"
 
@@ -162,3 +162,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+

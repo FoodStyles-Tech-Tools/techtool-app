@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import Link from "next/link"
-import { useSearchParams } from "next/navigation"
+import Link from "@/src/compat/link"
+import { useSearchParams } from "@/src/compat/router"
 import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -1171,3 +1171,5 @@ export default function ClockifyClient() {
     </div>
   )
 }
+
+

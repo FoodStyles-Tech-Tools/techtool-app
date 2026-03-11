@@ -1,6 +1,6 @@
 "use client"
 
-import dynamic from "next/dynamic"
+import dynamic from "@/src/compat/dynamic"
 import { TicketCancelReasonDialog } from "@/features/tickets/components/ticket-cancel-reason-dialog"
 import { TicketOpenSubtasksDialog } from "@/features/tickets/components/ticket-open-subtasks-dialog"
 import { TicketReturnedReasonDialog } from "@/features/tickets/components/ticket-returned-reason-dialog"
@@ -106,3 +106,5 @@ export function TicketsDialogs({
     </>
   )
 }
+
+

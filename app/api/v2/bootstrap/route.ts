@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server"
+import { NextResponse } from "@/backend/compat/server"
 import { auth } from "@/lib/auth"
 import { buildPermissionFlags, getCurrentUserPermissions } from "@/lib/server/permissions"
 import type { PermissionSnapshot } from "@/types/auth"
@@ -33,3 +33,5 @@ export async function GET() {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+

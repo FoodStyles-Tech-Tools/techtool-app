@@ -41,6 +41,15 @@ function normalizeCallbackPath(callbackURL?: string): string {
   return callbackURL
 }
 
+function getPublicAppUrl() {
+  return (
+    import.meta.env.VITE_APP_URL ||
+    import.meta.env.VITE_PUBLIC_APP_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "http://localhost:5173"
+  )
+}
+
 function clearClientAuthCache() {
   if (typeof window === "undefined") return
   delete (window as typeof window & { __PERMISSIONS_CACHE__?: unknown }).__PERMISSIONS_CACHE__
@@ -108,7 +117,7 @@ export const signIn = {
       const redirectBase =
         typeof window !== "undefined"
           ? window.location.origin
-          : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"
+          : getPublicAppUrl()
       const redirectTo = new URL("/auth/callback", redirectBase)
       redirectTo.searchParams.set("next", callbackPath)
 

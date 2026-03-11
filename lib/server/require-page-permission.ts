@@ -1,6 +1,4 @@
-import "server-only"
-
-import { redirect } from "next/navigation"
+import { redirect } from "@/src/compat/router"
 import { requirePermission } from "@/lib/auth-helpers"
 
 type Resource =
@@ -22,3 +20,5 @@ export async function requirePagePermission(resource: Resource, action: Action) 
     redirect("/dashboard")
   }
 }
+
+

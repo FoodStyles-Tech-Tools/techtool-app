@@ -1,5 +1,3 @@
-import "server-only"
-
 import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
 
 export type ServerPermission = {
@@ -31,3 +29,4 @@ export async function getRolesWithPermissions(): Promise<ServerRole[]> {
 
   return roles || []
 }
+

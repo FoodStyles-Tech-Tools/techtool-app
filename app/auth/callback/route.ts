@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { getUserDisplayName, getUserImage } from "@/lib/auth-session"
 import { createServerClient } from "@/lib/supabase"
 
@@ -85,3 +85,5 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.redirect(new URL(nextPath, request.url))
 }
+
+

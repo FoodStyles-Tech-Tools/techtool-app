@@ -44,7 +44,6 @@ const AvatarImage = React.forwardRef<
   const context = useAvatarContext()
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
     <img
       ref={ref}
       alt={alt}

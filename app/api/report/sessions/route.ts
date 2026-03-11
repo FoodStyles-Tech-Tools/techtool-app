@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { getDefaultReportDateRange } from "@/lib/report-date-range"
 import type { ReportSession, ReportSessionFilters } from "@/types/api/report"
@@ -116,3 +116,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+

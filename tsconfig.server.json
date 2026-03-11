@@ -1,0 +1,27 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist-backend",
+    "rootDir": "./",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "types": ["node"],
+    "incremental": false
+  },
+  "include": [
+    "backend/**/*.ts",
+    "app/api/**/*.ts",
+    "app/auth/callback/route.ts",
+    "types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "src",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "app/**/page.tsx",
+    "app/**/layout.tsx",
+    "app/**/loading.tsx"
+  ]
+}

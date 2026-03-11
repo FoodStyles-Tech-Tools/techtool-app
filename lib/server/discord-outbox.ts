@@ -1,5 +1,3 @@
-import "server-only"
-
 const DISCORD_TICKET_BASE_URL = "https://techtool-app.vercel.app/tickets"
 
 type SupabaseLike = any
@@ -297,3 +295,4 @@ export async function processDiscordOutboxBatch(
 
   return { processed, sent, failed }
 }
+

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/src/compat/router"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { PageHeader } from "@/components/ui/page-header"
@@ -272,3 +272,5 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
     </EntityPageLayout>
   )
 }
+
+

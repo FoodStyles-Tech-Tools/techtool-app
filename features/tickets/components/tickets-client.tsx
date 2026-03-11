@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/src/compat/router"
 import { useProjects } from "@/hooks/use-projects"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useTicketsFilters } from "@/hooks/use-tickets-filters"
@@ -248,3 +248,5 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     </EntityPageLayout>
   )
 }
+
+

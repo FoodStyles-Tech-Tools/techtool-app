@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server"
-import { revalidateTag } from "next/cache"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
+import { revalidateTag } from "@/backend/compat/cache"
 
 export const runtime = "nodejs"
 
@@ -37,3 +37,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+

@@ -1,6 +1,6 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/src/compat/router"
 import { TicketDetailDialog } from "@/features/tickets/components/ticket-detail-dialog"
 
 export function TicketDisplayPageClient({ ticketId }: { ticketId: string }) {
@@ -20,3 +20,5 @@ export function TicketDisplayPageClient({ ticketId }: { ticketId: string }) {
     </div>
   )
 }
+
+

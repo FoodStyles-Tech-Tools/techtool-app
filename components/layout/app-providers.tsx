@@ -1,6 +1,6 @@
 "use client"
 
-import dynamic from "next/dynamic"
+import dynamic from "@/src/compat/dynamic"
 import { ReactQueryProvider } from "@/lib/react-query"
 import { AuthProvider } from "@/lib/auth-client"
 import { SignOutOverlayProvider } from "@/components/signout-overlay"
@@ -26,3 +26,5 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     </AuthProvider>
   )
 }
+
+

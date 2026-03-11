@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname } from "@/src/compat/router"
 import { FormDialogShell } from "@/components/ui/form-dialog-shell"
 import { TicketForm } from "@/components/forms/ticket-form"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -71,3 +71,5 @@ export function GlobalTicketDialog({ open, onOpenChange }: GlobalTicketDialogPro
     </FormDialogShell>
   )
 }
+
+

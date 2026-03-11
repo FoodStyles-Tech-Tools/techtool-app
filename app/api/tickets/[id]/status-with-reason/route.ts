@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { isRichTextEmpty } from "@/lib/rich-text"
 import { enqueueTicketStatusDiscordNotifications } from "@/lib/server/discord-outbox"
@@ -247,3 +247,5 @@ export async function POST(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+

@@ -1,4 +1,3 @@
-import "server-only"
 import { sanitizeLinkArray } from "@/lib/links"
 import type { SortColumn } from "@/lib/ticket-constants"
 import type { TicketListItem, TicketPerson } from "@/types/api/tickets"
@@ -336,3 +335,4 @@ export async function fetchTicketList(
     ...(pageInfo ? { pageInfo } : {}),
   }
 }
+

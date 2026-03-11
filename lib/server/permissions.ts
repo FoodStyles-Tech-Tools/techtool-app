@@ -1,5 +1,3 @@
-import "server-only"
-
 import { createServerClient } from "@/lib/supabase"
 import { auth } from "@/lib/auth"
 import { getServerCache, setServerCache } from "@/lib/server/cache"
@@ -185,3 +183,4 @@ export async function getCurrentUserPermissions(
 
   return resolvedUser
 }
+

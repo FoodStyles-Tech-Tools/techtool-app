@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { isRichTextEmpty } from "@/lib/rich-text"
 import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
@@ -135,3 +135,5 @@ export async function DELETE(
     )
   }
 }
+
+

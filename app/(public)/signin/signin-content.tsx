@@ -2,7 +2,7 @@
 
 import { signIn } from "@/lib/auth-client"
 import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams } from "@/src/compat/router"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
@@ -11,6 +11,7 @@ export function SignInContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const searchParams = useSearchParams()
+  const nextPath = searchParams.get("next") || "/tickets"
 
   // Force light theme on the sign-in page regardless of user preference
   useEffect(() => {
@@ -80,7 +81,7 @@ export function SignInContent() {
                   await signIn.social(
                     {
                       provider: "google",
-                      callbackURL: "/tickets"
+                      callbackURL: nextPath
                     },
                     {
                       onRequest: () => {
@@ -112,3 +113,5 @@ export function SignInContent() {
     </div>
   )
 }
+
+

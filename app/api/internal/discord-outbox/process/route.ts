@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { createServerClient } from "@/lib/supabase"
 import { processDiscordOutboxBatch } from "@/lib/server/discord-outbox"
 
@@ -32,3 +32,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+

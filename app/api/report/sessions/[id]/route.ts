@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { requirePermission, getSupabaseWithUserContext } from "@/lib/auth-helpers"
 import type { ReportSession, ReportSessionFilters } from "@/types/api/report"
 
@@ -158,3 +158,5 @@ export async function DELETE(
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+

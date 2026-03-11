@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation"
+import { redirect } from "@/src/compat/router"
 import { buildPermissionFlags, getCurrentUserPermissions } from "@/lib/server/permissions"
 
 export default async function SettingsPage() {
@@ -35,3 +35,5 @@ export default async function SettingsPage() {
 
   redirect("/tickets")
 }
+
+

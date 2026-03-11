@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Link from "next/link"
+import Link from "@/src/compat/link"
 import { useQueryClient } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -241,3 +241,5 @@ export function Subtasks({
     </div>
   )
 }
+
+

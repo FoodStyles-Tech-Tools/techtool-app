@@ -1,6 +1,6 @@
 import { createServerClient as createSupabaseServerClient } from "@supabase/ssr"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
-import { cookies } from "next/headers"
+import { cookies } from "@/backend/compat/headers"
 
 function getSupabaseUrl(): string {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -63,3 +63,5 @@ export const supabase = new Proxy({} as SupabaseClient, {
     return true
   },
 })
+
+

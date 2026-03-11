@@ -1,5 +1,3 @@
-import "server-only"
-
 type SupabaseLike = any
 
 const TICKET_LINK_REGEX = /(?:https?:\/\/techtool-app\.vercel\.app)?\/tickets\/([a-z]{2,}-\d+)\b/gi
@@ -256,3 +254,4 @@ export async function fetchTicketDetailPayload(supabase: SupabaseLike, ticketId:
     },
   }
 }
+

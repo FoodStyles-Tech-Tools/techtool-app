@@ -1,7 +1,7 @@
 "use client"
 
-import Link from "next/link"
-import { useRouter, usePathname } from "next/navigation"
+import Link from "@/src/compat/link"
+import { useRouter, usePathname } from "@/src/compat/router"
 import { cn } from "@/lib/utils"
 import { CommentNotificationsDropdown } from "@/components/comment-notifications-dropdown"
 import { signOut, useSession } from "@/lib/auth-client"
@@ -191,3 +191,5 @@ export function Sidebar() {
     </aside>
   )
 }
+
+

@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-vi.mock("server-only", () => ({}))
-
 const getCacheNamespaceVersion = vi.fn()
 const bumpCacheNamespaceVersion = vi.fn()
 
@@ -33,3 +31,5 @@ describe("ticket-cache helpers", () => {
     expect(bumpCacheNamespaceVersion).toHaveBeenCalledWith("tickets")
   })
 })
+
+

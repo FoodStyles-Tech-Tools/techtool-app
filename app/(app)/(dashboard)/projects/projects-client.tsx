@@ -1,8 +1,8 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/src/compat/link"
 import { useDeferredValue, useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/src/compat/router"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
@@ -333,3 +333,5 @@ export default function ProjectsClient({
     </EntityPageLayout>
   )
 }
+
+

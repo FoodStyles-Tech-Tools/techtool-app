@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { buildStatusChangeBody } from "@/lib/ticket-statuses"
 import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
@@ -87,3 +87,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+

@@ -1,7 +1,7 @@
 "use client"
 
 import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
-import dynamic from "next/dynamic"
+import dynamic from "@/src/compat/dynamic"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -264,3 +264,5 @@ export function AssetForm({
     </Form>
   )
 }
+
+

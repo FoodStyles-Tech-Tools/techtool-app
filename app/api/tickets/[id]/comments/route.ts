@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { startTiming, endTiming } from "@/lib/query-timing"
 import { isRichTextEmpty } from "@/lib/rich-text"
@@ -315,3 +315,5 @@ export async function POST(
     )
   }
 }
+
+

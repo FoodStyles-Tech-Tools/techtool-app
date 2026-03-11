@@ -1,5 +1,5 @@
 import { auth } from "@/lib/auth"
-import { NextResponse } from "next/server"
+import { NextResponse } from "@/backend/compat/server"
 import { getCurrentUserPermissions } from "@/lib/server/permissions"
 
 export const runtime = 'nodejs'
@@ -33,3 +33,5 @@ export async function GET() {
     )
   }
 }
+
+

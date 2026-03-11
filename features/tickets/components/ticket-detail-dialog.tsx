@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/src/compat/router"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useDepartments } from "@/hooks/use-departments"
 import { useProjects } from "@/hooks/use-projects"
@@ -354,3 +354,5 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
     </>
   )
 }
+
+

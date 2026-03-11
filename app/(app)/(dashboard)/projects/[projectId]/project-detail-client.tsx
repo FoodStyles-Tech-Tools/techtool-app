@@ -1,8 +1,8 @@
 "use client"
 
-import Link from "next/link"
+import Link from "@/src/compat/link"
 import { useMemo, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/src/compat/router"
 import { useProject } from "@/hooks/use-projects"
 import { useDepartments } from "@/hooks/use-departments"
 import { useUsers } from "@/hooks/use-users"
@@ -242,3 +242,5 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
     </EntityPageLayout>
   )
 }
+
+

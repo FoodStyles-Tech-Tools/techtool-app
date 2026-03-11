@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "@/backend/compat/server"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { normalizeRichTextInput } from "@/lib/rich-text"
 import { prepareLinkPayload } from "@/lib/links"
@@ -559,3 +559,5 @@ export async function PATCH(
     )
   }
 }
+
+

@@ -1,0 +1,214 @@
+import express, { type Request as ExpressRequest, type Response as ExpressResponse } from "express"
+import fs from "node:fs/promises"
+import path from "node:path"
+import { createRequestContext, getContextResponseHeaders, runWithRequestContext } from "./compat/request-context"
+import type { NextRequest } from "./compat/server"
+
+type RouteHandlerModule = Partial<Record<"GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS", RouteHandler>>
+type RouteHandler = (request: NextRequest, context?: { params: Record<string, string> }) => Promise<Response>
+
+type RegisteredRoute = {
+  methods: RouteHandlerModule
+  urlPath: string
+}
+
+const app = express()
+const port = Number(process.env.PORT || 3001)
+const runtimeRoot = path.resolve(__dirname, "..")
+const isCompiledRuntime = path.basename(runtimeRoot) === "dist-backend"
+const workspaceRoot = isCompiledRuntime ? path.resolve(runtimeRoot, "..") : runtimeRoot
+const routesRoot = isCompiledRuntime ? runtimeRoot : workspaceRoot
+const clientDistDir = path.join(workspaceRoot, "dist")
+
+app.use(express.json({ limit: "5mb" }))
+app.use(express.urlencoded({ extended: true }))
+
+function toUrlPath(basePath: string, absoluteFilePath: string) {
+  const relativePath = path.relative(basePath, absoluteFilePath).replace(/\\/g, "/")
+  const segments = relativePath.split("/")
+  segments.pop()
+
+  const mappedSegments = segments.map((segment) => {
+    const dynamicMatch = segment.match(/^\[(.+)\]$/)
+    return dynamicMatch ? `:${dynamicMatch[1]}` : segment
+  })
+
+  return `/${mappedSegments.join("/")}`.replace(/\/+/g, "/")
+}
+
+async function collectRouteFiles(rootDir: string): Promise<string[]> {
+  const entries = await fs.readdir(rootDir, { withFileTypes: true })
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const fullPath = path.join(rootDir, entry.name)
+      if (entry.isDirectory()) {
+        return collectRouteFiles(fullPath)
+      }
+
+      if (!/route\.(ts|js)$/.test(entry.name)) {
+        return []
+      }
+
+      return [fullPath]
+    })
+  )
+
+  return files.flat()
+}
+
+async function loadRoutes(): Promise<RegisteredRoute[]> {
+  const routeRoots = [
+    { baseDir: path.join(routesRoot, "app", "api"), baseUrl: "/api" },
+    { baseDir: path.join(routesRoot, "app", "auth"), baseUrl: "/auth" },
+  ]
+
+  const collectedRoutes: RegisteredRoute[] = []
+
+  for (const routeRoot of routeRoots) {
+    try {
+      const files = await collectRouteFiles(routeRoot.baseDir)
+
+      for (const filePath of files) {
+        const routeModule = (await import(filePath)) as RouteHandlerModule
+        const routePath = toUrlPath(routeRoot.baseDir, filePath)
+        collectedRoutes.push({
+          methods: routeModule,
+          urlPath: `${routeRoot.baseUrl}${routePath === "/" ? "" : routePath}`,
+        })
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error
+      }
+    }
+  }
+
+  return collectedRoutes
+}
+
+function getRequestBody(request: ExpressRequest) {
+  if (request.method === "GET" || request.method === "HEAD") {
+    return undefined
+  }
+
+  if (Buffer.isBuffer(request.body)) {
+    return new Uint8Array(request.body)
+  }
+
+  if (typeof request.body === "string") {
+    return request.body
+  }
+
+  if (request.body && Object.keys(request.body).length > 0) {
+    return JSON.stringify(request.body)
+  }
+
+  return undefined
+}
+
+function createNextRequest(request: ExpressRequest): NextRequest {
+  const url = new URL(`${request.protocol}://${request.get("host")}${request.originalUrl}`)
+  const nextRequest = new Request(url, {
+    method: request.method,
+    headers: request.headers as HeadersInit,
+    body: getRequestBody(request),
+  }) as NextRequest
+
+  nextRequest.nextUrl = url
+  nextRequest.cookies = {
+    getAll() {
+      const cookieHeader = request.headers.cookie || ""
+      return cookieHeader
+        .split(";")
+        .map((entry) => entry.trim())
+        .filter(Boolean)
+        .map((entry) => {
+          const separatorIndex = entry.indexOf("=")
+          return {
+            name: entry.slice(0, separatorIndex),
+            value: entry.slice(separatorIndex + 1),
+          }
+        })
+    },
+    set() {
+      // Incoming request cookies are immutable. Response cookies are written via request context.
+    },
+  }
+
+  return nextRequest
+}
+
+function appendHeaders(target: Headers, source: Headers) {
+  source.forEach((value, key) => {
+    target.append(key, value)
+  })
+}
+
+async function sendResponse(response: ExpressResponse, webResponse: Response) {
+  response.status(webResponse.status)
+
+  webResponse.headers.forEach((value, key) => {
+    if (key.toLowerCase() === "set-cookie") {
+      response.append("Set-Cookie", value)
+      return
+    }
+    response.setHeader(key, value)
+  })
+
+  const buffer = Buffer.from(await webResponse.arrayBuffer())
+  response.send(buffer)
+}
+
+async function registerRoutes() {
+  const routes = await loadRoutes()
+
+  for (const route of routes) {
+    const methodEntries = Object.entries(route.methods).filter((entry): entry is [keyof RouteHandlerModule, RouteHandler] =>
+      typeof entry[1] === "function"
+    )
+
+    for (const [method, handler] of methodEntries) {
+      app[method.toLowerCase() as "get"](
+        route.urlPath,
+        async (request: ExpressRequest, response: ExpressResponse) => {
+          const requestContext = createRequestContext(request.headers.cookie)
+
+          try {
+            const nextRequest = createNextRequest(request)
+            const webResponse = await runWithRequestContext(requestContext, async () =>
+              handler(nextRequest, { params: request.params as Record<string, string> })
+            )
+
+            appendHeaders(webResponse.headers, getContextResponseHeaders())
+            await sendResponse(response, webResponse)
+          } catch (error) {
+            console.error(`Unhandled error in ${method} ${route.urlPath}:`, error)
+            response.status(500).json({ error: "Internal server error" })
+          }
+        }
+      )
+    }
+  }
+}
+
+async function start() {
+  await registerRoutes()
+
+  if (await fs.stat(clientDistDir).then(() => true).catch(() => false)) {
+    app.use(express.static(clientDistDir))
+    app.get("*", async (request, response, next) => {
+      if (request.path.startsWith("/api/") || request.path.startsWith("/auth/")) {
+        next()
+        return
+      }
+      response.sendFile(path.join(clientDistDir, "index.html"))
+    })
+  }
+
+  app.listen(port, () => {
+    console.log(`TechTool server running on http://localhost:${port}`)
+  })
+}
+
+void start()
+
