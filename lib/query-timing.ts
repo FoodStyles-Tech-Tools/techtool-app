@@ -58,10 +58,7 @@ export async function timeQuery<T>(
   const id = startTiming(label)
   try {
     const result = await fn()
-    const duration = endTiming(id, logThreshold)
-    if (duration && duration > logThreshold) {
-      console.log(`[TIMED] ${label}: ${duration.toFixed(2)}ms`)
-    }
+    endTiming(id, logThreshold)
     return result as Awaited<T>
   } catch (error) {
     endTiming(id, logThreshold)

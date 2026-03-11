@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { Link, useParams, useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,9 +26,7 @@ import { useProjects } from "@/hooks/use-projects"
 import {
   ClockifyReportSession,
   useClockifySessions,
-  useClockifySettings,
   useCreateClockifySession,
-  useUpdateClockifySettings,
 } from "@/hooks/use-clockify"
 import { ClockifySessionsCard } from "@/features/clockify/components/clockify-sessions-card"
 import { ClockifyReportSessionCard } from "@/features/clockify/components/clockify-report-session-card"
@@ -42,7 +40,6 @@ import {
   matchesCustomField,
   nativeSelectClassName,
   normalizeTicketId,
-  scheduleOptions,
 } from "@/features/clockify/lib/client"
 import type {
   ClockifyConfirmDialogState,
@@ -54,10 +51,10 @@ import type {
 export default function ClockifyClient() {
   const queryClient = useQueryClient()
   const { flags, user: currentUser } = usePermissions()
+  const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>()
   const isAdmin = currentUser?.role?.toLowerCase() === "admin"
   const canManageClockify = flags?.canManageClockify ?? false
   const canCreateTickets = flags?.canCreateTickets ?? false
-  const canManageSettings = canManageClockify
   const canManageSessions = canManageClockify
   const [searchParams] = useSearchParams()
 
@@ -94,9 +91,6 @@ export default function ClockifyClient() {
     enabled: !!createTicketDialog,
     realtime: false,
   })
-
-  const { data: settings, isLoading: settingsLoading } = useClockifySettings()
-  const updateSettings = useUpdateClockifySettings()
 
   const handleFetchReport = async () => {
     if (!isAdmin) {
@@ -420,16 +414,6 @@ export default function ClockifyClient() {
     }
   }
 
-  const handleScheduleChange = async (value: string) => {
-    try {
-      await updateSettings.mutateAsync({ schedule: value })
-      toast("Schedule updated.", "success")
-    } catch (error) {
-      console.error("Clockify schedule update failed:", error)
-      toast("Failed to update schedule.", "error")
-    }
-  }
-
   const reportEntriesRaw = useMemo(() => {
     const reportData = selectedSession?.report_data
     if (!reportData || typeof reportData !== "object") return []
@@ -563,18 +547,21 @@ export default function ClockifyClient() {
   const sessionIdParam = searchParams.get("sessionId")
 
   useEffect(() => {
-    if (!sessionIdParam) {
+    const effectiveSessionId = routeSessionId || sessionIdParam
+    if (!effectiveSessionId) {
       setSelectedSession(null)
       return
     }
 
-    const match = sessions.find((session) => session.id === sessionIdParam) || null
+    const match = sessions.find((session) => session.id === effectiveSessionId) || null
     setSelectedSession(match)
-  }, [sessionIdParam, sessions])
+  }, [routeSessionId, sessionIdParam, sessions])
+
+  const isSessionDetailMode = Boolean(routeSessionId || sessionIdParam)
 
   return (
     <div className="space-y-6">
-      {isAdmin ? (
+      {!isSessionDetailMode && isAdmin ? (
         <div className="flex justify-end border-b pb-2">
           <div className="flex flex-wrap items-center gap-0.5">
             <button
@@ -597,74 +584,67 @@ export default function ClockifyClient() {
         </div>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Weekly Range</CardTitle>
-            <CardDescription>
-              Reports always run Monday through Sunday. Default is the last full week.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-slate-500">Selected range</p>
-                <p className="text-lg font-medium">{rangeLabel}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setWeekOffset((prev) => prev + 1)}
-                  aria-label="View older week"
-                >
-                  Older
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setWeekOffset((prev) => Math.max(1, prev - 1))}
-                  disabled={weekOffset <= 1}
-                  aria-label="View newer week"
-                >
-                  Newer
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {canManageSettings ? (
+      {!isSessionDetailMode ? (
+        <div className="grid gap-4">
           <Card>
             <CardHeader>
-              <CardTitle>Schedule</CardTitle>
-              <CardDescription>Select how often the report should run.</CardDescription>
+              <CardTitle>Weekly Range</CardTitle>
+              <CardDescription>
+                Reports always run Monday through Sunday. Default is the last full week.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <select
-                value={settings?.schedule || "weekly"}
-                onChange={(event) => handleScheduleChange(event.target.value)}
-                disabled={settingsLoading}
-                className={nativeSelectClassName}
-              >
-                {scheduleOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-slate-500">Selected range</p>
+                  <p className="text-lg font-medium">{rangeLabel}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWeekOffset((prev) => prev + 1)}
+                    aria-label="View older week"
+                  >
+                    Older
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setWeekOffset((prev) => Math.max(1, prev - 1))}
+                    disabled={weekOffset <= 1}
+                    aria-label="View newer week"
+                  >
+                    Newer
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
-      {canManageSessions ? (
+      {!isSessionDetailMode && canManageSessions ? (
         <ClockifySessionsCard
           isLoading={isLoading}
           sessions={sessions}
           onDeleteSession={handleDeleteSession}
           formatRangeLabel={formatRangeLabel}
         />
+      ) : null}
+
+      {isSessionDetailMode && !isLoading && !selectedSession ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Clockify Report Session</CardTitle>
+            <Button variant="outline" asChild>
+              <Link to="/clockify">Back to sessions</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-slate-500">Session not found.</p>
+          </CardContent>
+        </Card>
       ) : null}
 
       {selectedSession && canManageSessions ? (

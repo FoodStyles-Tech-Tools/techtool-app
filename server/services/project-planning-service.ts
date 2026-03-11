@@ -9,7 +9,7 @@ import type {
   UpdateSprintInput,
 } from "@/server/validation/project-planning"
 
-export async function listEpics(context: RequestContext, projectId: string) {
+export async function listEpics(context: RequestContext, projectId?: string) {
   return {
     epics: await epicsRepository.listEpics(context.supabase, projectId),
   }
@@ -59,7 +59,7 @@ export async function deleteEpic(context: RequestContext, id: string) {
   return { success: true }
 }
 
-export async function listSprints(context: RequestContext, projectId: string) {
+export async function listSprints(context: RequestContext, projectId?: string) {
   return {
     sprints: await sprintsRepository.listSprints(context.supabase, projectId),
   }

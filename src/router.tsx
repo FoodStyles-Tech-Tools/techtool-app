@@ -5,20 +5,8 @@ import { AppShell } from "@/components/layout/app-shell"
 import { getClientBackendUrl } from "@/lib/config/client-env"
 import { useSession } from "@/lib/auth-client"
 import { requestJson } from "@/lib/client/api"
+import { lazyComponent } from "@/lib/lazy-component"
 import { SignInContent } from "@/src/routes/signin/signin-content"
-import TicketsClient from "@/features/tickets/components/tickets-client"
-import { TicketDetailPageClient } from "@/features/tickets/components/ticket-detail-page-client"
-import ProjectsClient from "@/src/routes/projects/projects-client"
-import ProjectDetailClient from "@/src/routes/projects/project-detail-client"
-import AssetsClient from "@/src/routes/assets/assets-client"
-import UsersClient from "@/src/routes/admin/users/users-client"
-import RolesClient from "@/src/routes/admin/roles/roles-client"
-import ClockifyClient from "@/src/routes/clockify/clockify-client"
-import GuildLeadReportClient from "@/src/routes/report/guild-lead-report-client"
-import { WorkspaceStatusPanel } from "@/components/settings/workspace-status-panel"
-import { WorkspaceEpicsPanel } from "@/components/settings/workspace-epics-panel"
-import { WorkspaceSprintsPanel } from "@/components/settings/workspace-sprints-panel"
-import { DeletedTicketsPanel } from "@/components/settings/deleted-tickets-panel"
 import { useAssets } from "@/hooks/use-assets"
 import { useDepartments } from "@/hooks/use-departments"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -50,6 +38,95 @@ function FullScreenMessage({
     </div>
   )
 }
+
+function RouteLoadingFallback() {
+  return (
+    <FullScreenMessage
+      title="Loading route"
+      description="Preparing the page module."
+    />
+  )
+}
+
+const TicketsClient = lazyComponent(
+  () => import("@/features/tickets/components/tickets-client"),
+  { loading: RouteLoadingFallback }
+)
+
+const TicketDetailPageClient = lazyComponent(
+  () =>
+    import("@/features/tickets/components/ticket-detail-page-client").then(
+      (module) => module.TicketDetailPageClient
+    ),
+  { loading: RouteLoadingFallback }
+)
+
+const ProjectsClient = lazyComponent(
+  () => import("@/src/routes/projects/projects-client"),
+  { loading: RouteLoadingFallback }
+)
+
+const ProjectDetailClient = lazyComponent(
+  () => import("@/src/routes/projects/project-detail-client"),
+  { loading: RouteLoadingFallback }
+)
+
+const AssetsClient = lazyComponent(
+  () => import("@/src/routes/assets/assets-client"),
+  { loading: RouteLoadingFallback }
+)
+
+const UsersClient = lazyComponent(
+  () => import("@/src/routes/admin/users/users-client"),
+  { loading: RouteLoadingFallback }
+)
+
+const RolesClient = lazyComponent(
+  () => import("@/src/routes/admin/roles/roles-client"),
+  { loading: RouteLoadingFallback }
+)
+
+const ClockifyClient = lazyComponent(
+  () => import("@/src/routes/clockify/clockify-client"),
+  { loading: RouteLoadingFallback }
+)
+
+const GuildLeadReportClient = lazyComponent(
+  () => import("@/src/routes/report/guild-lead-report-client"),
+  { loading: RouteLoadingFallback }
+)
+
+const WorkspaceStatusPanel = lazyComponent(
+  () =>
+    import("@/components/settings/workspace-status-panel").then(
+      (module) => module.WorkspaceStatusPanel
+    ),
+  { loading: RouteLoadingFallback }
+)
+
+const WorkspaceEpicsPanel = lazyComponent(
+  () =>
+    import("@/components/settings/workspace-epics-panel").then(
+      (module) => module.WorkspaceEpicsPanel
+    ),
+  { loading: RouteLoadingFallback }
+)
+
+const WorkspaceSprintsPanel = lazyComponent(
+  () =>
+    import("@/components/settings/workspace-sprints-panel").then(
+      (module) => module.WorkspaceSprintsPanel
+    ),
+  { loading: RouteLoadingFallback }
+)
+
+const DeletedTicketsPanel = lazyComponent(
+  () =>
+    import("@/components/settings/deleted-tickets-panel").then(
+      (module) => module.DeletedTicketsPanel
+    ),
+  { loading: RouteLoadingFallback }
+)
 
 function AuthCallbackPage() {
   const location = useLocation()
@@ -165,23 +242,6 @@ function ProjectsPage() {
   const { departments, loading: departmentsLoading } = useDepartments({ realtime: false })
   const { data: users = [], isLoading: usersLoading } = useUsers({ realtime: false })
 
-  const ticketStats = useMemo(
-    () =>
-      projects.reduce<Record<string, { total: number; done: number; percentage: number }>>(
-        (accumulator, project) => {
-          const stats = project.ticket_stats || { total: 0, open: 0, done: 0 }
-          accumulator[project.id] = {
-            total: stats.total,
-            done: stats.done,
-            percentage: stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0,
-          }
-          return accumulator
-        },
-        {}
-      ),
-    [projects]
-  )
-
   if (projectsLoading || departmentsLoading || usersLoading) {
     return (
       <FullScreenMessage
@@ -196,7 +256,6 @@ function ProjectsPage() {
       initialProjects={projects}
       initialDepartments={departments}
       initialUsers={users}
-      initialTicketStats={ticketStats}
     />
   )
 }
@@ -304,6 +363,7 @@ export function AppRoutes() {
         <Route path="/sprints" element={<WorkspaceSprintsPanel />} />
         <Route path="/deleted-tickets" element={<DeletedTicketsPanel />} />
         <Route path="/clockify" element={<ClockifyClient />} />
+        <Route path="/clockify/sessions/:sessionId" element={<ClockifyClient />} />
         <Route path="/report" element={<GuildLeadReportClient />} />
         <Route path="/report/guild-lead-report" element={<GuildLeadReportClient />} />
         <Route path="/settings" element={<SettingsRedirectPage />} />

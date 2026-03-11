@@ -1,4 +1,4 @@
-import { getRequestCookies, setRequestCookie } from "./request-context"
+import { getRequestCookies, setRequestCookie } from "@/server/http/request-context"
 
 export function cookies() {
   return {

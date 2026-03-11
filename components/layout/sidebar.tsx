@@ -98,7 +98,7 @@ export function Sidebar() {
   const isVisible = (item: { flag?: keyof PermissionFlags; visible?: (flags: PermissionFlags) => boolean }) =>
     item.visible ? item.visible(flags) : item.flag ? Boolean(flags[item.flag]) : true
 
-  const visibleAdminItems = adminItems.filter(isVisible)
+  const navItems = [...primaryNavItems.filter(isVisible), ...adminItems.filter(isVisible)]
 
   const handleSignOut = async () => {
     try {
@@ -129,7 +129,7 @@ export function Sidebar() {
 
         <div className="flex-1 overflow-y-auto py-4">
           <nav className="space-y-1">
-            {primaryNavItems.filter(isVisible).map((item) => {
+            {navItems.map((item) => {
               const isActive = isPathActive(pathname, item.href)
 
               return (
@@ -145,32 +145,6 @@ export function Sidebar() {
                 </Link>
               )
             })}
-
-            {visibleAdminItems.length > 0 ? (
-              <div className="pt-3">
-                <div className="mb-2 px-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Admin
-                </div>
-                <div className="space-y-0.5">
-                  {visibleAdminItems.map((item) => {
-                    const isActive = isPathActive(pathname, item.href)
-
-                    return (
-                      <Link
-                        key={item.href}
-                        to={item.href}
-                        className={cn(
-                          "block rounded-md px-2 py-1.5 text-sm font-medium text-slate-600 transition-colors",
-                          isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
-                        )}
-                      >
-                        {item.title}
-                      </Link>
-                    )
-                  })}
-                </div>
-              </div>
-            ) : null}
           </nav>
         </div>
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useMemo } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { getDefaultReportDateRange } from "@/lib/report-date-range"
@@ -42,6 +43,7 @@ import type { ReportInsightKey } from "@/types/api/report"
 
 export default function GuildLeadReportClient() {
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [createName, setCreateName] = useState("")
@@ -58,6 +60,15 @@ export default function GuildLeadReportClient() {
   })
 
   useEffect(() => {
+    const sessionIdFromQuery = searchParams.get("sessionId")
+
+    if (sessionIdFromQuery && sessions.some((session) => session.id === sessionIdFromQuery)) {
+      if (selectedSessionId !== sessionIdFromQuery) {
+        setSelectedSessionId(sessionIdFromQuery)
+      }
+      return
+    }
+
     if (sessions.length === 0) {
       if (selectedSessionId) setSelectedSessionId(null)
       return
@@ -66,7 +77,24 @@ export default function GuildLeadReportClient() {
     if (!selectedSessionId || !sessions.some((session) => session.id === selectedSessionId)) {
       setSelectedSessionId(sessions[0].id)
     }
-  }, [sessions, selectedSessionId])
+  }, [searchParams, selectedSessionId, sessions])
+
+  useEffect(() => {
+    const current = searchParams.get("sessionId")
+    if (selectedSessionId) {
+      if (current === selectedSessionId) return
+      const next = new URLSearchParams(searchParams)
+      next.set("sessionId", selectedSessionId)
+      setSearchParams(next, { replace: true })
+      return
+    }
+
+    if (current) {
+      const next = new URLSearchParams(searchParams)
+      next.delete("sessionId")
+      setSearchParams(next, { replace: true })
+    }
+  }, [searchParams, selectedSessionId, setSearchParams])
 
   const { data: session } = useQuery({
     queryKey: ["report-session", selectedSessionId],

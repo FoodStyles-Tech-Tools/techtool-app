@@ -5,7 +5,7 @@ const entityIdParamsSchema = z.object({
 })
 
 const projectScopedQuerySchema = z.object({
-  project_id: z.string().trim().min(1, "project_id is required"),
+  project_id: z.string().trim().min(1, "project_id is required").optional(),
 })
 
 const optionalNullableString = z

@@ -21,13 +21,6 @@ import {
 } from "@/components/ui/table"
 import { AssetForm } from "@/components/forms/asset-form"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
 
 const formatLinkLabel = (url: string) => {
@@ -55,7 +48,6 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
   }, [initialAssets])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null)
-  const [detailAsset, setDetailAsset] = useState<Asset | null>(null)
   const [deletingAsset, setDeletingAsset] = useState<Asset | null>(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
@@ -138,19 +130,10 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                       <p className="text-sm">{asset.name}</p>
                       <div className="space-y-1">
                         {asset.description ? (
-                          <>
-                            <div
-                              className="asset-description asset-description--clamped"
-                              dangerouslySetInnerHTML={getSanitizedHtmlProps(asset.description) ?? { __html: "" }}
-                            />
-                            <button
-                              type="button"
-                              className="text-xs text-blue-600 hover:underline"
-                              onClick={() => setDetailAsset(asset)}
-                            >
-                              See more
-                            </button>
-                          </>
+                          <div
+                            className="asset-description asset-description--clamped"
+                            dangerouslySetInnerHTML={getSanitizedHtmlProps(asset.description) ?? { __html: "" }}
+                          />
                         ) : (
                           <p className="text-xs text-slate-500">
                             No description provided.
@@ -302,25 +285,6 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
           users={users}
         />
       </FormDialogShell>
-
-      <Dialog open={!!detailAsset} onOpenChange={(open) => !open && setDetailAsset(null)}>
-        <DialogContent className="max-w-3xl w-[90vw]">
-          <DialogHeader>
-            <DialogTitle>{detailAsset?.name || "Asset Details"}</DialogTitle>
-            <DialogDescription>
-              Full asset description
-            </DialogDescription>
-          </DialogHeader>
-          {detailAsset?.description ? (
-            <div
-              className="asset-description max-h-[60vh] overflow-y-auto"
-              dangerouslySetInnerHTML={getSanitizedHtmlProps(detailAsset.description) ?? { __html: "" }}
-            />
-          ) : (
-            <p className="text-sm text-slate-500">No description provided.</p>
-          )}
-        </DialogContent>
-      </Dialog>
 
       <ConfirmDialog
         open={!!deletingAsset}

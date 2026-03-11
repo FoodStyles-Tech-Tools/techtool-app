@@ -37,13 +37,18 @@ function mapCreateError(error: { message?: string; code?: string; hint?: string 
 
 export async function listSprints(
   supabase: SupabaseClient,
-  projectId: string
+  projectId?: string
 ): Promise<SprintRecord[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("sprints")
     .select(SPRINT_SELECT)
-    .eq("project_id", projectId)
     .order("created_at", { ascending: false })
+
+  if (projectId) {
+    query = query.eq("project_id", projectId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error("Error fetching sprints:", error)

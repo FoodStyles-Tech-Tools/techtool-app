@@ -1,6 +1,6 @@
 "use client"
 
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { useDeferredValue, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,14 +9,21 @@ import { EntityPageLayout } from "@/components/ui/entity-page-layout"
 import { FilterBar } from "@/components/ui/filter-bar"
 import { DataState } from "@/components/ui/data-state"
 import { FormDialogShell } from "@/components/ui/form-dialog-shell"
-import { ContentCard } from "@/components/ui/content-card"
+import { EntityTableShell } from "@/components/ui/entity-table-shell"
 import { ProjectForm } from "@/components/forms/project-form"
 import { usePermissions } from "@/hooks/use-permissions"
 import { toast } from "@/components/ui/toast"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 
 const ROWS_PER_PAGE = 20
 
-type ProjectTicketStats = { total: number; done: number; percentage: number }
 type Department = { id: string; name: string }
 type BasicUser = {
   id: string
@@ -45,32 +52,13 @@ type ProjectsClientProps = {
   initialProjects: ProjectRowData[]
   initialDepartments: Department[]
   initialUsers: BasicUser[]
-  initialTicketStats: Record<string, ProjectTicketStats>
-}
-
-function formatDate(value: string) {
-  return new Date(value).toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
-}
-
-function getProjectPeopleCount(project: ProjectRowData) {
-  const people = new Set<string>()
-  if (project.owner?.id) people.add(project.owner.id)
-  project.requesters.forEach((requester) => people.add(requester.id))
-  project.collaborators.forEach((collaborator) => people.add(collaborator.id))
-  return people.size
 }
 
 export default function ProjectsClient({
   initialProjects,
   initialDepartments,
   initialUsers,
-  initialTicketStats,
 }: ProjectsClientProps) {
-  const navigate = useNavigate()
   const { flags, user: currentUser } = usePermissions()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active")
@@ -119,19 +107,6 @@ export default function ProjectsClient({
   const endIndex = startIndex + ROWS_PER_PAGE
   const paginatedProjects = filteredProjects.slice(startIndex, endIndex)
   const canCreateProjects = flags?.canCreateProjects ?? false
-  const summary = useMemo(() => {
-    return filteredProjects.reduce(
-      (totals, project) => {
-        const stats = initialTicketStats[project.id] || { total: 0, done: 0, percentage: 0 }
-        totals.projects += 1
-        totals.openTickets += Math.max(0, stats.total - stats.done)
-        if (project.require_sqa) totals.requireSqa += 1
-        return totals
-      },
-      { projects: 0, openTickets: 0, requireSqa: 0 }
-    )
-  }, [filteredProjects, initialTicketStats])
-
   return (
     <EntityPageLayout
       header={
@@ -205,83 +180,51 @@ export default function ProjectsClient({
       }
     >
       <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <ContentCard className="p-4 shadow-none">
-            <p className="text-xs font-medium uppercase text-slate-500">Projects</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">{summary.projects}</p>
-          </ContentCard>
-          <ContentCard className="p-4 shadow-none">
-            <p className="text-xs font-medium uppercase text-slate-500">Open Tickets</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">{summary.openTickets}</p>
-          </ContentCard>
-          <ContentCard className="p-4 shadow-none">
-            <p className="text-xs font-medium uppercase text-slate-500">Require SQA</p>
-            <p className="mt-1 text-2xl font-semibold text-slate-900">{summary.requireSqa}</p>
-          </ContentCard>
-        </div>
-
         <DataState
           isEmpty={filteredProjects.length === 0}
           emptyTitle="No projects found"
           emptyDescription="Try changing the current filters or create a project."
         >
-          <ContentCard className="overflow-hidden shadow-none">
-            <div className="divide-y divide-slate-200">
-              {paginatedProjects.map((project) => {
-                const stats = initialTicketStats[project.id] || { total: 0, done: 0, percentage: 0 }
-                const openTickets = Math.max(0, stats.total - stats.done)
-                const ownerLabel = project.owner?.name || project.owner?.email || "Unassigned"
-                const departmentLabel = project.department?.name || "No department"
+          <EntityTableShell className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="h-9 py-2 text-xs">Project Name</TableHead>
+                  <TableHead className="h-9 py-2 text-xs">Project Owner</TableHead>
+                  <TableHead className="h-9 py-2 text-xs">Collaborators</TableHead>
+                  <TableHead className="h-9 py-2 text-xs">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedProjects.map((project) => {
+                  const ownerLabel = project.owner?.name || project.owner?.email || "Unassigned"
+                  const collaboratorLabel =
+                    project.collaborators.length > 0
+                      ? project.collaborators
+                          .map((collaborator) => collaborator.name || collaborator.email)
+                          .join(", ")
+                      : "-"
 
-                return (
-                  <div key={project.id} className="p-4">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="min-w-0 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Link
-                            to={`/projects/${project.id}`}
-                            className="text-sm font-medium text-slate-900 hover:underline"
-                          >
-                            {project.name}
-                          </Link>
-                          <span className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs capitalize text-slate-600">
-                            {project.status}
-                          </span>
-                          {project.require_sqa ? (
-                            <span className="inline-flex rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-600">
-                              SQA required
-                            </span>
-                          ) : null}
-                        </div>
-                        <p className="text-sm text-slate-600">
-                          {project.description || "No project description provided."}
-                        </p>
-                        <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-                          <span>Lead {ownerLabel}</span>
-                          <span>Department {departmentLabel}</span>
-                          <span>Created {formatDate(project.created_at)}</span>
-                        </div>
-                      </div>
-
-                      <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-3 lg:min-w-[360px]">
-                        <div>
-                          <dt className="text-xs uppercase text-slate-500">Open tickets</dt>
-                          <dd className="mt-1 font-medium text-slate-900">{openTickets}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs uppercase text-slate-500">Done</dt>
-                          <dd className="mt-1 font-medium text-slate-900">{stats.done}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-xs uppercase text-slate-500">People</dt>
-                          <dd className="mt-1 font-medium text-slate-900">{getProjectPeopleCount(project)}</dd>
-                        </div>
-                      </dl>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                  return (
+                    <TableRow key={project.id}>
+                      <TableCell className="py-2 text-sm">
+                        <Link
+                          to={`/projects/${project.id}`}
+                          className="font-medium text-slate-900 hover:underline"
+                        >
+                          {project.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="py-2 text-sm text-slate-700">{ownerLabel}</TableCell>
+                      <TableCell className="py-2 text-sm text-slate-700">{collaboratorLabel}</TableCell>
+                      <TableCell className="py-2 text-sm capitalize text-slate-700">
+                        {project.status}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
             <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
               <div className="text-sm text-slate-500">
                 Showing {filteredProjects.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} projects
@@ -306,7 +249,7 @@ export default function ProjectsClient({
                 </Button>
               </div>
             </div>
-          </ContentCard>
+          </EntityTableShell>
         </DataState>
       </div>
 

@@ -33,12 +33,20 @@ function mapCreateError(error: { message?: string; code?: string; hint?: string 
   return new HttpError(500, errorMessage)
 }
 
-export async function listEpics(supabase: SupabaseClient, projectId: string): Promise<EpicRecord[]> {
-  const { data, error } = await supabase
+export async function listEpics(
+  supabase: SupabaseClient,
+  projectId?: string
+): Promise<EpicRecord[]> {
+  let query = supabase
     .from("epics")
     .select(EPIC_SELECT)
-    .eq("project_id", projectId)
     .order("created_at", { ascending: false })
+
+  if (projectId) {
+    query = query.eq("project_id", projectId)
+  }
+
+  const { data, error } = await query
 
   if (error) {
     console.error("Error fetching epics:", error)

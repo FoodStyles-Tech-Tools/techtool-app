@@ -1,6 +1,7 @@
 import type { Response } from "express"
 import { ZodError } from "zod"
 import { HttpError } from "@/server/http/http-error"
+import { logServerError } from "@/server/http/request-logger"
 
 export function handleControllerError(
   response: Response,
@@ -36,6 +37,7 @@ export function handleControllerError(
     }
   }
 
-  console.error(`${context}:`, error)
+  const requestId = typeof response.locals?.requestId === "string" ? response.locals.requestId : undefined
+  logServerError(context, error, requestId ? { requestId } : undefined)
   response.status(500).json({ error: "Internal server error" })
 }

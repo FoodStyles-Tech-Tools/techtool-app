@@ -70,38 +70,32 @@ export function WorkspaceSprintsPanel() {
       setSprints([])
       return
     }
-
-    const visibleProjects =
-      projectFilter === "all" ? projects : projects.filter((project) => project.id === projectFilter)
-
-    if (!visibleProjects.length) {
-      setSprints([])
-      return
-    }
+    const projectNameById = new Map(projects.map((project) => [project.id, project.name]))
 
     setLoading(true)
     try {
-      const sprintResults = await Promise.all(
-        visibleProjects.map(async (project) => {
-          const res = await fetch(`/api/sprints?project_id=${project.id}`)
-          if (!res.ok) {
-            const error = await res.json().catch(() => null)
-            throw new Error(error?.error || `Failed to fetch sprints for ${project.name}`)
-          }
-          const data = await res.json()
-          const list = Array.isArray(data?.sprints) ? data.sprints : []
-          return list.map((sprint: any) => ({
-            ...sprint,
-            project_name: project.name,
-          })) as WorkspaceSprint[]
-        })
-      )
+      const query =
+        projectFilter === "all"
+          ? ""
+          : `?project_id=${encodeURIComponent(projectFilter)}`
+      const res = await fetch(`/api/sprints${query}`)
+      if (!res.ok) {
+        const error = await res.json().catch(() => null)
+        throw new Error(error?.error || "Failed to fetch sprints")
+      }
+      const data = await res.json()
+      const list = Array.isArray(data?.sprints) ? data.sprints : []
+      const merged = list
+        .map((sprint: any) => ({
+          ...sprint,
+          project_name: projectNameById.get(sprint.project_id) || "Unknown Project",
+        }))
+        .sort((a: WorkspaceSprint, b: WorkspaceSprint) =>
+          new Date(b.updated_at || b.created_at).getTime() -
+          new Date(a.updated_at || a.created_at).getTime()
+        )
 
-      const merged = sprintResults
-        .flat()
-        .sort((a, b) => new Date(b.updated_at || b.created_at).getTime() - new Date(a.updated_at || a.created_at).getTime())
-
-      setSprints(merged)
+      setSprints(merged as WorkspaceSprint[])
     } catch (error: any) {
       toast(error.message || "Failed to load sprints", "error")
       setSprints([])

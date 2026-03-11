@@ -4,6 +4,7 @@ import express from "express"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { getServerPort } from "@/lib/config/server-env"
+import { createRequestLoggingMiddleware } from "@/server/http/request-logger"
 import { createAssetsRouter } from "@/server/routes/assets-router"
 import { createAuthRouter } from "@/server/routes/auth-router"
 import { createClockifyRouter } from "@/server/routes/clockify-router"
@@ -55,20 +56,7 @@ function registerRequestLogging() {
     return
   }
 
-  app.use((request, response, next) => {
-    const startedAt = Date.now()
-
-    response.on("finish", () => {
-      if (!request.path.startsWith("/api/") && !request.path.startsWith("/auth/")) {
-        return
-      }
-
-      const duration = Date.now() - startedAt
-      console.log(`[http] ${request.method} ${request.originalUrl} -> ${response.statusCode} (${duration}ms)`)
-    })
-
-    next()
-  })
+  app.use(createRequestLoggingMiddleware())
 }
 
 async function start() {

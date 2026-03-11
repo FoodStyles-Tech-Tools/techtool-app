@@ -75,7 +75,7 @@ export function ClockifySessionsCard({
                       <div className="flex justify-end gap-2">
                         <Button size="sm" variant="ghost" asChild>
                           <Link
-                            to={`/clockify?sessionId=${session.id}`}
+                            to={`/clockify/sessions/${session.id}`}
                             aria-label="View report session"
                           >
                             View
