@@ -87,9 +87,10 @@ function isPathActive(pathname: string, href: string) {
 type SidebarProps = {
   className?: string
   onNavigate?: () => void
+  onToggleCollapsed?: () => void
 }
 
-export function Sidebar({ className, onNavigate }: SidebarProps) {
+export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarProps) {
   const pathname = useLocation().pathname
   const { flags } = usePermissions()
 
@@ -101,17 +102,39 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
   return (
     <aside
       className={cn(
-        "bg-white border-r border-slate-200",
+        "border-r border-slate-200 bg-white",
         className
       )}
     >
       <div className="flex h-full flex-col px-3 py-4">
         <div className="border-b border-slate-200 pb-4">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center justify-between gap-2.5">
             <div className="space-y-0.5">
               <p className="text-sm font-semibold text-slate-900">TECHTOOL</p>
               <p className="text-xs text-slate-500">Ticketing</p>
             </div>
+
+            {onToggleCollapsed ? (
+              <button
+                type="button"
+                onClick={onToggleCollapsed}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
+              >
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+            ) : null}
           </div>
         </div>
 
