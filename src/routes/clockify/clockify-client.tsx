@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { Button } from "@/components/ui/button"
+import { PageLayout } from "@/components/ui/page-layout"
+import { PageHeader } from "@/components/ui/page-header"
 import {
   Card,
   CardContent,
@@ -560,29 +562,35 @@ export default function ClockifyClient() {
   const isSessionDetailMode = Boolean(routeSessionId || sessionIdParam)
 
   return (
-    <div className="space-y-6">
-      {!isSessionDetailMode && isAdmin ? (
-        <div className="flex justify-end border-b pb-2">
-          <div className="flex flex-wrap items-center gap-0.5">
-            <button
-              type="button"
-              onClick={handleReuploadReport}
-              disabled={createSession.isPending}
-              className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Re-upload
-            </button>
-            <button
-              type="button"
-              onClick={handleFetchReport}
-              disabled={createSession.isPending}
-              className="inline-flex h-8 items-center gap-2 rounded-md px-2 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {createSession.isPending ? "Fetching..." : "Fetch Report"}
-            </button>
-          </div>
-        </div>
-      ) : null}
+    <PageLayout>
+      <PageHeader
+        title="Clockify"
+        description="Reconcile Clockify time entries with tickets and manage report sessions."
+        actions={
+          !isSessionDetailMode && isAdmin ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={handleReuploadReport}
+                disabled={createSession.isPending}
+              >
+                Re-upload
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={handleFetchReport}
+                disabled={createSession.isPending}
+              >
+                {createSession.isPending ? "Fetching..." : "Fetch Report"}
+              </Button>
+            </div>
+          ) : null
+        }
+      />
 
       {!isSessionDetailMode ? (
         <div className="grid gap-4">
@@ -765,6 +773,6 @@ export default function ClockifyClient() {
           />
         ) : null}
       </FormDialogShell>
-    </div>
+    </PageLayout>
   )
 }

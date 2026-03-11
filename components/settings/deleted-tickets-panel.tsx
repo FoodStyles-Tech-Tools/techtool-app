@@ -4,6 +4,8 @@ import { Link } from "react-router-dom"
 import { useMemo } from "react"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
+import { PageLayout } from "@/components/ui/page-layout"
+import { PageHeader } from "@/components/ui/page-header"
 import { DataState } from "@/components/ui/data-state"
 import { EntityTableShell } from "@/components/ui/entity-table-shell"
 import { useTickets } from "@/hooks/use-tickets"
@@ -34,13 +36,16 @@ export function DeletedTicketsPanel() {
   )
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium">Deleted</h3>
-        <Badge variant="outline" className="text-xs">
-          {rows.length} ticket{rows.length === 1 ? "" : "s"}
-        </Badge>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="Deleted tickets"
+        description="Archived tickets that have been removed from the active queue."
+        actions={
+          <Badge variant="outline" className="text-xs">
+            {rows.length} ticket{rows.length === 1 ? "" : "s"}
+          </Badge>
+        }
+      />
       <DataState
         loading={isLoading}
         isEmpty={!isLoading && rows.length === 0}
@@ -80,12 +85,12 @@ export function DeletedTicketsPanel() {
                   )}
                   {row.archivedReason ? <div className="line-clamp-2 text-[11px]">{row.archivedReason}</div> : null}
                 </div>
-              </div>
-            ))}
-          </div>
-        </EntityTableShell>
-      </DataState>
-    </div>
+            </div>
+          ))}
+        </div>
+      </EntityTableShell>
+    </DataState>
+    </PageLayout>
   )
 }
 

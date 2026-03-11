@@ -26,6 +26,7 @@ import { TicketsToolbar } from "@/components/tickets/tickets-toolbar"
 import { TicketsDialogs } from "@/features/tickets/components/tickets-dialogs"
 import { TicketsResults } from "@/features/tickets/components/tickets-results"
 import { PageHeader } from "@/components/ui/page-header"
+import { PageLayout } from "@/components/ui/page-layout"
 import { EntityPageLayout } from "@/components/ui/entity-page-layout"
 import { Button } from "@/components/ui/button"
 
@@ -170,9 +171,10 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   )
 
   return (
-    <EntityPageLayout
-      header={
-        <PageHeader
+    <PageLayout>
+      <EntityPageLayout
+        header={
+          <PageHeader
           title="Tickets"
           description={`Track and update work in ${selectedProjectLabel}. Keep the queue clean and move quickly.`}
           actions={
@@ -245,7 +247,8 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         onReturnedReasonCancel={handleReturnedReasonCancel}
         onReturnedReasonConfirm={handleReturnedReasonConfirm}
       />
-    </EntityPageLayout>
+      </EntityPageLayout>
+    </PageLayout>
   )
 }
 

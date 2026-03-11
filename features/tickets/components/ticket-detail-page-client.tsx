@@ -21,6 +21,7 @@ import { TicketDetailDialogs } from "@/features/tickets/components/ticket-detail
 import { TicketDetailHeader } from "@/features/tickets/components/ticket-detail-header"
 import { TicketDetailMainColumn } from "@/features/tickets/components/ticket-detail-main-column"
 import { TicketDetailSidebar } from "@/features/tickets/components/ticket-detail-sidebar"
+import { PageLayout } from "@/components/ui/page-layout"
 import { DataState } from "@/components/ui/data-state"
 import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@/lib/ticket-constants"
 
@@ -163,6 +164,7 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
 
   return (
     <>
+      <PageLayout>
       <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col gap-4">
         <TicketDetailHeader
           ticketId={ticketId}
@@ -291,6 +293,7 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
           </DataState>
         </div>
       </div>
+      </PageLayout>
 
       <TicketDetailDialogs
         canEditTickets={canEditTickets}

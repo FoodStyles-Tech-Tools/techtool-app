@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { PageLayout } from "@/components/ui/page-layout"
+import { PageHeader } from "@/components/ui/page-header"
+import { EntityTableShell } from "@/components/ui/entity-table-shell"
 import {
   Dialog,
   DialogContent,
@@ -44,8 +47,6 @@ type WorkspaceSprint = {
 
 const nativeSelectClassName =
   "h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
-const actionButtonClassName =
-  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50"
 
 export function WorkspaceSprintsPanel() {
   const { flags } = usePermissions()
@@ -152,39 +153,36 @@ export function WorkspaceSprintsPanel() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold">Sprint</h3>
-          <p className="text-sm text-slate-500">Sprints are always specific to a project.</p>
-        </div>
-        <div className="flex items-end gap-2">
-          <div className="w-[260px] space-y-1">
-            <Label htmlFor="sprint-project-filter">Project</Label>
-            <select
-              id="sprint-project-filter"
-              value={projectFilter}
-              onChange={(event) => setProjectFilter(event.target.value)}
-              className={nativeSelectClassName}
-            >
-              <option value="all">All Projects</option>
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
+    <PageLayout>
+      <PageHeader
+        title="Sprints"
+        description="Sprints are always specific to a project."
+        actions={
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="w-[260px] space-y-1">
+              <Label htmlFor="sprint-project-filter">Project</Label>
+              <select
+                id="sprint-project-filter"
+                value={projectFilter}
+                onChange={(event) => setProjectFilter(event.target.value)}
+                className={nativeSelectClassName}
+              >
+                <option value="all">All Projects</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button type="button" size="sm" variant="outline" onClick={openCreateDialog}>
+              Create Sprint
+            </Button>
           </div>
-          <Button type="button" size="sm" variant="outline" onClick={openCreateDialog}>
-            Create Sprint
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs uppercase tracking-wide text-slate-500">
-          Sprints belong to one project and can optionally include dates.
-        </div>
+      <EntityTableShell>
         <Table>
           <TableHeader>
             <TableRow>
@@ -221,25 +219,27 @@ export function WorkspaceSprintsPanel() {
                   <TableCell>{sprint.updated_at ? new Date(sprint.updated_at).toLocaleDateString() : "-"}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         type="button"
-                        className={actionButtonClassName}
                         onClick={() => openEditDialog(sprint)}
                         aria-label={`Edit ${sprint.name}`}
                         title="Edit sprint"
                       >
                         Edit
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         type="button"
-                        className={actionButtonClassName}
                         onClick={() => setSprintToDelete(sprint)}
                         disabled={deleteSprint.isPending}
                         aria-label={`Delete ${sprint.name}`}
                         title="Delete sprint"
                       >
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -247,7 +247,7 @@ export function WorkspaceSprintsPanel() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </EntityTableShell>
 
       <Dialog
         open={dialogOpen}
@@ -325,6 +325,6 @@ export function WorkspaceSprintsPanel() {
           }
         }}
       />
-    </div>
+    </PageLayout>
   )
 }

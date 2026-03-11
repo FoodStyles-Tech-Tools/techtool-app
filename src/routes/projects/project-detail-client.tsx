@@ -7,6 +7,7 @@ import { useDepartments } from "@/hooks/use-departments"
 import { useUsers } from "@/hooks/use-users"
 import { usePermissions } from "@/hooks/use-permissions"
 import { PageHeader } from "@/components/ui/page-header"
+import { PageLayout } from "@/components/ui/page-layout"
 import { EntityPageLayout } from "@/components/ui/entity-page-layout"
 import { DataState } from "@/components/ui/data-state"
 import { ContentCard } from "@/components/ui/content-card"
@@ -48,9 +49,10 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
     : "No collaborators"
 
   return (
-    <EntityPageLayout
-      header={
-        <PageHeader
+    <PageLayout>
+      <EntityPageLayout
+        header={
+          <PageHeader
           title={project?.name || "Project"}
           description={project?.description || "Use this project page to understand scope, ownership, and jump into related tickets."}
           actions={
@@ -238,6 +240,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
           />
         ) : null}
       </FormDialogShell>
-    </EntityPageLayout>
+      </EntityPageLayout>
+    </PageLayout>
   )
 }

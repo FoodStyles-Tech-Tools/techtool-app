@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useDeleteAsset, type Asset } from "@/hooks/use-assets"
 import { PageHeader } from "@/components/ui/page-header"
+import { PageLayout } from "@/components/ui/page-layout"
 import { EntityPageLayout } from "@/components/ui/entity-page-layout"
 import { DataState } from "@/components/ui/data-state"
 import { EntityTableShell } from "@/components/ui/entity-table-shell"
@@ -87,21 +88,22 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
   }
 
   return (
-    <EntityPageLayout
-      header={
-        <PageHeader
-          title="Assets"
-          description="Maintain shared assets, owners, collaborators, and source links."
-          actions={
-            canCreateAssets ? (
-              <Button type="button" onClick={handleAddAsset}>
-                Create Asset
-              </Button>
-            ) : null
-          }
-        />
-      }
-    >
+    <PageLayout>
+      <EntityPageLayout
+        header={
+          <PageHeader
+            title="Assets"
+            description="Maintain shared assets, owners, collaborators, and source links."
+            actions={
+              canCreateAssets ? (
+                <Button type="button" onClick={handleAddAsset}>
+                  Create Asset
+                </Button>
+              ) : null
+            }
+          />
+        }
+      >
       <DataState
         isEmpty={assets.length === 0}
         emptyTitle="No assets yet"
@@ -262,6 +264,7 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
           }
         }}
       />
-    </EntityPageLayout>
+      </EntityPageLayout>
+    </PageLayout>
   )
 }

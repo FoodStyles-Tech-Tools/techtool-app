@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { emitPermissionsRefresh, usePermissions } from "@/hooks/use-permissions"
 import { PageHeader } from "@/components/ui/page-header"
+import { PageLayout } from "@/components/ui/page-layout"
 import { EntityPageLayout } from "@/components/ui/entity-page-layout"
 import { DataState } from "@/components/ui/data-state"
 import { FormDialogShell } from "@/components/ui/form-dialog-shell"
@@ -229,21 +230,22 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
   }
 
   return (
-    <EntityPageLayout
-      header={
-        <PageHeader
-          title="Roles"
-          description="Create roles and manage permission sets across the workspace."
-          actions={
-            canCreateRoles ? (
-              <Button type="button" onClick={handleAddRole}>
-                Create Role
-              </Button>
-            ) : null
-          }
-        />
-      }
-    >
+    <PageLayout>
+      <EntityPageLayout
+        header={
+          <PageHeader
+            title="Roles"
+            description="Create roles and manage permission sets across the workspace."
+            actions={
+              canCreateRoles ? (
+                <Button type="button" onClick={handleAddRole}>
+                  Create Role
+                </Button>
+              ) : null
+            }
+          />
+        }
+      >
       <DataState
         isEmpty={roles.length === 0}
         emptyTitle="No roles yet"
@@ -413,6 +415,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
           }
         }}
       />
-    </EntityPageLayout>
+      </EntityPageLayout>
+    </PageLayout>
   )
 }

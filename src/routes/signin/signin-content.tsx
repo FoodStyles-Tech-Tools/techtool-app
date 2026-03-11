@@ -4,8 +4,7 @@ import { signIn } from "@/lib/auth-client"
 import { useState, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { cn } from "@/lib/utils"
+import { FullScreenMessage } from "@/src/layouts/full-screen-message"
 
 export function SignInContent() {
   const [loading, setLoading] = useState(false)
@@ -51,52 +50,42 @@ export function SignInContent() {
   }, [searchParams])
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4 text-slate-900">
-      <Card className="max-w-md w-full border border-slate-200 bg-white shadow-md">
-        <CardHeader>
-          <CardTitle className="text-lg md:text-xl">Sign in to TechTool App</CardTitle>
-          <CardDescription className="text-xs text-slate-500 md:text-sm">
-            Enter your email below to login to your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4">
-            {error ? (
-              <div className="rounded-md border border-red-200 bg-red-50 p-4">
-                <p className="text-sm text-red-600">{error}</p>
-              </div>
-            ) : null}
-
-            <div className={cn("flex w-full items-center justify-between gap-2", "flex-col")}>
-              <Button
-                variant="outline"
-                className={cn("h-11 w-full gap-2 bg-white hover:bg-slate-100")}
-                disabled={loading}
-                onClick={async () => {
-                  await signIn.social(
-                    {
-                      provider: "google",
-                      callbackURL: nextPath,
-                    },
-                    {
-                      onRequest: () => {
-                        setLoading(true)
-                        setError(null)
-                      },
-                      onError: () => {
-                        setLoading(false)
-                        setError("Failed to sign in. Please try again.")
-                      },
-                    }
-                  )
-                }}
-              >
-                {loading ? "Signing in..." : "Sign in with Google"}
-              </Button>
-            </div>
+    <FullScreenMessage
+      title="Sign in to TechTool App"
+      description="Use your Google account to sign in."
+    >
+      <div className="flex flex-col gap-4 text-left">
+        {error ? (
+          <div className="rounded-md border border-red-200 bg-red-50 p-4">
+            <p className="text-sm text-red-600">{error}</p>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        ) : null}
+        <Button
+          variant="outline"
+          className="h-11 w-full bg-white hover:bg-slate-100"
+          disabled={loading}
+          onClick={async () => {
+            await signIn.social(
+              {
+                provider: "google",
+                callbackURL: nextPath,
+              },
+              {
+                onRequest: () => {
+                  setLoading(true)
+                  setError(null)
+                },
+                onError: () => {
+                  setLoading(false)
+                  setError("Failed to sign in. Please try again.")
+                },
+              }
+            )
+          }}
+        >
+          {loading ? "Signing in..." : "Sign in with Google"}
+        </Button>
+      </div>
+    </FullScreenMessage>
   )
 }

@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
+import { PageLayout } from "@/components/ui/page-layout"
+import { PageHeader } from "@/components/ui/page-header"
+import { EntityTableShell } from "@/components/ui/entity-table-shell"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -36,8 +39,6 @@ type StatusRow = TicketStatus & {
 }
 
 const DEFAULT_COLOR = "#9ca3af"
-const actionButtonClassName =
-  "inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-slate-500 transition-colors hover:border-slate-200 hover:bg-slate-50 hover:text-slate-900"
 
 export function WorkspaceStatusPanel() {
   const { flags } = usePermissions()
@@ -158,21 +159,18 @@ export function WorkspaceStatusPanel() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold">Status</h3>
-          <p className="text-sm text-slate-500">Global ticket statuses used across projects.</p>
-        </div>
-        <Button type="button" size="sm" variant="outline" onClick={openCreate}>
-          Create Status
-        </Button>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="Status"
+        description="Global ticket statuses used across projects."
+        actions={
+          <Button type="button" size="sm" variant="outline" onClick={openCreate}>
+            Create Status
+          </Button>
+        }
+      />
 
-      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-slate-50 px-4 py-2 text-xs uppercase tracking-wide text-slate-500">
-          Statuses control available ticket workflow states.
-        </div>
+      <EntityTableShell>
         <Table>
           <TableHeader>
             <TableRow>
@@ -212,24 +210,26 @@ export function WorkspaceStatusPanel() {
                   <TableCell>{status.updated_at ? new Date(status.updated_at).toLocaleDateString() : "-"}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         type="button"
-                        className={actionButtonClassName}
                         onClick={() => openEdit(status)}
                         aria-label={`Edit ${status.label}`}
                         title="Edit status"
                       >
                         Edit
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         type="button"
-                        className={actionButtonClassName}
                         onClick={() => setStatusToDelete(status)}
                         aria-label={`Delete ${status.label}`}
                         title="Delete status"
                       >
                         Delete
-                      </button>
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -237,7 +237,7 @@ export function WorkspaceStatusPanel() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </EntityTableShell>
 
       <Dialog
         open={dialogOpen}
@@ -308,6 +308,6 @@ export function WorkspaceStatusPanel() {
           }
         }}
       />
-    </div>
+    </PageLayout>
   )
 }

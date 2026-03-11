@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { PageHeader } from "@/components/ui/page-header"
+import { PageLayout } from "@/components/ui/page-layout"
 import { EntityPageLayout } from "@/components/ui/entity-page-layout"
 import { DataState } from "@/components/ui/data-state"
 import { EntityTableShell } from "@/components/ui/entity-table-shell"
@@ -115,21 +116,22 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
   }
 
   return (
-    <EntityPageLayout
-      header={
-        <PageHeader
-          title="Users"
-          description="Manage who can access the workspace and what role they hold."
-          actions={
-            canCreateUsers ? (
-              <Button type="button" onClick={handleAddUser}>
-                Create User
-              </Button>
-            ) : null
-          }
-        />
-      }
-    >
+    <PageLayout>
+      <EntityPageLayout
+        header={
+          <PageHeader
+            title="Users"
+            description="Manage who can access the workspace and what role they hold."
+            actions={
+              canCreateUsers ? (
+                <Button type="button" onClick={handleAddUser}>
+                  Create User
+                </Button>
+              ) : null
+            }
+          />
+        }
+      >
       <DataState
         isEmpty={users.length === 0}
         emptyTitle="No users yet"
@@ -256,7 +258,8 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
           }
         }}
       />
-    </EntityPageLayout>
+      </EntityPageLayout>
+    </PageLayout>
   )
 }
 

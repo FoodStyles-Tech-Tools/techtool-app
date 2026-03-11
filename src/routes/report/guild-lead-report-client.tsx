@@ -7,6 +7,8 @@ import { format } from "date-fns"
 import { getDefaultReportDateRange } from "@/lib/report-date-range"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { PageLayout } from "@/components/ui/page-layout"
+import { PageHeader } from "@/components/ui/page-header"
 import { toast } from "@/components/ui/toast"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -231,13 +233,11 @@ export default function GuildLeadReportClient() {
   const showSessionView = !!selectedSessionId && !!session
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold">Guild Lead Report</h1>
-        <p className="mt-0.5 text-sm text-slate-500">
-          Ticket analytics by date range: volume, requesters, status, response time, and lead time.
-        </p>
-      </div>
+    <PageLayout>
+      <PageHeader
+        title="Guild Lead Report"
+        description="Ticket analytics by date range: volume, requesters, status, response time, and lead time."
+      />
 
       <Card className="border-slate-200 shadow-none">
         <CardHeader className="border-b border-slate-200 bg-slate-50">
@@ -478,6 +478,6 @@ export default function GuildLeadReportClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageLayout>
   )
 }
