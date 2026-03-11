@@ -12,6 +12,8 @@ import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import { DataState } from "@client/components/ui/data-state"
 import { Button } from "@client/components/ui/button"
 import { Input } from "@client/components/ui/input"
+import { Select } from "@client/components/ui/select"
+import { Checkbox } from "@client/components/ui/checkbox"
 import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import {
   Table,
@@ -134,29 +136,24 @@ export default function ProjectsClient({
                 }}
               />
             </div>
-            <select
+            <Select
               value={statusFilter}
               onChange={(event) => {
                 setStatusFilter(event.target.value as "active" | "all")
                 setCurrentPage(1)
               }}
-              className="h-9 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
             >
               <option value="active">Active only</option>
               <option value="all">All projects</option>
-            </select>
-            <label className="flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                checked={assignedToMeOnly}
-                onChange={(event) => {
-                  setAssignedToMeOnly(event.target.checked)
-                  setCurrentPage(1)
-                }}
-                className="h-4 w-4 rounded border-slate-300"
-              />
-              Assigned to me
-            </label>
+            </Select>
+            <Checkbox
+              checked={assignedToMeOnly}
+              onChange={(event) => {
+                setAssignedToMeOnly(event.target.checked)
+                setCurrentPage(1)
+              }}
+              label="Assigned to me"
+            />
           </>
         }
         actions={

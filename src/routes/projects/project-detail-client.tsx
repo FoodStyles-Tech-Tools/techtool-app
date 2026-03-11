@@ -10,7 +10,7 @@ import { PageHeader } from "@client/components/ui/page-header"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { DataState } from "@client/components/ui/data-state"
-import { ContentCard } from "@client/components/ui/content-card"
+import { Card } from "@client/components/ui/card"
 import { Button } from "@client/components/ui/button"
 import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import { ProjectForm } from "@client/components/forms/project-form"
@@ -86,7 +86,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
         {project ? (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,360px)]">
             <div className="space-y-4">
-              <ContentCard className="p-5 shadow-none">
+              <Card className="p-5 shadow-none">
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <div>
                     <p className="text-xs font-medium uppercase text-slate-500">Status</p>
@@ -105,16 +105,16 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                     <p className="mt-1 text-sm text-slate-900">{project.department?.name || "No department"}</p>
                   </div>
                 </div>
-              </ContentCard>
+              </Card>
 
-              <ContentCard className="p-5 shadow-none">
+              <Card className="p-5 shadow-none">
                 <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
                 <p className="mt-3 text-sm leading-6 text-slate-600">
                   {project.description || "No project description provided."}
                 </p>
-              </ContentCard>
+              </Card>
 
-              <ContentCard className="p-5 shadow-none">
+              <Card className="p-5 shadow-none">
                 <h2 className="text-sm font-semibold text-slate-900">People</h2>
                 <dl className="mt-3 space-y-4 text-sm">
                   <div>
@@ -130,11 +130,11 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                     <dd className="mt-1 text-slate-900">{collaboratorsLabel}</dd>
                   </div>
                 </dl>
-              </ContentCard>
+              </Card>
             </div>
 
             <div className="space-y-4">
-              <ContentCard className="p-5 shadow-none">
+              <Card className="p-5 shadow-none">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-sm font-semibold text-slate-900">Ticket Queue</h2>
@@ -158,9 +158,9 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                     <dd className="mt-1 text-sm text-slate-900">{ticketStats.total}</dd>
                   </div>
                 </dl>
-              </ContentCard>
+              </Card>
 
-              <ContentCard className="p-5 shadow-none">
+              <Card className="p-5 shadow-none">
                 <h2 className="text-sm font-semibold text-slate-900">Details</h2>
                 <dl className="mt-3 space-y-3 text-sm">
                   <div>
@@ -180,9 +180,9 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                     <dd className="mt-1 text-slate-900">{formatDate(project.created_at)}</dd>
                   </div>
                 </dl>
-              </ContentCard>
+              </Card>
 
-              <ContentCard className="p-5 shadow-none">
+              <Card className="p-5 shadow-none">
                 <h2 className="text-sm font-semibold text-slate-900">Links</h2>
                 <div className="mt-3 space-y-2">
                   {project.links?.length ? (
@@ -202,7 +202,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                     <p className="text-sm text-slate-500">No links added.</p>
                   )}
                 </div>
-              </ContentCard>
+              </Card>
             </div>
           </div>
         ) : null}

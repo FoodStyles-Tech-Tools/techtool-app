@@ -1,10 +1,1 @@
-import { cn } from "@client/lib/utils"
-
-type ContentCardProps = {
-  children: React.ReactNode
-  className?: string
-}
-
-export function ContentCard({ children, className }: ContentCardProps) {
-  return <section className={cn("rounded-lg border border-slate-200 bg-white shadow-sm", className)}>{children}</section>
-}
+export { Card as ContentCard } from "./card"

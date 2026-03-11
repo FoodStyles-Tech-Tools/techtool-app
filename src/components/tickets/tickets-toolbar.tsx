@@ -2,6 +2,9 @@
 
 import { Button } from "@client/components/ui/button"
 import { Input } from "@client/components/ui/input"
+import { Select } from "@client/components/ui/select"
+import { Checkbox } from "@client/components/ui/checkbox"
+import { FilterBar } from "@client/components/ui/filter-bar"
 
 interface ProjectOption {
   id: string
@@ -46,77 +49,69 @@ export function TicketsToolbar({
   resetToolbarFilters,
   currentUserId,
 }: TicketsToolbarProps) {
-  const selectClassName =
-    "h-9 rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
-
   return (
-    <div className="overflow-x-auto">
-      <div className="flex min-w-max items-center gap-2 whitespace-nowrap py-1">
-        <Input
-          value={searchQuery}
-          onChange={(event) => setSearchQuery(event.target.value)}
-          placeholder="Search tickets by ID, title, or description"
-          className="h-9 w-80"
-        />
+    <FilterBar
+      filters={
+        <>
+          <Input
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search tickets by ID, title, or description"
+            className="h-9 w-80"
+          />
 
-        <select
-          value={projectFilter}
-          onChange={(event) => setProjectFilter(event.target.value)}
-          className={selectClassName}
-          aria-label="Project filter"
-        >
-          <option value="all">All projects</option>
-          {projectOptions.map((project) => (
-            <option key={project.id} value={project.id}>
-              {project.name}
-            </option>
-          ))}
-        </select>
+          <Select
+            value={projectFilter}
+            onChange={(event) => setProjectFilter(event.target.value)}
+            aria-label="Project filter"
+          >
+            <option value="all">All projects</option>
+            {projectOptions.map((project) => (
+              <option key={project.id} value={project.id}>
+                {project.name}
+              </option>
+            ))}
+          </Select>
 
-        <select
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          className={selectClassName}
-          aria-label="Status filter"
-        >
-          <option value="all">All statuses</option>
-          {statusOptions.map((status) => (
-            <option key={status.id} value={status.id}>
-              {status.label}
-            </option>
-          ))}
-        </select>
+          <Select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            aria-label="Status filter"
+          >
+            <option value="all">All statuses</option>
+            {statusOptions.map((status) => (
+              <option key={status.id} value={status.id}>
+                {status.label}
+              </option>
+            ))}
+          </Select>
 
-        <select
-          value={assigneeFilter}
-          onChange={(event) => setAssigneeFilter(event.target.value)}
-          className={selectClassName}
-          aria-label="Assignee filter"
-        >
-          <option value="all">All assignees</option>
-          {currentUserId ? <option value={currentUserId}>Assigned to me</option> : null}
-          <option value="unassigned">Unassigned</option>
-        </select>
+          <Select
+            value={assigneeFilter}
+            onChange={(event) => setAssigneeFilter(event.target.value)}
+            aria-label="Assignee filter"
+          >
+            <option value="all">All assignees</option>
+            {currentUserId ? <option value={currentUserId}>Assigned to me</option> : null}
+            <option value="unassigned">Unassigned</option>
+          </Select>
 
-        <label className="flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-600">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={excludeDone}
             onChange={(event) => setExcludeDone(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300"
+            label="Hide done"
           />
-          Hide done
-        </label>
-
+        </>
+      }
+      actions={
         <Button
           variant="outline"
           size="sm"
-          className="h-9 px-3"
           onClick={resetToolbarFilters}
         >
           Reset
         </Button>
-      </div>
-    </div>
+      }
+    />
   )
 }

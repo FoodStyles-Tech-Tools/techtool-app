@@ -5,6 +5,16 @@ import type { Ticket } from "@shared/types"
 import { type SortColumn } from "@shared/ticket-constants"
 import { formatRelativeDate, getDueDateDisplay } from "@client/lib/format-dates"
 import { normalizeStatusKey, isDoneStatus } from "@shared/ticket-statuses"
+import { Button } from "@client/components/ui/button"
+import { EntityTableShell } from "@client/components/ui/entity-table-shell"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@client/components/ui/table"
 
 const SERVER_SORTABLE_COLUMNS = new Set<SortColumn>([
   "id",
@@ -16,7 +26,7 @@ const SERVER_SORTABLE_COLUMNS = new Set<SortColumn>([
   "assignee",
 ])
 
-interface TicketsTableProps {
+export interface TicketsTableProps {
   sortConfig: { column: SortColumn; direction: "asc" | "desc" }
   onSort: (column: SortColumn) => void
   tickets: Ticket[]
@@ -29,14 +39,19 @@ interface TicketsTableProps {
   onSelectTicket: (ticketId: string) => void
 }
 
-function renderSortableHeader(
-  column: SortColumn,
-  label: string,
-  sortConfig: { column: SortColumn; direction: "asc" | "desc" },
+function SortableHeader({
+  column,
+  label,
+  sortConfig,
+  onSort,
+}: {
+  column: SortColumn
+  label: string
+  sortConfig: { column: SortColumn; direction: "asc" | "desc" }
   onSort: (column: SortColumn) => void
-) {
+}) {
   if (!SERVER_SORTABLE_COLUMNS.has(column)) {
-    return <span className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</span>
+    return <span>{label}</span>
   }
 
   const isActive = sortConfig.column === column
@@ -44,7 +59,7 @@ function renderSortableHeader(
     <button
       type="button"
       onClick={() => onSort(column)}
-      className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-slate-500 hover:text-slate-900"
+      className="flex items-center gap-1 hover:text-slate-900"
     >
       <span>{label}</span>
       <span className="text-[10px]">{!isActive ? "Sort" : sortConfig.direction === "asc" ? "Asc" : "Desc"}</span>
@@ -65,11 +80,11 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
   )
 
   return (
-    <tr className="border-t border-slate-100">
-      <td className="px-4 py-2 text-xs font-mono text-slate-500">
-        <span>{ticket.displayId || ticket.id.slice(0, 8)}</span>
-      </td>
-      <td className="w-[400px] min-w-[300px] px-4 py-2">
+    <TableRow>
+      <TableCell className="py-2 text-xs font-mono text-slate-500">
+        {ticket.displayId || ticket.id.slice(0, 8)}
+      </TableCell>
+      <TableCell className="w-[400px] min-w-[300px] py-2">
         <button
           type="button"
           onClick={() => onSelectTicket(ticket.id)}
@@ -77,30 +92,28 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
         >
           {ticket.title}
         </button>
-      </td>
-      <td className="px-4 py-2">
-        <div className="flex items-center gap-2 text-xs text-slate-900">
-          <span>{ticket.status}</span>
-        </div>
-      </td>
-      <td className="px-4 py-2">
-        <span className="text-xs capitalize text-slate-900">{ticket.priority}</span>
-      </td>
-      <td className="px-4 py-2">
-        <span className="text-xs text-slate-900">{assigneeLabel}</span>
-      </td>
-      <td className="px-4 py-2">
-        <span className="text-xs text-slate-900">{ticket.project?.name || "No project"}</span>
-      </td>
-      <td className="px-4 py-2">
+      </TableCell>
+      <TableCell className="py-2 text-xs text-slate-900">
+        {ticket.status}
+      </TableCell>
+      <TableCell className="py-2 text-xs capitalize text-slate-900">
+        {ticket.priority}
+      </TableCell>
+      <TableCell className="py-2 text-xs text-slate-900">
+        {assigneeLabel}
+      </TableCell>
+      <TableCell className="py-2 text-xs text-slate-900">
+        {ticket.project?.name || "No project"}
+      </TableCell>
+      <TableCell className="py-2">
         <span className={["inline-flex rounded-md px-2 py-1 text-[11px] font-medium", dueDate.className].join(" ")}>
           {dueDate.label}
         </span>
-      </td>
-      <td className="px-4 py-2">
-        <span className="text-xs text-slate-500">{formatRelativeDate(ticket.createdAt)}</span>
-      </td>
-    </tr>
+      </TableCell>
+      <TableCell className="py-2 text-xs text-slate-500">
+        {formatRelativeDate(ticket.createdAt)}
+      </TableCell>
+    </TableRow>
   )
 })
 
@@ -117,72 +130,69 @@ export function TicketsTable({
   onSelectTicket,
 }: TicketsTableProps) {
   return (
-    <div className="rounded-md border bg-white">
-      <div className="max-h-[calc(100vh-220px)] overflow-y-auto relative">
-        <table className="w-full border-collapse text-left">
-          <thead className="sticky top-0 z-20 bg-slate-50 border-b">
-            <tr>
-              <th className="h-9 px-4 py-2 text-left align-middle">
-                {renderSortableHeader("id", "ID", sortConfig, onSort)}
-              </th>
-              <th className="h-9 w-[400px] min-w-[300px] px-4 py-2 text-left align-middle">
-                {renderSortableHeader("title", "Title", sortConfig, onSort)}
-              </th>
-              <th className="h-9 px-4 py-2 text-left align-middle">
-                {renderSortableHeader("status", "Status", sortConfig, onSort)}
-              </th>
-              <th className="h-9 px-4 py-2 text-left align-middle">
-                {renderSortableHeader("priority", "Priority", sortConfig, onSort)}
-              </th>
-              <th className="h-9 px-4 py-2 text-left align-middle">
-                {renderSortableHeader("assignee", "Assignee", sortConfig, onSort)}
-              </th>
-              <th className="h-9 px-4 py-2 text-left align-middle">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Project</span>
-              </th>
-              <th className="h-9 px-4 py-2 text-left align-middle">
-                {renderSortableHeader("due_date", "Due", sortConfig, onSort)}
-              </th>
-              <th className="h-9 px-4 py-2 text-left align-middle">
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Created</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody className="[&_tr:last-child]:border-0">
-            {tickets.map((ticket) => (
-              <TicketRow key={ticket.id} ticket={ticket} onSelectTicket={onSelectTicket} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
-        <div className="text-sm text-slate-500">
-          Showing {startIndex + 1} to {Math.min(endIndex, totalCount)} of {totalCount} tickets
-        </div>
-        <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-1">
-            <button
+    <EntityTableShell
+      footer={
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-slate-500">
+            Showing {startIndex + 1} to {Math.min(endIndex, totalCount)} of {totalCount} tickets
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
               type="button"
               onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Previous
-            </button>
-            <div className="text-sm text-slate-500 px-2">
+            </Button>
+            <span className="text-sm text-slate-500">
               Page {currentPage} of {totalPages || 1}
-            </div>
-            <button
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
               type="button"
               onClick={() => onPageChange(Math.min(totalPages || 1, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Next
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="h-9 py-2">
+              <SortableHeader column="id" label="ID" sortConfig={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="h-9 w-[400px] min-w-[300px] py-2">
+              <SortableHeader column="title" label="Title" sortConfig={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="h-9 py-2">
+              <SortableHeader column="status" label="Status" sortConfig={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="h-9 py-2">
+              <SortableHeader column="priority" label="Priority" sortConfig={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="h-9 py-2">
+              <SortableHeader column="assignee" label="Assignee" sortConfig={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="h-9 py-2">Project</TableHead>
+            <TableHead className="h-9 py-2">
+              <SortableHeader column="due_date" label="Due" sortConfig={sortConfig} onSort={onSort} />
+            </TableHead>
+            <TableHead className="h-9 py-2">Created</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tickets.map((ticket) => (
+            <TicketRow key={ticket.id} ticket={ticket} onSelectTicket={onSelectTicket} />
+          ))}
+        </TableBody>
+      </Table>
+    </EntityTableShell>
   )
 }

@@ -2,14 +2,8 @@
 
 import type { KeyboardEvent as ReactKeyboardEvent } from "react"
 import { Button } from "@client/components/ui/button"
-import { Badge } from "@client/components/ui/badge"
 import { Input } from "@client/components/ui/input"
 import { TicketStatusSelect } from "@client/components/ticket-status-select"
-import { TicketPriorityIcon } from "@client/components/ticket-priority-select"
-import { TicketTypeIcon } from "@client/components/ticket-type-select"
-import { getDueDateDisplay } from "@client/lib/format-dates"
-import { isDoneStatus, normalizeStatusKey } from "@shared/ticket-statuses"
-import { cn } from "@client/lib/utils"
 import type { Ticket } from "@shared/types"
 
 type TicketDetailHeaderProps = {
@@ -56,11 +50,6 @@ export function TicketDetailHeader({
   onStatusChange,
 }: TicketDetailHeaderProps) {
   const displayId = ticket?.displayId || ticketId.slice(0, 8)
-  const assigneeLabel = ticket?.assignee?.name || ticket?.assignee?.email || "Unassigned"
-  const dueDateDisplay = getDueDateDisplay(
-    ticket?.dueDate,
-    ticket ? isDoneStatus(normalizeStatusKey(ticket.status)) : false
-  )
 
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4">
@@ -135,16 +124,9 @@ export function TicketDetailHeader({
       </div>
 
       <div className="mt-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md bg-slate-100 px-2.5 py-1 font-mono text-xs text-slate-600">
-            {displayId}
-          </span>
-          {ticket?.project?.name ? (
-            <Badge variant="outline" className="text-xs">
-              {ticket.project.name}
-            </Badge>
-          ) : null}
-        </div>
+        <span className="rounded-md bg-slate-100 px-2.5 py-1 font-mono text-xs text-slate-600">
+          {displayId}
+        </span>
 
         {isEditingTitle ? (
           <Input
@@ -171,23 +153,6 @@ export function TicketDetailHeader({
             {ticket?.title || "Untitled ticket"}
           </h1>
         )}
-
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="flex items-center gap-1.5 text-xs">
-            <TicketTypeIcon type={ticket?.type || "task"} />
-            <span>{ticket?.type || "task"}</span>
-          </Badge>
-          <Badge variant="outline" className="flex items-center gap-1.5 text-xs">
-            <TicketPriorityIcon priority={ticket?.priority || "medium"} />
-            <span className="capitalize">{ticket?.priority || "medium"} priority</span>
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            Assignee: {assigneeLabel}
-          </Badge>
-          <span className={cn("inline-flex rounded-md px-2 py-1 text-xs font-medium", dueDateDisplay.className)}>
-            {dueDateDisplay.label}
-          </span>
-        </div>
       </div>
     </div>
   )

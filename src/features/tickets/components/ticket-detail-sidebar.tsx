@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@client/components/ui/card"
 import { TicketDetailFieldsSection } from "@client/features/tickets/components/ticket-detail-fields-section"
 import { TicketDetailRelationsSection } from "@client/features/tickets/components/ticket-detail-relations-section"
@@ -92,6 +93,8 @@ export function TicketDetailSidebar({
   onProjectChange,
   onTimestampChange,
 }: TicketDetailSidebarProps) {
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+
   return (
     <div className="min-w-0">
       <Card>
@@ -131,25 +134,35 @@ export function TicketDetailSidebar({
               onSprintChange={onSprintChange}
               onProjectChange={onProjectChange}
             />
-            <details className="rounded-md border border-slate-200">
-              <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2 text-sm font-medium text-slate-900 [&::-webkit-details-marker]:hidden">
+
+            <div className="rounded-md border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen((prev) => !prev)}
+                className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-sm font-medium text-slate-900"
+                aria-expanded={advancedOpen}
+              >
                 <span>Advanced details</span>
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Open</span>
-              </summary>
-              <div className="space-y-4 border-t border-slate-200 p-3">
-                <TicketDetailRelationsSection ticket={ticket} relations={relations} />
-                <TicketDetailTimestampsSection
-                  ticket={ticket}
-                  canEditTickets={canEditTickets}
-                  isAssignmentLocked={isAssignmentLocked}
-                  updatingFields={updatingFields}
-                  timestampValidation={timestampValidation}
-                  parseTimestamp={parseTimestamp}
-                  getTimestampWarningMessage={getTimestampWarningMessage}
-                  onTimestampChange={onTimestampChange}
-                />
-              </div>
-            </details>
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  {advancedOpen ? "Hide" : "Show"}
+                </span>
+              </button>
+              {advancedOpen ? (
+                <div className="space-y-4 border-t border-slate-200 p-3">
+                  <TicketDetailRelationsSection ticket={ticket} relations={relations} />
+                  <TicketDetailTimestampsSection
+                    ticket={ticket}
+                    canEditTickets={canEditTickets}
+                    isAssignmentLocked={isAssignmentLocked}
+                    updatingFields={updatingFields}
+                    timestampValidation={timestampValidation}
+                    parseTimestamp={parseTimestamp}
+                    getTimestampWarningMessage={getTimestampWarningMessage}
+                    onTimestampChange={onTimestampChange}
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
         </CardContent>
       </Card>
