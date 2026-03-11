@@ -3,32 +3,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
 import { requestJson } from "@/lib/client/api"
+import type { Asset } from "@/lib/types"
 
-export interface AssetOwner {
-  id: string
-  name: string | null
-  email: string
-}
-
-export interface AssetCollaborator {
-  id: string
-  name: string | null
-  email: string
-  image: string | null
-}
-
-export interface Asset {
-  id: string
-  name: string
-  description: string | null
-  links: string[]
-  production_url: string | null
-  owner: AssetOwner | null
-  owner_id: string
-  collaborator_ids: string[]
-  collaborators: AssetCollaborator[]
-  created_at: string
-}
+export type { Asset }
 
 function normalizeAsset(asset: Asset): Asset {
   return {

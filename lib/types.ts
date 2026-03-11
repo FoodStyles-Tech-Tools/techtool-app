@@ -37,6 +37,34 @@ export interface Department {
   name: string
 }
 
+/** Asset owner / collaborator */
+export interface AssetOwner {
+  id: string
+  name: string | null
+  email: string
+}
+
+export interface AssetCollaborator {
+  id: string
+  name: string | null
+  email: string
+  image: string | null
+}
+
+/** Asset domain type */
+export interface Asset {
+  id: string
+  name: string
+  description: string | null
+  links: string[]
+  production_url: string | null
+  owner: AssetOwner | null
+  owner_id: string
+  collaborator_ids: string[]
+  collaborators: AssetCollaborator[]
+  created_at: string
+}
+
 /** Project collaborator (requester / collaborator) */
 export interface ProjectCollaborator {
   id: string

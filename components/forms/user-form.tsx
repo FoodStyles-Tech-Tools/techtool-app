@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { toast } from "@/components/ui/toast"
+import type { Role } from "@/lib/types"
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),

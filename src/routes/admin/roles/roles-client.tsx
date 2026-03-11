@@ -20,21 +20,7 @@ import {
 import { RoleForm } from "@/components/forms/role-form"
 import { Badge } from "@/components/ui/badge"
 import { toast } from "@/components/ui/toast"
-
-interface Permission {
-  id?: string
-  resource: string
-  action: string
-}
-
-interface Role {
-  id: string
-  name: string
-  description: string | null | undefined
-  is_system: boolean
-  permissions: Permission[]
-  created_at: string
-}
+import type { Role, RolePermission } from "@/lib/types"
 
 const resources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status"] as const
 const actions = ["view", "create", "edit", "delete", "manage"] as const
@@ -91,7 +77,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
           perms[role.id] = allPerms
           original[role.id] = [...allPerms]
         } else {
-          const rolePerms = role.permissions.map((p: Permission) => `${p.resource}:${p.action}`)
+          const rolePerms = role.permissions.map((p: RolePermission) => `${p.resource}:${p.action}`)
           perms[role.id] = rolePerms
           original[role.id] = [...rolePerms]
         }
