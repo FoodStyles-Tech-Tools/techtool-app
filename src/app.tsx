@@ -1,5 +1,5 @@
 import { BrowserRouter } from "react-router-dom"
-import { AppProviders } from "@/components/layout/app-providers"
+import { AppProviders } from "@client/components/layout/app-providers"
 import { AppRoutes } from "./router"
 
 export default function App() {

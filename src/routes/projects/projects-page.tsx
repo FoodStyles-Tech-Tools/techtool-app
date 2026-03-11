@@ -1,7 +1,7 @@
-import { useDepartments } from "@/hooks/use-departments"
-import { useProjects } from "@/hooks/use-projects"
-import { useUsers } from "@/hooks/use-users"
-import { FullScreenMessage } from "@/src/layouts/full-screen-message"
+import { useDepartments } from "@client/hooks/use-departments"
+import { useProjects } from "@client/hooks/use-projects"
+import { useUsers } from "@client/hooks/use-users"
+import { FullScreenMessage } from "@client/layouts/full-screen-message"
 import ProjectsClient from "./projects-client"
 
 export function ProjectsPage() {

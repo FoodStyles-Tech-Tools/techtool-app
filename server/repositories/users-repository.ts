@@ -1,4 +1,4 @@
-import { HttpError } from "@/server/http/http-error"
+import { HttpError } from "@server/http/http-error"
 
 export type UserRecord = {
   id: string

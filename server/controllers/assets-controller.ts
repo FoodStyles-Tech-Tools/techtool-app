@@ -1,12 +1,12 @@
 import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as assetsService from "@/server/services/assets-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as assetsService from "@server/services/assets-service"
 import {
   parseAssetIdParams,
   parseCreateAssetBody,
   parseUpdateAssetBody,
-} from "@/server/validation/assets"
+} from "@server/validation/assets"
 
 export async function listAssetsController(_request: Request, response: Response) {
   try {

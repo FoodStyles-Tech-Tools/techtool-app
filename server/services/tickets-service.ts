@@ -3,14 +3,14 @@ import { prepareLinkPayload } from "@/lib/links"
 import { buildStatusChangeBody } from "@/lib/ticket-statuses"
 import { enqueueTicketStatusDiscordNotifications } from "@/lib/server/discord-outbox"
 import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
-import { HttpError } from "@/server/http/http-error"
-import * as ticketsRepository from "@/server/repositories/tickets-repository"
+import { HttpError } from "@server/http/http-error"
+import * as ticketsRepository from "@server/repositories/tickets-repository"
 import type {
   BatchUpdateTicketStatusInput,
   CreateTicketInput,
   UpdateTicketInput,
   UpdateTicketStatusWithReasonInput,
-} from "@/server/validation/tickets"
+} from "@server/validation/tickets"
 import type { TicketListQuery } from "@/lib/server/tickets-list"
 
 type TicketRequestContext = {

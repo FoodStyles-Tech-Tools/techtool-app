@@ -1,4 +1,4 @@
-import type { Permission, PermissionFlags } from "@/types/auth"
+import type { Permission, PermissionFlags } from "@shared/types/auth"
 
 export function buildPermissionFlags(permissions: Permission[] = []): PermissionFlags {
   const has = (resource: string, action: string) =>

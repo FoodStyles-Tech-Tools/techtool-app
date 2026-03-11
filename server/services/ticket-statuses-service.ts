@@ -1,10 +1,10 @@
 import type { RequestContext } from "@/lib/auth-helpers"
-import { HttpError } from "@/server/http/http-error"
-import * as ticketStatusesRepository from "@/server/repositories/ticket-statuses-repository"
+import { HttpError } from "@server/http/http-error"
+import * as ticketStatusesRepository from "@server/repositories/ticket-statuses-repository"
 import type {
   CreateTicketStatusInput,
   UpdateTicketStatusInput,
-} from "@/server/validation/ticket-statuses"
+} from "@server/validation/ticket-statuses"
 
 export async function listTicketStatuses(context: RequestContext) {
   return {

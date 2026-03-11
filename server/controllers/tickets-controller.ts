@@ -2,8 +2,8 @@ import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
 import { getOrSetServerCache } from "@/lib/server/cache"
 import { getTicketCacheVersion } from "@/lib/server/ticket-cache"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as ticketsService from "@/server/services/tickets-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as ticketsService from "@server/services/tickets-service"
 import {
   parseBatchUpdateTicketStatusBody,
   parseCreateTicketBody,
@@ -12,7 +12,7 @@ import {
   parseTicketListRequest,
   parseUpdateTicketBody,
   parseUpdateTicketStatusWithReasonBody,
-} from "@/server/validation/tickets"
+} from "@server/validation/tickets"
 
 function toSearchParams(request: Request) {
   const searchParams = new URLSearchParams()

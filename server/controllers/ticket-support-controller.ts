@@ -1,7 +1,7 @@
 import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as ticketSupportService from "@/server/services/ticket-support-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as ticketSupportService from "@server/services/ticket-support-service"
 import {
   parseCommentIdParams,
   parseCreateCommentBody,
@@ -9,7 +9,7 @@ import {
   parseSubtaskCountsQuery,
   parseTicketIdParams,
   parseUpdateCommentBody,
-} from "@/server/validation/ticket-support"
+} from "@server/validation/ticket-support"
 
 export async function getTicketByDisplayIdController(request: Request, response: Response) {
   try {

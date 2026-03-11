@@ -1,11 +1,11 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   createDepartmentController,
   getUserPreferencesController,
   listDepartmentsController,
   updateUserPreferencesController,
-} from "@/server/controllers/meta-controller"
+} from "@server/controllers/meta-controller"
 
 export const explicitMetaRouteSignatures = new Set([
   "GET /api/departments",

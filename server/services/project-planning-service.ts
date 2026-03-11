@@ -1,13 +1,13 @@
 import type { RequestContext } from "@/lib/auth-helpers"
-import { HttpError } from "@/server/http/http-error"
-import * as epicsRepository from "@/server/repositories/epics-repository"
-import * as sprintsRepository from "@/server/repositories/sprints-repository"
+import { HttpError } from "@server/http/http-error"
+import * as epicsRepository from "@server/repositories/epics-repository"
+import * as sprintsRepository from "@server/repositories/sprints-repository"
 import type {
   CreateEpicInput,
   CreateSprintInput,
   UpdateEpicInput,
   UpdateSprintInput,
-} from "@/server/validation/project-planning"
+} from "@server/validation/project-planning"
 
 export async function listEpics(context: RequestContext, projectId?: string) {
   return {

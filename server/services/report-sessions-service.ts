@@ -1,9 +1,9 @@
 import type { RequestContext } from "@/lib/auth-helpers"
 import { getDefaultReportDateRange } from "@/lib/report-date-range"
 import { getReportData } from "@/lib/server/report"
-import { HttpError } from "@/server/http/http-error"
-import * as reportSessionsRepository from "@/server/repositories/report-sessions-repository"
-import type { ReportSessionFilters } from "@/types/api/report"
+import { HttpError } from "@server/http/http-error"
+import * as reportSessionsRepository from "@server/repositories/report-sessions-repository"
+import type { ReportSessionFilters } from "@shared/types/api/report"
 
 function resolveDateRange(input: { date_range_start?: string; date_range_end?: string }) {
   const { start: defaultStart, end: defaultEnd } = getDefaultReportDateRange()

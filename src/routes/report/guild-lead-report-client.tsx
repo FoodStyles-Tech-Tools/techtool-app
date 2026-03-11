@@ -4,14 +4,14 @@ import { useState, useCallback, useEffect, useMemo } from "react"
 import { useSearchParams } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
-import { getDefaultReportDateRange } from "@/lib/report-date-range"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { PageLayout } from "@/components/ui/page-layout"
-import { PageHeader } from "@/components/ui/page-header"
-import { toast } from "@/components/ui/toast"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { getDefaultReportDateRange } from "@lib/report-date-range"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@client/components/ui/card"
+import { Button } from "@client/components/ui/button"
+import { PageLayout } from "@client/components/ui/page-layout"
+import { PageHeader } from "@client/components/ui/page-header"
+import { toast } from "@client/components/ui/toast"
+import { Input } from "@client/components/ui/input"
+import { Label } from "@client/components/ui/label"
 import {
   Dialog,
   DialogContent,
@@ -19,9 +19,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { ChartWithInsight } from "@/features/report/components/insight-editor"
+} from "@client/components/ui/dialog"
+import { ConfirmDialog } from "@client/components/ui/confirm-dialog"
+import { ChartWithInsight } from "@client/features/report/components/insight-editor"
 import {
   buildDateRangePayload,
   createSession,
@@ -33,7 +33,7 @@ import {
   parseInsights,
   toDateInputValue,
   updateSession,
-} from "@/features/report/lib/client"
+} from "@client/features/report/lib/client"
 import {
   ReportVolumeChart,
   ReportStatusCards,
@@ -41,7 +41,7 @@ import {
   ReportResponseTimeChart,
   ReportLeadTimeChart,
 } from "./report-charts"
-import type { ReportInsightKey } from "@/types/api/report"
+import type { ReportInsightKey } from "@shared/types/api/report"
 
 export default function GuildLeadReportClient() {
   const queryClient = useQueryClient()

@@ -3,7 +3,7 @@ import {
   createRequestContext,
   getContextResponseHeaders,
   runWithRequestContext,
-} from "@/server/http/request-context"
+} from "@server/http/request-context"
 
 export function withRequestContext(handler: RequestHandler): RequestHandler {
   return (request, response, next) => {

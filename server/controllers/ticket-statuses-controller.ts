@@ -1,13 +1,13 @@
 import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as ticketStatusesService from "@/server/services/ticket-statuses-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as ticketStatusesService from "@server/services/ticket-statuses-service"
 import {
   parseCreateTicketStatusBody,
   parseReorderTicketStatusesBody,
   parseTicketStatusKeyParams,
   parseUpdateTicketStatusBody,
-} from "@/server/validation/ticket-statuses"
+} from "@server/validation/ticket-statuses"
 
 export async function listTicketStatusesController(_request: Request, response: Response) {
   try {

@@ -1,34 +1,34 @@
 import { Navigate, Route, Routes } from "react-router-dom"
-import { lazyComponent } from "@/lib/lazy-component"
+import { lazyComponent } from "@lib/lazy-component"
 import {
   RouteLoadingFallback,
   ProtectedLayout,
   AuthCallbackPage,
   SettingsRedirectPage,
   NotFoundPage,
-} from "@/src/layouts"
-import { SignInContent } from "@/routes/signin/signin-content"
-import { ProjectsPage } from "@/routes/projects/projects-page"
-import { ProjectDetailRoute } from "@/routes/projects/project-detail-route"
-import { AssetsPage } from "@/routes/assets/assets-page"
-import { UsersPage } from "@/routes/admin/users/users-page"
-import { RolesPage } from "@/routes/admin/roles/roles-page"
-import { TicketsPage } from "@/features/tickets/components/tickets-page"
-import { TicketDetailRoute } from "@/features/tickets/components/ticket-detail-route"
+} from "@client/layouts"
+import { SignInContent } from "@client/routes/signin/signin-content"
+import { ProjectsPage } from "@client/routes/projects/projects-page"
+import { ProjectDetailRoute } from "@client/routes/projects/project-detail-route"
+import { AssetsPage } from "@client/routes/assets/assets-page"
+import { UsersPage } from "@client/routes/admin/users/users-page"
+import { RolesPage } from "@client/routes/admin/roles/roles-page"
+import { TicketsPage } from "@client/features/tickets/components/tickets-page"
+import { TicketDetailRoute } from "@client/features/tickets/components/ticket-detail-route"
 
 const ClockifyClient = lazyComponent(
-  () => import("@/routes/clockify/clockify-client"),
+  () => import("@client/routes/clockify/clockify-client"),
   { loading: RouteLoadingFallback }
 )
 
 const GuildLeadReportClient = lazyComponent(
-  () => import("@/routes/report/guild-lead-report-client"),
+  () => import("@client/routes/report/guild-lead-report-client"),
   { loading: RouteLoadingFallback }
 )
 
 const WorkspaceStatusPanel = lazyComponent(
   () =>
-    import("@/components/settings/workspace-status-panel").then(
+    import("@client/components/settings/workspace-status-panel").then(
       (module) => module.WorkspaceStatusPanel
     ),
   { loading: RouteLoadingFallback }
@@ -36,7 +36,7 @@ const WorkspaceStatusPanel = lazyComponent(
 
 const WorkspaceEpicsPanel = lazyComponent(
   () =>
-    import("@/components/settings/workspace-epics-panel").then(
+    import("@client/components/settings/workspace-epics-panel").then(
       (module) => module.WorkspaceEpicsPanel
     ),
   { loading: RouteLoadingFallback }
@@ -44,7 +44,7 @@ const WorkspaceEpicsPanel = lazyComponent(
 
 const WorkspaceSprintsPanel = lazyComponent(
   () =>
-    import("@/components/settings/workspace-sprints-panel").then(
+    import("@client/components/settings/workspace-sprints-panel").then(
       (module) => module.WorkspaceSprintsPanel
     ),
   { loading: RouteLoadingFallback }
@@ -52,7 +52,7 @@ const WorkspaceSprintsPanel = lazyComponent(
 
 const DeletedTicketsPanel = lazyComponent(
   () =>
-    import("@/components/settings/deleted-tickets-panel").then(
+    import("@client/components/settings/deleted-tickets-panel").then(
       (module) => module.DeletedTicketsPanel
     ),
   { loading: RouteLoadingFallback }

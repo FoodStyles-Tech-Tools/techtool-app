@@ -1,11 +1,11 @@
 import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as metaService from "@/server/services/meta-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as metaService from "@server/services/meta-service"
 import {
   parseCreateDepartmentBody,
   parseUpdateUserPreferencesBody,
-} from "@/server/validation/meta"
+} from "@server/validation/meta"
 
 export async function listDepartmentsController(_request: Request, response: Response) {
   try {

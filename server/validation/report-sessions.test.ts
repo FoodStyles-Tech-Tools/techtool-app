@@ -3,7 +3,7 @@ import {
   parseCreateReportSessionBody,
   parseReportSessionIdParams,
   parseUpdateReportSessionBody,
-} from "@/server/validation/report-sessions"
+} from "@server/validation/report-sessions"
 
 describe("report session validation", () => {
   it("parses id params", () => {

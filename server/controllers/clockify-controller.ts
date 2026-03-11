@@ -1,7 +1,7 @@
 import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as clockifyService from "@/server/services/clockify-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as clockifyService from "@server/services/clockify-service"
 import {
   parseClockifyReconcileBody,
   parseClockifySessionsQuery,
@@ -10,7 +10,7 @@ import {
   parseDeleteClockifySessionQuery,
   parseUpdateClockifySessionBody,
   parseUpdateClockifySettingsBody,
-} from "@/server/validation/clockify"
+} from "@server/validation/clockify"
 
 export async function listClockifySessionsController(request: Request, response: Response) {
   try {

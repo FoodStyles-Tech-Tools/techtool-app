@@ -1,7 +1,7 @@
 import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as projectPlanningService from "@/server/services/project-planning-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as projectPlanningService from "@server/services/project-planning-service"
 import {
   parseCreateEpicBody,
   parseCreateSprintBody,
@@ -9,7 +9,7 @@ import {
   parseProjectScopedQuery,
   parseUpdateEpicBody,
   parseUpdateSprintBody,
-} from "@/server/validation/project-planning"
+} from "@server/validation/project-planning"
 
 export async function listEpicsController(request: Request, response: Response) {
   try {

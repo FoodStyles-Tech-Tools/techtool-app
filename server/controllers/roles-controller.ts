@@ -1,12 +1,12 @@
 import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as rolesService from "@/server/services/roles-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as rolesService from "@server/services/roles-service"
 import {
   parseCreateRoleBody,
   parseRoleIdParams,
   parseUpdateRoleBody,
-} from "@/server/validation/roles"
+} from "@server/validation/roles"
 
 export async function listRolesController(_request: Request, response: Response) {
   try {

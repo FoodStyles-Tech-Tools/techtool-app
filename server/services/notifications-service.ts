@@ -1,7 +1,7 @@
 import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
-import * as notificationsRepository from "@/server/repositories/notifications-repository"
-import { HttpError } from "@/server/http/http-error"
-import type { CursorPage } from "@/types/api/common"
+import * as notificationsRepository from "@server/repositories/notifications-repository"
+import { HttpError } from "@server/http/http-error"
+import type { CursorPage } from "@shared/types/api/common"
 
 export async function listCommentNotifications(input: { unreadOnly: boolean; limit: number }) {
   const { supabase, userId } = await getSupabaseWithUserContext()

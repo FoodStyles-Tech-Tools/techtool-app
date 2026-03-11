@@ -10,7 +10,7 @@ import type {
   AvgResponseTimeByWeekItem,
   AvgLeadTimeByWeekItem,
   ReportSessionFilters,
-} from "@/types/api/report"
+} from "@shared/types/api/report"
 
 const OPEN_STATUS = "open"
 const DONE_STATUSES = new Set(["completed", "cancelled", "rejected"])

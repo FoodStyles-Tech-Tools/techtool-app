@@ -70,14 +70,24 @@ npm start
 Notes:
 
 - `npm run dev` starts Vite and Express together.
-- The backend watcher includes `backend/**/*.ts` and `lib/**/*.ts`.
+- The backend watcher includes `server/**/*.ts` and `lib/**/*.ts`.
 - Set `DEBUG_ROUTES=true` to print the full Express route manifest on startup.
 
 ## Architecture
 
-- `src/` contains the Vite client entry and React Router setup.
-- `backend/routes/api/**/route.ts` and `backend/routes/auth/**/route.ts` contain backend route handlers mounted by Express.
-- `backend/server.ts` loads those route handlers dynamically and serves the built frontend in production.
+The codebase is split into **client**, **server**, and **shared**:
+
+- **`src/`** – Frontend only (Vite + React). Entry: `src/main.tsx` → `src/app.tsx` → `src/router.tsx`. Route screens live in `src/routes/`, feature UI and hooks in `src/features/`, shared UI in `src/components/`, app-level hooks in `src/hooks/`. Use `@client/` for imports under `src/`.
+- **`server/`** – Backend only (Express). Entry: `server/server.ts`. Handlers live in `server/routes/`, `server/controllers/`, `server/services/`, `server/repositories/`, `server/validation/`. Use `@server/` for server imports.
+- **`shared/`** – Cross-stack contracts: `shared/types/` (API/domain types), `shared/permissions.ts`, `shared/constants.ts`. Use `@shared/` for types and shared logic. Client and server must not import each other; use `shared/` and the API boundary instead.
+
+Path aliases: `@client/*` → `src/*`, `@server/*` → `server/*`, `@shared/*` → `shared/*`, `@lib/*` → `lib/*`. ESLint enforces that code under `src/` cannot import from `server/` or `lib/server/`, and server code cannot import from `src/`.
+
+**Where to add things**
+
+- New page/screen: `src/routes/<area>/` and/or a component in `src/features/<feature>/`.
+- New API: `server/routes/`, `server/controllers/`, `server/services/`, `server/repositories/`, plus validation in `server/validation/`.
+- New shared type or DTO: `shared/types/`.
 
 ## Build and production
 

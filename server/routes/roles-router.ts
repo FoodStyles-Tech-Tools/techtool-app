@@ -1,12 +1,12 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   createRoleController,
   deleteRoleController,
   getRoleController,
   listRolesController,
   updateRoleController,
-} from "@/server/controllers/roles-controller"
+} from "@server/controllers/roles-controller"
 
 export const explicitRoleRouteSignatures = new Set([
   "GET /api/roles",

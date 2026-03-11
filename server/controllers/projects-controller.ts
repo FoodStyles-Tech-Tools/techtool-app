@@ -1,8 +1,8 @@
 import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import { HttpError } from "@/server/http/http-error"
-import * as projectsService from "@/server/services/projects-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import { HttpError } from "@server/http/http-error"
+import * as projectsService from "@server/services/projects-service"
 import {
   parseCreateProjectBody,
   parseDeleteProjectQuery,
@@ -10,7 +10,7 @@ import {
   parseProjectIdParams,
   parseProjectListQuery,
   parseUpdateProjectBody,
-} from "@/server/validation/projects"
+} from "@server/validation/projects"
 
 export async function listProjectsController(request: Request, response: Response) {
   try {

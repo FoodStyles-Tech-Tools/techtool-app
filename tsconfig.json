@@ -16,7 +16,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@/routes/*": ["src/routes/*"]
+      "@/routes/*": ["src/routes/*"],
+      "@client/*": ["src/*"],
+      "@server/*": ["server/*"],
+      "@shared/*": ["shared/*"],
+      "@lib/*": ["lib/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "vite-env.d.ts"],

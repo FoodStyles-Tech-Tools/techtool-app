@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { ReportSessionFilters } from "@/types/api/report"
+import type { ReportSessionFilters } from "@shared/types/api/report"
 
 const optionalString = z
   .union([z.string(), z.undefined(), z.null()])

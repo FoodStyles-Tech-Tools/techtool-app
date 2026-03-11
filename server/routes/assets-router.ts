@@ -1,11 +1,11 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   createAssetController,
   deleteAssetController,
   listAssetsController,
   updateAssetController,
-} from "@/server/controllers/assets-controller"
+} from "@server/controllers/assets-controller"
 
 export const explicitAssetRouteSignatures = new Set([
   "GET /api/assets",

@@ -1,15 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { emitPermissionsRefresh, usePermissions } from "@/hooks/use-permissions"
-import { PageHeader } from "@/components/ui/page-header"
-import { PageLayout } from "@/components/ui/page-layout"
-import { EntityPageLayout } from "@/components/ui/entity-page-layout"
-import { DataState } from "@/components/ui/data-state"
-import { FormDialogShell } from "@/components/ui/form-dialog-shell"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@client/components/ui/button"
+import { emitPermissionsRefresh, usePermissions } from "@client/hooks/use-permissions"
+import { PageHeader } from "@client/components/ui/page-header"
+import { PageLayout } from "@client/components/ui/page-layout"
+import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
+import { DataState } from "@client/components/ui/data-state"
+import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
+import { ConfirmDialog } from "@client/components/ui/confirm-dialog"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@client/components/ui/card"
 import {
   Table,
   TableBody,
@@ -17,11 +17,11 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { RoleForm } from "@/components/forms/role-form"
-import { Badge } from "@/components/ui/badge"
-import { toast } from "@/components/ui/toast"
-import type { Role, RolePermission } from "@/lib/types"
+} from "@client/components/ui/table"
+import { RoleForm } from "@client/components/forms/role-form"
+import { Badge } from "@client/components/ui/badge"
+import { toast } from "@client/components/ui/toast"
+import type { Role, RolePermission } from "@lib/types"
 
 const resources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status"] as const
 const actions = ["view", "create", "edit", "delete", "manage"] as const

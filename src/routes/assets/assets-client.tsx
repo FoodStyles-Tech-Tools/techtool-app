@@ -1,17 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { usePermissions } from "@/hooks/use-permissions"
-import { useDeleteAsset, type Asset } from "@/hooks/use-assets"
-import { PageHeader } from "@/components/ui/page-header"
-import { PageLayout } from "@/components/ui/page-layout"
-import { EntityPageLayout } from "@/components/ui/entity-page-layout"
-import { DataState } from "@/components/ui/data-state"
-import { EntityTableShell } from "@/components/ui/entity-table-shell"
-import { FormDialogShell } from "@/components/ui/form-dialog-shell"
-import { ConfirmDialog } from "@/components/ui/confirm-dialog"
-import { toast } from "@/components/ui/toast"
+import { Button } from "@client/components/ui/button"
+import { usePermissions } from "@client/hooks/use-permissions"
+import { useDeleteAsset, type Asset } from "@client/hooks/use-assets"
+import { PageHeader } from "@client/components/ui/page-header"
+import { PageLayout } from "@client/components/ui/page-layout"
+import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
+import { DataState } from "@client/components/ui/data-state"
+import { EntityTableShell } from "@client/components/ui/entity-table-shell"
+import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
+import { ConfirmDialog } from "@client/components/ui/confirm-dialog"
+import { toast } from "@client/components/ui/toast"
 import {
   Table,
   TableBody,
@@ -19,8 +19,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
-import { AssetForm } from "@/components/forms/asset-form"
+} from "@client/components/ui/table"
+import { AssetForm } from "@client/components/forms/asset-form"
 
 const formatLinkLabel = (url: string) => {
   try {

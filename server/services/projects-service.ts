@@ -1,11 +1,11 @@
 import type { RequestContext } from "@/lib/auth-helpers"
 import { prepareLinkPayload } from "@/lib/links"
-import { HttpError } from "@/server/http/http-error"
-import * as projectsRepository from "@/server/repositories/projects-repository"
+import { HttpError } from "@server/http/http-error"
+import * as projectsRepository from "@server/repositories/projects-repository"
 import type {
   CreateProjectInput,
   UpdateProjectInput,
-} from "@/server/validation/projects"
+} from "@server/validation/projects"
 
 export async function listProjects(
   context: RequestContext,

@@ -5,8 +5,8 @@ import {
   getAuthSessionController,
   getBootstrapController,
   getVersionController,
-} from "@/server/controllers/auth-controller"
-import { withRequestContext } from "@/server/http/with-request-context"
+} from "@server/controllers/auth-controller"
+import { withRequestContext } from "@server/http/with-request-context"
 
 export const explicitAuthRouteSignatures = new Set([
   "GET /api/auth/me",

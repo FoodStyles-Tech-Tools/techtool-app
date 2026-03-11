@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { parseDiscordOutboxBody, parseRevalidateBody } from "@/server/validation/internal"
+import { parseDiscordOutboxBody, parseRevalidateBody } from "@server/validation/internal"
 
 describe("internal validation", () => {
   it("keeps valid tags and strips invalid ones", () => {

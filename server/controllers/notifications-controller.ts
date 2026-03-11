@@ -1,12 +1,12 @@
 import type { Request, Response } from "express"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as notificationsService from "@/server/services/notifications-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as notificationsService from "@server/services/notifications-service"
 import {
   parseLegacyNotificationsQuery,
   parseMarkReadBody,
   parseNotificationIdParams,
   parseV2NotificationsQuery,
-} from "@/server/validation/notifications"
+} from "@server/validation/notifications"
 
 export async function listCommentNotificationsController(request: Request, response: Response) {
   try {

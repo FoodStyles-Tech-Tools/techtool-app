@@ -1,10 +1,10 @@
 "use client"
 
-import { signIn } from "@/lib/auth-client"
+import { signIn } from "@lib/auth-client"
 import { useState, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { FullScreenMessage } from "@/src/layouts/full-screen-message"
+import { Button } from "@client/components/ui/button"
+import { FullScreenMessage } from "@client/layouts/full-screen-message"
 
 export function SignInContent() {
   const [loading, setLoading] = useState(false)

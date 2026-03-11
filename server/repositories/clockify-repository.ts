@@ -1,5 +1,5 @@
-import { HttpError } from "@/server/http/http-error"
-import type { ClockifyReconciliationEntry } from "@/server/validation/clockify"
+import { HttpError } from "@server/http/http-error"
+import type { ClockifyReconciliationEntry } from "@server/validation/clockify"
 
 type SupabaseClient = Awaited<ReturnType<typeof import("@/lib/supabase").createServerClient>>
 

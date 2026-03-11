@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
-import { useUsers } from "@/hooks/use-users"
-import { requestJson } from "@/lib/client/api"
-import { FullScreenMessage } from "@/src/layouts/full-screen-message"
+import { useUsers } from "@client/hooks/use-users"
+import { requestJson } from "@lib/client/api"
+import { FullScreenMessage } from "@client/layouts/full-screen-message"
 import UsersClient from "./users-client"
 
 export function UsersPage() {

@@ -1,7 +1,7 @@
 import type { Response } from "express"
 import { ZodError } from "zod"
-import { HttpError } from "@/server/http/http-error"
-import { logServerError } from "@/server/http/request-logger"
+import { HttpError } from "@server/http/http-error"
+import { logServerError } from "@server/http/request-logger"
 
 export function handleControllerError(
   response: Response,

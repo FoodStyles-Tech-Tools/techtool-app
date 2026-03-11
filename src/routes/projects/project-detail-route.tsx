@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom"
-import { FullScreenMessage } from "@/src/layouts/full-screen-message"
+import { FullScreenMessage } from "@client/layouts/full-screen-message"
 import ProjectDetailClient from "./project-detail-client"
 
 export function ProjectDetailRoute() {

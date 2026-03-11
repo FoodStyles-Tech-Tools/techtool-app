@@ -1,8 +1,8 @@
 import type { RequestContext } from "@/lib/auth-helpers"
 import { prepareLinkPayload } from "@/lib/links"
-import { HttpError } from "@/server/http/http-error"
-import * as assetsRepository from "@/server/repositories/assets-repository"
-import type { CreateAssetInput, UpdateAssetInput } from "@/server/validation/assets"
+import { HttpError } from "@server/http/http-error"
+import * as assetsRepository from "@server/repositories/assets-repository"
+import type { CreateAssetInput, UpdateAssetInput } from "@server/validation/assets"
 
 function normalizeAssetUpdates(input: UpdateAssetInput) {
   const updates: Record<string, unknown> = {}

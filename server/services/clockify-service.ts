@@ -1,7 +1,7 @@
 import type { RequestContext } from "@/lib/auth-helpers"
-import { HttpError } from "@/server/http/http-error"
-import * as clockifyRepository from "@/server/repositories/clockify-repository"
-import type { ClockifyReconciliationEntry } from "@/server/validation/clockify"
+import { HttpError } from "@server/http/http-error"
+import * as clockifyRepository from "@server/repositories/clockify-repository"
+import type { ClockifyReconciliationEntry } from "@server/validation/clockify"
 
 const CLOCKIFY_API_URL = "https://reports.api.clockify.me/v1"
 const CLOCKIFY_PAGE_SIZE = 1000

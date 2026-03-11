@@ -1,5 +1,5 @@
-import { HttpError } from "@/server/http/http-error"
-import type { ReportSession, ReportSessionFilters } from "@/types/api/report"
+import { HttpError } from "@server/http/http-error"
+import type { ReportSession, ReportSessionFilters } from "@shared/types/api/report"
 
 type SupabaseClient = Awaited<ReturnType<typeof import("@/lib/supabase").createServerClient>>
 

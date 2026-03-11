@@ -1,12 +1,12 @@
 import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as usersService from "@/server/services/users-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as usersService from "@server/services/users-service"
 import {
   parseCreateUserBody,
   parseUpdateUserBody,
   parseUserIdParams,
-} from "@/server/validation/users"
+} from "@server/validation/users"
 
 export async function listUsersController(_request: Request, response: Response) {
   try {

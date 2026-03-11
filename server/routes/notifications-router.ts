@@ -1,11 +1,11 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   listCommentNotificationsController,
   listV2NotificationsController,
   markNotificationsReadController,
   markSingleNotificationReadController,
-} from "@/server/controllers/notifications-controller"
+} from "@server/controllers/notifications-controller"
 
 export const explicitNotificationRouteSignatures = new Set([
   "GET /api/comment-notifications",

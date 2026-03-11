@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   createReportSessionController,
   deleteReportSessionController,
@@ -7,7 +7,7 @@ import {
   getReportSessionDataController,
   listReportSessionsController,
   updateReportSessionController,
-} from "@/server/controllers/report-sessions-controller"
+} from "@server/controllers/report-sessions-controller"
 
 export const explicitReportSessionRouteSignatures = new Set([
   "GET /api/report/sessions",

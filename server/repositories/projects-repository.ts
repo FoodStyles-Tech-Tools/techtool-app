@@ -1,5 +1,5 @@
 import { sanitizeLinkArray } from "@/lib/links"
-import { HttpError } from "@/server/http/http-error"
+import { HttpError } from "@server/http/http-error"
 
 type SupabaseClient = Awaited<ReturnType<typeof import("@/lib/supabase").createServerClient>>
 

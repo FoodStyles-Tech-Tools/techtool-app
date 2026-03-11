@@ -1,12 +1,12 @@
 import type { Request, Response } from "express"
 import { getRequestContext } from "@/lib/auth-helpers"
-import { handleControllerError } from "@/server/http/handle-controller-error"
-import * as reportSessionsService from "@/server/services/report-sessions-service"
+import { handleControllerError } from "@server/http/handle-controller-error"
+import * as reportSessionsService from "@server/services/report-sessions-service"
 import {
   parseCreateReportSessionBody,
   parseReportSessionIdParams,
   parseUpdateReportSessionBody,
-} from "@/server/validation/report-sessions"
+} from "@server/validation/report-sessions"
 
 export async function listReportSessionsController(_request: Request, response: Response) {
   try {

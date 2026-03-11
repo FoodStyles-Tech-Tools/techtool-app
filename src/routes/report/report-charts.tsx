@@ -13,7 +13,7 @@ import {
   ComposedChart,
   Cell,
 } from "recharts"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@client/components/ui/card"
 import type {
   VolumeByWeek,
   RequesterCount,
@@ -21,7 +21,7 @@ import type {
   AvgResponseTimeByWeekItem,
   AvgLeadTimeByWeekItem,
   ReportDataPayload,
-} from "@/types/api/report"
+} from "@shared/types/api/report"
 
 const CHART_COLORS = ["#2563eb", "#0ea5e9", "#14b8a6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899"]
 const AXIS_TICK = { fontSize: 12, fill: "#64748b" }

@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   createEpicController,
   createSprintController,
@@ -11,7 +11,7 @@ import {
   listSprintsController,
   updateEpicController,
   updateSprintController,
-} from "@/server/controllers/project-planning-controller"
+} from "@server/controllers/project-planning-controller"
 
 export const explicitProjectPlanningRouteSignatures = new Set([
   "GET /api/epics",

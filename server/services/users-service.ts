@@ -1,7 +1,7 @@
 import type { RequestContext } from "@/lib/auth-helpers"
-import { HttpError } from "@/server/http/http-error"
-import * as usersRepository from "@/server/repositories/users-repository"
-import type { CreateUserInput, UpdateUserInput } from "@/server/validation/users"
+import { HttpError } from "@server/http/http-error"
+import * as usersRepository from "@server/repositories/users-repository"
+import type { CreateUserInput, UpdateUserInput } from "@server/validation/users"
 
 function normalizeDiscordId(value: unknown): string | null {
   if (typeof value !== "string") return null

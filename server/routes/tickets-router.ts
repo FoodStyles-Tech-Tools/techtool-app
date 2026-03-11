@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   batchUpdateLegacyTicketStatusController,
   batchUpdateTicketStatusController,
@@ -14,7 +14,7 @@ import {
   updateLegacyTicketStatusWithReasonController,
   updateTicketController,
   updateTicketStatusWithReasonController,
-} from "@/server/controllers/tickets-controller"
+} from "@server/controllers/tickets-controller"
 import {
   createTicketCommentController,
   deleteTicketCommentController,
@@ -23,7 +23,7 @@ import {
   getTicketSubtaskCountsController,
   listTicketCommentsController,
   updateTicketCommentController,
-} from "@/server/controllers/ticket-support-controller"
+} from "@server/controllers/ticket-support-controller"
 
 export const explicitTicketRouteSignatures = new Set([
   "GET /api/tickets",

@@ -1,8 +1,8 @@
 import { isRichTextEmpty } from "@/lib/rich-text"
 import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
-import { HttpError } from "@/server/http/http-error"
-import * as ticketSupportRepository from "@/server/repositories/ticket-support-repository"
-import type { CreateCommentInput, UpdateCommentInput } from "@/server/validation/ticket-support"
+import { HttpError } from "@server/http/http-error"
+import * as ticketSupportRepository from "@server/repositories/ticket-support-repository"
+import type { CreateCommentInput, UpdateCommentInput } from "@server/validation/ticket-support"
 
 type TicketSupportContext = {
   supabase: Parameters<typeof ticketSupportRepository.findTicketByDisplayId>[0]

@@ -1,12 +1,12 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   createTicketStatusController,
   deleteTicketStatusController,
   listTicketStatusesController,
   reorderTicketStatusesController,
   updateTicketStatusController,
-} from "@/server/controllers/ticket-statuses-controller"
+} from "@server/controllers/ticket-statuses-controller"
 
 export const explicitTicketStatusRouteSignatures = new Set([
   "GET /api/ticket-statuses",

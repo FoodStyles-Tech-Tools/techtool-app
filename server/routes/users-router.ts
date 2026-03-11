@@ -1,12 +1,12 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   createUserController,
   deleteUserController,
   getUserController,
   listUsersController,
   updateUserController,
-} from "@/server/controllers/users-controller"
+} from "@server/controllers/users-controller"
 
 export const explicitUserRouteSignatures = new Set([
   "GET /api/users",

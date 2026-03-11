@@ -3,35 +3,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
-import { Button } from "@/components/ui/button"
-import { PageLayout } from "@/components/ui/page-layout"
-import { PageHeader } from "@/components/ui/page-header"
+import { Button } from "@client/components/ui/button"
+import { PageLayout } from "@client/components/ui/page-layout"
+import { PageHeader } from "@client/components/ui/page-header"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@client/components/ui/card"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { FormDialogShell } from "@/components/ui/form-dialog-shell"
-import { TicketForm } from "@/components/forms/ticket-form"
-import { toast } from "@/components/ui/toast"
-import { usePermissions } from "@/hooks/use-permissions"
-import { useProjects } from "@/hooks/use-projects"
+} from "@client/components/ui/dialog"
+import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
+import { TicketForm } from "@client/components/forms/ticket-form"
+import { toast } from "@client/components/ui/toast"
+import { usePermissions } from "@client/hooks/use-permissions"
+import { useProjects } from "@client/hooks/use-projects"
 import {
   ClockifyReportSession,
   useClockifySessions,
   useCreateClockifySession,
-} from "@/hooks/use-clockify"
-import { ClockifySessionsCard } from "@/features/clockify/components/clockify-sessions-card"
-import { ClockifyReportSessionCard } from "@/features/clockify/components/clockify-report-session-card"
+} from "@client/hooks/use-clockify"
+import { ClockifySessionsCard } from "@client/features/clockify/components/clockify-sessions-card"
+import { ClockifyReportSessionCard } from "@client/features/clockify/components/clockify-report-session-card"
 import {
   extractTicketIdFromEntry,
   formatDurationHours,
@@ -42,13 +42,13 @@ import {
   matchesCustomField,
   nativeSelectClassName,
   normalizeTicketId,
-} from "@/features/clockify/lib/client"
+} from "@client/features/clockify/lib/client"
 import type {
   ClockifyConfirmDialogState,
   ClockifyReconcileEntry,
   ClockifyReportEntry,
   ClockifyTicketLookupItem,
-} from "@/features/clockify/types"
+} from "@client/features/clockify/types"
 
 export default function ClockifyClient() {
   const queryClient = useQueryClient()

@@ -1,6 +1,6 @@
 import { getCurrentUserWithSupabase } from "@/lib/current-user"
 import type { RequestContext } from "@/lib/auth-helpers"
-import * as metaRepository from "@/server/repositories/meta-repository"
+import * as metaRepository from "@server/repositories/meta-repository"
 
 export async function listDepartments(context: RequestContext) {
   const departments = await metaRepository.listDepartments(context.supabase)

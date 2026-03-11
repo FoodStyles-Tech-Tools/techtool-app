@@ -1,8 +1,8 @@
 import type { Request, Response } from "express"
 import { createServerClient } from "@/lib/supabase"
 import { processDiscordOutboxBatch } from "@/lib/server/discord-outbox"
-import { revalidateTag } from "@/server/http/cache-tags"
-import { parseDiscordOutboxBody, parseRevalidateBody } from "@/server/validation/internal"
+import { revalidateTag } from "@server/http/cache-tags"
+import { parseDiscordOutboxBody, parseRevalidateBody } from "@server/validation/internal"
 
 export async function revalidateController(request: Request, response: Response) {
   try {

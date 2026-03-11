@@ -5,7 +5,7 @@ import { getUserDisplayName, getUserImage } from "@/lib/auth-session"
 import { createServerClient } from "@/lib/supabase"
 import { APP_VERSION } from "@/lib/version"
 import { buildPermissionFlags, getCurrentUserPermissions } from "@/lib/server/permissions"
-import type { PermissionSnapshot } from "@/types/auth"
+import type { PermissionSnapshot } from "@shared/types/auth"
 
 function normalizeNextPath(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {

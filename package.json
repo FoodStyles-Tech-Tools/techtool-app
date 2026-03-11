@@ -11,7 +11,7 @@
     "audit:contrast": "node scripts/contrast-audit.js",
     "check:boundaries": "node scripts/check-runtime-boundaries.js",
     "check:migrations": "node scripts/check-migration-order.js",
-    "lint": "eslint --config eslint.config.cjs src components features hooks lib server --ext .ts,.tsx",
+    "lint": "eslint --config eslint.config.js src lib server shared --ext .ts,.tsx",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "node scripts/test-connection.js"

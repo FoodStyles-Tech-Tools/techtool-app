@@ -1,6 +1,6 @@
-import { useAssets } from "@/hooks/use-assets"
-import { useUsers } from "@/hooks/use-users"
-import { FullScreenMessage } from "@/src/layouts/full-screen-message"
+import { useAssets } from "@client/hooks/use-assets"
+import { useUsers } from "@client/hooks/use-users"
+import { FullScreenMessage } from "@client/layouts/full-screen-message"
 import AssetsClient from "./assets-client"
 
 export function AssetsPage() {

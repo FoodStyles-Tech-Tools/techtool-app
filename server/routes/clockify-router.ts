@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   createClockifySessionController,
   deleteClockifySessionController,
@@ -9,7 +9,7 @@ import {
   searchClockifyTicketsController,
   updateClockifySessionController,
   updateClockifySettingsController,
-} from "@/server/controllers/clockify-controller"
+} from "@server/controllers/clockify-controller"
 
 export const explicitClockifyRouteSignatures = new Set([
   "GET /api/clockify/sessions",

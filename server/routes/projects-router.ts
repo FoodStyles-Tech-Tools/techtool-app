@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   createProjectController,
   deleteProjectController,
@@ -7,7 +7,7 @@ import {
   listPinnedProjectsController,
   listProjectsController,
   updateProjectController,
-} from "@/server/controllers/projects-controller"
+} from "@server/controllers/projects-controller"
 
 export const explicitProjectRouteSignatures = new Set([
   "GET /api/projects",

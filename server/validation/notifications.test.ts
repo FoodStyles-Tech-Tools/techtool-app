@@ -4,7 +4,7 @@ import {
   parseMarkReadBody,
   parseNotificationIdParams,
   parseV2NotificationsQuery,
-} from "@/server/validation/notifications"
+} from "@server/validation/notifications"
 
 describe("notifications validation", () => {
   it("normalizes legacy query and clamps limit", () => {

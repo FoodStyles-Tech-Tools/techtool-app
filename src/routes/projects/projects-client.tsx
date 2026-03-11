@@ -2,17 +2,17 @@
 
 import { Link } from "react-router-dom"
 import { useDeferredValue, useMemo, useState } from "react"
-import { ProjectForm } from "@/components/forms/project-form"
-import { usePermissions } from "@/hooks/use-permissions"
-import { toast } from "@/components/ui/toast"
-import { PageLayout } from "@/components/ui/page-layout"
-import { PageHeader } from "@/components/ui/page-header"
-import { FilterBar } from "@/components/ui/filter-bar"
-import { EntityTableShell } from "@/components/ui/entity-table-shell"
-import { DataState } from "@/components/ui/data-state"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { FormDialogShell } from "@/components/ui/form-dialog-shell"
+import { ProjectForm } from "@client/components/forms/project-form"
+import { usePermissions } from "@client/hooks/use-permissions"
+import { toast } from "@client/components/ui/toast"
+import { PageLayout } from "@client/components/ui/page-layout"
+import { PageHeader } from "@client/components/ui/page-header"
+import { FilterBar } from "@client/components/ui/filter-bar"
+import { EntityTableShell } from "@client/components/ui/entity-table-shell"
+import { DataState } from "@client/components/ui/data-state"
+import { Button } from "@client/components/ui/button"
+import { Input } from "@client/components/ui/input"
+import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import {
   Table,
   TableBody,
@@ -20,7 +20,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@client/components/ui/table"
 
 const ROWS_PER_PAGE = 20
 

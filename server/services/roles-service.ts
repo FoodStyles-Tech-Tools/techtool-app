@@ -1,7 +1,7 @@
 import type { RequestContext } from "@/lib/auth-helpers"
-import { HttpError } from "@/server/http/http-error"
-import * as rolesRepository from "@/server/repositories/roles-repository"
-import type { CreateRoleInput, UpdateRoleInput } from "@/server/validation/roles"
+import { HttpError } from "@server/http/http-error"
+import * as rolesRepository from "@server/repositories/roles-repository"
+import type { CreateRoleInput, UpdateRoleInput } from "@server/validation/roles"
 
 function isAdminRole(name: string | null | undefined) {
   return name?.toLowerCase() === "admin"

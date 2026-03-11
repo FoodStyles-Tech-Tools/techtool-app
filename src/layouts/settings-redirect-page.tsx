@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom"
-import { usePermissions } from "@/hooks/use-permissions"
+import { usePermissions } from "@client/hooks/use-permissions"
 import { FullScreenMessage } from "./full-screen-message"
 
 export function SettingsRedirectPage() {

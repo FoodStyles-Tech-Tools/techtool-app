@@ -1,9 +1,9 @@
 import { Router } from "express"
-import { withRequestContext } from "@/server/http/with-request-context"
+import { withRequestContext } from "@server/http/with-request-context"
 import {
   processDiscordOutboxController,
   revalidateController,
-} from "@/server/controllers/internal-controller"
+} from "@server/controllers/internal-controller"
 
 export const explicitInternalRouteSignatures = new Set([
   "POST /api/v2/revalidate",
