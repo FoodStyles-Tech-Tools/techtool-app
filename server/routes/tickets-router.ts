@@ -1,10 +1,17 @@
 import { Router } from "express"
 import { withRequestContext } from "@/server/http/with-request-context"
 import {
+  batchUpdateLegacyTicketStatusController,
   batchUpdateTicketStatusController,
+  createLegacyTicketController,
   createTicketController,
+  getLegacyTicketController,
+  getLegacyTicketDetailController,
   getTicketDetailController,
+  listLegacyTicketsController,
   listTicketsController,
+  updateLegacyTicketController,
+  updateLegacyTicketStatusWithReasonController,
   updateTicketController,
   updateTicketStatusWithReasonController,
 } from "@/server/controllers/tickets-controller"
@@ -19,6 +26,13 @@ import {
 } from "@/server/controllers/ticket-support-controller"
 
 export const explicitTicketRouteSignatures = new Set([
+  "GET /api/tickets",
+  "POST /api/tickets",
+  "GET /api/tickets/:id",
+  "PATCH /api/tickets/:id",
+  "GET /api/tickets/:id/detail",
+  "POST /api/tickets/:id/status-with-reason",
+  "POST /api/tickets/batch-status",
   "GET /api/v2/tickets",
   "POST /api/v2/tickets",
   "GET /api/v2/tickets/:id",
@@ -37,6 +51,13 @@ export const explicitTicketRouteSignatures = new Set([
 export function createTicketsRouter() {
   const router = Router()
 
+  router.get("/api/tickets", withRequestContext(listLegacyTicketsController))
+  router.post("/api/tickets", withRequestContext(createLegacyTicketController))
+  router.post("/api/tickets/batch-status", withRequestContext(batchUpdateLegacyTicketStatusController))
+  router.get("/api/tickets/:id", withRequestContext(getLegacyTicketController))
+  router.patch("/api/tickets/:id", withRequestContext(updateLegacyTicketController))
+  router.get("/api/tickets/:id/detail", withRequestContext(getLegacyTicketDetailController))
+  router.post("/api/tickets/:id/status-with-reason", withRequestContext(updateLegacyTicketStatusWithReasonController))
   router.get("/api/v2/tickets", withRequestContext(listTicketsController))
   router.post("/api/v2/tickets", withRequestContext(createTicketController))
   router.post("/api/v2/tickets/batch-status", withRequestContext(batchUpdateTicketStatusController))
