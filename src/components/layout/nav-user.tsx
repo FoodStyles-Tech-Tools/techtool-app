@@ -15,7 +15,7 @@ export function NavUser({ user, onSignOut, avatarOnly = false }: NavUserProps) {
 
   return (
     <details className="relative">
-      <summary className="flex list-none items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
+      <summary className="flex list-none cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 [&::-webkit-details-marker]:hidden">
         {user.avatar ? (
           <img
             src={user.avatar}
@@ -37,7 +37,7 @@ export function NavUser({ user, onSignOut, avatarOnly = false }: NavUserProps) {
           </>
         ) : null}
       </summary>
-      <div className="absolute right-0 top-full z-30 mt-2 min-w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-md">
+      <div className="absolute right-0 top-full z-30 mt-2 min-w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
         {!avatarOnly ? (
           <>
             <div className="flex items-center gap-2 px-2 py-2 text-left text-sm font-medium">
@@ -65,7 +65,7 @@ export function NavUser({ user, onSignOut, avatarOnly = false }: NavUserProps) {
         <button
           type="button"
           onClick={onSignOut}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-100"
+          className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
         >
           Log out
         </button>

@@ -67,11 +67,9 @@ export function getDueDateDisplay(dueDateString?: string | null, isCompleted: bo
     return {
       label: `Overdue: ${formattedDate}`,
       className:
-        "border border-red-500 bg-red-500/10 text-red-700 font-semibold " +
-        "dark:border-red-400 dark:bg-red-500/15 dark:text-red-200",
+        "border border-red-500 bg-red-500/10 text-red-700 font-semibold",
       highlightClassName:
-        "!border-red-500 !bg-red-50 hover:!bg-red-100/50 " +
-        "dark:!border-red-500/50 dark:!bg-red-500/10 dark:hover:!bg-red-500/20",
+        "!border-red-500 !bg-red-50 hover:!bg-red-100/50",
       title,
       isOverdue: true,
     }
@@ -80,8 +78,8 @@ export function getDueDateDisplay(dueDateString?: string | null, isCompleted: bo
   if (dueToday) {
     return {
       label: "Due today",
-      className: "border border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/20 dark:text-orange-50",
-      highlightClassName: "bg-orange-50/70 hover:bg-orange-100/70 dark:bg-orange-500/10 dark:hover:bg-orange-500/20",
+      className: "border border-orange-200 bg-orange-50 text-orange-700",
+      highlightClassName: "bg-orange-50/70 hover:bg-orange-100/70",
       title,
     }
   }
@@ -89,8 +87,8 @@ export function getDueDateDisplay(dueDateString?: string | null, isCompleted: bo
   if (diffDays === 1) {
     return {
       label: "Due tomorrow",
-      className: "border border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-500/40 dark:bg-yellow-500/20 dark:text-yellow-50",
-      highlightClassName: "bg-yellow-50/70 hover:bg-yellow-100/70 dark:bg-yellow-500/10 dark:hover:bg-yellow-500/20",
+      className: "border border-yellow-200 bg-yellow-50 text-yellow-700",
+      highlightClassName: "bg-yellow-50/70 hover:bg-yellow-100/70",
       title,
     }
   }
@@ -98,15 +96,15 @@ export function getDueDateDisplay(dueDateString?: string | null, isCompleted: bo
   if (diffDays >= 2 && diffDays <= 7) {
     return {
       label: `Due in ${diffDays} day${diffDays > 1 ? "s" : ""}`,
-      className: "border border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/40 dark:bg-orange-500/20 dark:text-orange-50",
-      highlightClassName: "bg-orange-50/70 hover:bg-orange-100/70 dark:bg-orange-500/10 dark:hover:bg-orange-500/20",
+      className: "border border-orange-200 bg-orange-50 text-orange-700",
+      highlightClassName: "bg-orange-50/70 hover:bg-orange-100/70",
       title,
     }
   }
 
   return {
     label: `Due ${formattedDate}`,
-    className: "border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-50",
+    className: "border border-emerald-200 bg-emerald-50 text-emerald-700",
     title,
   }
 }

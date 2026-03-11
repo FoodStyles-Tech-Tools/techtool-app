@@ -44,11 +44,11 @@ export function ClockifySessionsCard({
         {isLoading ? (
           <InlineLoader label="Loading sessions..." />
         ) : sessions.length === 0 ? (
-          <div className="rounded-lg border p-6 text-center">
+          <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
             <p className="text-sm text-slate-500">No report sessions yet.</p>
           </div>
         ) : (
-          <div className="rounded-md border">
+          <div className="rounded-md border border-slate-200">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">

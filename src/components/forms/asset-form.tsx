@@ -17,6 +17,7 @@ import { Input } from "@client/components/ui/input"
 import { useCreateAsset, useUpdateAsset } from "@client/hooks/use-assets"
 import { CollaboratorSelector } from "@client/components/collaborator-selector"
 import { toast } from "@client/components/ui/toast"
+import { inputClassNameLg } from "@client/lib/form-styles"
 
 const RichTextEditor = lazyComponent(
   () => import("@client/components/rich-text-editor").then((mod) => mod.RichTextEditor),
@@ -48,8 +49,7 @@ interface AssetFormProps {
   hideSubmitButton?: boolean
 }
 
-const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+const nativeSelectClassName = inputClassNameLg
 
 export function AssetForm({
   onSuccess,

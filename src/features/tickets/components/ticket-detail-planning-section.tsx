@@ -8,11 +8,11 @@ import type { Epic } from "@client/hooks/use-epics"
 import type { Sprint } from "@client/hooks/use-sprints"
 import type { Department, Ticket } from "@shared/types"
 import type { TicketProjectOption } from "@client/features/tickets/components/ticket-detail-sidebar-types"
+import { selectStyleInputSm } from "@client/lib/form-styles"
 
 const NO_DEPARTMENT_VALUE = "no_department"
 const NO_PROJECT_VALUE = "no_project"
-const nativeSelectClassName =
-  "h-8 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+const nativeSelectClassName = selectStyleInputSm
 const fieldLabelClassName =
   "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"
 

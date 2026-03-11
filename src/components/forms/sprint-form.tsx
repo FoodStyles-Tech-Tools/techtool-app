@@ -15,6 +15,7 @@ import {
 import { Input } from "@client/components/ui/input"
 import { Textarea } from "@client/components/ui/textarea"
 import { useCreateSprint, useUpdateSprint } from "@client/hooks/use-sprints"
+import { inputClassNameLg } from "@client/lib/form-styles"
 
 const sprintSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -32,8 +33,7 @@ interface SprintFormProps {
   initialData?: Partial<SprintFormValues> & { id?: string }
 }
 
-const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400"
+const nativeSelectClassName = inputClassNameLg
 
 export function SprintForm({ projectId, onSuccess, initialData }: SprintFormProps) {
   const createSprint = useCreateSprint()

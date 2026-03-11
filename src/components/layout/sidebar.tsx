@@ -166,7 +166,7 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                   to={item.href}
                   onClick={onNavigate}
                   className={cn(
-                    "flex h-9 items-center gap-2 rounded-md px-2 text-sm text-slate-700 transition-colors",
+                    "flex h-9 items-center gap-2 rounded-md px-2 text-sm text-slate-700 transition-colors duration-150",
                     isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
@@ -188,7 +188,7 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                       to={item.href}
                       onClick={onNavigate}
                       className={cn(
-                        "flex h-9 items-center gap-2 rounded-md px-2 text-sm text-slate-700 transition-colors",
+                        "flex h-9 items-center gap-2 rounded-md px-2 text-sm text-slate-700 transition-colors duration-150",
                         isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
                       )}
                     >
@@ -206,7 +206,7 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                 type="button"
                 onClick={() => setSettingsExpanded((e) => !e)}
                 className={cn(
-                  "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-slate-700 transition-colors",
+                  "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-slate-700 transition-colors duration-150",
                   isSettingsActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
                 )}
               >
@@ -229,7 +229,7 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                         to={child.href}
                         onClick={onNavigate}
                         className={cn(
-                          "flex h-8 items-center rounded-md px-2 text-sm text-slate-700 transition-colors",
+                          "flex h-8 items-center rounded-md px-2 text-sm text-slate-700 transition-colors duration-150",
                           isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
                         )}
                       >

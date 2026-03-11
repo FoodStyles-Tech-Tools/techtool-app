@@ -21,6 +21,7 @@ import { DepartmentForm } from "@client/components/forms/department-form"
 import { useCreateProject, useUpdateProject } from "@client/hooks/use-projects"
 import { CollaboratorSelector } from "@client/components/collaborator-selector"
 import { toast } from "@client/components/ui/toast"
+import { inputClassNameLg } from "@client/lib/form-styles"
 
 const projectSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -51,8 +52,7 @@ interface ProjectFormProps {
 }
 
 const NO_DEPARTMENT_VALUE = "no_department"
-const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+const nativeSelectClassName = inputClassNameLg
 
 export function ProjectForm({
   onSuccess,

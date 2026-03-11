@@ -13,23 +13,6 @@ export function SignInContent() {
   const nextPath = searchParams.get("next") || "/tickets"
 
   useEffect(() => {
-    const root = document.documentElement
-    const hadDark = root.classList.contains("dark")
-    const hadLight = root.classList.contains("light")
-
-    root.classList.remove("dark")
-    root.classList.add("light")
-    root.style.colorScheme = "light"
-
-    return () => {
-      root.style.colorScheme = ""
-      root.classList.remove("light")
-      if (hadDark) root.classList.add("dark")
-      else if (hadLight) root.classList.add("light")
-    }
-  }, [])
-
-  useEffect(() => {
     const errorParam = searchParams.get("error")
     if (errorParam) {
       if (
@@ -61,8 +44,8 @@ export function SignInContent() {
           </div>
         ) : null}
         <Button
-          variant="outline"
-          className="h-11 w-full bg-white hover:bg-slate-100"
+          variant="primary"
+          className="h-11 w-full"
           disabled={loading}
           onClick={async () => {
             await signIn.social(

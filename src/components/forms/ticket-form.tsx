@@ -28,6 +28,7 @@ import { usePermissions } from "@client/hooks/use-permissions"
 import { useSprints } from "@client/hooks/use-sprints"
 import { SprintSelect } from "@client/components/sprint-select"
 import { ASSIGNEE_ALLOWED_ROLES } from "@shared/ticket-constants"
+import { inputClassNameLg } from "@client/lib/form-styles"
 import { normalizeRichTextInput } from "@shared/rich-text"
 import type { User } from "@shared/types"
 
@@ -35,8 +36,7 @@ const NO_PROJECT_VALUE = "__no_project__"
 const RichTextEditor = lazyComponent(
   () => import("@client/components/rich-text-editor").then((mod) => mod.RichTextEditor),
 )
-const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+const nativeSelectClassName = inputClassNameLg
 
 const ticketSchema = z.object({
   title: z.string().min(1, "Title is required"),

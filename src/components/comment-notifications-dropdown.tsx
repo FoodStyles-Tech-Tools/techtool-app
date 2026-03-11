@@ -37,7 +37,7 @@ function NotificationItem({
       onClick={handleClick}
       onKeyDown={(event) => event.key === "Enter" && handleClick()}
       className={cn(
-        "flex cursor-pointer gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-900",
+        "flex cursor-pointer gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
         isUnread && "border-l-2 border-slate-900 bg-slate-50"
       )}
     >

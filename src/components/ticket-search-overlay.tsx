@@ -178,7 +178,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
             />
             <button
               onClick={() => onOpenChange(false)}
-              className="rounded-sm px-2 py-1 text-xs font-medium text-slate-500 opacity-70 transition-opacity hover:bg-slate-100 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2"
+              className="rounded-sm px-2 py-1 text-xs font-medium text-slate-500 opacity-70 transition-opacity hover:bg-slate-100 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
             >
               Close
             </button>

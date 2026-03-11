@@ -15,6 +15,7 @@ import { TicketPrioritySelect } from "@client/components/ticket-priority-select"
 import { TicketStatusSelect } from "@client/components/ticket-status-select"
 import { ASSIGNEE_ALLOWED_ROLES } from "@shared/ticket-constants"
 import { isDoneStatus } from "@shared/ticket-statuses"
+import { selectStyleInputSmPx2 } from "@client/lib/form-styles"
 
 interface SubtasksProps {
   ticketId: string
@@ -26,8 +27,7 @@ interface SubtasksProps {
 }
 
 const UNASSIGNED_VALUE = "unassigned"
-const subtaskSelectClassName =
-  "h-8 w-full rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+const subtaskSelectClassName = selectStyleInputSmPx2
 
 export function Subtasks({
   ticketId,

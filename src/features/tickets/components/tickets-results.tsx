@@ -20,7 +20,7 @@ export function TicketsResults({
 }: TicketsResultsProps) {
   if (loading) {
     return (
-      <div className="rounded-md border">
+      <div className="rounded-md border border-slate-200">
         <div className="space-y-2 p-4">
           {Array.from({ length: 5 }).map((_, index) => (
             <div key={index} className="flex items-center space-x-4">
@@ -38,7 +38,7 @@ export function TicketsResults({
 
   if (filteredTickets.length === 0) {
     return (
-        <div className="rounded-lg border p-8 text-center">
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
         <p className="text-sm text-slate-500">
           {hasSearchQuery ? "No tickets found" : "No tickets yet."}
         </p>

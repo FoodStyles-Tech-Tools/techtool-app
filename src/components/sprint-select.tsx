@@ -1,5 +1,6 @@
 "use client"
 
+import { selectStyleInputSm } from "@client/lib/form-styles"
 import { cn } from "@client/lib/utils"
 import { Sprint } from "@client/hooks/use-sprints"
 
@@ -33,11 +34,7 @@ export function SprintSelect({
         onValueChange(event.target.value === NO_SPRINT_VALUE ? null : event.target.value)
       }
       disabled={disabled}
-      className={cn(
-        "h-8 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
-        className,
-        triggerClassName,
-      )}
+      className={cn(selectStyleInputSm, className, triggerClassName)}
     >
       <option value={NO_SPRINT_VALUE}>No Sprint</option>
       {sprints.map((sprint) => (

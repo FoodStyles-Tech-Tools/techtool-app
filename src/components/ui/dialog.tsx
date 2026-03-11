@@ -137,7 +137,7 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("fixed inset-0 z-0 bg-slate-900/40", className)}
+    className={cn("fixed inset-0 z-0 bg-slate-900/40 transition-opacity duration-150", className)}
     {...props}
   />
 ))
@@ -203,7 +203,7 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             {showCloseButton ? (
               <button
                 type="button"
-                className="absolute right-4 top-4 rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none disabled:pointer-events-none"
+                className="absolute right-4 top-4 rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none"
                 onClick={() => setOpen(false)}
               >
                 Close

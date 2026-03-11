@@ -28,6 +28,7 @@ import { useProjects } from "@client/hooks/use-projects"
 import { useDeleteSprint } from "@client/hooks/use-sprints"
 import { SprintForm } from "@client/components/forms/sprint-form"
 import { InlineLoader } from "@client/components/ui/loading-pill"
+import { inputClassName } from "@client/lib/form-styles"
 
 type WorkspaceProject = {
   id: string
@@ -47,8 +48,7 @@ type WorkspaceSprint = {
   project_name: string
 }
 
-const nativeSelectClassName =
-  "h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+const nativeSelectClassName = inputClassName
 
 export function WorkspaceSprintsPanel() {
   const { flags } = usePermissions()

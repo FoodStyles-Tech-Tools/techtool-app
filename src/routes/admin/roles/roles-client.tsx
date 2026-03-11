@@ -295,7 +295,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <div className="space-y-3">
-                    <div className="rounded-md border">
+                    <div className="rounded-md border border-slate-200">
                       <Table>
                         <TableHeader>
                           <TableRow>

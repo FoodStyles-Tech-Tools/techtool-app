@@ -2,6 +2,7 @@
 
 import type { KeyboardEvent as ReactKeyboardEvent } from "react"
 import { Input } from "@client/components/ui/input"
+import { cn } from "@client/lib/utils"
 import { Breadcrumb } from "@client/components/ui/breadcrumb"
 import type { Ticket } from "@shared/types"
 import type { BreadcrumbItem } from "@client/components/ui/breadcrumb"
@@ -72,10 +73,10 @@ export function TicketDetailHeader({
           />
         ) : (
           <h1
-            className={[
+            className={cn(
               "text-2xl font-semibold leading-tight text-slate-900",
-              canEditTickets ? "cursor-pointer rounded-md px-1 py-1 hover:bg-slate-50" : "",
-            ].join(" ")}
+              canEditTickets && "cursor-pointer rounded-md px-1 py-1 hover:bg-slate-50"
+            )}
             onClick={() => {
               if (canEditTickets) {
                 onStartTitleEdit()

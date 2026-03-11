@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import { selectStyleInputSmPx2 } from "@client/lib/form-styles"
 import { cn } from "@client/lib/utils"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import {
@@ -51,10 +52,7 @@ export function TicketStatusSelect({
         value={value}
         onChange={(event) => onValueChange(event.target.value)}
         disabled={disabled}
-        className={cn(
-          "h-8 w-full rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
-          triggerClassName
-        )}
+        className={cn(selectStyleInputSmPx2, triggerClassName)}
       >
         {selectableStatuses.map((status) => (
           <option key={status.key} value={status.key}>

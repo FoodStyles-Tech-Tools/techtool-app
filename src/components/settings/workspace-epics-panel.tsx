@@ -27,6 +27,7 @@ import { usePermissions } from "@client/hooks/use-permissions"
 import { useProjects } from "@client/hooks/use-projects"
 import { useDeleteEpic } from "@client/hooks/use-epics"
 import { EpicForm } from "@client/components/forms/epic-form"
+import { inputClassName } from "@client/lib/form-styles"
 
 type WorkspaceProject = {
   id: string
@@ -45,8 +46,7 @@ type WorkspaceEpic = {
   project_name: string
 }
 
-const nativeSelectClassName =
-  "h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+const nativeSelectClassName = inputClassName
 
 export function WorkspaceEpicsPanel() {
   const { flags } = usePermissions()

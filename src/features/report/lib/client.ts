@@ -1,4 +1,5 @@
 import { format } from "date-fns"
+import { inputClassNameLgNoFull } from "@client/lib/form-styles"
 import type {
   ReportDataPayload,
   ReportInsightKey,
@@ -6,8 +7,7 @@ import type {
   ReportSessionInsights,
 } from "@shared/types/api/report"
 
-export const nativeSelectClassName =
-  "h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400"
+export const nativeSelectClassName = inputClassNameLgNoFull
 
 export type CreateSessionBody = {
   name?: string | null

@@ -121,7 +121,7 @@ export function Toaster() {
         <div
           key={toast.id}
           className={cn(
-            "flex items-center gap-3 rounded-lg border bg-white px-4 py-3 shadow-lg",
+            "flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-lg",
             toast.type === "success" && "border-slate-200",
             toast.type === "error" && "border-red-200"
           )}

@@ -15,6 +15,7 @@ import {
 import { Input } from "@client/components/ui/input"
 import { toast } from "@client/components/ui/toast"
 import type { Role } from "@shared/types"
+import { inputClassNameLg } from "@client/lib/form-styles"
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -38,8 +39,7 @@ interface UserFormProps {
   hideSubmitButton?: boolean
 }
 
-const nativeSelectClassName =
-  "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+const nativeSelectClassName = inputClassNameLg
 
 export function UserForm({ onSuccess, initialData, roles, formId, hideSubmitButton = false }: UserFormProps) {
   const form = useForm<UserFormValues>({

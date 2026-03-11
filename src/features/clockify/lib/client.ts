@@ -1,3 +1,4 @@
+import { inputClassNameLgNoFull } from "@client/lib/form-styles"
 import type { ClockifyReportEntry } from "@client/features/clockify/types"
 
 export const scheduleOptions = [
@@ -7,8 +8,7 @@ export const scheduleOptions = [
   { value: "monthly", label: "Monthly" },
 ]
 
-export const nativeSelectClassName =
-  "h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400"
+export const nativeSelectClassName = inputClassNameLgNoFull
 
 const CLOCKIFY_CUSTOM_FIELD_ID = "64f739d670d77d39061e8b05"
 const CLOCKIFY_CUSTOM_FIELD_VALUE = "TechTool"

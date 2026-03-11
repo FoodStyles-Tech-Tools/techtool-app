@@ -151,7 +151,7 @@ export function ClockifyReportSessionCard({
                 ) : null}
               </div>
               {reportEntries.length > 0 ? (
-                <div className="max-h-[60vh] overflow-y-auto rounded-md border">
+                <div className="max-h-[60vh] overflow-y-auto rounded-md border border-slate-200">
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
@@ -276,13 +276,13 @@ export function ClockifyReportSessionCard({
                   </Table>
                 </div>
               ) : (
-                <div className="rounded-md border p-4">
+                <div className="rounded-md border border-slate-200 p-4">
                   <p className="text-sm text-slate-500">No time entries found.</p>
                 </div>
               )}
             </div>
           ) : (
-            <div className="rounded-md border p-4">
+            <div className="rounded-md border border-slate-200 p-4">
               <p className="text-sm text-slate-500">No report data saved for this session.</p>
             </div>
           )}
