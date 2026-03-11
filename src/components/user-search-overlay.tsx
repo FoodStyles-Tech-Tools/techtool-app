@@ -6,6 +6,7 @@ import { Badge } from "@client/components/ui/badge"
 import { useUsers } from "@client/hooks/use-users"
 import { cn } from "@client/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@client/components/ui/avatar"
+import { InlineLoader } from "@client/components/ui/loading-pill"
 
 const MAX_SEARCH_RESULTS = 50
 
@@ -151,9 +152,7 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
           {/* Results */}
           <div className="max-h-[400px] overflow-y-auto p-2">
             {isLoading ? (
-              <div className="px-4 py-8 text-center text-sm text-slate-500">
-                Loading users...
-              </div>
+              <div className="px-4 py-8"><InlineLoader label="Loading users..." /></div>
             ) : filteredUsers.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-slate-500">
                 {searchQuery ? "No users found" : "Start typing to search users"}

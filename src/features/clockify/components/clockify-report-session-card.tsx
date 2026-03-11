@@ -25,6 +25,7 @@ import type {
   ClockifyReconcileEntry,
   ClockifyTicketLookupItem,
 } from "@client/features/clockify/types"
+import { InlineLoader } from "@client/components/ui/loading-pill"
 
 type ClockifyReportSessionCardProps = {
   selectedSession: ClockifyReportSession
@@ -201,7 +202,7 @@ export function ClockifyReportSessionCard({
                                   {activeTicketEntryId === entryId ? (
                                     <div className="absolute z-20 mt-1 max-h-48 w-72 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-sm">
                                       {isTicketSearchLoading ? (
-                                        <div className="px-3 py-2 text-xs text-slate-500">Loading tickets...</div>
+                                        <div className="px-3 py-2"><InlineLoader label="Loading tickets..." className="justify-start text-xs" /></div>
                                       ) : ticketSearchResults.length === 0 ? (
                                         <div className="px-3 py-2 text-xs text-slate-500">No tickets found.</div>
                                       ) : (

@@ -1,16 +1,15 @@
 import { Navigate } from "react-router-dom"
 import { usePermissions } from "@client/hooks/use-permissions"
-import { FullScreenMessage } from "./full-screen-message"
+import { LoadingPill } from "@client/components/ui/loading-pill"
 
 export function SettingsRedirectPage() {
   const { flags, loading } = usePermissions()
 
   if (loading) {
     return (
-      <FullScreenMessage
-        title="Loading settings"
-        description="Resolving the right section for your permissions."
-      />
+      <div className="flex min-h-[400px] items-center justify-center">
+        <LoadingPill label="Loading settings..." />
+      </div>
     )
   }
 

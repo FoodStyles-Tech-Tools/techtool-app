@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useUsers } from "@client/hooks/use-users"
 import { requestJson } from "@client/lib/api"
-import { FullScreenMessage } from "@client/layouts/full-screen-message"
+import { LoadingPill } from "@client/components/ui/loading-pill"
 import UsersClient from "./users-client"
 
 export function UsersPage() {
@@ -16,10 +16,9 @@ export function UsersPage() {
 
   if (usersLoading || rolesQuery.isLoading) {
     return (
-      <FullScreenMessage
-        title="Loading users"
-        description="Fetching users and available roles."
-      />
+      <div className="flex min-h-[400px] items-center justify-center">
+        <LoadingPill label="Loading users..." />
+      </div>
     )
   }
 

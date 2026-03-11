@@ -13,6 +13,7 @@ import { PageHeader } from "@client/components/ui/page-header"
 import { toast } from "@client/components/ui/toast"
 import { Input } from "@client/components/ui/input"
 import { Label } from "@client/components/ui/label"
+import { InlineLoader } from "@client/components/ui/loading-pill"
 import {
   Dialog,
   DialogContent,
@@ -252,10 +253,7 @@ export default function GuildLeadReportClient() {
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium">Session</span>
             {sessionsLoading ? (
-              <span className="inline-flex items-center gap-2 text-sm text-slate-500">
-                <span className="animate-pulse text-xs font-semibold uppercase tracking-wide">Loading</span>
-                Loading sessions...
-              </span>
+              <InlineLoader label="Loading sessions..." />
             ) : (
               <>
                 <select
@@ -354,9 +352,7 @@ export default function GuildLeadReportClient() {
 
           {dataLoading ? (
             <div className="flex items-center justify-center rounded-md border border-slate-200 bg-white py-12">
-              <span className="animate-pulse text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Loading
-              </span>
+              <InlineLoader label="Loading report..." />
             </div>
           ) : reportData ? (
             <div className="space-y-6">

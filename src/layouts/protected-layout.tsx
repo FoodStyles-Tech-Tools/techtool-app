@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { AppShell } from "@client/components/layout/app-shell"
 import { useSession } from "@client/lib/auth-client"
-import { FullScreenMessage } from "./full-screen-message"
+import { LoadingPill } from "@client/components/ui/loading-pill"
 
 export function ProtectedLayout() {
   const location = useLocation()
@@ -9,10 +9,9 @@ export function ProtectedLayout() {
 
   if (isPending) {
     return (
-      <FullScreenMessage
-        title="Loading workspace"
-        description="Checking your session and preparing the app shell."
-      />
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <LoadingPill label="Loading workspace..." />
+      </div>
     )
   }
 

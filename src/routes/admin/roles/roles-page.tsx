@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { requestJson } from "@client/lib/api"
-import { FullScreenMessage } from "@client/layouts/full-screen-message"
+import { LoadingPill } from "@client/components/ui/loading-pill"
 import RolesClient from "./roles-client"
 
 type RoleRecord = {
@@ -23,10 +23,9 @@ export function RolesPage() {
 
   if (rolesQuery.isLoading) {
     return (
-      <FullScreenMessage
-        title="Loading roles"
-        description="Fetching role definitions and permission sets."
-      />
+      <div className="flex min-h-[400px] items-center justify-center">
+        <LoadingPill label="Loading roles..." />
+      </div>
     )
   }
 

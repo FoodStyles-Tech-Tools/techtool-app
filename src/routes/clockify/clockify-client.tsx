@@ -32,6 +32,7 @@ import {
 } from "@client/hooks/use-clockify"
 import { ClockifySessionsCard } from "@client/features/clockify/components/clockify-sessions-card"
 import { ClockifyReportSessionCard } from "@client/features/clockify/components/clockify-report-session-card"
+import { InlineLoader } from "@client/components/ui/loading-pill"
 import {
   extractTicketIdFromEntry,
   formatDurationHours,
@@ -737,9 +738,7 @@ export default function ClockifyClient() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center py-4">
-            <span className="animate-pulse text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Working
-            </span>
+            <InlineLoader label="Working..." />
           </div>
         </DialogContent>
       </Dialog>

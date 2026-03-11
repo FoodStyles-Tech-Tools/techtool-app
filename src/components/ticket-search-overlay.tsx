@@ -9,6 +9,7 @@ import { TicketStatusIcon } from "@client/components/ticket-status-select"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import { formatStatusLabel, normalizeStatusKey } from "@shared/ticket-statuses"
 import { TicketTypeIcon } from "@client/components/ticket-type-select"
+import { InlineLoader } from "@client/components/ui/loading-pill"
 
 const MAX_SEARCH_RESULTS = 50
 
@@ -186,9 +187,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
           {/* Results */}
           <div className="max-h-[400px] overflow-y-auto p-2">
             {isLoading ? (
-              <div className="px-4 py-8 text-center text-sm text-slate-500">
-                Loading tickets...
-              </div>
+              <div className="px-4 py-8"><InlineLoader label="Loading tickets..." /></div>
             ) : filteredTickets.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-slate-500">
                 {searchQuery ? "No tickets found" : "Start typing to search tickets"}

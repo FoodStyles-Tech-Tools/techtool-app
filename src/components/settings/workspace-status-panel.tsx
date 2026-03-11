@@ -28,6 +28,7 @@ import {
 import { usePermissions } from "@client/hooks/use-permissions"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import { normalizeStatusKey, type TicketStatus } from "@shared/ticket-statuses"
+import { InlineLoader } from "@client/components/ui/loading-pill"
 import { toast } from "@client/components/ui/toast"
 
 type StatusDraft = {
@@ -187,8 +188,8 @@ export function WorkspaceStatusPanel() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-slate-500">
-                  Loading statuses...
+                <TableCell colSpan={6} className="py-8">
+                  <InlineLoader label="Loading statuses..." />
                 </TableCell>
               </TableRow>
             ) : sortedStatuses.length === 0 ? (

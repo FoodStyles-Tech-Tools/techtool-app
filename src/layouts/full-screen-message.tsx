@@ -1,3 +1,5 @@
+import { LoadingPill } from "@client/components/ui/loading-pill"
+
 export function FullScreenMessage({
   title,
   description,
@@ -20,9 +22,8 @@ export function FullScreenMessage({
 
 export function RouteLoadingFallback() {
   return (
-    <FullScreenMessage
-      title="Loading route"
-      description="Preparing the page module."
-    />
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <LoadingPill label="Loading page..." />
+    </div>
   )
 }

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
 import { useLocation } from "react-router-dom"
+import { Loader2 } from "lucide-react"
 
 type SignOutOverlayContextValue = {
   show: () => void
@@ -28,11 +29,9 @@ export function SignOutOverlayProvider({ children }: { children: React.ReactNode
       {children}
       {visible && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/70">
-          <div className="flex flex-col items-center gap-3 text-white">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-200 animate-pulse">
-              Working
-            </span>
-            <p className="text-lg font-semibold tracking-wide">Logging you out...</p>
+          <div className="inline-flex items-center gap-2.5 rounded-full bg-white px-5 py-2.5 shadow-lg">
+            <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
+            <span className="text-sm text-slate-600">Logging you out...</span>
           </div>
         </div>
       )}

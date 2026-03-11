@@ -1,7 +1,7 @@
 import { useDepartments } from "@client/hooks/use-departments"
 import { useProjects } from "@client/hooks/use-projects"
 import { useUsers } from "@client/hooks/use-users"
-import { FullScreenMessage } from "@client/layouts/full-screen-message"
+import { LoadingPill } from "@client/components/ui/loading-pill"
 import ProjectsClient from "./projects-client"
 
 export function ProjectsPage() {
@@ -11,10 +11,9 @@ export function ProjectsPage() {
 
   if (projectsLoading || departmentsLoading || usersLoading) {
     return (
-      <FullScreenMessage
-        title="Loading projects"
-        description="Fetching projects, departments, and people."
-      />
+      <div className="flex min-h-[400px] items-center justify-center">
+        <LoadingPill label="Loading projects..." />
+      </div>
     )
   }
 

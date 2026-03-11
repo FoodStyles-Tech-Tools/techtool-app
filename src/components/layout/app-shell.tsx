@@ -140,8 +140,14 @@ export function AppShell({
                 <Menu className="h-5 w-5" />
               </button>
               <div className="block md:hidden">
-                <p className="text-sm font-semibold text-slate-900">TECHTOOL</p>
-                <p className="text-xs text-slate-500">Ticketing</p>
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/techtool-logo.png"
+                    alt="Techtool logo"
+                    className="h-5 w-5 rounded-sm object-contain"
+                  />
+                  <p className="text-sm font-semibold text-slate-900">Techtool</p>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-1">

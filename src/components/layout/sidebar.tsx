@@ -1,19 +1,17 @@
 "use client"
 
+import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 import {
   PanelLeftClose,
   Ticket,
   FolderKanban,
   BarChart3,
-  Users,
-  Shield,
-  CircleDot,
-  Layers,
-  CalendarDays,
-  Archive,
   Package,
   Clock,
+  Settings,
+  ChevronDown,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@client/lib/utils"
@@ -28,12 +26,15 @@ type NavItem = {
   flag?: keyof PermissionFlags
 }
 
-type AdminItem = {
+type SettingsChild = {
   title: string
   href: string
-  icon: LucideIcon
   flag?: keyof PermissionFlags
-  visible?: (flags: PermissionFlags) => boolean
+}
+
+type SettingsParent = {
+  title: string
+  children: SettingsChild[]
 }
 
 const primaryNavItems: NavItem[] = [
@@ -57,43 +58,7 @@ const primaryNavItems: NavItem[] = [
   },
 ]
 
-const adminItems: AdminItem[] = [
-  {
-    title: "Users",
-    href: "/users",
-    icon: Users,
-    flag: "canViewUsers",
-  },
-  {
-    title: "Roles",
-    href: "/roles",
-    icon: Shield,
-    flag: "canViewRoles",
-  },
-  {
-    title: "Statuses",
-    href: "/status",
-    icon: CircleDot,
-    flag: "canManageStatus",
-  },
-  {
-    title: "Epics",
-    href: "/epics",
-    icon: Layers,
-    flag: "canEditProjects",
-  },
-  {
-    title: "Sprints",
-    href: "/sprints",
-    icon: CalendarDays,
-    flag: "canEditProjects",
-  },
-  {
-    title: "Deleted Tickets",
-    href: "/deleted-tickets",
-    icon: Archive,
-    flag: "canViewTickets",
-  },
+const assetsClockifyItems: NavItem[] = [
   {
     title: "Assets",
     href: "/assets",
@@ -105,6 +70,25 @@ const adminItems: AdminItem[] = [
     href: "/clockify",
     icon: Clock,
     flag: "canViewClockify",
+  },
+]
+
+const settingsParents: SettingsParent[] = [
+  {
+    title: "User Management",
+    children: [
+      { title: "Users", href: "/users", flag: "canViewUsers" },
+      { title: "Roles", href: "/roles", flag: "canViewRoles" },
+    ],
+  },
+  {
+    title: "Workspace",
+    children: [
+      { title: "Status", href: "/status", flag: "canManageStatus" },
+      { title: "Epics", href: "/epics", flag: "canEditProjects" },
+      { title: "Sprints", href: "/sprints", flag: "canEditProjects" },
+      { title: "Deleted Tickets", href: "/deleted-tickets", flag: "canViewTickets" },
+    ],
   },
 ]
 
@@ -121,12 +105,22 @@ type SidebarProps = {
 export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarProps) {
   const pathname = useLocation().pathname
   const { flags } = usePermissions()
+  const [settingsExpanded, setSettingsExpanded] = useState(false)
 
-  const isVisible = (item: { flag?: keyof PermissionFlags; visible?: (flags: PermissionFlags) => boolean }) =>
-    item.visible ? item.visible(flags) : item.flag ? Boolean(flags[item.flag]) : true
+  const isVisible = (item: { flag?: keyof PermissionFlags }) =>
+    item.flag ? Boolean(flags[item.flag]) : true
 
   const visiblePrimary = primaryNavItems.filter(isVisible)
-  const visibleAdmin = adminItems.filter(isVisible)
+  const visibleAssetsClockify = assetsClockifyItems.filter(isVisible)
+
+  const hasAnySettingsChild = settingsParents.some((parent) =>
+    parent.children.some((c) => isVisible(c))
+  )
+
+  const visibleSettingsChildren = settingsParents.flatMap((parent) =>
+    parent.children.filter(isVisible).map((child) => ({ ...child }))
+  )
+  const isSettingsActive = visibleSettingsChildren.some((c) => isPathActive(pathname, c.href))
 
   return (
     <aside
@@ -138,9 +132,13 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
       <div className="flex h-full flex-col px-3 py-4">
         <div className="border-b border-slate-200 pb-4">
           <div className="flex items-center justify-between gap-2.5">
-            <div className="space-y-0.5">
-              <p className="text-sm font-semibold text-slate-900">TECHTOOL</p>
-              <p className="text-xs text-slate-500">Ticketing</p>
+            <div className="flex items-center gap-2">
+              <img
+                src="/techtool-logo.png"
+                alt="Techtool logo"
+                className="h-6 w-6 rounded-sm object-contain"
+              />
+              <p className="text-sm font-semibold text-slate-900">Techtool</p>
             </div>
 
             {onToggleCollapsed ? (
@@ -179,14 +177,9 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
             })}
           </nav>
 
-          {visibleAdmin.length > 0 ? (
-            <>
-              <div className="my-3 border-t border-slate-200" />
-              <p className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-slate-400">
-                Workspace
-              </p>
-              <nav className="space-y-1">
-                {visibleAdmin.map((item) => {
+          {visibleAssetsClockify.length > 0 ? (
+            <nav className="mt-1 space-y-1">
+                {visibleAssetsClockify.map((item) => {
                   const isActive = isPathActive(pathname, item.href)
                   const Icon = item.icon
                   return (
@@ -205,7 +198,48 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                   )
                 })}
               </nav>
-            </>
+          ) : null}
+
+          {hasAnySettingsChild ? (
+            <div className="mt-1">
+              <button
+                type="button"
+                onClick={() => setSettingsExpanded((e) => !e)}
+                className={cn(
+                  "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-slate-700 transition-colors",
+                  isSettingsActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
+                )}
+              >
+                <Settings className="h-4 w-4 shrink-0" />
+                <span>Settings</span>
+                {settingsExpanded ? (
+                  <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
+                ) : (
+                  <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
+                )}
+              </button>
+
+              {settingsExpanded && (
+                <div className="mt-1 space-y-0.5 border-l-2 border-slate-200 pl-3">
+                  {visibleSettingsChildren.map((child) => {
+                    const isActive = isPathActive(pathname, child.href)
+                    return (
+                      <Link
+                        key={child.href}
+                        to={child.href}
+                        onClick={onNavigate}
+                        className={cn(
+                          "flex h-8 items-center rounded-md px-2 text-sm text-slate-700 transition-colors",
+                          isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
+                        )}
+                      >
+                        {child.title}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           ) : null}
         </div>
       </div>

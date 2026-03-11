@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@client/components/ui/table"
 import type { ClockifyReportSession } from "@client/hooks/use-clockify"
+import { InlineLoader } from "@client/components/ui/loading-pill"
 
 type ClockifySessionsCardProps = {
   isLoading: boolean
@@ -41,7 +42,7 @@ export function ClockifySessionsCard({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-sm text-slate-500">Loading sessions...</p>
+          <InlineLoader label="Loading sessions..." />
         ) : sessions.length === 0 ? (
           <div className="rounded-lg border p-6 text-center">
             <p className="text-sm text-slate-500">No report sessions yet.</p>

@@ -1,6 +1,6 @@
 import { useAssets } from "@client/hooks/use-assets"
 import { useUsers } from "@client/hooks/use-users"
-import { FullScreenMessage } from "@client/layouts/full-screen-message"
+import { LoadingPill } from "@client/components/ui/loading-pill"
 import AssetsClient from "./assets-client"
 
 export function AssetsPage() {
@@ -9,10 +9,9 @@ export function AssetsPage() {
 
   if (assetsLoading || usersLoading) {
     return (
-      <FullScreenMessage
-        title="Loading assets"
-        description="Fetching the shared asset registry."
-      />
+      <div className="flex min-h-[400px] items-center justify-center">
+        <LoadingPill label="Loading assets..." />
+      </div>
     )
   }
 
