@@ -10,7 +10,7 @@ import type { ParentTicketOption } from "@client/features/tickets/components/tic
 const UNASSIGNED_VALUE = "unassigned"
 const NO_PARENT_TICKET_VALUE = "no_parent_ticket"
 const nativeSelectClassName =
-  "h-8 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
+  "h-8 w-full rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"
 const fieldLabelClassName =
   "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"
 

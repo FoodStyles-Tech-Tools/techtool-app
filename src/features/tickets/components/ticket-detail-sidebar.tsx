@@ -1,9 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@client/components/ui/card"
+import { Card } from "@client/components/ui/card"
 import { TicketDetailFieldsSection } from "@client/features/tickets/components/ticket-detail-fields-section"
-import { TicketDetailRelationsSection } from "@client/features/tickets/components/ticket-detail-relations-section"
 import { TicketDetailTimestampsSection } from "@client/features/tickets/components/ticket-detail-timestamps-section"
 import type {
   ParentTicketOption,
@@ -12,12 +10,7 @@ import type {
 } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 import type { Epic } from "@client/hooks/use-epics"
 import type { Sprint } from "@client/hooks/use-sprints"
-import type {
-  Department,
-  Ticket,
-  TicketDetailRelations,
-  User,
-} from "@shared/types"
+import type { Department, Ticket, User } from "@shared/types"
 
 type TicketDetailSidebarProps = {
   ticket: Ticket
@@ -33,7 +26,6 @@ type TicketDetailSidebarProps = {
   epics: Epic[]
   sprints: Sprint[]
   projectOptions: TicketProjectOption[]
-  relations: TicketDetailRelations
   parentTicketOptions: ParentTicketOption[]
   selectedParentTicketId: string | null
   selectedParentTicketOption: ParentTicketOption | null
@@ -72,7 +64,6 @@ export function TicketDetailSidebar({
   epics,
   sprints,
   projectOptions,
-  relations,
   parentTicketOptions,
   selectedParentTicketId,
   selectedParentTicketOption,
@@ -93,79 +84,54 @@ export function TicketDetailSidebar({
   onProjectChange,
   onTimestampChange,
 }: TicketDetailSidebarProps) {
-  const [advancedOpen, setAdvancedOpen] = useState(false)
-
   return (
-    <div className="min-w-0">
-      <Card>
-        <CardHeader className="px-4 pt-4 pb-2">
-          <CardTitle className="text-base">Details</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-4 pt-0">
-          <div className="space-y-4">
-            <TicketDetailFieldsSection
-              ticket={ticket}
-              canEditTickets={canEditTickets}
-              isAssignmentLocked={isAssignmentLocked}
-              isSqaEditLocked={isSqaEditLocked}
-              updatingFields={updatingFields}
-              currentUser={currentUser}
-              users={users}
-              assigneeEligibleUsers={assigneeEligibleUsers}
-              sqaEligibleUsers={sqaEligibleUsers}
-              departments={departments}
-              epics={epics}
-              sprints={sprints}
-              projectOptions={projectOptions}
-              parentTicketOptions={parentTicketOptions}
-              selectedParentTicketId={selectedParentTicketId}
-              selectedParentTicketOption={selectedParentTicketOption}
-              parentNavigationSlug={parentNavigationSlug}
-              parseTimestamp={parseTimestamp}
-              onAssigneeChange={onAssigneeChange}
-              onRequestedByChange={onRequestedByChange}
-              onSqaAssigneeChange={onSqaAssigneeChange}
-              onTypeChange={onTypeChange}
-              onParentTicketChange={onParentTicketChange}
-              onPriorityChange={onPriorityChange}
-              onDueDateChange={onDueDateChange}
-              onDepartmentChange={onDepartmentChange}
-              onEpicChange={onEpicChange}
-              onSprintChange={onSprintChange}
-              onProjectChange={onProjectChange}
-            />
-
-            <div className="rounded-md border border-slate-200">
-              <button
-                type="button"
-                onClick={() => setAdvancedOpen((prev) => !prev)}
-                className="flex w-full cursor-pointer items-center justify-between px-3 py-2 text-sm font-medium text-slate-900"
-                aria-expanded={advancedOpen}
-              >
-                <span>Advanced details</span>
-                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                  {advancedOpen ? "Hide" : "Show"}
-                </span>
-              </button>
-              {advancedOpen ? (
-                <div className="space-y-4 border-t border-slate-200 p-3">
-                  <TicketDetailRelationsSection ticket={ticket} relations={relations} />
-                  <TicketDetailTimestampsSection
-                    ticket={ticket}
-                    canEditTickets={canEditTickets}
-                    isAssignmentLocked={isAssignmentLocked}
-                    updatingFields={updatingFields}
-                    timestampValidation={timestampValidation}
-                    parseTimestamp={parseTimestamp}
-                    getTimestampWarningMessage={getTimestampWarningMessage}
-                    onTimestampChange={onTimestampChange}
-                  />
-                </div>
-              ) : null}
-            </div>
-          </div>
-        </CardContent>
+    <aside className="min-w-0 space-y-4">
+      <Card className="p-5 shadow-none">
+        <h2 className="text-sm font-semibold text-slate-900">Details</h2>
+        <div className="mt-3 space-y-4">
+          <TicketDetailFieldsSection
+            ticket={ticket}
+            canEditTickets={canEditTickets}
+            isAssignmentLocked={isAssignmentLocked}
+            isSqaEditLocked={isSqaEditLocked}
+            updatingFields={updatingFields}
+            currentUser={currentUser}
+            users={users}
+            assigneeEligibleUsers={assigneeEligibleUsers}
+            sqaEligibleUsers={sqaEligibleUsers}
+            departments={departments}
+            epics={epics}
+            sprints={sprints}
+            projectOptions={projectOptions}
+            parentTicketOptions={parentTicketOptions}
+            selectedParentTicketId={selectedParentTicketId}
+            selectedParentTicketOption={selectedParentTicketOption}
+            parentNavigationSlug={parentNavigationSlug}
+            parseTimestamp={parseTimestamp}
+            onAssigneeChange={onAssigneeChange}
+            onRequestedByChange={onRequestedByChange}
+            onSqaAssigneeChange={onSqaAssigneeChange}
+            onTypeChange={onTypeChange}
+            onParentTicketChange={onParentTicketChange}
+            onPriorityChange={onPriorityChange}
+            onDueDateChange={onDueDateChange}
+            onDepartmentChange={onDepartmentChange}
+            onEpicChange={onEpicChange}
+            onSprintChange={onSprintChange}
+            onProjectChange={onProjectChange}
+          />
+          <TicketDetailTimestampsSection
+            ticket={ticket}
+            canEditTickets={canEditTickets}
+            isAssignmentLocked={isAssignmentLocked}
+            updatingFields={updatingFields}
+            timestampValidation={timestampValidation}
+            parseTimestamp={parseTimestamp}
+            getTimestampWarningMessage={getTimestampWarningMessage}
+            onTimestampChange={onTimestampChange}
+          />
+        </div>
       </Card>
-    </div>
+    </aside>
   )
 }

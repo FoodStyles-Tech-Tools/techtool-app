@@ -14,9 +14,9 @@ interface EpicSelectProps {
 
 const NO_EPIC_VALUE = "no_epic"
 
-export function EpicSelect({ 
-  value, 
-  onValueChange, 
+export function EpicSelect({
+  value,
+  onValueChange,
   epics,
   disabled,
   className,
@@ -27,23 +27,24 @@ export function EpicSelect({
     : null
 
   return (
-    <div className={cn("relative w-[140px]", className)}>
-      <select
-        value={value || NO_EPIC_VALUE}
-        onChange={(event) => onValueChange(event.target.value === NO_EPIC_VALUE ? null : event.target.value)}
-        disabled={disabled}
-        className={cn(
-          "h-7 w-full rounded-md border border-slate-300 bg-white px-2 text-xs text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
-          triggerClassName
-        )}
-      >
-        <option value={NO_EPIC_VALUE}>No Epic</option>
-        {epics.map((epic) => (
-          <option key={epic.id} value={epic.id}>
-            {epic.name}
-          </option>
-        ))}
-      </select>
-    </div>
+    <select
+      value={value || NO_EPIC_VALUE}
+      onChange={(event) =>
+        onValueChange(event.target.value === NO_EPIC_VALUE ? null : event.target.value)
+      }
+      disabled={disabled}
+      className={cn(
+        "h-8 w-full rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50",
+        className,
+        triggerClassName,
+      )}
+    >
+      <option value={NO_EPIC_VALUE}>No Epic</option>
+      {epics.map((epic) => (
+        <option key={epic.id} value={epic.id}>
+          {epic.name}
+        </option>
+      ))}
+    </select>
   )
 }

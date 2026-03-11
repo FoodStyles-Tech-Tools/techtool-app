@@ -4,7 +4,6 @@ import { DateTimePicker } from "@client/components/ui/datetime-picker"
 import type { Ticket } from "@shared/types"
 import type { TimestampValidation } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 
-const sectionTitleClassName = "mb-2 text-xs font-medium uppercase tracking-wide text-slate-500"
 const fieldLabelClassName =
   "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"
 
@@ -34,7 +33,6 @@ export function TicketDetailTimestampsSection({
 }: TicketDetailTimestampsSectionProps) {
   return (
     <div>
-      <h3 className={sectionTitleClassName}>Timestamps</h3>
       <div className="space-y-2.5">
         <div className="flex items-start gap-3">
           <label className={fieldLabelClassName}>Created</label>

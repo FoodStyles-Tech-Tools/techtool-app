@@ -2,7 +2,6 @@
 
 import { useId, useMemo, useState } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { Card, CardContent, CardHeader, CardTitle } from "@client/components/ui/card"
 import { Button } from "@client/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@client/components/ui/avatar"
 import { DataState } from "@client/components/ui/data-state"
@@ -20,7 +19,7 @@ interface TicketActivityProps {
   initialComments?: TicketComment[]
 }
 
-type ActivityTab = "all" | "comments" | "history"
+type ActivityTab = "comments" | "history"
 
 const FIELD_LABELS: Record<string, string> = {
   title: "title",
@@ -192,10 +191,9 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
 
 export function TicketActivity({ ticketId, displayId, initialComments }: TicketActivityProps) {
   const panelId = useId()
-  const [isCollapsed, setIsCollapsed] = useState(false)
   const [activeTab, setActiveTab] = useState<ActivityTab>("comments")
   const { data, isLoading, error } = useTicketActivity(ticketId, {
-    enabled: !!ticketId && !isCollapsed && activeTab !== "comments",
+    enabled: !!ticketId && activeTab === "history",
   })
 
   const activities = useMemo(() => data?.activities ?? [], [data?.activities])
@@ -206,50 +204,27 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
   const activityItems = activeTab === "history" ? historyItems : activities
 
   return (
-    <Card className="shadow-none">
-      <CardHeader className="px-4 pt-4 pb-2">
-        <button
-          type="button"
-          className="flex w-full items-center gap-2 text-left"
-          onClick={() => setIsCollapsed((prev) => !prev)}
-          aria-expanded={!isCollapsed}
-          aria-controls={panelId}
-        >
-          <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            {isCollapsed ? "Show" : "Hide"}
-          </span>
-          <CardTitle className="text-base">Activity</CardTitle>
-        </button>
-      </CardHeader>
+    <section id={panelId} className="space-y-3">
+      <h2 className="text-sm font-semibold text-slate-900">Activity</h2>
 
-      {!isCollapsed && (
-        <CardContent id={panelId} className="px-4 pb-4 pt-0">
-          <div className="mb-3 inline-flex items-center rounded-md border border-slate-200 bg-slate-50 p-0.5">
-            <Button
-              variant={activeTab === "all" ? "selected" : "ghost"}
-              size="sm"
-              className={cn("h-7 text-xs px-3", activeTab === "all" ? "shadow-none" : "")}
-              onClick={() => setActiveTab("all")}
-            >
-              All
-            </Button>
-            <Button
-              variant={activeTab === "comments" ? "selected" : "ghost"}
-              size="sm"
-              className={cn("h-7 text-xs px-3", activeTab === "comments" ? "shadow-none" : "")}
-              onClick={() => setActiveTab("comments")}
-            >
-              Comments
-            </Button>
-            <Button
-              variant={activeTab === "history" ? "selected" : "ghost"}
-              size="sm"
-              className={cn("h-7 text-xs px-3", activeTab === "history" ? "shadow-none" : "")}
-              onClick={() => setActiveTab("history")}
-            >
-              History
-            </Button>
-          </div>
+      <div className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 p-0.5">
+        <Button
+          variant={activeTab === "comments" ? "selected" : "ghost"}
+          size="sm"
+          className={cn("h-7 px-3 text-xs", activeTab === "comments" ? "shadow-none" : "")}
+          onClick={() => setActiveTab("comments")}
+        >
+          Comments
+        </Button>
+        <Button
+          variant={activeTab === "history" ? "selected" : "ghost"}
+          size="sm"
+          className={cn("h-7 px-3 text-xs", activeTab === "history" ? "shadow-none" : "")}
+          onClick={() => setActiveTab("history")}
+        >
+          History
+        </Button>
+      </div>
 
           {activeTab === "comments" ? (
             <TicketComments
@@ -307,8 +282,6 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
               </div>
             </DataState>
           )}
-        </CardContent>
-      )}
-    </Card>
+    </section>
   )
 }
