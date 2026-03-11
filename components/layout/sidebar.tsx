@@ -84,7 +84,12 @@ function isPathActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`)
 }
 
-export function Sidebar() {
+type SidebarProps = {
+  className?: string
+  onNavigate?: () => void
+}
+
+export function Sidebar({ className, onNavigate }: SidebarProps) {
   const pathname = useLocation().pathname
   const { flags } = usePermissions()
 
@@ -94,7 +99,12 @@ export function Sidebar() {
   const navItems = [...primaryNavItems.filter(isVisible), ...adminItems.filter(isVisible)]
 
   return (
-    <aside className="sticky top-0 h-screen w-60 shrink-0 border-r border-slate-200 bg-white">
+    <aside
+      className={cn(
+        "bg-white border-r border-slate-200",
+        className
+      )}
+    >
       <div className="flex h-full flex-col px-3 py-4">
         <div className="border-b border-slate-200 pb-4">
           <div className="flex items-center gap-2.5">
@@ -114,6 +124,7 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   to={item.href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex h-9 items-center rounded-md px-2 text-sm text-slate-700 transition-colors",
                     isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
@@ -129,5 +140,4 @@ export function Sidebar() {
     </aside>
   )
 }
-
 

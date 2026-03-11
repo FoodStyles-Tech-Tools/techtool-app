@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Sidebar } from "./sidebar"
 import { PermissionsBootstrap } from "@/components/permissions-bootstrap"
@@ -51,6 +52,7 @@ export function AppShell({
   children: React.ReactNode
   permissionsBootstrap?: PermissionsBootstrapPayload
 }) {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const navigate = useNavigate()
   const { data: session } = useSession()
   const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()
@@ -67,13 +69,55 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-slate-100 text-slate-900">
-      {permissionsBootstrap ? (
-        <PermissionsBootstrap payload={permissionsBootstrap} />
+      {permissionsBootstrap ? <PermissionsBootstrap payload={permissionsBootstrap} /> : null}
+
+      {/* Mobile sidebar + overlay */}
+      {mobileSidebarOpen ? (
+        <div className="fixed inset-0 z-40 flex md:hidden">
+          <div
+            className="fixed inset-0 bg-slate-900/40"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+          <Sidebar
+            className="relative z-50 h-full w-64 shrink-0 bg-white shadow-xl"
+            onNavigate={() => setMobileSidebarOpen(false)}
+          />
+        </div>
       ) : null}
-      <Sidebar />
+
+      {/* Desktop sidebar */}
+      <Sidebar className="sticky top-0 hidden h-screen w-60 shrink-0 md:block" />
+
       <div className="min-w-0 flex-1">
         <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-          <div className="flex h-14 items-center justify-end gap-3 px-4 sm:px-6">
+          <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:hidden"
+                aria-label="Open navigation"
+                onClick={() => setMobileSidebarOpen(true)}
+              >
+                <span className="sr-only">Open navigation</span>
+                <svg
+                  className="h-5 w-5"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="4" y1="6" x2="20" y2="6" />
+                  <line x1="4" y1="12" x2="20" y2="12" />
+                  <line x1="4" y1="18" x2="20" y2="18" />
+                </svg>
+              </button>
+              <div className="block md:hidden">
+                <p className="text-sm font-semibold text-slate-900">TECHTOOL</p>
+                <p className="text-xs text-slate-500">Ticketing</p>
+              </div>
+            </div>
             <div className="flex items-center gap-1">
               <CommentNotificationsDropdown />
               <NavUser
