@@ -10,17 +10,14 @@
     "incremental": false
   },
   "include": [
-    "backend/**/*.ts",
     "server/**/*.ts",
+    "shared/**/*.ts",
     "types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "src",
     "**/*.test.ts",
-    "**/*.spec.ts",
-    "app/**/page.tsx",
-    "app/**/layout.tsx",
-    "app/**/loading.tsx"
+    "**/*.spec.ts"
   ]
 }
