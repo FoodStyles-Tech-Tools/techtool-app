@@ -85,6 +85,7 @@ export function TicketDetailMainColumn({
                 placeholder="Describe this ticket"
                 className="border-slate-200"
                 activateOnClick
+                initialActivated
                 onContentKeyDown={(event: KeyboardEvent) => {
                   if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
                     event.preventDefault()
@@ -95,10 +96,25 @@ export function TicketDetailMainColumn({
                 }}
               />
               <div className="flex items-center justify-end gap-2">
-                <Button size="sm" onClick={() => void onDescriptionSave()}>
+                <Button
+                  size="sm"
+                  onClick={() => void onDescriptionSave()}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    void onDescriptionSave()
+                  }}
+                >
                   Save
                 </Button>
-                <Button size="sm" variant="ghost" onClick={onCancelDescriptionEdit}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onCancelDescriptionEdit}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    onCancelDescriptionEdit()
+                  }}
+                >
                   Cancel
                 </Button>
               </div>

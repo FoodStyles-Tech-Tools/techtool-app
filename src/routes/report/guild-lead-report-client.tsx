@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react"
 import { useSearchParams } from "react-router-dom"
+import { Plus } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { getDefaultReportDateRange } from "@shared/report-date-range"
@@ -270,6 +271,7 @@ export default function GuildLeadReportClient() {
                   ))}
                 </select>
                 <Button variant="outline" size="sm" onClick={openCreateSessionDialog}>
+                  <Plus className="h-4 w-4" />
                   New session
                 </Button>
               </>

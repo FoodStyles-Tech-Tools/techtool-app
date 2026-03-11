@@ -1,5 +1,6 @@
 "use client"
 
+import { Search, RotateCcw } from "lucide-react"
 import { Button } from "@client/components/ui/button"
 import { Input } from "@client/components/ui/input"
 import { Select } from "@client/components/ui/select"
@@ -53,12 +54,15 @@ export function TicketsToolbar({
     <FilterBar
       filters={
         <>
-          <Input
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search tickets by ID, title, or description"
-            className="h-9 w-80"
-          />
+          <div className="relative w-80">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search tickets by ID, title, or description"
+              className="h-9 pl-8"
+            />
+          </div>
 
           <Select
             value={projectFilter}
@@ -109,6 +113,7 @@ export function TicketsToolbar({
           size="sm"
           onClick={resetToolbarFilters}
         >
+          <RotateCcw className="h-4 w-4" />
           Reset
         </Button>
       }

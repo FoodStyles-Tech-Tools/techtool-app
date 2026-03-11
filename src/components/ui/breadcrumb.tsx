@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom"
+import { ChevronRight as ChevronRightIcon } from "lucide-react"
 import { cn } from "@client/lib/utils"
 
 export type BreadcrumbItem = {
@@ -40,7 +41,7 @@ export function Breadcrumb({ items, className, separator = "chevron" }: Breadcru
                 <span className="px-1" aria-hidden>{sep}</span>
               ) : (
                 <span className="text-slate-300" aria-hidden>
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRightIcon className="h-4 w-4" />
                 </span>
               )
             )}
@@ -52,19 +53,3 @@ export function Breadcrumb({ items, className, separator = "chevron" }: Breadcru
   )
 }
 
-function ChevronRight({ className }: { className?: string }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className={className}
-    >
-      <path
-        fillRule="evenodd"
-        d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.06l-4.5 4.25a.75.75 0 01-1.06-.02z"
-        clipRule="evenodd"
-      />
-    </svg>
-  )
-}

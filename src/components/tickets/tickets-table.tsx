@@ -2,7 +2,6 @@
 
 import { memo } from "react"
 import type { Ticket } from "@shared/types"
-import { type SortColumn } from "@shared/ticket-constants"
 import { formatRelativeDate, getDueDateDisplay } from "@client/lib/format-dates"
 import { normalizeStatusKey, isDoneStatus } from "@shared/ticket-statuses"
 import { Button } from "@client/components/ui/button"
@@ -16,19 +15,7 @@ import {
   TableRow,
 } from "@client/components/ui/table"
 
-const SERVER_SORTABLE_COLUMNS = new Set<SortColumn>([
-  "id",
-  "title",
-  "due_date",
-  "type",
-  "status",
-  "priority",
-  "assignee",
-])
-
 export interface TicketsTableProps {
-  sortConfig: { column: SortColumn; direction: "asc" | "desc" }
-  onSort: (column: SortColumn) => void
   tickets: Ticket[]
   totalCount: number
   currentPage: number
@@ -37,34 +24,6 @@ export interface TicketsTableProps {
   startIndex: number
   endIndex: number
   onSelectTicket: (ticketId: string) => void
-}
-
-function SortableHeader({
-  column,
-  label,
-  sortConfig,
-  onSort,
-}: {
-  column: SortColumn
-  label: string
-  sortConfig: { column: SortColumn; direction: "asc" | "desc" }
-  onSort: (column: SortColumn) => void
-}) {
-  if (!SERVER_SORTABLE_COLUMNS.has(column)) {
-    return <span>{label}</span>
-  }
-
-  const isActive = sortConfig.column === column
-  return (
-    <button
-      type="button"
-      onClick={() => onSort(column)}
-      className="flex items-center gap-1 hover:text-slate-900"
-    >
-      <span>{label}</span>
-      <span className="text-xs">{!isActive ? "Sort" : sortConfig.direction === "asc" ? "Asc" : "Desc"}</span>
-    </button>
-  )
 }
 
 interface TicketRowProps {
@@ -126,8 +85,6 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
 })
 
 export function TicketsTable({
-  sortConfig,
-  onSort,
   tickets,
   totalCount,
   currentPage,
@@ -173,27 +130,15 @@ export function TicketsTable({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead className="h-9 py-2">
-              <SortableHeader column="id" label="ID" sortConfig={sortConfig} onSort={onSort} />
-            </TableHead>
-            <TableHead className="h-9 w-[400px] min-w-[300px] py-2">
-              <SortableHeader column="title" label="Title" sortConfig={sortConfig} onSort={onSort} />
-            </TableHead>
-            <TableHead className="h-9 py-2">
-              <SortableHeader column="status" label="Status" sortConfig={sortConfig} onSort={onSort} />
-            </TableHead>
-            <TableHead className="h-9 py-2">
-              <SortableHeader column="priority" label="Priority" sortConfig={sortConfig} onSort={onSort} />
-            </TableHead>
-            <TableHead className="h-9 py-2">
-              <SortableHeader column="assignee" label="Assignee" sortConfig={sortConfig} onSort={onSort} />
-            </TableHead>
+            <TableHead className="h-9 py-2">ID</TableHead>
+            <TableHead className="h-9 w-[400px] min-w-[300px] py-2">Title</TableHead>
+            <TableHead className="h-9 py-2">Status</TableHead>
+            <TableHead className="h-9 py-2">Priority</TableHead>
+            <TableHead className="h-9 py-2">Assignee</TableHead>
             <TableHead className="h-9 py-2">Requester</TableHead>
             <TableHead className="h-9 py-2">SQA</TableHead>
             <TableHead className="h-9 py-2">Project</TableHead>
-            <TableHead className="h-9 py-2">
-              <SortableHeader column="due_date" label="Due" sortConfig={sortConfig} onSort={onSort} />
-            </TableHead>
+            <TableHead className="h-9 py-2">Due</TableHead>
             <TableHead className="h-9 py-2">Created</TableHead>
           </TableRow>
         </TableHeader>

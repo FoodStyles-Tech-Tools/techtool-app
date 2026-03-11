@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { Menu, PanelLeftOpen } from "lucide-react"
 import { Sidebar } from "./sidebar"
 import { PermissionsBootstrap } from "@client/components/permissions-bootstrap"
 import { CommentNotificationsDropdown } from "@client/components/comment-notifications-dropdown"
@@ -126,17 +127,7 @@ export function AppShell({
                   onClick={() => setDesktopSidebarCollapsed(false)}
                 >
                   <span className="sr-only">Expand navigation</span>
-                  <svg
-                    className="h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
+                  <PanelLeftOpen className="h-5 w-5" />
                 </button>
               ) : null}
               <button
@@ -146,19 +137,7 @@ export function AppShell({
                 onClick={() => setMobileSidebarOpen(true)}
               >
                 <span className="sr-only">Open navigation</span>
-                <svg
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="4" y1="6" x2="20" y2="6" />
-                  <line x1="4" y1="12" x2="20" y2="12" />
-                  <line x1="4" y1="18" x2="20" y2="18" />
-                </svg>
+                <Menu className="h-5 w-5" />
               </button>
               <div className="block md:hidden">
                 <p className="text-sm font-semibold text-slate-900">TECHTOOL</p>

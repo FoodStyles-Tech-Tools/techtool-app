@@ -1,5 +1,3 @@
-import type { SortColumn } from "@shared/ticket-constants"
-
 export type TicketSubtaskRow = {
   id: string
   displayId: string | null
@@ -14,11 +12,6 @@ export type TicketStatusGuardResult = {
   proceed: boolean
   closeSubtasks: boolean
   subtasks: TicketSubtaskRow[]
-}
-
-export type TicketSortConfig = {
-  column: SortColumn
-  direction: "asc" | "desc"
 }
 
 export type TicketsClientProps = {

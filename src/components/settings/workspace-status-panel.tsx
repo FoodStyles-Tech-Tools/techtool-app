@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { Plus } from "lucide-react"
 import { Button } from "@client/components/ui/button"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
@@ -165,6 +166,7 @@ export function WorkspaceStatusPanel() {
         description="Global ticket statuses used across projects."
         actions={
           <Button type="button" size="sm" variant="outline" onClick={openCreate}>
+            <Plus className="h-4 w-4" />
             Create Status
           </Button>
         }

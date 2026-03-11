@@ -2,10 +2,10 @@
 
 import { Link, useNavigate } from "react-router-dom"
 import { formatDistanceToNow } from "date-fns"
+import { Bell, AtSign, MessageSquareText } from "lucide-react"
 import { Button } from "@client/components/ui/button"
 import { useCommentNotifications, type CommentNotification } from "@client/hooks/use-comment-notifications"
 import { cn } from "@client/lib/utils"
-import { TextToken } from "@client/components/ui/text-token"
 import { richTextToPlainText } from "@shared/rich-text"
 
 function NotificationItem({
@@ -41,7 +41,11 @@ function NotificationItem({
       )}
     >
       <div className="mt-0.5 shrink-0">
-        <TextToken>{notification.type === "mention" ? "Mention" : "Reply"}</TextToken>
+        {notification.type === "mention" ? (
+          <AtSign className="h-4 w-4 text-blue-500" />
+        ) : (
+          <MessageSquareText className="h-4 w-4 text-slate-500" />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -95,8 +99,8 @@ export function CommentNotificationsDropdown() {
   return (
     <details className="relative">
       <summary className="list-none [&::-webkit-details-marker]:hidden">
-        <Button variant="ghost" size="sm" className="relative h-9 px-3" title="Comment notifications">
-          Alerts
+        <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0" title="Comment notifications" aria-label="Notifications">
+          <Bell className="h-5 w-5" />
           {unreadCount > 0 ? (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-medium text-white">
               {unreadCount > 99 ? "99+" : unreadCount}

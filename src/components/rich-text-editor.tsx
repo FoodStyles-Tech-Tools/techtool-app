@@ -12,6 +12,28 @@ import { Table } from "@tiptap/extension-table"
 import TableRow from "@tiptap/extension-table-row"
 import TableCell from "@tiptap/extension-table-cell"
 import TableHeader from "@tiptap/extension-table-header"
+import TaskList from "@tiptap/extension-task-list"
+import TaskItem from "@tiptap/extension-task-item"
+import {
+  Bold,
+  Italic,
+  Underline as UnderlineIcon,
+  Strikethrough,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  ListChecks,
+  Quote,
+  Code,
+  SquareCode,
+  Link as LinkIcon,
+  RemoveFormatting,
+  Palette,
+  ImageIcon,
+  TableIcon,
+} from "lucide-react"
 import { cn } from "@client/lib/utils"
 
 declare module "@tiptap/core" {
@@ -190,6 +212,32 @@ const MentionBadge = Node.create({
   },
 })
 
+const TabIndentHandler = Extension.create({
+  name: "tabIndentHandler",
+  addKeyboardShortcuts() {
+    return {
+      Tab: ({ editor }) => {
+        if (editor.isActive("listItem")) {
+          return editor.commands.sinkListItem("listItem")
+        }
+        if (editor.isActive("taskItem")) {
+          return editor.commands.sinkListItem("taskItem")
+        }
+        return false
+      },
+      "Shift-Tab": ({ editor }) => {
+        if (editor.isActive("listItem")) {
+          return editor.commands.liftListItem("listItem")
+        }
+        if (editor.isActive("taskItem")) {
+          return editor.commands.liftListItem("taskItem")
+        }
+        return false
+      },
+    }
+  },
+})
+
 const MentionDecoration = Extension.create({
   name: "mentionDecorationHelper",
   addProseMirrorPlugins() {
@@ -233,6 +281,8 @@ interface RichTextEditorProps {
   showToolbarOnFocus?: boolean
   /** Show only a placeholder box until clicked. */
   activateOnClick?: boolean
+  /** When true, editor starts activated and focused (e.g. when parent just opened it for editing). */
+  initialActivated?: boolean
   /** Optional footer rendered inside the editor box (below content). */
   footer?: ReactNode
   /** Optional inline panel rendered between toolbar and content (e.g. mentions menu). */
@@ -246,11 +296,9 @@ interface RichTextEditorProps {
 }
 
 const toolbarButtonClassName =
-  "rounded-md border border-transparent px-2 py-1 text-xs transition-colors"
-const toolbarHeadingButtonClassName =
-  "rounded-md border border-transparent px-1.5 py-1 text-xs font-semibold transition-colors"
-const toolbarMutedButtonClassName = "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-const activeToolbarButtonClassName = "bg-slate-900 text-white"
+  "inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent transition-colors"
+const toolbarMutedButtonClassName = "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+const activeToolbarButtonClassName = "bg-blue-50 text-blue-600 border-blue-200"
 
 export function RichTextEditor({
   value,
@@ -261,6 +309,7 @@ export function RichTextEditor({
   compact = false,
   showToolbarOnFocus = true,
   activateOnClick = false,
+  initialActivated = false,
   footer,
   inlinePanel,
   onContentKeyDown,
@@ -268,7 +317,9 @@ export function RichTextEditor({
   onEditorReady,
 }: RichTextEditorProps) {
   const [isFocused, setIsFocused] = useState(false)
-  const [isActivated, setIsActivated] = useState(() => !activateOnClick || Boolean(value?.trim()))
+  const [isActivated, setIsActivated] = useState(
+    () => initialActivated || !activateOnClick || Boolean(value?.trim())
+  )
   const onContentKeyDownRef = useRef<RichTextEditorProps["onContentKeyDown"]>(onContentKeyDown)
 
   useEffect(() => {
@@ -297,6 +348,9 @@ export function RichTextEditor({
       TableRow,
       TableHeader,
       TableCell,
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      TabIndentHandler,
       ImageBlock,
       MentionBadge,
       ...(decorateMentions ? [MentionDecoration] : []),
@@ -344,8 +398,23 @@ export function RichTextEditor({
     return () => onEditorReady(null)
   }, [editor, onEditorReady])
 
+  // When opening in "initial activated" mode, focus the editor once it's ready (defer so we run after dialog focus trap)
   useEffect(() => {
-    if (!activateOnClick) return
+    if (!initialActivated || !editor || editor.isDestroyed) return
+    const id = setTimeout(() => {
+      if (editor.isDestroyed) return
+      editor.chain().focus().run()
+    }, 50)
+    return () => clearTimeout(id)
+  }, [initialActivated, editor])
+
+  // When activateOnClick is true, collapse back to placeholder on blur if empty — but never when we were opened with initialActivated (single-click edit)
+  const initialActivatedRef = useRef(initialActivated)
+  useEffect(() => {
+    initialActivatedRef.current = initialActivated
+  }, [initialActivated])
+  useEffect(() => {
+    if (!activateOnClick || initialActivatedRef.current) return
     const hasValue = Boolean(value?.trim())
     if (!isFocused && !hasValue) {
       setIsActivated(false)
@@ -429,7 +498,7 @@ export function RichTextEditor({
       onClick={focusEditorSafely}
     >
       {showToolbar && (
-      <div className="flex flex-wrap gap-1 border-b border-slate-200 p-2">
+      <div className="flex flex-wrap items-center gap-0.5 border-b border-slate-200 p-1.5">
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
@@ -438,8 +507,9 @@ export function RichTextEditor({
             editor?.isActive("bold") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleBold().run()}
+          title="Bold"
         >
-          B
+          <Bold className="h-4 w-4" strokeWidth={1} />
         </button>
         <button
           type="button"
@@ -449,8 +519,9 @@ export function RichTextEditor({
             editor?.isActive("italic") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleItalic().run()}
+          title="Italic"
         >
-          I
+          <Italic className="h-4 w-4" strokeWidth={1} />
         </button>
         <button
           type="button"
@@ -460,8 +531,9 @@ export function RichTextEditor({
             editor?.isActive("underline") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleUnderline().run()}
+          title="Underline"
         >
-          U
+          <UnderlineIcon className="h-4 w-4" strokeWidth={1} />
         </button>
         <button
           type="button"
@@ -471,50 +543,54 @@ export function RichTextEditor({
             editor?.isActive("strike") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleStrike().run()}
+          title="Strikethrough"
         >
-          S
+          <Strikethrough className="h-4 w-4" strokeWidth={1} />
         </button>
-        <span className="mx-1 h-5 w-px bg-slate-200" />
+        <span className="mx-0.5 h-5 w-px bg-slate-200" />
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
           className={cn(
-            toolbarHeadingButtonClassName,
+            toolbarButtonClassName,
             editor?.isActive("heading", { level: 1 })
               ? activeToolbarButtonClassName
               : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+          title="Heading 1"
         >
-          H1
+          <Heading1 className="h-4 w-4" strokeWidth={1} />
         </button>
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
           className={cn(
-            toolbarHeadingButtonClassName,
+            toolbarButtonClassName,
             editor?.isActive("heading", { level: 2 })
               ? activeToolbarButtonClassName
               : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+          title="Heading 2"
         >
-          H2
+          <Heading2 className="h-4 w-4" strokeWidth={1} />
         </button>
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
           className={cn(
-            toolbarHeadingButtonClassName,
+            toolbarButtonClassName,
             editor?.isActive("heading", { level: 3 })
               ? activeToolbarButtonClassName
               : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+          title="Heading 3"
         >
-          H3
+          <Heading3 className="h-4 w-4" strokeWidth={1} />
         </button>
-        <span className="mx-1 h-5 w-px bg-slate-200" />
+        <span className="mx-0.5 h-5 w-px bg-slate-200" />
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
@@ -523,8 +599,9 @@ export function RichTextEditor({
             editor?.isActive("bulletList") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
+          title="Bullet list"
         >
-          List
+          <List className="h-4 w-4" strokeWidth={1} />
         </button>
         <button
           type="button"
@@ -534,8 +611,21 @@ export function RichTextEditor({
             editor?.isActive("orderedList") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
+          title="Numbered list"
         >
-          1.
+          <ListOrdered className="h-4 w-4" strokeWidth={1} />
+        </button>
+        <button
+          type="button"
+          onMouseDown={(event) => event.preventDefault()}
+          className={cn(
+            toolbarButtonClassName,
+            editor?.isActive("taskList") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
+          )}
+          onClick={() => editor?.chain().focus().toggleTaskList().run()}
+          title="Checklist"
+        >
+          <ListChecks className="h-4 w-4" strokeWidth={1} />
         </button>
         <button
           type="button"
@@ -545,9 +635,11 @@ export function RichTextEditor({
             editor?.isActive("blockquote") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+          title="Quote"
         >
-          Quote
+          <Quote className="h-4 w-4" strokeWidth={1} />
         </button>
+        <span className="mx-0.5 h-5 w-px bg-slate-200" />
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
@@ -556,8 +648,9 @@ export function RichTextEditor({
             editor?.isActive("code") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
           )}
           onClick={() => editor?.chain().focus().toggleCode().run()}
+          title="Inline code"
         >
-          Code
+          <Code className="h-4 w-4" strokeWidth={1} />
         </button>
         <button
           type="button"
@@ -569,9 +662,8 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
           title="Code block"
         >
-          Block
+          <SquareCode className="h-4 w-4" strokeWidth={1} />
         </button>
-        <span className="mx-1 h-5 w-px bg-slate-200" />
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
@@ -580,20 +672,19 @@ export function RichTextEditor({
             editor?.isActive("link") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
           )}
           onClick={toggleLink}
+          title="Link"
         >
-          Link
+          <LinkIcon className="h-4 w-4" strokeWidth={1} />
         </button>
+        <span className="mx-0.5 h-5 w-px bg-slate-200" />
         <button
           type="button"
           onMouseDown={(event) => event.preventDefault()}
-          className={cn(
-            toolbarButtonClassName,
-            editor?.isActive("textColor") ? activeToolbarButtonClassName : toolbarMutedButtonClassName
-          )}
+          className={cn(toolbarButtonClassName, toolbarMutedButtonClassName)}
           onClick={setColor}
           title="Clear text color"
         >
-          Clear
+          <RemoveFormatting className="h-4 w-4" strokeWidth={1} />
         </button>
         <label
           onMouseDown={(event) => event.preventDefault()}
@@ -603,10 +694,10 @@ export function RichTextEditor({
           )}
           title="Pick text color"
         >
-          Color
+          <Palette className="h-4 w-4" strokeWidth={1} />
           <span
-            className="absolute bottom-1 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full border border-slate-300"
-            style={{ backgroundColor: activeTextColor || "transparent" }}
+            className="absolute bottom-0.5 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full"
+            style={{ backgroundColor: activeTextColor || "currentColor" }}
           />
           <input
             type="color"
@@ -623,7 +714,7 @@ export function RichTextEditor({
           onClick={insertImage}
           title="Insert image"
         >
-          Image
+          <ImageIcon className="h-4 w-4" strokeWidth={1} />
         </button>
         <button
           type="button"
@@ -632,8 +723,9 @@ export function RichTextEditor({
           onClick={() =>
             editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
           }
+          title="Insert table"
         >
-          Table
+          <TableIcon className="h-4 w-4" strokeWidth={1} />
         </button>
       </div>
       )}
