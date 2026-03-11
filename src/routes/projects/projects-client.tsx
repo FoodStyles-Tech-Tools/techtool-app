@@ -2,25 +2,9 @@
 
 import { Link } from "react-router-dom"
 import { useDeferredValue, useMemo, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { PageHeader } from "@/components/ui/page-header"
-import { EntityPageLayout } from "@/components/ui/entity-page-layout"
-import { FilterBar } from "@/components/ui/filter-bar"
-import { DataState } from "@/components/ui/data-state"
-import { FormDialogShell } from "@/components/ui/form-dialog-shell"
-import { EntityTableShell } from "@/components/ui/entity-table-shell"
 import { ProjectForm } from "@/components/forms/project-form"
 import { usePermissions } from "@/hooks/use-permissions"
 import { toast } from "@/components/ui/toast"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 
 const ROWS_PER_PAGE = 20
 
@@ -108,94 +92,98 @@ export default function ProjectsClient({
   const paginatedProjects = filteredProjects.slice(startIndex, endIndex)
   const canCreateProjects = flags?.canCreateProjects ?? false
   return (
-    <EntityPageLayout
-      header={
-        <PageHeader
-          title="Projects"
-          description="Projects organize ticket work. Open a project to review ownership and jump into its queue."
-          actions={
-            canCreateProjects ? (
-              <Button type="button" onClick={() => setProjectFormOpen(true)}>
-                Create Project
-              </Button>
-            ) : null
-          }
-        />
-      }
-      toolbar={
-        <FilterBar
-          filters={
-            <>
-              <div className="w-full min-w-[220px] md:w-72">
-                <Input
-                  placeholder="Search projects..."
-                  value={searchQuery}
-                  onChange={(event) => {
-                    setSearchQuery(event.target.value)
-                    setCurrentPage(1)
-                  }}
-                />
-              </div>
-              <select
-                value={statusFilter}
-                onChange={(event) => {
-                  setStatusFilter(event.target.value as "active" | "all")
-                  setCurrentPage(1)
-                }}
-                className="h-9 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
-              >
-                <option value="active">Active only</option>
-                <option value="all">All projects</option>
-              </select>
-              <label className="flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={assignedToMeOnly}
-                  onChange={(event) => {
-                    setAssignedToMeOnly(event.target.checked)
-                    setCurrentPage(1)
-                  }}
-                  className="h-4 w-4 rounded border-slate-300"
-                />
-                Assigned to me
-              </label>
-            </>
-          }
-          actions={
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 px-3"
-              onClick={() => {
-                setSearchQuery("")
-                setStatusFilter("active")
-                setAssignedToMeOnly(false)
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-lg font-semibold text-slate-900">Projects</h1>
+            <p className="text-sm text-slate-500">
+              Projects organize ticket work. Open a project to review ownership and jump into its queue.
+            </p>
+          </div>
+          {canCreateProjects ? (
+            <button
+              type="button"
+              className="inline-flex h-9 items-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+              onClick={() => setProjectFormOpen(true)}
+            >
+              Create Project
+            </button>
+          ) : null}
+        </div>
+
+        <div className="overflow-x-auto">
+          <div className="flex min-w-max items-center gap-2 whitespace-nowrap py-1">
+          <div className="w-full min-w-[220px] md:w-72">
+            <input
+              placeholder="Search projects..."
+              value={searchQuery}
+              onChange={(event) => {
+                setSearchQuery(event.target.value)
                 setCurrentPage(1)
               }}
-            >
-              Reset
-            </Button>
-          }
-        />
-      }
-    >
-      <div className="space-y-4">
-        <DataState
-          isEmpty={filteredProjects.length === 0}
-          emptyTitle="No projects found"
-          emptyDescription="Try changing the current filters or create a project."
-        >
-          <EntityTableShell className="overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-9 py-2 text-xs">Project Name</TableHead>
-                  <TableHead className="h-9 py-2 text-xs">Project Owner</TableHead>
-                  <TableHead className="h-9 py-2 text-xs">Collaborators</TableHead>
-                  <TableHead className="h-9 py-2 text-xs">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+              className="h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+            />
+          </div>
+          <select
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value as "active" | "all")
+              setCurrentPage(1)
+            }}
+            className="h-9 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900"
+          >
+            <option value="active">Active only</option>
+            <option value="all">All projects</option>
+          </select>
+          <label className="flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={assignedToMeOnly}
+              onChange={(event) => {
+                setAssignedToMeOnly(event.target.checked)
+                setCurrentPage(1)
+              }}
+              className="h-4 w-4 rounded border-slate-300"
+            />
+            Assigned to me
+          </label>
+          <button
+            type="button"
+            className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50"
+            onClick={() => {
+              setSearchQuery("")
+              setStatusFilter("active")
+              setAssignedToMeOnly(false)
+              setCurrentPage(1)
+            }}
+          >
+            Reset
+          </button>
+          </div>
+        </div>
+      </div>
+
+      {filteredProjects.length === 0 ? (
+        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center">
+          <h2 className="text-sm font-medium text-slate-900">No projects found</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Try changing the current filters or create a project.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr>
+                  <th className="h-9 px-3 py-2 text-xs font-medium text-slate-500">Project Name</th>
+                  <th className="h-9 px-3 py-2 text-xs font-medium text-slate-500">Project Owner</th>
+                  <th className="h-9 px-3 py-2 text-xs font-medium text-slate-500">Collaborators</th>
+                  <th className="h-9 px-3 py-2 text-xs font-medium text-slate-500">Status</th>
+                </tr>
+              </thead>
+              <tbody>
                 {paginatedProjects.map((project) => {
                   const ownerLabel = project.owner?.name || project.owner?.email || "Unassigned"
                   const collaboratorLabel =
@@ -204,74 +192,100 @@ export default function ProjectsClient({
                           .map((collaborator) => collaborator.name || collaborator.email)
                           .join(", ")
                       : "-"
-
                   return (
-                    <TableRow key={project.id}>
-                      <TableCell className="py-2 text-sm">
+                    <tr key={project.id} className="border-t border-slate-100">
+                      <td className="px-3 py-2 text-sm">
                         <Link
                           to={`/projects/${project.id}`}
                           className="font-medium text-slate-900 hover:underline"
                         >
                           {project.name}
                         </Link>
-                      </TableCell>
-                      <TableCell className="py-2 text-sm text-slate-700">{ownerLabel}</TableCell>
-                      <TableCell className="py-2 text-sm text-slate-700">{collaboratorLabel}</TableCell>
-                      <TableCell className="py-2 text-sm capitalize text-slate-700">
-                        {project.status}
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                      <td className="px-3 py-2 text-sm text-slate-700">{ownerLabel}</td>
+                      <td className="px-3 py-2 text-sm text-slate-700">{collaboratorLabel}</td>
+                      <td className="px-3 py-2 text-sm capitalize text-slate-700">{project.status}</td>
+                    </tr>
                   )
                 })}
-              </TableBody>
-            </Table>
-            <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
-              <div className="text-sm text-slate-500">
-                Showing {filteredProjects.length === 0 ? 0 : startIndex + 1} to {Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} projects
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
-                <span className="text-sm text-slate-500">Page {currentPage} of {totalPages}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                  disabled={currentPage >= totalPages}
-                >
-                  Next
-                </Button>
-              </div>
+              </tbody>
+            </table>
+          </div>
+          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
+            <div className="text-sm text-slate-500">
+              Showing {filteredProjects.length === 0 ? 0 : startIndex + 1} to{" "}
+              {Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} projects
             </div>
-          </EntityTableShell>
-        </DataState>
-      </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </button>
+              <span className="text-sm text-slate-500">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                className="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      <FormDialogShell
-        open={isProjectFormOpen}
-        onOpenChange={setProjectFormOpen}
-        title="Create Project"
-        formId="create-project-form"
-        submitLabel="Create"
-      >
-        <ProjectForm
-          departments={initialDepartments}
-          users={users}
-          formId="create-project-form"
-          hideSubmitButton
-          onSuccess={() => {
-            setProjectFormOpen(false)
-            toast("Project created")
-            window.location.reload()
-          }}
-        />
-      </FormDialogShell>
-    </EntityPageLayout>
+      {isProjectFormOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4">
+          <div className="w-full max-w-2xl rounded-lg bg-white shadow-lg">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+              <h2 className="text-base font-semibold text-slate-900">Create Project</h2>
+              <button
+                type="button"
+                className="text-sm text-slate-500 hover:text-slate-900"
+                onClick={() => setProjectFormOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="p-4">
+              <ProjectForm
+                departments={initialDepartments}
+                users={users}
+                formId="create-project-form"
+                hideSubmitButton
+                onSuccess={() => {
+                  setProjectFormOpen(false)
+                  toast("Project created")
+                  window.location.reload()
+                }}
+              />
+            </div>
+            <div className="flex justify-end gap-2 border-t border-slate-200 px-4 py-3">
+              <button
+                type="button"
+                className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50"
+                onClick={() => setProjectFormOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="create-project-form"
+                className="inline-flex h-9 items-center rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
   )
 }

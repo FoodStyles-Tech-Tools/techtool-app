@@ -1,12 +1,8 @@
 "use client"
 
-import { Link, useLocation, useNavigate } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
-import { CommentNotificationsDropdown } from "@/components/comment-notifications-dropdown"
-import { signOut, useSession } from "@/lib/auth-client"
 import { type PermissionFlags, usePermissions } from "@/hooks/use-permissions"
-import { useSignOutOverlay } from "@/components/signout-overlay"
-import { NavUser } from "@/components/layout/nav-user"
 
 const ACTIVE_ITEM_CLASS = "bg-blue-50 text-blue-700"
 
@@ -90,40 +86,22 @@ function isPathActive(pathname: string, href: string) {
 
 export function Sidebar() {
   const pathname = useLocation().pathname
-  const navigate = useNavigate()
-  const { data: session } = useSession()
   const { flags } = usePermissions()
-  const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()
 
   const isVisible = (item: { flag?: keyof PermissionFlags; visible?: (flags: PermissionFlags) => boolean }) =>
     item.visible ? item.visible(flags) : item.flag ? Boolean(flags[item.flag]) : true
 
   const navItems = [...primaryNavItems.filter(isVisible), ...adminItems.filter(isVisible)]
 
-  const handleSignOut = async () => {
-    try {
-      showOverlay()
-      await signOut()
-      navigate("/signin")
-    } finally {
-      hideOverlay()
-    }
-  }
-
-  const user = session?.user
-
   return (
-    <aside className="h-full w-64 shrink-0 border-r bg-white">
-      <div className="flex h-full flex-col px-3 py-3">
-        <div className="border-b border-slate-200 pb-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="space-y-0.5">
-                <p className="text-sm font-semibold text-slate-900">TECHTOOL</p>
-                <p className="text-xs text-slate-500">Ticketing</p>
-              </div>
+    <aside className="sticky top-0 h-screen w-60 shrink-0 border-r border-slate-200 bg-white">
+      <div className="flex h-full flex-col px-3 py-4">
+        <div className="border-b border-slate-200 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="space-y-0.5">
+              <p className="text-sm font-semibold text-slate-900">TECHTOOL</p>
+              <p className="text-xs text-slate-500">Ticketing</p>
             </div>
-            <CommentNotificationsDropdown />
           </div>
         </div>
 
@@ -137,7 +115,7 @@ export function Sidebar() {
                   key={item.href}
                   to={item.href}
                   className={cn(
-                    "flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-slate-600 transition-colors",
+                    "flex h-9 items-center rounded-md px-2 text-sm text-slate-700 transition-colors",
                     isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >
@@ -146,17 +124,6 @@ export function Sidebar() {
               )
             })}
           </nav>
-        </div>
-
-        <div className="border-t border-slate-200 pt-3">
-          <NavUser
-            user={{
-              name: user?.name || "User",
-              email: user?.email || "",
-              avatar: user?.image || "",
-            }}
-            onSignOut={handleSignOut}
-          />
         </div>
       </div>
     </aside>

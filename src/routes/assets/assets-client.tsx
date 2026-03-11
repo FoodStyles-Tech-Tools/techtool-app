@@ -20,8 +20,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { AssetForm } from "@/components/forms/asset-form"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
 
 const formatLinkLabel = (url: string) => {
   try {
@@ -126,54 +124,18 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
               {assets.map((asset) => (
                 <TableRow key={asset.id}>
                   <TableCell className="py-2">
-                    <div>
-                      <p className="text-sm">{asset.name}</p>
-                      <div className="space-y-1">
-                        {asset.description ? (
-                          <div
-                            className="asset-description asset-description--clamped"
-                            dangerouslySetInnerHTML={getSanitizedHtmlProps(asset.description) ?? { __html: "" }}
-                          />
-                        ) : (
-                          <p className="text-xs text-slate-500">
-                            No description provided.
-                          </p>
-                        )}
-                      </div>
-                    </div>
+                    <p className="text-sm">{asset.name}</p>
                   </TableCell>
                   <TableCell className="py-2 text-sm">
-                    <div className="text-sm">
-                      {asset.owner?.name || asset.owner?.email || "Unknown"}
-                    </div>
-                    {asset.owner?.name && asset.owner?.email && (
-                      <div className="text-xs text-slate-500">
-                        {asset.owner.email}
-                      </div>
-                    )}
+                    {asset.owner?.name || asset.owner?.email || "Unknown"}
                   </TableCell>
                   <TableCell className="py-2">
                     {asset.collaborators?.length ? (
-                      <div className="flex items-center gap-1.5">
-                        <div className="flex -space-x-2">
-                          {asset.collaborators.slice(0, 3).map((collaborator) => (
-                            <Avatar key={collaborator.id} className="h-5 w-5 border border-background">
-                              <AvatarImage
-                                src={collaborator.image || undefined}
-                                alt={collaborator.name || collaborator.email}
-                              />
-                              <AvatarFallback className="text-[10px]">
-                                {collaborator.name?.[0]?.toUpperCase() || collaborator.email[0].toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
-                        </div>
-                        {asset.collaborators.length > 3 && (
-                          <span className="text-[10px] text-slate-500">
-                            +{asset.collaborators.length - 3}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-sm text-slate-700">
+                        {asset.collaborators
+                          .map((collaborator) => collaborator.name || collaborator.email)
+                          .join(", ")}
+                      </span>
                     ) : (
                       <span className="text-xs text-slate-500">No collaborators</span>
                     )}

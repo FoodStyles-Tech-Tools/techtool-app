@@ -1,19 +1,10 @@
 "use client"
 
 import { memo } from "react"
-import { Button } from "@/components/ui/button"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-} from "@/components/ui/table"
 import type { Ticket } from "@/lib/types"
 import { type SortColumn } from "@/lib/ticket-constants"
 import { formatRelativeDate, getDueDateDisplay } from "@/lib/format-dates"
 import { normalizeStatusKey, isDoneStatus } from "@/lib/ticket-statuses"
-import { TicketStatusIcon } from "@/components/ticket-status-select"
 
 const SERVER_SORTABLE_COLUMNS = new Set<SortColumn>([
   "id",
@@ -74,11 +65,11 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
   )
 
   return (
-    <TableRow>
-      <TableCell className="py-2 text-xs font-mono text-slate-500">
+    <tr className="border-t border-slate-100">
+      <td className="px-4 py-2 text-xs font-mono text-slate-500">
         <span>{ticket.displayId || ticket.id.slice(0, 8)}</span>
-      </TableCell>
-      <TableCell className="py-2 w-[400px] min-w-[300px]">
+      </td>
+      <td className="w-[400px] min-w-[300px] px-4 py-2">
         <button
           type="button"
           onClick={() => onSelectTicket(ticket.id)}
@@ -86,30 +77,30 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
         >
           {ticket.title}
         </button>
-      </TableCell>
-      <TableCell className="py-2">
+      </td>
+      <td className="px-4 py-2">
         <div className="flex items-center gap-2 text-xs text-slate-900">
           <span>{ticket.status}</span>
         </div>
-      </TableCell>
-      <TableCell className="py-2">
+      </td>
+      <td className="px-4 py-2">
         <span className="text-xs capitalize text-slate-900">{ticket.priority}</span>
-      </TableCell>
-      <TableCell className="py-2">
+      </td>
+      <td className="px-4 py-2">
         <span className="text-xs text-slate-900">{assigneeLabel}</span>
-      </TableCell>
-      <TableCell className="py-2">
+      </td>
+      <td className="px-4 py-2">
         <span className="text-xs text-slate-900">{ticket.project?.name || "No project"}</span>
-      </TableCell>
-      <TableCell className="py-2">
+      </td>
+      <td className="px-4 py-2">
         <span className={["inline-flex rounded-md px-2 py-1 text-[11px] font-medium", dueDate.className].join(" ")}>
           {dueDate.label}
         </span>
-      </TableCell>
-      <TableCell className="py-2">
+      </td>
+      <td className="px-4 py-2">
         <span className="text-xs text-slate-500">{formatRelativeDate(ticket.createdAt)}</span>
-      </TableCell>
-    </TableRow>
+      </td>
+    </tr>
   )
 })
 
@@ -128,41 +119,41 @@ export function TicketsTable({
   return (
     <div className="rounded-md border bg-white">
       <div className="max-h-[calc(100vh-220px)] overflow-y-auto relative">
-        <Table>
+        <table className="w-full border-collapse text-left">
           <thead className="sticky top-0 z-20 bg-slate-50 border-b">
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="h-9 py-2 px-4 text-left align-middle">
+            <tr>
+              <th className="h-9 px-4 py-2 text-left align-middle">
                 {renderSortableHeader("id", "ID", sortConfig, onSort)}
-              </TableHead>
-              <TableHead className="h-9 py-2 px-4 text-left align-middle w-[400px] min-w-[300px]">
+              </th>
+              <th className="h-9 w-[400px] min-w-[300px] px-4 py-2 text-left align-middle">
                 {renderSortableHeader("title", "Title", sortConfig, onSort)}
-              </TableHead>
-              <TableHead className="h-9 py-2 px-4 text-left align-middle">
+              </th>
+              <th className="h-9 px-4 py-2 text-left align-middle">
                 {renderSortableHeader("status", "Status", sortConfig, onSort)}
-              </TableHead>
-              <TableHead className="h-9 py-2 px-4 text-left align-middle">
+              </th>
+              <th className="h-9 px-4 py-2 text-left align-middle">
                 {renderSortableHeader("priority", "Priority", sortConfig, onSort)}
-              </TableHead>
-              <TableHead className="h-9 py-2 px-4 text-left align-middle">
+              </th>
+              <th className="h-9 px-4 py-2 text-left align-middle">
                 {renderSortableHeader("assignee", "Assignee", sortConfig, onSort)}
-              </TableHead>
-              <TableHead className="h-9 py-2 px-4 text-left align-middle">
+              </th>
+              <th className="h-9 px-4 py-2 text-left align-middle">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Project</span>
-              </TableHead>
-              <TableHead className="h-9 py-2 px-4 text-left align-middle">
+              </th>
+              <th className="h-9 px-4 py-2 text-left align-middle">
                 {renderSortableHeader("due_date", "Due", sortConfig, onSort)}
-              </TableHead>
-              <TableHead className="h-9 py-2 px-4 text-left align-middle">
+              </th>
+              <th className="h-9 px-4 py-2 text-left align-middle">
                 <span className="text-xs font-medium uppercase tracking-wide text-slate-500">Created</span>
-              </TableHead>
-            </TableRow>
+              </th>
+            </tr>
           </thead>
-          <TableBody className="[&_tr:last-child]:border-0">
+          <tbody className="[&_tr:last-child]:border-0">
             {tickets.map((ticket) => (
               <TicketRow key={ticket.id} ticket={ticket} onSelectTicket={onSelectTicket} />
             ))}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
       <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
         <div className="text-sm text-slate-500">
@@ -170,27 +161,25 @@ export function TicketsTable({
         </div>
         <div className="flex items-center space-x-2">
             <div className="flex items-center space-x-1">
-            <Button
-              variant="outline"
-              size="sm"
+            <button
+              type="button"
               onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
-              className="h-8"
+              className="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Previous
-            </Button>
+            </button>
             <div className="text-sm text-slate-500 px-2">
               Page {currentPage} of {totalPages || 1}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
+            <button
+              type="button"
               onClick={() => onPageChange(Math.min(totalPages || 1, currentPage + 1))}
               disabled={currentPage >= totalPages}
-              className="h-8"
+              className="inline-flex h-8 items-center rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50"
             >
               Next
-            </Button>
+            </button>
           </div>
         </div>
       </div>
