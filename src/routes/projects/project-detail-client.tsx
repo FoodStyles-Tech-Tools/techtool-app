@@ -1,12 +1,13 @@
 "use client"
 
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { useMemo, useState } from "react"
 import { useProject } from "@client/hooks/use-projects"
 import { useDepartments } from "@client/hooks/use-departments"
 import { useUsers } from "@client/hooks/use-users"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { PageHeader } from "@client/components/ui/page-header"
+import { Breadcrumb } from "@client/components/ui/breadcrumb"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { DataState } from "@client/components/ui/data-state"
@@ -25,7 +26,6 @@ function formatDate(value: string) {
 }
 
 export default function ProjectDetailClient({ projectId }: { projectId: string }) {
-  const navigate = useNavigate()
   const { flags } = usePermissions()
   const { data, isLoading } = useProject(projectId)
   const { departments } = useDepartments()
@@ -55,13 +55,18 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
           <PageHeader
           title={project?.name || "Project"}
           description={project?.description || "Use this project page to understand scope, ownership, and jump into related tickets."}
+          breadcrumb={
+            <Breadcrumb
+              items={[
+                { label: "Projects", href: "/projects" },
+                { label: project?.name || "Project" },
+              ]}
+            />
+          }
           actions={
             <>
-              <Button variant="outline" onClick={() => navigate("/projects")}>
-                Back to Projects
-              </Button>
               <Button asChild>
-                <Link href={`/tickets?projectId=${projectId}`}>
+                <Link to={`/tickets?projectId=${projectId}`}>
                   Open Tickets
                 </Link>
               </Button>

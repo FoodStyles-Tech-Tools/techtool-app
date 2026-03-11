@@ -8,7 +8,6 @@ import { cn } from "@client/lib/utils"
 import { TicketStatusIcon } from "@client/components/ticket-status-select"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import { formatStatusLabel, normalizeStatusKey } from "@shared/ticket-statuses"
-import { TicketPriorityIcon } from "@client/components/ticket-priority-select"
 import { TicketTypeIcon } from "@client/components/ticket-type-select"
 
 const MAX_SEARCH_RESULTS = 50
@@ -218,7 +217,6 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
                             formatStatusLabel(ticket.status)}
                         </Badge>
                         <Badge variant="outline" className="text-xs flex items-center gap-1">
-                          <TicketPriorityIcon priority={ticket.priority} />
                           {ticket.priority}
                         </Badge>
                         <Badge variant="outline" className="text-xs flex items-center gap-1">

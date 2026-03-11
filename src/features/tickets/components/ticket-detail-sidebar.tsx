@@ -1,6 +1,7 @@
 "use client"
 
 import { Card } from "@client/components/ui/card"
+import { TicketStatusSelect } from "@client/components/ticket-status-select"
 import { TicketDetailFieldsSection } from "@client/features/tickets/components/ticket-detail-fields-section"
 import { TicketDetailTimestampsSection } from "@client/features/tickets/components/ticket-detail-timestamps-section"
 import type {
@@ -13,6 +14,7 @@ import type { Sprint } from "@client/hooks/use-sprints"
 import type { Department, Ticket, User } from "@shared/types"
 
 type TicketDetailSidebarProps = {
+  hideStatusRow?: boolean
   ticket: Ticket
   canEditTickets: boolean
   isAssignmentLocked: boolean
@@ -48,9 +50,11 @@ type TicketDetailSidebarProps = {
     field: "created_at" | "assigned_at" | "sqa_assigned_at" | "started_at" | "completed_at",
     value: Date | null
   ) => void | Promise<void>
+  onStatusChange: (value: string) => void | Promise<void>
 }
 
 export function TicketDetailSidebar({
+  hideStatusRow,
   ticket,
   canEditTickets,
   isAssignmentLocked,
@@ -83,9 +87,21 @@ export function TicketDetailSidebar({
   onSprintChange,
   onProjectChange,
   onTimestampChange,
+  onStatusChange,
 }: TicketDetailSidebarProps) {
   return (
     <aside className="min-w-0 space-y-4">
+      {!hideStatusRow ? (
+        <div className="flex justify-start">
+          <TicketStatusSelect
+            value={ticket.status}
+            onValueChange={onStatusChange}
+            disabled={!canEditTickets || isAssignmentLocked || !!updatingFields.status}
+            allowSqaStatuses={ticket.project?.require_sqa === true}
+            triggerClassName="h-8 text-xs"
+          />
+        </div>
+      ) : null}
       <Card className="p-5 shadow-none">
         <h2 className="text-sm font-semibold text-slate-900">Details</h2>
         <div className="mt-3 space-y-4">

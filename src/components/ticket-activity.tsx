@@ -8,7 +8,6 @@ import { DataState } from "@client/components/ui/data-state"
 import { TicketComments } from "@client/components/ticket-comments"
 import { useTicketActivity, type TicketActivityItem } from "@client/hooks/use-ticket-activity"
 import type { TicketComment } from "@client/hooks/use-ticket-comments"
-import { TicketPriorityIcon } from "@client/components/ticket-priority-select"
 import { formatStatusLabel } from "@shared/ticket-statuses"
 import { cn } from "@client/lib/utils"
 import { richTextToPlainText } from "@shared/rich-text"
@@ -178,9 +177,6 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
           isStatus ? "tracking-wide uppercase" : ""
         )}
       >
-        {isPriority && typeof value === "string" && (
-          <TicketPriorityIcon priority={value.toLowerCase()} className="h-3 w-3" />
-        )}
         {text}
       </span>
     )

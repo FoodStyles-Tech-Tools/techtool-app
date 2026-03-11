@@ -1,12 +1,12 @@
 "use client"
 
-import { Card } from "@client/components/ui/card"
 import { DataState } from "@client/components/ui/data-state"
+import { Input } from "@client/components/ui/input"
+import { TicketStatusSelect } from "@client/components/ticket-status-select"
 import { TicketDetailHeader } from "@client/features/tickets/components/ticket-detail-header"
 import { TicketDetailMainColumn } from "@client/features/tickets/components/ticket-detail-main-column"
 import { TicketDetailSidebar } from "@client/features/tickets/components/ticket-detail-sidebar"
 import { TicketDetailDialogs } from "@client/features/tickets/components/ticket-detail-dialogs"
-import { formatStatusLabel } from "@shared/ticket-statuses"
 import type { TicketDetailSurface } from "@client/features/tickets/hooks/use-ticket-detail-surface"
 
 type TicketDetailLayoutProps = {
@@ -55,114 +55,136 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
       emptyDescription="The requested ticket could not be loaded."
     >
       {ticket ? (
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,360px)]">
-          <div className="space-y-4">
-            <Card className="p-5 shadow-none">
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div>
-                  <p className="text-xs font-medium uppercase text-slate-500">Status</p>
-                  <p className="mt-1 text-sm capitalize text-slate-900">{formatStatusLabel(ticket.status)}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase text-slate-500">Type</p>
-                  <p className="mt-1 text-sm capitalize text-slate-900">{ticket.type}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase text-slate-500">Priority</p>
-                  <p className="mt-1 text-sm capitalize text-slate-900">{ticket.priority}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase text-slate-500">Assignee</p>
-                  <p className="mt-1 text-sm text-slate-900">
-                    {ticket.assignee?.name || ticket.assignee?.email || "Unassigned"}
-                  </p>
-                </div>
+        <div className="space-y-4">
+          {!showHeader ? (
+            <div className="grid items-center gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,360px)]">
+              <div className="min-w-0">
+                {actions.isEditingTitle ? (
+                  <Input
+                    value={actions.titleValue}
+                    onChange={(event) => actions.setTitleValue(event.target.value)}
+                    onBlur={() => void actions.handleTitleSave()}
+                    onKeyDown={actions.handleTitleKeyDown}
+                    className="h-8 text-sm font-semibold"
+                    disabled={!canEditTickets}
+                    autoFocus
+                  />
+                ) : (
+                  <h1
+                    className={[
+                      "text-sm font-semibold leading-tight text-slate-900",
+                      canEditTickets ? "cursor-pointer rounded-md px-1 py-1 hover:bg-slate-50" : "",
+                    ].join(" ")}
+                    onClick={() => {
+                      if (canEditTickets) {
+                        actions.setIsEditingTitle(true)
+                      }
+                    }}
+                  >
+                    {ticket.title || "Untitled ticket"}
+                  </h1>
+                )}
               </div>
-            </Card>
+              <div className="flex justify-start">
+                <TicketStatusSelect
+                  value={ticket.status}
+                  onValueChange={(status) => actions.handleStatusChange(status)}
+                  disabled={!canEditTickets || isAssignmentLocked || !!actions.updatingFields.status}
+                  allowSqaStatuses={ticket.project?.require_sqa === true}
+                  triggerClassName="h-8 text-xs"
+                />
+              </div>
+            </div>
+          ) : null}
 
-            <TicketDetailMainColumn
-              ticketId={ticketId}
-              ticket={ticket}
-              canEditTickets={canEditTickets}
-              detailComments={detailComments}
-              isEditingDescription={actions.isEditingDescription}
-              descriptionValue={actions.descriptionValue}
-              onDescriptionValueChange={actions.setDescriptionValue}
-              onDescriptionSave={actions.handleDescriptionSave}
-              onCancelDescriptionEdit={() => {
-                actions.setDescriptionValue(ticket.description || "")
-                actions.setIsEditingDescription(false)
-              }}
-              onStartDescriptionEdit={() => actions.setIsEditingDescription(true)}
-              isAddingLink={actions.isAddingLink}
-              onStartAddLink={() => {
-                actions.setIsAddingLink(true)
-                actions.setNewLinkUrl("")
-              }}
-              onCancelAddLink={() => {
-                actions.setIsAddingLink(false)
-                actions.setNewLinkUrl("")
-              }}
-              newLinkUrl={actions.newLinkUrl}
-              onNewLinkUrlChange={actions.setNewLinkUrl}
-              onAddLink={actions.handleAddLink}
-              editingLinkIndex={actions.editingLinkIndex}
-              onStartEditLink={(index, url) => {
-                actions.setEditingLinkIndex(index)
-                actions.setNewLinkUrl(url)
-              }}
-              onCancelEditLink={() => {
-                actions.setEditingLinkIndex(null)
-                actions.setNewLinkUrl("")
-              }}
-              onUpdateLink={actions.handleUpdateLink}
-              onRemoveLink={actions.handleRemoveLink}
-            />
-          </div>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(280px,360px)]">
+            <div className="space-y-4">
+              <TicketDetailMainColumn
+                ticketId={ticketId}
+                ticket={ticket}
+                canEditTickets={canEditTickets}
+                detailComments={detailComments}
+                isEditingDescription={actions.isEditingDescription}
+                descriptionValue={actions.descriptionValue}
+                onDescriptionValueChange={actions.setDescriptionValue}
+                onDescriptionSave={actions.handleDescriptionSave}
+                onCancelDescriptionEdit={() => {
+                  actions.setDescriptionValue(ticket.description || "")
+                  actions.setIsEditingDescription(false)
+                }}
+                onStartDescriptionEdit={() => actions.setIsEditingDescription(true)}
+                isAddingLink={actions.isAddingLink}
+                onStartAddLink={() => {
+                  actions.setIsAddingLink(true)
+                  actions.setNewLinkUrl("")
+                }}
+                onCancelAddLink={() => {
+                  actions.setIsAddingLink(false)
+                  actions.setNewLinkUrl("")
+                }}
+                newLinkUrl={actions.newLinkUrl}
+                onNewLinkUrlChange={actions.setNewLinkUrl}
+                onAddLink={actions.handleAddLink}
+                editingLinkIndex={actions.editingLinkIndex}
+                onStartEditLink={(index, url) => {
+                  actions.setEditingLinkIndex(index)
+                  actions.setNewLinkUrl(url)
+                }}
+                onCancelEditLink={() => {
+                  actions.setEditingLinkIndex(null)
+                  actions.setNewLinkUrl("")
+                }}
+                onUpdateLink={actions.handleUpdateLink}
+                onRemoveLink={actions.handleRemoveLink}
+              />
+            </div>
 
-          <div className="space-y-4">
-            <TicketDetailSidebar
-              ticket={ticket}
-              canEditTickets={canEditTickets}
-              isAssignmentLocked={isAssignmentLocked}
-              isSqaEditLocked={isSqaEditLocked}
-              updatingFields={actions.updatingFields}
-              currentUser={currentUser}
-              users={users}
-              assigneeEligibleUsers={assigneeEligibleUsers}
-              sqaEligibleUsers={sqaEligibleUsers}
-              departments={departments}
-              epics={epics}
-              sprints={sprints}
-              projectOptions={projectOptions}
-              parentTicketOptions={parentTicketOptions}
-              selectedParentTicketId={selectedParentTicketId}
-              selectedParentTicketOption={selectedParentTicketOption}
-              parentNavigationSlug={parentNavigationSlug}
-              timestampValidation={actions.timestampValidation}
-              parseTimestamp={actions.parseTimestamp}
-              getTimestampWarningMessage={actions.getTimestampWarningMessage}
-              onAssigneeChange={actions.handleAssigneeChange}
-              onRequestedByChange={actions.handleRequestedByChange}
-              onSqaAssigneeChange={actions.handleSqaAssigneeChange}
-              onTypeChange={actions.handleTypeChange}
-              onParentTicketChange={(nextParentTicketId) =>
-                void actions.handleParentTicketChange(nextParentTicketId, NO_PARENT_TICKET_VALUE)
-              }
-              onPriorityChange={actions.handlePriorityChange}
-              onDueDateChange={actions.handleDueDateChange}
-              onDepartmentChange={(nextDepartmentId) =>
-                actions.handleDepartmentChange(nextDepartmentId, NO_DEPARTMENT_VALUE)
-              }
-              onEpicChange={actions.handleEpicChange}
-              onSprintChange={actions.handleSprintChange}
-              onProjectChange={(nextProjectId) =>
-                actions.handleProjectChange(nextProjectId, NO_PROJECT_VALUE)
-              }
-              onTimestampChange={(field, value) =>
-                void actions.handleTimestampChange(field, value)
-              }
-            />
+            <div className="space-y-4">
+              <TicketDetailSidebar
+                hideStatusRow={!showHeader}
+                ticket={ticket}
+                canEditTickets={canEditTickets}
+                isAssignmentLocked={isAssignmentLocked}
+                isSqaEditLocked={isSqaEditLocked}
+                updatingFields={actions.updatingFields}
+                currentUser={currentUser}
+                users={users}
+                assigneeEligibleUsers={assigneeEligibleUsers}
+                sqaEligibleUsers={sqaEligibleUsers}
+                departments={departments}
+                epics={epics}
+                sprints={sprints}
+                projectOptions={projectOptions}
+                parentTicketOptions={parentTicketOptions}
+                selectedParentTicketId={selectedParentTicketId}
+                selectedParentTicketOption={selectedParentTicketOption}
+                parentNavigationSlug={parentNavigationSlug}
+                timestampValidation={actions.timestampValidation}
+                parseTimestamp={actions.parseTimestamp}
+                getTimestampWarningMessage={actions.getTimestampWarningMessage}
+                onAssigneeChange={actions.handleAssigneeChange}
+                onRequestedByChange={actions.handleRequestedByChange}
+                onSqaAssigneeChange={actions.handleSqaAssigneeChange}
+                onTypeChange={actions.handleTypeChange}
+                onParentTicketChange={(nextParentTicketId) =>
+                  void actions.handleParentTicketChange(nextParentTicketId, NO_PARENT_TICKET_VALUE)
+                }
+                onPriorityChange={actions.handlePriorityChange}
+                onDueDateChange={actions.handleDueDateChange}
+                onDepartmentChange={(nextDepartmentId) =>
+                  actions.handleDepartmentChange(nextDepartmentId, NO_DEPARTMENT_VALUE)
+                }
+                onEpicChange={actions.handleEpicChange}
+                onSprintChange={actions.handleSprintChange}
+                onProjectChange={(nextProjectId) =>
+                  actions.handleProjectChange(nextProjectId, NO_PROJECT_VALUE)
+                }
+                onTimestampChange={(field, value) =>
+                  void actions.handleTimestampChange(field, value)
+                }
+                onStatusChange={(status) => actions.handleStatusChange(status)}
+              />
+            </div>
           </div>
         </div>
       ) : null}
@@ -177,17 +199,19 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
             ticketId={ticketId}
             ticket={ticket}
             parentNavigationSlug={parentNavigationSlug}
+            parentLabel={
+              selectedParentTicketOption
+                ? (selectedParentTicketOption.displayId || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()
+                : null
+            }
             canEditTickets={canEditTickets}
             isAssignmentLocked={isAssignmentLocked}
-            isUpdatingStatus={!!actions.updatingFields.status}
             isEditingTitle={actions.isEditingTitle}
             titleValue={actions.titleValue}
             onTitleValueChange={actions.setTitleValue}
             onTitleSave={actions.handleTitleSave}
             onTitleKeyDown={actions.handleTitleKeyDown}
             onStartTitleEdit={() => actions.setIsEditingTitle(true)}
-            onBackToTickets={onBackToTickets}
-            onGoToParentTicket={handleGoToParentTicket}
             onCopyTicketLabel={actions.handleCopyTicketLabel}
             onCopyShareUrl={actions.handleCopyShareUrl}
             onCopyHyperlinkedUrl={actions.handleCopyHyperlinkedUrl}

@@ -41,7 +41,7 @@ export function useTicketsFilters({
     } else {
       setAssigneeFilter((prev) => (prev === "all" ? user.id : prev))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [user?.id, user?.role])
 
   // Reset status filter when excludeDone is on and current status is done
