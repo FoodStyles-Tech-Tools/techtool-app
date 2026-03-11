@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 export function SignInContent() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const searchParams = useSearchParams()
+  const [searchParams] = useSearchParams()
   const nextPath = searchParams.get("next") || "/tickets"
 
   useEffect(() => {

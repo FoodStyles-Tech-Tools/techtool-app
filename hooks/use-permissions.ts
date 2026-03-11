@@ -4,18 +4,14 @@ import { useCallback, useEffect, useState } from "react"
 import { useSession } from "@/lib/auth-client"
 import { buildPermissionFlags } from "@/shared/permissions"
 import type { Permission, PermissionFlags } from "@/types/auth"
+import type { User as BaseUser } from "@/lib/types"
 
-interface User {
-  id: string
-  email: string
-  name: string | null
-  role: string | null
-  image: string | null
+interface PermissionsUser extends BaseUser {
   permissions?: Permission[]
 }
 
 export type PermissionsCache = {
-  user: User | null
+  user: PermissionsUser | null
   flags: PermissionFlags
   ts: number
 }
@@ -71,7 +67,7 @@ export function usePermissions() {
   const { data: session, isPending } = useSession()
   // Keep initial client render deterministic with server render.
   // Cache hydration happens after mount in an effect.
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<PermissionsUser | null>(null)
   const [flags, setFlags] = useState<PermissionFlags>(buildPermissionFlags())
   const [loading, setLoading] = useState(true)
 

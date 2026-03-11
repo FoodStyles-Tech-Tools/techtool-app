@@ -1,0 +1,27 @@
+import { useQuery } from "@tanstack/react-query"
+import { useUsers } from "@/hooks/use-users"
+import { requestJson } from "@/lib/client/api"
+import { FullScreenMessage } from "@/src/layouts/full-screen-message"
+import UsersClient from "./users-client"
+
+export function UsersPage() {
+  const { data: users = [], isLoading: usersLoading } = useUsers({ realtime: false })
+  const rolesQuery = useQuery({
+    queryKey: ["roles", "select"],
+    queryFn: async () => {
+      const response = await requestJson<{ roles: Array<{ id: string; name: string }> }>("/api/roles")
+      return response.roles
+    },
+  })
+
+  if (usersLoading || rolesQuery.isLoading) {
+    return (
+      <FullScreenMessage
+        title="Loading users"
+        description="Fetching users and available roles."
+      />
+    )
+  }
+
+  return <UsersClient initialUsers={users} roles={rolesQuery.data || []} />
+}

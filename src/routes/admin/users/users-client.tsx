@@ -21,16 +21,7 @@ import {
 import { UserForm } from "@/components/forms/user-form"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
-interface User {
-  id: string
-  email: string
-  name: string | null
-  discord_id?: string | null
-  role?: string | null
-  image: string | null
-  created_at?: string
-}
+import type { User } from "@/lib/types"
 
 type UsersClientProps = {
   initialUsers: User[]
@@ -268,3 +259,5 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
     </EntityPageLayout>
   )
 }
+
+

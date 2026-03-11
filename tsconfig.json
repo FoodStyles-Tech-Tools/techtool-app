@@ -15,7 +15,8 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@/routes/*": ["src/routes/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "vite-env.d.ts"],

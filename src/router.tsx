@@ -1,98 +1,28 @@
-import { Navigate, Outlet, Route, Routes, useLocation, useParams, useSearchParams } from "react-router-dom"
-import { useEffect, useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
-import { AppShell } from "@/components/layout/app-shell"
-import { getClientBackendUrl } from "@/lib/config/client-env"
-import { useSession } from "@/lib/auth-client"
-import { requestJson } from "@/lib/client/api"
+import { Navigate, Route, Routes } from "react-router-dom"
 import { lazyComponent } from "@/lib/lazy-component"
-import { SignInContent } from "@/src/routes/signin/signin-content"
-import { useAssets } from "@/hooks/use-assets"
-import { useDepartments } from "@/hooks/use-departments"
-import { usePermissions } from "@/hooks/use-permissions"
-import { useProjects } from "@/hooks/use-projects"
-import { useUsers } from "@/hooks/use-users"
-
-type RoleRecord = {
-  id: string
-  name: string
-  description: string | null
-  is_system: boolean
-  permissions: Array<{ id?: string; resource: string; action: string }>
-  created_at: string
-}
-
-function FullScreenMessage({
-  title,
-  description,
-}: {
-  title: string
-  description: string
-}) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="max-w-md rounded-lg border border-slate-200 bg-white p-6 text-center shadow-sm">
-        <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
-        <p className="mt-2 text-sm text-slate-500">{description}</p>
-      </div>
-    </div>
-  )
-}
-
-function RouteLoadingFallback() {
-  return (
-    <FullScreenMessage
-      title="Loading route"
-      description="Preparing the page module."
-    />
-  )
-}
-
-const TicketsClient = lazyComponent(
-  () => import("@/features/tickets/components/tickets-client"),
-  { loading: RouteLoadingFallback }
-)
-
-const TicketDetailPageClient = lazyComponent(
-  () =>
-    import("@/features/tickets/components/ticket-detail-page-client").then(
-      (module) => module.TicketDetailPageClient
-    ),
-  { loading: RouteLoadingFallback }
-)
-
-const ProjectsClient = lazyComponent(
-  () => import("@/src/routes/projects/projects-client"),
-  { loading: RouteLoadingFallback }
-)
-
-const ProjectDetailClient = lazyComponent(
-  () => import("@/src/routes/projects/project-detail-client"),
-  { loading: RouteLoadingFallback }
-)
-
-const AssetsClient = lazyComponent(
-  () => import("@/src/routes/assets/assets-client"),
-  { loading: RouteLoadingFallback }
-)
-
-const UsersClient = lazyComponent(
-  () => import("@/src/routes/admin/users/users-client"),
-  { loading: RouteLoadingFallback }
-)
-
-const RolesClient = lazyComponent(
-  () => import("@/src/routes/admin/roles/roles-client"),
-  { loading: RouteLoadingFallback }
-)
+import {
+  RouteLoadingFallback,
+  ProtectedLayout,
+  AuthCallbackPage,
+  SettingsRedirectPage,
+  NotFoundPage,
+} from "@/src/layouts"
+import { SignInContent } from "@/routes/signin/signin-content"
+import { ProjectsPage } from "@/routes/projects/projects-page"
+import { ProjectDetailRoute } from "@/routes/projects/project-detail-route"
+import { AssetsPage } from "@/routes/assets/assets-page"
+import { UsersPage } from "@/routes/admin/users/users-page"
+import { RolesPage } from "@/routes/admin/roles/roles-page"
+import { TicketsPage } from "@/features/tickets/components/tickets-page"
+import { TicketDetailRoute } from "@/features/tickets/components/ticket-detail-route"
 
 const ClockifyClient = lazyComponent(
-  () => import("@/src/routes/clockify/clockify-client"),
+  () => import("@/routes/clockify/clockify-client"),
   { loading: RouteLoadingFallback }
 )
 
 const GuildLeadReportClient = lazyComponent(
-  () => import("@/src/routes/report/guild-lead-report-client"),
+  () => import("@/routes/report/guild-lead-report-client"),
   { loading: RouteLoadingFallback }
 )
 
@@ -127,221 +57,6 @@ const DeletedTicketsPanel = lazyComponent(
     ),
   { loading: RouteLoadingFallback }
 )
-
-function AuthCallbackPage() {
-  const location = useLocation()
-
-  useEffect(() => {
-    const currentUrl = new URL(window.location.href)
-    const backendCallbackUrl = new URL("/auth/callback", getClientBackendUrl())
-    backendCallbackUrl.search = location.search
-
-    if (currentUrl.origin === backendCallbackUrl.origin) {
-      return
-    }
-
-    window.location.replace(backendCallbackUrl.toString())
-  }, [location.search])
-
-  return (
-    <FullScreenMessage
-      title="Completing sign-in"
-      description="Finishing the authentication flow and redirecting you back into the app."
-    />
-  )
-}
-
-function ProtectedLayout() {
-  const location = useLocation()
-  const { data: session, isPending } = useSession()
-
-  if (isPending) {
-    return (
-      <FullScreenMessage
-        title="Loading workspace"
-        description="Checking your session and preparing the app shell."
-      />
-    )
-  }
-
-  if (!session) {
-    const next = encodeURIComponent(`${location.pathname}${location.search}`)
-    return <Navigate to={`/signin?next=${next}`} replace />
-  }
-
-  return (
-    <AppShell>
-      <Outlet />
-    </AppShell>
-  )
-}
-
-function SettingsRedirectPage() {
-  const { flags, loading } = usePermissions()
-
-  if (loading) {
-    return (
-      <FullScreenMessage
-        title="Loading settings"
-        description="Resolving the right section for your permissions."
-      />
-    )
-  }
-
-  if (flags.canViewUsers) return <Navigate to="/users" replace />
-  if (flags.canViewRoles) return <Navigate to="/roles" replace />
-  if (flags.canManageStatus) return <Navigate to="/status" replace />
-  if (flags.canEditProjects) return <Navigate to="/epics" replace />
-  if (flags.canViewTickets) return <Navigate to="/deleted-tickets" replace />
-  if (flags.canViewAssets) return <Navigate to="/assets" replace />
-  if (flags.canViewClockify) return <Navigate to="/clockify" replace />
-  return <Navigate to="/tickets" replace />
-}
-
-function TicketsPage() {
-  const [searchParams] = useSearchParams()
-  return <TicketsClient initialProjectId={searchParams.get("projectId")} />
-}
-
-function TicketDetailRoute() {
-  const { displayId } = useParams()
-  const ticketLookup = useQuery({
-    queryKey: ["ticket-display-id", displayId],
-    enabled: !!displayId,
-    queryFn: async () => {
-      const response = await requestJson<{ ticket: { id: string } }>(
-        `/api/tickets/by-display-id/${encodeURIComponent(displayId || "")}`
-      )
-      return response.ticket
-    },
-  })
-
-  if (ticketLookup.isLoading) {
-    return (
-      <FullScreenMessage
-        title="Loading ticket"
-        description="Resolving the ticket identifier and fetching details."
-      />
-    )
-  }
-
-  if (!ticketLookup.data?.id) {
-    return (
-      <FullScreenMessage
-        title="Ticket not found"
-        description="The requested ticket could not be resolved."
-      />
-    )
-  }
-
-  return <TicketDetailPageClient ticketId={ticketLookup.data.id} />
-}
-
-function ProjectsPage() {
-  const { data: projects = [], isLoading: projectsLoading } = useProjects({ realtime: false })
-  const { departments, loading: departmentsLoading } = useDepartments({ realtime: false })
-  const { data: users = [], isLoading: usersLoading } = useUsers({ realtime: false })
-
-  if (projectsLoading || departmentsLoading || usersLoading) {
-    return (
-      <FullScreenMessage
-        title="Loading projects"
-        description="Fetching projects, departments, and people."
-      />
-    )
-  }
-
-  return (
-    <ProjectsClient
-      initialProjects={projects}
-      initialDepartments={departments}
-      initialUsers={users}
-    />
-  )
-}
-
-function AssetsPage() {
-  const { data: assets = [], isLoading: assetsLoading } = useAssets()
-  const { data: users = [], isLoading: usersLoading } = useUsers({ realtime: false })
-
-  if (assetsLoading || usersLoading) {
-    return (
-      <FullScreenMessage
-        title="Loading assets"
-        description="Fetching the shared asset registry."
-      />
-    )
-  }
-
-  return <AssetsClient initialAssets={assets} users={users} />
-}
-
-function UsersPage() {
-  const { data: users = [], isLoading: usersLoading } = useUsers({ realtime: false })
-  const rolesQuery = useQuery({
-    queryKey: ["roles", "select"],
-    queryFn: async () => {
-      const response = await requestJson<{ roles: Array<{ id: string; name: string }> }>("/api/roles")
-      return response.roles
-    },
-  })
-
-  if (usersLoading || rolesQuery.isLoading) {
-    return (
-      <FullScreenMessage
-        title="Loading users"
-        description="Fetching users and available roles."
-      />
-    )
-  }
-
-  return <UsersClient initialUsers={users} roles={rolesQuery.data || []} />
-}
-
-function RolesPage() {
-  const rolesQuery = useQuery({
-    queryKey: ["roles"],
-    queryFn: async () => {
-      const response = await requestJson<{ roles: RoleRecord[] }>("/api/roles")
-      return response.roles
-    },
-  })
-
-  if (rolesQuery.isLoading) {
-    return (
-      <FullScreenMessage
-        title="Loading roles"
-        description="Fetching role definitions and permission sets."
-      />
-    )
-  }
-
-  return <RolesClient initialRoles={rolesQuery.data || []} />
-}
-
-function ProjectDetailRoute() {
-  const { projectId } = useParams()
-
-  if (!projectId) {
-    return (
-      <FullScreenMessage
-        title="Project not found"
-        description="The requested project identifier is missing."
-      />
-    )
-  }
-
-  return <ProjectDetailClient projectId={projectId} />
-}
-
-function NotFoundPage() {
-  return (
-    <FullScreenMessage
-      title="Page not found"
-      description="The requested route does not exist in the Vite frontend."
-    />
-  )
-}
 
 export function AppRoutes() {
   return (

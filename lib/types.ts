@@ -37,6 +37,40 @@ export interface Department {
   name: string
 }
 
+/** Project collaborator (requester / collaborator) */
+export interface ProjectCollaborator {
+  id: string
+  name: string | null
+  email: string
+  image: string | null
+}
+
+/** Aggregate ticket stats for a project */
+export interface ProjectTicketStats {
+  total: number
+  open: number
+  done: number
+}
+
+/** Project as used across hooks/components */
+export interface Project {
+  id: string
+  name: string
+  description: string | null
+  status: string
+  require_sqa: boolean
+  links: string[]
+  department: Department | null
+  owner: User | null
+  collaborator_ids: string[]
+  collaborators: ProjectCollaborator[]
+  requester_ids: string[]
+  requesters: ProjectCollaborator[]
+  created_at: string
+  tickets?: Array<{ count: number }>
+  ticket_stats?: ProjectTicketStats
+}
+
 /** Ticket relation: project */
 export interface TicketProject {
   id: string

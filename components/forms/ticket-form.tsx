@@ -29,6 +29,7 @@ import { useSprints } from "@/hooks/use-sprints"
 import { SprintSelect } from "@/components/sprint-select"
 import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import { normalizeRichTextInput } from "@/lib/rich-text"
+import type { User } from "@/lib/types"
 
 const NO_PROJECT_VALUE = "__no_project__"
 const RichTextEditor = lazyComponent(
@@ -88,14 +89,6 @@ interface TicketFormProps {
   initialData?: Partial<TicketFormValues> & { id?: string }
   formId?: string
   hideSubmitButton?: boolean
-}
-
-interface User {
-  id: string
-  name: string | null
-  email: string
-  image?: string | null
-  role?: string | null
 }
 
 export function TicketForm({

@@ -4,45 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
 import { requestJson, createQueryString } from "@/lib/client/api"
 import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
-
-interface ProjectCollaborator {
-  id: string
-  name: string | null
-  email: string
-  image: string | null
-}
-
-interface ProjectTicketStats {
-  total: number
-  open: number
-  done: number
-}
-
-interface Project {
-  id: string
-  name: string
-  description: string | null
-  status: string
-  require_sqa: boolean
-  links: string[]
-  department: {
-    id: string
-    name: string
-  } | null
-  owner: {
-    id: string
-    name: string | null
-    email: string
-    image: string | null
-  } | null
-  collaborator_ids: string[]
-  collaborators: ProjectCollaborator[]
-  requester_ids: string[]
-  requesters: ProjectCollaborator[]
-  created_at: string
-  tickets?: Array<{ count: number }>
-  ticket_stats?: ProjectTicketStats
-}
+import type { Project, ProjectCollaborator, ProjectTicketStats } from "@/lib/types"
 
 interface ProjectsResponse {
   projects: Project[]
