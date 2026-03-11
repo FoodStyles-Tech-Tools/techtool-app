@@ -39,6 +39,8 @@
 - Client-side `link`, `router`, and `dynamic` compat usage has been removed from the active Vite runtime paths.
 - Canonical ticket endpoints under `/api/v2/tickets` are now owned by explicit Express routes in `server/routes`, `server/controllers`, `server/services`, and `server/repositories`.
 - Internal ticket mutations now use `/api/v2/tickets` instead of the deprecated `/api/tickets` mutation endpoints.
+- Ticket support endpoints for `by-display-id`, `subtask-counts`, `activity`, and `comments` are also now explicitly registered in Express, even though they still preserve the legacy `/api/tickets/...` URLs.
+- `src/routes/signin/signin-content.tsx` is now a real route module; the old `app/(public)/signin/signin-content.tsx` is only a compatibility re-export.
 - `backend/server.ts` still contains the legacy Next-style route adapter. That is an acknowledged temporary state until the Express route conversion lands.
 
 ## Enforcement
