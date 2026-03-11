@@ -6,21 +6,23 @@ import path from "node:path"
 import { pathToFileURL } from "node:url"
 import { createRequestContext, getContextResponseHeaders, runWithRequestContext } from "./compat/request-context"
 import type { NextRequest } from "./compat/server"
+import { getServerPort } from "@/lib/config/server-env"
 
 type RouteHandlerModule = Partial<Record<"GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS", RouteHandler>>
 type RouteHandler = (request: NextRequest, context?: { params: Record<string, string> }) => Promise<Response>
 
 type RegisteredRoute = {
   methods: RouteHandlerModule
+  sourceFilePath: string
   urlPath: string
 }
 
 const app = express()
-const port = Number(process.env.PORT || 4000)
+const port = getServerPort()
 const runtimeRoot = path.resolve(__dirname, "..")
 const isCompiledRuntime = path.basename(runtimeRoot) === "dist-backend"
 const workspaceRoot = isCompiledRuntime ? path.resolve(runtimeRoot, "..") : runtimeRoot
-const routesRoot = isCompiledRuntime ? runtimeRoot : workspaceRoot
+const routesRoot = path.join(isCompiledRuntime ? runtimeRoot : workspaceRoot, "backend", "routes")
 const clientDistDir = path.join(workspaceRoot, "dist")
 
 app.use(express.json({ limit: "5mb" }))
@@ -61,8 +63,8 @@ async function collectRouteFiles(rootDir: string): Promise<string[]> {
 
 async function loadRoutes(): Promise<RegisteredRoute[]> {
   const routeRoots = [
-    { baseDir: path.join(routesRoot, "app", "api"), baseUrl: "/api" },
-    { baseDir: path.join(routesRoot, "app", "auth"), baseUrl: "/auth" },
+    { baseDir: path.join(routesRoot, "api"), baseUrl: "/api" },
+    { baseDir: path.join(routesRoot, "auth"), baseUrl: "/auth" },
   ]
 
   const collectedRoutes: RegisteredRoute[] = []
@@ -76,6 +78,7 @@ async function loadRoutes(): Promise<RegisteredRoute[]> {
         const routePath = toUrlPath(routeRoot.baseDir, filePath)
         collectedRoutes.push({
           methods: routeModule,
+          sourceFilePath: filePath,
           urlPath: `${routeRoot.baseUrl}${routePath === "/" ? "" : routePath}`,
         })
       }
@@ -120,6 +123,30 @@ function normalizeRouteModule(moduleExports: unknown): RouteHandlerModule {
 
 function hasRouteHandlers(moduleExports: RouteHandlerModule) {
   return Object.values(moduleExports).some((value) => typeof value === "function")
+}
+
+function logRegisteredRoutes(routes: RegisteredRoute[]) {
+  const summarizedRoutes = routes.flatMap((route) =>
+    Object.entries(route.methods)
+      .filter((entry): entry is [keyof RouteHandlerModule, RouteHandler] => typeof entry[1] === "function")
+      .map(([method]) => ({
+        method,
+        sourceFilePath: path.relative(workspaceRoot, route.sourceFilePath).replace(/\\/g, "/"),
+        urlPath: route.urlPath,
+      }))
+  )
+
+  console.log(
+    `[server] Registered ${summarizedRoutes.length} route handlers across ${routes.length} route files.`
+  )
+
+  if (process.env.DEBUG_ROUTES !== "true") {
+    return
+  }
+
+  for (const route of summarizedRoutes.sort((left, right) => left.urlPath.localeCompare(right.urlPath))) {
+    console.log(`[route] ${route.method.padEnd(7)} ${route.urlPath} (${route.sourceFilePath})`)
+  }
 }
 
 function getRequestBody(request: ExpressRequest) {
@@ -195,6 +222,27 @@ async function sendResponse(response: ExpressResponse, webResponse: Response) {
   response.send(buffer)
 }
 
+function registerRequestLogging() {
+  if (process.env.NODE_ENV === "production") {
+    return
+  }
+
+  app.use((request, response, next) => {
+    const startedAt = Date.now()
+
+    response.on("finish", () => {
+      if (!request.path.startsWith("/api/") && !request.path.startsWith("/auth/")) {
+        return
+      }
+
+      const duration = Date.now() - startedAt
+      console.log(`[http] ${request.method} ${request.originalUrl} -> ${response.statusCode} (${duration}ms)`)
+    })
+
+    next()
+  })
+}
+
 async function registerRoutes() {
   const routes = await loadRoutes()
   const requiredRoutes = ["/api/auth/me", "/auth/callback"]
@@ -204,6 +252,8 @@ async function registerRoutes() {
       throw new Error(`Required route was not registered: ${requiredRoute}`)
     }
   }
+
+  logRegisteredRoutes(routes)
 
   for (const route of routes) {
     const methodEntries = Object.entries(route.methods).filter((entry): entry is [keyof RouteHandlerModule, RouteHandler] =>
@@ -235,6 +285,7 @@ async function registerRoutes() {
 }
 
 async function start() {
+  registerRequestLogging()
   await registerRoutes()
 
   if (await fs.stat(clientDistDir).then(() => true).catch(() => false)) {

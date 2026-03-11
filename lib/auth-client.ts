@@ -11,6 +11,7 @@ import {
 } from "react"
 import type { AuthChangeEvent, Provider, Session } from "@supabase/supabase-js"
 import { mapSupabaseUserToSession, type AppSession } from "@/lib/auth-session"
+import { getClientAppUrl, getClientBackendUrl } from "@/lib/config/client-env"
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser"
 
 type UseSessionResult = {
@@ -39,14 +40,6 @@ function normalizeCallbackPath(callbackURL?: string): string {
     return "/dashboard"
   }
   return callbackURL
-}
-
-function getPublicAppUrl() {
-  return import.meta.env.VITE_APP_URL || import.meta.env.VITE_PUBLIC_APP_URL || "http://localhost:5173"
-}
-
-function getServerAppUrl() {
-  return import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_API_URL || "http://localhost:4000"
 }
 
 function clearClientAuthCache() {
@@ -113,7 +106,7 @@ export const signIn = {
     try {
       const supabase = getBrowserSupabaseClient()
       const callbackPath = normalizeCallbackPath(options.callbackURL)
-      const redirectBase = typeof window !== "undefined" ? getServerAppUrl() : getPublicAppUrl()
+      const redirectBase = typeof window !== "undefined" ? getClientBackendUrl() : getClientAppUrl()
       const redirectTo = new URL("/auth/callback", redirectBase)
       redirectTo.searchParams.set("next", callbackPath)
 

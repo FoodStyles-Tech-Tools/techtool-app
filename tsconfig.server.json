@@ -11,8 +11,6 @@
   },
   "include": [
     "backend/**/*.ts",
-    "app/api/**/*.ts",
-    "app/auth/callback/route.ts",
     "types/**/*.ts"
   ],
   "exclude": [

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "@/backend/compat/server"
+import { getServerAppUrl } from "@/lib/config/server-env"
 import { getUserDisplayName, getUserImage } from "@/lib/auth-session"
 import { createServerClient } from "@/lib/supabase"
 
@@ -12,12 +13,8 @@ function normalizeNextPath(value: string | null): string {
   return value
 }
 
-function getFrontendAppUrl() {
-  return process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173"
-}
-
 function redirectToSignIn(error: string, nextPath: string) {
-  const url = new URL("/signin", getFrontendAppUrl())
+  const url = new URL("/signin", getServerAppUrl())
   url.searchParams.set("error", error)
   url.searchParams.set("next", nextPath)
   return NextResponse.redirect(url)
@@ -88,7 +85,7 @@ export async function GET(request: NextRequest) {
     console.error("Failed to sync user profile:", updateUserError)
   }
 
-  return NextResponse.redirect(new URL(nextPath, getFrontendAppUrl()))
+  return NextResponse.redirect(new URL(nextPath, getServerAppUrl()))
 }
 
 

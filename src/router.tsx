@@ -2,6 +2,7 @@ import { Navigate, Outlet, Route, Routes, useLocation, useParams, useSearchParam
 import { useEffect, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { AppShell } from "@/components/layout/app-shell"
+import { getClientBackendUrl } from "@/lib/config/client-env"
 import { useSession } from "@/lib/auth-client"
 import { requestJson } from "@/lib/client/api"
 import { SignInContent } from "@/app/(public)/signin/signin-content"
@@ -50,16 +51,12 @@ function FullScreenMessage({
   )
 }
 
-function getBackendAppUrl() {
-  return import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_API_URL || "http://localhost:4000"
-}
-
 function AuthCallbackPage() {
   const location = useLocation()
 
   useEffect(() => {
     const currentUrl = new URL(window.location.href)
-    const backendCallbackUrl = new URL("/auth/callback", getBackendAppUrl())
+    const backendCallbackUrl = new URL("/auth/callback", getClientBackendUrl())
     backendCallbackUrl.search = location.search
 
     if (currentUrl.origin === backendCallbackUrl.origin) {
