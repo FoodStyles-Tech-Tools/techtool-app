@@ -30,7 +30,7 @@ type ChannelEntry = {
 
 const channelRegistry = new Map<string, ChannelEntry>()
 const MAX_DEV_SUBSCRIPTIONS = 30
-const isDev = process.env.NODE_ENV !== "production"
+const isDev = import.meta.env.DEV
 
 function makeChannelKey(table: string, filter?: string) {
   return filter ? `${table}::${filter}` : `${table}::all`

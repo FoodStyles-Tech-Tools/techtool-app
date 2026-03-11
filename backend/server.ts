@@ -1,6 +1,9 @@
+import "dotenv/config"
+
 import express, { type Request as ExpressRequest, type Response as ExpressResponse } from "express"
 import fs from "node:fs/promises"
 import path from "node:path"
+import { pathToFileURL } from "node:url"
 import { createRequestContext, getContextResponseHeaders, runWithRequestContext } from "./compat/request-context"
 import type { NextRequest } from "./compat/server"
 
@@ -13,7 +16,7 @@ type RegisteredRoute = {
 }
 
 const app = express()
-const port = Number(process.env.PORT || 3001)
+const port = Number(process.env.PORT || 4000)
 const runtimeRoot = path.resolve(__dirname, "..")
 const isCompiledRuntime = path.basename(runtimeRoot) === "dist-backend"
 const workspaceRoot = isCompiledRuntime ? path.resolve(runtimeRoot, "..") : runtimeRoot
@@ -69,7 +72,7 @@ async function loadRoutes(): Promise<RegisteredRoute[]> {
       const files = await collectRouteFiles(routeRoot.baseDir)
 
       for (const filePath of files) {
-        const routeModule = (await import(filePath)) as RouteHandlerModule
+        const routeModule = normalizeRouteModule(await importFromFilePath(filePath))
         const routePath = toUrlPath(routeRoot.baseDir, filePath)
         collectedRoutes.push({
           methods: routeModule,
@@ -84,6 +87,39 @@ async function loadRoutes(): Promise<RegisteredRoute[]> {
   }
 
   return collectedRoutes
+}
+
+const dynamicImport = new Function("modulePath", "return import(modulePath)") as (
+  modulePath: string
+) => Promise<unknown>
+
+async function importFromFilePath(filePath: string) {
+  return dynamicImport(pathToFileURL(filePath).href)
+}
+
+function normalizeRouteModule(moduleExports: unknown): RouteHandlerModule {
+  if (!moduleExports || typeof moduleExports !== "object") {
+    return {}
+  }
+
+  const exportedModule = moduleExports as RouteHandlerModule & { default?: unknown }
+
+  if (hasRouteHandlers(exportedModule)) {
+    return exportedModule
+  }
+
+  if (exportedModule.default && typeof exportedModule.default === "object") {
+    const defaultModule = exportedModule.default as RouteHandlerModule
+    if (hasRouteHandlers(defaultModule)) {
+      return defaultModule
+    }
+  }
+
+  return {}
+}
+
+function hasRouteHandlers(moduleExports: RouteHandlerModule) {
+  return Object.values(moduleExports).some((value) => typeof value === "function")
 }
 
 function getRequestBody(request: ExpressRequest) {
@@ -161,6 +197,13 @@ async function sendResponse(response: ExpressResponse, webResponse: Response) {
 
 async function registerRoutes() {
   const routes = await loadRoutes()
+  const requiredRoutes = ["/api/auth/me", "/auth/callback"]
+
+  for (const requiredRoute of requiredRoutes) {
+    if (!routes.some((route) => route.urlPath === requiredRoute && hasRouteHandlers(route.methods))) {
+      throw new Error(`Required route was not registered: ${requiredRoute}`)
+    }
+  }
 
   for (const route of routes) {
     const methodEntries = Object.entries(route.methods).filter((entry): entry is [keyof RouteHandlerModule, RouteHandler] =>
@@ -179,7 +222,7 @@ async function registerRoutes() {
               handler(nextRequest, { params: request.params as Record<string, string> })
             )
 
-            appendHeaders(webResponse.headers, getContextResponseHeaders())
+            appendHeaders(webResponse.headers, getContextResponseHeaders(requestContext))
             await sendResponse(response, webResponse)
           } catch (error) {
             console.error(`Unhandled error in ${method} ${route.urlPath}:`, error)

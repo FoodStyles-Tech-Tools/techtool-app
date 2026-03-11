@@ -1,5 +1,5 @@
 import { Navigate, Outlet, Route, Routes, useLocation, useParams, useSearchParams } from "react-router-dom"
-import { useMemo } from "react"
+import { useEffect, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { AppShell } from "@/components/layout/app-shell"
 import { useSession } from "@/lib/auth-client"
@@ -47,6 +47,33 @@ function FullScreenMessage({
         <p className="mt-2 text-sm text-slate-500">{description}</p>
       </div>
     </div>
+  )
+}
+
+function getBackendAppUrl() {
+  return import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_API_URL || "http://localhost:4000"
+}
+
+function AuthCallbackPage() {
+  const location = useLocation()
+
+  useEffect(() => {
+    const currentUrl = new URL(window.location.href)
+    const backendCallbackUrl = new URL("/auth/callback", getBackendAppUrl())
+    backendCallbackUrl.search = location.search
+
+    if (currentUrl.origin === backendCallbackUrl.origin) {
+      return
+    }
+
+    window.location.replace(backendCallbackUrl.toString())
+  }, [location.search])
+
+  return (
+    <FullScreenMessage
+      title="Completing sign-in"
+      description="Finishing the authentication flow and redirecting you back into the app."
+    />
   )
 }
 
@@ -265,6 +292,7 @@ export function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/tickets" replace />} />
       <Route path="/signin" element={<SignInContent />} />
+      <Route path="/auth/callback" element={<AuthCallbackPage />} />
       <Route element={<ProtectedLayout />}>
         <Route path="/dashboard" element={<Navigate to="/tickets" replace />} />
         <Route path="/tickets" element={<TicketsPage />} />

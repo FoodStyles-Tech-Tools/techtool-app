@@ -9,7 +9,12 @@ export const APP_VERSION =
       ? (window as Window & { __APP_VERSION__?: string }).__APP_VERSION__?.slice(0, 7)
       : undefined
   ) ||
-  process.env.VITE_APP_VERSION?.slice(0, 7) ||
-  process.env.NEXT_PUBLIC_APP_VERSION?.slice(0, 7) ||
-  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ||
+  (
+    typeof process !== "undefined" ? process.env.VITE_APP_VERSION?.slice(0, 7) : undefined
+  ) ||
+  (
+    typeof process !== "undefined"
+      ? process.env.VITE_PUBLIC_APP_VERSION?.slice(0, 7)
+      : undefined
+  ) ||
   packageVersion

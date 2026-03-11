@@ -42,12 +42,11 @@ function normalizeCallbackPath(callbackURL?: string): string {
 }
 
 function getPublicAppUrl() {
-  return (
-    import.meta.env.VITE_APP_URL ||
-    import.meta.env.VITE_PUBLIC_APP_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    "http://localhost:5173"
-  )
+  return import.meta.env.VITE_APP_URL || import.meta.env.VITE_PUBLIC_APP_URL || "http://localhost:5173"
+}
+
+function getServerAppUrl() {
+  return import.meta.env.VITE_SERVER_URL || import.meta.env.VITE_API_URL || "http://localhost:4000"
 }
 
 function clearClientAuthCache() {
@@ -114,10 +113,7 @@ export const signIn = {
     try {
       const supabase = getBrowserSupabaseClient()
       const callbackPath = normalizeCallbackPath(options.callbackURL)
-      const redirectBase =
-        typeof window !== "undefined"
-          ? window.location.origin
-          : getPublicAppUrl()
+      const redirectBase = typeof window !== "undefined" ? getServerAppUrl() : getPublicAppUrl()
       const redirectTo = new URL("/auth/callback", redirectBase)
       redirectTo.searchParams.set("next", callbackPath)
 

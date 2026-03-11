@@ -12,9 +12,14 @@ function normalizeNextPath(value: string | null): string {
   return value
 }
 
-function redirectToSignIn(request: NextRequest, error: string) {
-  const url = new URL("/signin", request.url)
+function getFrontendAppUrl() {
+  return process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173"
+}
+
+function redirectToSignIn(error: string, nextPath: string) {
+  const url = new URL("/signin", getFrontendAppUrl())
   url.searchParams.set("error", error)
+  url.searchParams.set("next", nextPath)
   return NextResponse.redirect(url)
 }
 
@@ -24,11 +29,11 @@ export async function GET(request: NextRequest) {
   const nextPath = normalizeNextPath(request.nextUrl.searchParams.get("next"))
 
   if (error) {
-    return redirectToSignIn(request, error)
+    return redirectToSignIn(error, nextPath)
   }
 
   if (!code) {
-    return redirectToSignIn(request, "missing_code")
+    return redirectToSignIn("missing_code", nextPath)
   }
 
   const supabase = createServerClient()
@@ -36,7 +41,7 @@ export async function GET(request: NextRequest) {
 
   if (exchangeError) {
     console.error("Failed to exchange Supabase auth code:", exchangeError)
-    return redirectToSignIn(request, "oauth_exchange_failed")
+    return redirectToSignIn("oauth_exchange_failed", nextPath)
   }
 
   const {
@@ -47,7 +52,7 @@ export async function GET(request: NextRequest) {
   if (userError || !user?.email) {
     console.error("Failed to load Supabase user after OAuth callback:", userError)
     await supabase.auth.signOut()
-    return redirectToSignIn(request, "unauthorized")
+    return redirectToSignIn("unauthorized", nextPath)
   }
 
   const email = user.email
@@ -63,12 +68,12 @@ export async function GET(request: NextRequest) {
   if (appUserError) {
     console.error("Failed to verify registered user:", appUserError)
     await supabase.auth.signOut()
-    return redirectToSignIn(request, "account_check_failed")
+    return redirectToSignIn("account_check_failed", nextPath)
   }
 
   if (!appUser?.id) {
     await supabase.auth.signOut()
-    return redirectToSignIn(request, "not_registered")
+    return redirectToSignIn("not_registered", nextPath)
   }
 
   const { error: updateUserError } = await supabase
@@ -83,7 +88,7 @@ export async function GET(request: NextRequest) {
     console.error("Failed to sync user profile:", updateUserError)
   }
 
-  return NextResponse.redirect(new URL(nextPath, request.url))
+  return NextResponse.redirect(new URL(nextPath, getFrontendAppUrl()))
 }
 
 

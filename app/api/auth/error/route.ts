@@ -6,13 +6,15 @@ export const dynamic = 'force-dynamic'
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const error = searchParams.get("error")
-  
-  // Redirect to signin page with error message
-  const signinUrl = new URL("/signin", request.url)
+
+  const signinUrl = new URL(
+    "/signin",
+    process.env.VITE_APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:5173"
+  )
   if (error) {
     signinUrl.searchParams.set("error", error)
   }
-  
+
   return NextResponse.redirect(signinUrl)
 }
 

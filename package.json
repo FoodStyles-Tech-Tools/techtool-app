@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "vite",
-    "dev:server": "tsx watch backend/server.ts",
+    "dev:server": "tsx watch --include backend/**/*.ts --include app/**/*.ts --include lib/**/*.ts backend/server.ts",
     "build": "vite build && tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
     "start": "node dist-backend/backend/server.js",
     "audit:contrast": "node scripts/contrast-audit.js",

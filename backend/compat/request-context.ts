@@ -33,6 +33,8 @@ export function createRequestContext(cookieHeader: string | null | undefined): R
   }
 }
 
+export type { RequestContext }
+
 export async function runWithRequestContext<T>(
   context: RequestContext,
   callback: () => Promise<T>
@@ -50,6 +52,6 @@ export function setRequestCookie(name: string, value: string, options?: Serializ
   context.responseHeaders.append("Set-Cookie", serialize(name, value, options))
 }
 
-export function getContextResponseHeaders() {
-  return getContext().responseHeaders
+export function getContextResponseHeaders(context?: RequestContext) {
+  return context?.responseHeaders ?? getContext().responseHeaders
 }
