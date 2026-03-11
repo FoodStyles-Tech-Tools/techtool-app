@@ -4,10 +4,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
 import { requestJson } from "@/lib/client/api"
 import type { User } from "@/lib/types"
+import type { UserDto } from "@/types/api/users"
 
 type UseUsersOptions = {
   enabled?: boolean
   realtime?: boolean
+}
+
+function mapUserDtoToDomain(dto: UserDto): User {
+  return dto
 }
 
 function sortUsersByName(users: User[]): User[] {
@@ -69,8 +74,9 @@ export function useUsers(options?: UseUsersOptions) {
     enabled,
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
-      const response = await requestJson<{ users: User[] }>("/api/users")
-      return sortUsersByName(response.users || [])
+      const response = await requestJson<{ users: UserDto[] }>("/api/users")
+      const users = (response.users || []).map(mapUserDtoToDomain)
+      return sortUsersByName(users)
     },
   })
 }

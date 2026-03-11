@@ -5,16 +5,7 @@ import { useRealtimeSubscription } from "./use-realtime"
 import { requestJson, createQueryString } from "@/lib/client/api"
 import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
 import type { Project, ProjectCollaborator, ProjectTicketStats } from "@/lib/types"
-
-interface ProjectsResponse {
-  projects: Project[]
-  pagination?: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-  }
-}
+import type { ProjectDto, ProjectsResponseDto } from "@/types/api/projects"
 
 type UseProjectsOptions = {
   status?: string
@@ -26,7 +17,12 @@ type UseProjectsOptions = {
 
 const toArray = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : [])
 
-function normalizeProject(project: Project): Project {
+function mapProjectDtoToDomain(dto: ProjectDto): Project {
+  return dto as unknown as Project
+}
+
+function normalizeProjectDto(dto: ProjectDto): Project {
+  const project = mapProjectDtoToDomain(dto)
   return {
     ...project,
     links: sanitizeLinkArray(project.links),
@@ -96,8 +92,8 @@ export function useProjects(options?: UseProjectsOptions) {
         limit: options?.limit,
         page: options?.page,
       })
-      const response = await requestJson<ProjectsResponse>(`/api/projects${query}`)
-      return (response.projects || []).map(normalizeProject)
+      const response = await requestJson<ProjectsResponseDto>(`/api/projects${query}`)
+      return (response.projects || []).map(normalizeProjectDto)
     },
   })
 }
@@ -130,8 +126,8 @@ export function useProject(projectId: string, options?: { enabled?: boolean; rea
     enabled,
     staleTime: 60 * 1000,
     queryFn: async () => {
-      const response = await requestJson<{ project: Project }>(`/api/projects/${projectId}`)
-      return { project: normalizeProject(response.project) }
+      const response = await requestJson<{ project: ProjectDto }>(`/api/projects/${projectId}`)
+      return { project: normalizeProjectDto(response.project) }
     },
   })
 }
@@ -157,13 +153,13 @@ export function useCreateProject() {
         requester_ids: toArray<string>(data.requester_ids),
       }
 
-      const response = await requestJson<{ project: Project }>(`/api/projects`, {
+      const response = await requestJson<{ project: ProjectDto }>(`/api/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
 
-      return { project: normalizeProject(response.project) }
+      return { project: normalizeProjectDto(response.project) }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] })
@@ -197,13 +193,13 @@ export function useUpdateProject() {
         ...(data.requester_ids !== undefined ? { requester_ids: toArray<string>(data.requester_ids) } : {}),
       }
 
-      const response = await requestJson<{ project: Project }>(`/api/projects/${id}`, {
+      const response = await requestJson<{ project: ProjectDto }>(`/api/projects/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
 
-      return { project: normalizeProject(response.project) }
+      return { project: normalizeProjectDto(response.project) }
     },
     onSuccess: (data) => {
       queryClient.setQueryData<{ project: Project }>(["project", data.project.id], data)

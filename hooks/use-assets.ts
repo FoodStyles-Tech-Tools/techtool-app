@@ -4,10 +4,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { prepareLinkPayload, sanitizeLinkArray } from "@/lib/links"
 import { requestJson } from "@/lib/client/api"
 import type { Asset } from "@/lib/types"
+import type { AssetDto } from "@/types/api/assets"
 
 export type { Asset }
 
-function normalizeAsset(asset: Asset): Asset {
+function mapAssetDtoToDomain(dto: AssetDto): Asset {
+  return dto
+}
+
+function normalizeAsset(dto: AssetDto): Asset {
+  const asset = mapAssetDtoToDomain(dto)
   return {
     ...asset,
     links: sanitizeLinkArray(asset.links),
@@ -21,7 +27,7 @@ export function useAssets() {
     queryKey: ["assets"],
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
-      const response = await requestJson<{ assets: Asset[] }>("/api/assets")
+      const response = await requestJson<{ assets: AssetDto[] }>("/api/assets")
       return (response.assets || []).map(normalizeAsset)
     },
   })
@@ -47,7 +53,7 @@ export function useCreateAsset() {
           : [],
       }
 
-      const response = await requestJson<{ asset: Asset }>("/api/assets", {
+      const response = await requestJson<{ asset: AssetDto }>("/api/assets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -85,7 +91,7 @@ export function useUpdateAsset() {
           : {}),
       }
 
-      const response = await requestJson<{ asset: Asset }>(`/api/assets/${id}`, {
+      const response = await requestJson<{ asset: AssetDto }>(`/api/assets/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
