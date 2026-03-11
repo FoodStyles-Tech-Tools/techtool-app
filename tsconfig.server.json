@@ -11,6 +11,7 @@
   },
   "include": [
     "backend/**/*.ts",
+    "server/**/*.ts",
     "types/**/*.ts"
   ],
   "exclude": [

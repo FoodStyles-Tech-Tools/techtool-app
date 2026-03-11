@@ -1,8 +1,7 @@
 "use client"
 
-import Link from "@/src/compat/link"
+import { Link, useNavigate } from "react-router-dom"
 import { useDeferredValue, useMemo, useState } from "react"
-import { useRouter } from "@/src/compat/router"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { PageHeader } from "@/components/ui/page-header"
@@ -71,7 +70,7 @@ export default function ProjectsClient({
   initialUsers,
   initialTicketStats,
 }: ProjectsClientProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { flags, user: currentUser } = usePermissions()
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active")
@@ -240,7 +239,7 @@ export default function ProjectsClient({
                       <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           <Link
-                            href={`/projects/${project.id}`}
+                            to={`/projects/${project.id}`}
                             className="text-sm font-medium text-slate-900 hover:underline"
                           >
                             {project.name}
@@ -326,7 +325,7 @@ export default function ProjectsClient({
           onSuccess={() => {
             setProjectFormOpen(false)
             toast("Project created")
-            router.refresh()
+            window.location.reload()
           }}
         />
       </FormDialogShell>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { useRouter } from "@/src/compat/router"
+import { useNavigate } from "react-router-dom"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useDepartments } from "@/hooks/use-departments"
 import { useProjects } from "@/hooks/use-projects"
@@ -39,7 +39,7 @@ const NO_PROJECT_VALUE = "no_project"
 const NO_PARENT_TICKET_VALUE = "no_parent_ticket"
 
 export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetailDialogProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { flags } = usePermissions()
   const canEditTickets = flags?.canEditTickets ?? false
   const { departments } = useDepartments({ realtime: false })
@@ -162,7 +162,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
 
   const handleGoToParentTicket = () => {
     if (!parentNavigationSlug) return
-    router.push(`/tickets/${parentNavigationSlug}`)
+    navigate(`/tickets/${parentNavigationSlug}`)
   }
 
   if (!ticketId) return null

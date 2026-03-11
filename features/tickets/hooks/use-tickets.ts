@@ -272,7 +272,7 @@ export function useCreateTicket() {
         links: prepareLinkPayload(data.links),
       }
 
-      const response = await requestJson<TicketResponse>(`/api/tickets`, {
+      const response = await requestJson<TicketResponse>(`/api/v2/tickets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -346,7 +346,7 @@ export function useUpdateTicket() {
         ...(data.links !== undefined ? { links: prepareLinkPayload(data.links) } : {}),
       }
 
-      const response = await requestJson<TicketResponse>(`/api/tickets/${id}`, {
+      const response = await requestJson<TicketResponse>(`/api/v2/tickets/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -405,7 +405,7 @@ export function useUpdateTicketWithReasonComment() {
       completedAt?: string | null
       epicId?: string | null
     }) => {
-      const response = await requestJson<TicketResponse>(`/api/tickets/${id}/status-with-reason`, {
+      const response = await requestJson<TicketResponse>(`/api/v2/tickets/${id}/status-with-reason`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,13 +1,12 @@
 import { Suspense, lazy, type ComponentType } from "react"
 
-type DynamicOptions = {
+type LazyOptions = {
   loading?: ComponentType
-  ssr?: boolean
 }
 
-export default function dynamic<TProps extends object>(
+export function lazyComponent<TProps extends object>(
   loader: () => Promise<ComponentType<TProps> | { default: ComponentType<TProps> }>,
-  options?: DynamicOptions
+  options?: LazyOptions
 ) {
   const LazyComponent = lazy(async () => {
     const resolved = await loader()
@@ -18,7 +17,7 @@ export default function dynamic<TProps extends object>(
 
   const LoadingComponent = options?.loading
 
-  return function DynamicComponent(props: TProps) {
+  return function LazyLoadedComponent(props: TProps) {
     return (
       <Suspense fallback={LoadingComponent ? <LoadingComponent /> : null}>
         <LazyComponent {...props} />

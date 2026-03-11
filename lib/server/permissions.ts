@@ -1,6 +1,10 @@
 import { createServerClient } from "@/lib/supabase"
 import { auth } from "@/lib/auth"
 import { getServerCache, setServerCache } from "@/lib/server/cache"
+import { buildPermissionFlags } from "@/shared/permissions"
+import type { PermissionFlags } from "@/types/auth"
+
+export { buildPermissionFlags } from "@/shared/permissions"
 
 export type Permission = {
   resource: string
@@ -16,100 +20,9 @@ export type PermissionsUser = {
   permissions: Permission[]
 }
 
-export type PermissionFlags = {
-  canViewProjects: boolean
-  canCreateProjects: boolean
-  canEditProjects: boolean
-  canViewAssets: boolean
-  canCreateAssets: boolean
-  canEditAssets: boolean
-  canDeleteAssets: boolean
-  canManageAssets: boolean
-  canViewClockify: boolean
-  canManageClockify: boolean
-  canViewTickets: boolean
-  canCreateTickets: boolean
-  canEditTickets: boolean
-  canViewUsers: boolean
-  canCreateUsers: boolean
-  canEditUsers: boolean
-  canDeleteUsers: boolean
-  canViewRoles: boolean
-  canCreateRoles: boolean
-  canEditRoles: boolean
-  canDeleteRoles: boolean
-  canManageStatus: boolean
-  canManageSettings: boolean
-  canAccessSettings: boolean
-}
-
 const ALL_RESOURCES = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status"] as const
 const ALL_ACTIONS = ["view", "create", "edit", "delete", "manage"] as const
 const PERMISSIONS_CACHE_TTL_MS = 60 * 1000
-
-export function buildPermissionFlags(permissions: Permission[]): PermissionFlags {
-  const has = (resource: string, action: string) =>
-    permissions.some((p) => p.resource === resource && p.action === action)
-
-  const canViewProjects = has("projects", "view")
-  const canCreateProjects = has("projects", "create")
-  const canEditProjects = has("projects", "edit")
-  const canViewAssets = has("assets", "view")
-  const canCreateAssets = has("assets", "create")
-  const canEditAssets = has("assets", "edit")
-  const canDeleteAssets = has("assets", "delete")
-  const canManageAssets = has("assets", "manage")
-  const canViewClockify = has("clockify", "view")
-  const canManageClockify = has("clockify", "manage")
-  const canViewTickets = has("tickets", "view")
-  const canCreateTickets = has("tickets", "create")
-  const canEditTickets = has("tickets", "edit")
-  const canViewUsers = has("users", "view")
-  const canCreateUsers = has("users", "create")
-  const canEditUsers = has("users", "edit")
-  const canDeleteUsers = has("users", "delete")
-  const canViewRoles = has("roles", "view")
-  const canCreateRoles = has("roles", "create")
-  const canEditRoles = has("roles", "edit")
-  const canDeleteRoles = has("roles", "delete")
-  const canManageStatus = has("status", "manage")
-  const canManageSettings = has("settings", "manage")
-  const canAccessSettings =
-    has("users", "view") ||
-    has("roles", "view") ||
-    has("roles", "edit") ||
-    has("roles", "create") ||
-    has("roles", "manage") ||
-    has("status", "manage") ||
-    has("settings", "manage")
-
-  return {
-    canViewProjects,
-    canCreateProjects,
-    canEditProjects,
-    canViewAssets,
-    canCreateAssets,
-    canEditAssets,
-    canDeleteAssets,
-    canManageAssets,
-    canViewClockify,
-    canManageClockify,
-    canViewTickets,
-    canCreateTickets,
-    canEditTickets,
-    canViewUsers,
-    canCreateUsers,
-    canEditUsers,
-    canDeleteUsers,
-    canViewRoles,
-    canCreateRoles,
-    canEditRoles,
-    canDeleteRoles,
-    canManageStatus,
-    canManageSettings,
-    canAccessSettings,
-  }
-}
 
 export async function getCurrentUserPermissions(
   session?: Awaited<ReturnType<typeof auth.api.getSession>>

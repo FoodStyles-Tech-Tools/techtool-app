@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "@/src/compat/router"
 import { Button } from "@/components/ui/button"
 import { emitPermissionsRefresh, usePermissions } from "@/hooks/use-permissions"
 import { PageHeader } from "@/components/ui/page-header"
@@ -57,7 +56,6 @@ type RolesClientProps = {
 }
 
 export default function RolesClient({ initialRoles }: RolesClientProps) {
-  const router = useRouter()
   const [roles, setRoles] = useState<Role[]>(initialRoles)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRole, setEditingRole] = useState<Role | null>(null)
@@ -116,7 +114,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
 
       if (res.ok) {
         setRoles((prev) => prev.filter((role) => role.id !== id))
-        router.refresh()
+        window.location.reload()
         emitPermissionsRefresh()
         toast("Role deleted successfully", "success")
       } else {
@@ -227,7 +225,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
           ...originalPermissions,
           [roleId]: [...(editingPermissions[roleId] || [])],
         })
-        router.refresh()
+        window.location.reload()
         emitPermissionsRefresh()
         toast("Permissions updated successfully", "success")
       } else {
@@ -433,7 +431,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
             setIsDialogOpen(false)
             setEditingRole(null)
             toast(editingRole ? "Role updated" : "Role created")
-            router.refresh()
+            window.location.reload()
             emitPermissionsRefresh()
           }}
         />

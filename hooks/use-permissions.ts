@@ -2,11 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useSession } from "@/lib/auth-client"
-
-interface Permission {
-  resource: string
-  action: string
-}
+import { buildPermissionFlags } from "@/shared/permissions"
+import type { Permission, PermissionFlags } from "@/types/auth"
 
 interface User {
   id: string
@@ -15,33 +12,6 @@ interface User {
   role: string | null
   image: string | null
   permissions?: Permission[]
-}
-
-export type PermissionFlags = {
-  canViewProjects: boolean
-  canCreateProjects: boolean
-  canEditProjects: boolean
-  canViewAssets: boolean
-  canCreateAssets: boolean
-  canEditAssets: boolean
-  canDeleteAssets: boolean
-  canManageAssets: boolean
-  canViewClockify: boolean
-  canManageClockify: boolean
-  canViewTickets: boolean
-  canCreateTickets: boolean
-  canEditTickets: boolean
-  canViewUsers: boolean
-  canCreateUsers: boolean
-  canEditUsers: boolean
-  canDeleteUsers: boolean
-  canViewRoles: boolean
-  canCreateRoles: boolean
-  canEditRoles: boolean
-  canDeleteRoles: boolean
-  canManageStatus: boolean
-  canManageSettings: boolean
-  canAccessSettings: boolean
 }
 
 export type PermissionsCache = {
@@ -57,47 +27,6 @@ const CACHE_TTL_MS = 5 * 60 * 1000
 declare global {
   interface Window {
     __PERMISSIONS_CACHE__?: PermissionsCache
-  }
-}
-
-function computeFlags(permissions: Permission[] = []): PermissionFlags {
-  const has = (resource: string, action: string) =>
-    permissions.some((p) => p.resource === resource && p.action === action)
-
-  const canAccessSettings =
-    has("users", "view") ||
-    has("roles", "view") ||
-    has("roles", "edit") ||
-    has("roles", "create") ||
-    has("roles", "manage") ||
-    has("status", "manage") ||
-    has("settings", "manage")
-
-  return {
-    canViewProjects: has("projects", "view"),
-    canCreateProjects: has("projects", "create"),
-    canEditProjects: has("projects", "edit"),
-    canViewAssets: has("assets", "view"),
-    canCreateAssets: has("assets", "create"),
-    canEditAssets: has("assets", "edit"),
-    canDeleteAssets: has("assets", "delete"),
-    canManageAssets: has("assets", "manage"),
-    canViewClockify: has("clockify", "view"),
-    canManageClockify: has("clockify", "manage"),
-    canViewTickets: has("tickets", "view"),
-    canCreateTickets: has("tickets", "create"),
-    canEditTickets: has("tickets", "edit"),
-    canViewUsers: has("users", "view"),
-    canCreateUsers: has("users", "create"),
-    canEditUsers: has("users", "edit"),
-    canDeleteUsers: has("users", "delete"),
-    canViewRoles: has("roles", "view"),
-    canCreateRoles: has("roles", "create"),
-    canEditRoles: has("roles", "edit"),
-    canDeleteRoles: has("roles", "delete"),
-    canManageStatus: has("status", "manage"),
-    canManageSettings: has("settings", "manage"),
-    canAccessSettings,
   }
 }
 
@@ -143,13 +72,13 @@ export function usePermissions() {
   // Keep initial client render deterministic with server render.
   // Cache hydration happens after mount in an effect.
   const [user, setUser] = useState<User | null>(null)
-  const [flags, setFlags] = useState<PermissionFlags>(computeFlags())
+  const [flags, setFlags] = useState<PermissionFlags>(buildPermissionFlags())
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
     if (!session?.user?.email) {
       setUser(null)
-      setFlags(computeFlags())
+      setFlags(buildPermissionFlags())
       setLoading(false)
       return
     }
@@ -157,25 +86,25 @@ export function usePermissions() {
     setLoading(true)
     try {
       let nextUser: User | null = null
-      let nextFlags: PermissionFlags = computeFlags()
+      let nextFlags: PermissionFlags = buildPermissionFlags()
       let cacheTs = Date.now()
 
       const bootstrapRes = await fetch("/api/v2/bootstrap")
       if (bootstrapRes.ok) {
         const bootstrapData = await bootstrapRes.json()
         nextUser = bootstrapData?.user ?? null
-        nextFlags = bootstrapData?.flags ?? computeFlags(nextUser?.permissions || [])
+        nextFlags = bootstrapData?.flags ?? buildPermissionFlags(nextUser?.permissions || [])
         cacheTs = typeof bootstrapData?.ts === "number" ? bootstrapData.ts : Date.now()
       } else {
         const res = await fetch("/api/auth/me", { cache: "no-store" })
         if (!res.ok) {
           setUser(null)
-          setFlags(computeFlags())
+          setFlags(buildPermissionFlags())
           return
         }
         const data = await res.json()
         nextUser = data?.user ?? null
-        nextFlags = computeFlags(nextUser?.permissions || [])
+        nextFlags = buildPermissionFlags(nextUser?.permissions || [])
       }
 
       setUser(nextUser)
@@ -184,7 +113,7 @@ export function usePermissions() {
     } catch (error) {
       console.error("Failed to load permissions:", error)
       setUser(null)
-      setFlags(computeFlags())
+      setFlags(buildPermissionFlags())
     } finally {
       setLoading(false)
     }
@@ -200,7 +129,7 @@ export function usePermissions() {
     }
 
     setUser(cache.user ?? null)
-    setFlags(cache.flags ?? computeFlags(cache.user?.permissions))
+    setFlags(cache.flags ?? buildPermissionFlags(cache.user?.permissions))
     setLoading(false)
 
     const isStale = Date.now() - cache.ts > CACHE_TTL_MS

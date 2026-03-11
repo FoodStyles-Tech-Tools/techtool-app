@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { usePathname } from "@/src/compat/router"
+import { useLocation } from "react-router-dom"
 import { FormDialogShell } from "@/components/ui/form-dialog-shell"
 import { TicketForm } from "@/components/forms/ticket-form"
 import { usePermissions } from "@/hooks/use-permissions"
@@ -13,21 +13,21 @@ interface GlobalTicketDialogProps {
 }
 
 export function GlobalTicketDialog({ open, onOpenChange }: GlobalTicketDialogProps) {
-  const pathname = usePathname()
+  const location = useLocation()
   const { flags } = usePermissions()
   const [projectId, setProjectId] = useState<string | null>(null)
   const [isCreatingTicket, setIsCreatingTicket] = useState(false)
 
   // Extract projectId from pathname if on project detail page
   useEffect(() => {
-    const projectMatch = pathname?.match(/^\/projects\/([^/]+)/)
+    const projectMatch = location.pathname.match(/^\/projects\/([^/]+)/)
     if (projectMatch) {
       const extractedProjectId = projectMatch[1]
       setProjectId(extractedProjectId)
     } else {
       setProjectId(null)
     }
-  }, [pathname])
+  }, [location.pathname])
 
   const shouldLoadProjectData = open
   const { data: projectsData } = useProjects({

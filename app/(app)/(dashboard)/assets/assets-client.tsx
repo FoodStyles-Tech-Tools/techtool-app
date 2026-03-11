@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "@/src/compat/router"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useDeleteAsset, type Asset } from "@/hooks/use-assets"
@@ -46,7 +45,6 @@ type AssetsClientProps = {
 }
 
 export default function AssetsClient({ initialAssets, users }: AssetsClientProps) {
-  const router = useRouter()
   const { flags, user: currentUser } = usePermissions()
   const canManageAssets = flags?.canManageAssets ?? false
   const deleteAsset = useDeleteAsset()
@@ -87,7 +85,7 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
     try {
       await deleteAsset.mutateAsync(id)
       setAssets((prev) => prev.filter((asset) => asset.id !== id))
-      router.refresh()
+      window.location.reload()
       toast("Asset deleted")
     } catch (error) {
       console.error("Error deleting asset:", error)
@@ -299,7 +297,7 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
             setIsDialogOpen(false)
             setEditingAsset(null)
             toast(editingAsset ? "Asset updated" : "Asset created")
-            router.refresh()
+            window.location.reload()
           }}
           users={users}
         />

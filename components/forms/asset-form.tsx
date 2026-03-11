@@ -1,7 +1,7 @@
 "use client"
 
 import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
-import dynamic from "@/src/compat/dynamic"
+import { lazyComponent } from "@/lib/lazy-component"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -18,9 +18,8 @@ import { useCreateAsset, useUpdateAsset } from "@/hooks/use-assets"
 import { CollaboratorSelector } from "@/components/collaborator-selector"
 import { toast } from "@/components/ui/toast"
 
-const RichTextEditor = dynamic(
+const RichTextEditor = lazyComponent(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
-  { ssr: false }
 )
 
 const assetSchema = z.object({

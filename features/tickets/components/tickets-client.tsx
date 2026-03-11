@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useCallback } from "react"
-import { useRouter } from "@/src/compat/router"
+import { useNavigate } from "react-router-dom"
 import { useProjects } from "@/hooks/use-projects"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useTicketsFilters } from "@/hooks/use-tickets-filters"
@@ -40,7 +40,7 @@ const SERVER_SORT_COLUMNS = new Set<SortColumn>([
 ])
 
 export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const [sortConfig, setSortConfig] = useState<TicketSortConfig>({
     column: "due_date",
     direction: "asc",
@@ -164,7 +164,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
       const ticket = allTickets.find((t) => t.id === ticketId)
       if (!ticket) return
       const slug = (ticket.displayId || ticketId.slice(0, 8)).toLowerCase()
-      router.push(`/tickets/${slug}`)
+      navigate(`/tickets/${slug}`)
     },
     [allTickets, router]
   )

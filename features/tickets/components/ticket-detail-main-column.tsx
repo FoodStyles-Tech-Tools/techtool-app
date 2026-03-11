@@ -1,6 +1,6 @@
 "use client"
 
-import dynamic from "@/src/compat/dynamic"
+import { lazyComponent } from "@/lib/lazy-component"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,9 +12,8 @@ import { isRichTextEmpty, toDisplayHtml } from "@/lib/rich-text"
 import type { Ticket } from "@/lib/types"
 import type { TicketComment } from "@/hooks/use-ticket-comments"
 
-const RichTextEditor = dynamic(
+const RichTextEditor = lazyComponent(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
-  { ssr: false }
 )
 
 type TicketDetailMainColumnProps = {

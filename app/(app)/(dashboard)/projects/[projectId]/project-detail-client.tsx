@@ -1,8 +1,7 @@
 "use client"
 
-import Link from "@/src/compat/link"
+import { Link, useNavigate } from "react-router-dom"
 import { useMemo, useState } from "react"
-import { useRouter } from "@/src/compat/router"
 import { useProject } from "@/hooks/use-projects"
 import { useDepartments } from "@/hooks/use-departments"
 import { useUsers } from "@/hooks/use-users"
@@ -25,7 +24,7 @@ function formatDate(value: string) {
 }
 
 export default function ProjectDetailClient({ projectId }: { projectId: string }) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { flags } = usePermissions()
   const { data, isLoading } = useProject(projectId)
   const { departments } = useDepartments()
@@ -56,7 +55,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
           description={project?.description || "Use this project page to understand scope, ownership, and jump into related tickets."}
           actions={
             <>
-              <Button variant="outline" onClick={() => router.push("/projects")}>
+              <Button variant="outline" onClick={() => navigate("/projects")}>
                 Back to Projects
               </Button>
               <Button asChild>
@@ -234,7 +233,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
             onSuccess={() => {
               setEditOpen(false)
               toast("Project updated")
-              router.refresh()
+              window.location.reload()
             }}
           />
         ) : null}

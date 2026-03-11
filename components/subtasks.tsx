@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import Link from "@/src/compat/link"
+import { Link } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -167,7 +167,7 @@ export function Subtasks({
                 className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] items-center gap-2 px-3 py-2"
               >
                 <Link
-                  href={`/tickets/${String(subtask.displayId || subtask.id).toLowerCase()}`}
+                  to={`/tickets/${String(subtask.displayId || subtask.id).toLowerCase()}`}
                   className="min-w-0 truncate text-sm hover:underline"
                 >
                   {(subtask.displayId || subtask.id.slice(0, 8)).toUpperCase()} {subtask.title}

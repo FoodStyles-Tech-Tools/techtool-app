@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react"
 import type { Editor } from "@tiptap/core"
-import dynamic from "@/src/compat/dynamic"
+import { lazyComponent } from "@/lib/lazy-component"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -19,9 +19,8 @@ import { cn } from "@/lib/utils"
 import { getSanitizedHtmlProps } from "@/lib/sanitize-html"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText, toDisplayHtml } from "@/lib/rich-text"
 
-const RichTextEditor = dynamic(
+const RichTextEditor = lazyComponent(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
-  { ssr: false }
 )
 
 interface TicketCommentsProps {

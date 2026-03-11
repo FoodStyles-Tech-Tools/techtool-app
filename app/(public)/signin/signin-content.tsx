@@ -2,7 +2,7 @@
 
 import { signIn } from "@/lib/auth-client"
 import { useState, useEffect } from "react"
-import { useSearchParams } from "@/src/compat/router"
+import { useSearchParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { cn } from "@/lib/utils"

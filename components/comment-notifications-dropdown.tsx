@@ -1,7 +1,6 @@
 "use client"
 
-import Link from "@/src/compat/link"
-import { useRouter } from "@/src/compat/router"
+import { Link, useNavigate } from "react-router-dom"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { useCommentNotifications, type CommentNotification } from "@/hooks/use-comment-notifications"
@@ -83,13 +82,13 @@ function NotificationItem({
 }
 
 export function CommentNotificationsDropdown() {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { notifications, unreadCount, isLoading, markRead, markAllRead } = useCommentNotifications()
 
   const handleNavigate = (notification: CommentNotification) => {
     const displayId = notification.ticket?.displayId
     if (displayId) {
-      router.push(`/tickets/${displayId}`)
+      navigate(`/tickets/${displayId}`)
     }
   }
 
@@ -136,7 +135,7 @@ export function CommentNotificationsDropdown() {
         </div>
         {notifications.length > 0 ? (
           <div className="border-t border-slate-200 px-4 py-2">
-            <Link href="/tickets" className="text-xs text-slate-900 hover:underline">
+            <Link to="/tickets" className="text-xs text-slate-900 hover:underline">
               View all tickets
             </Link>
           </div>

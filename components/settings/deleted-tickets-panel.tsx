@@ -1,6 +1,6 @@
 "use client"
 
-import Link from "@/src/compat/link"
+import { Link } from "react-router-dom"
 import { useMemo } from "react"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
@@ -64,7 +64,7 @@ export function DeletedTicketsPanel() {
               >
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`/tickets/${String(row.displayId).toLowerCase()}`}
+                    to={`/tickets/${String(row.displayId).toLowerCase()}`}
                     className="inline-flex h-7 items-center rounded-md px-2 font-mono text-xs hover:bg-slate-100"
                   >
                     {row.displayId}

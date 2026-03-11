@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url"
 import { createRequestContext, getContextResponseHeaders, runWithRequestContext } from "./compat/request-context"
 import type { NextRequest } from "./compat/server"
 import { getServerPort } from "@/lib/config/server-env"
+import { createTicketsRouter, explicitTicketRouteSignatures } from "@/server/routes/tickets-router"
 
 type RouteHandlerModule = Partial<Record<"GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS", RouteHandler>>
 type RouteHandler = (request: NextRequest, context?: { params: Record<string, string> }) => Promise<Response>
@@ -24,9 +25,19 @@ const isCompiledRuntime = path.basename(runtimeRoot) === "dist-backend"
 const workspaceRoot = isCompiledRuntime ? path.resolve(runtimeRoot, "..") : runtimeRoot
 const routesRoot = path.join(isCompiledRuntime ? runtimeRoot : workspaceRoot, "backend", "routes")
 const clientDistDir = path.join(workspaceRoot, "dist")
+const explicitRouteSignatures = new Set(explicitTicketRouteSignatures)
 
 app.use(express.json({ limit: "5mb" }))
 app.use(express.urlencoded({ extended: true }))
+app.use(createTicketsRouter())
+
+function getHealthPayload() {
+  return {
+    status: "ok",
+    uptimeSeconds: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+  }
+}
 
 function toUrlPath(basePath: string, absoluteFilePath: string) {
   const relativePath = path.relative(basePath, absoluteFilePath).replace(/\\/g, "/")
@@ -243,6 +254,10 @@ function registerRequestLogging() {
   })
 }
 
+function isExplicitlyRegisteredRoute(method: string, urlPath: string) {
+  return explicitRouteSignatures.has(`${method} ${urlPath}`)
+}
+
 async function registerRoutes() {
   const routes = await loadRoutes()
   const requiredRoutes = ["/api/auth/me", "/auth/callback"]
@@ -261,6 +276,10 @@ async function registerRoutes() {
     )
 
     for (const [method, handler] of methodEntries) {
+      if (isExplicitlyRegisteredRoute(method, route.urlPath)) {
+        continue
+      }
+
       app[method.toLowerCase() as "get"](
         route.urlPath,
         async (request: ExpressRequest, response: ExpressResponse) => {
@@ -287,6 +306,14 @@ async function registerRoutes() {
 async function start() {
   registerRequestLogging()
   await registerRoutes()
+
+  app.get("/healthz", (_request, response) => {
+    response.status(200).json(getHealthPayload())
+  })
+
+  app.get("/api/healthz", (_request, response) => {
+    response.status(200).json(getHealthPayload())
+  })
 
   if (await fs.stat(clientDistDir).then(() => true).catch(() => false)) {
     app.use(express.static(clientDistDir))

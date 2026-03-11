@@ -1,10 +1,10 @@
 "use client"
 
-import { useRouter } from "@/src/compat/router"
+import { useNavigate } from "react-router-dom"
 import { TicketDetailDialog } from "@/features/tickets/components/ticket-detail-dialog"
 
 export function TicketDisplayPageClient({ ticketId }: { ticketId: string }) {
-  const router = useRouter()
+  const navigate = useNavigate()
 
   return (
     <div className="flex min-h-screen items-center justify-center">
@@ -13,7 +13,7 @@ export function TicketDisplayPageClient({ ticketId }: { ticketId: string }) {
         open
         onOpenChange={(open) => {
           if (!open) {
-            router.replace("/tickets")
+            navigate("/tickets", { replace: true })
           }
         }}
       />

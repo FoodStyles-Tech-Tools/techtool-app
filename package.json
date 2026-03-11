@@ -9,6 +9,7 @@
     "build": "vite build && tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
     "start": "node dist-backend/backend/server.js",
     "audit:contrast": "node scripts/contrast-audit.js",
+    "check:boundaries": "node scripts/check-runtime-boundaries.js",
     "check:migrations": "node scripts/check-migration-order.js",
     "test": "vitest run",
     "test:watch": "vitest",

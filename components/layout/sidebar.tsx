@@ -1,7 +1,6 @@
 "use client"
 
-import Link from "@/src/compat/link"
-import { useRouter, usePathname } from "@/src/compat/router"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { CommentNotificationsDropdown } from "@/components/comment-notifications-dropdown"
 import { signOut, useSession } from "@/lib/auth-client"
@@ -90,8 +89,8 @@ function isPathActive(pathname: string, href: string) {
 }
 
 export function Sidebar() {
-  const pathname = usePathname()
-  const router = useRouter()
+  const pathname = useLocation().pathname
+  const navigate = useNavigate()
   const { data: session } = useSession()
   const { flags } = usePermissions()
   const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()
@@ -105,7 +104,7 @@ export function Sidebar() {
     try {
       showOverlay()
       await signOut()
-      router.push("/signin")
+      navigate("/signin")
     } finally {
       hideOverlay()
     }
@@ -136,8 +135,7 @@ export function Sidebar() {
               return (
                 <Link
                   key={item.href}
-                  href={item.href}
-                  prefetch={true}
+                  to={item.href}
                   className={cn(
                     "flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-slate-600 transition-colors",
                     isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
@@ -160,8 +158,7 @@ export function Sidebar() {
                     return (
                       <Link
                         key={item.href}
-                        href={item.href}
-                        prefetch={true}
+                        to={item.href}
                         className={cn(
                           "block rounded-md px-2 py-1.5 text-sm font-medium text-slate-600 transition-colors",
                           isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"

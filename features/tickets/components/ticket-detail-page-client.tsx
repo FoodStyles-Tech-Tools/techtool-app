@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { useRouter } from "@/src/compat/router"
+import { useNavigate } from "react-router-dom"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useDepartments } from "@/hooks/use-departments"
 import { useProjects } from "@/hooks/use-projects"
@@ -33,7 +33,7 @@ type TicketDetailPageClientProps = {
 }
 
 export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps) {
-  const router = useRouter()
+  const navigate = useNavigate()
   const { flags } = usePermissions()
   const canEditTickets = flags?.canEditTickets ?? false
   const { departments } = useDepartments({ realtime: false })
@@ -156,7 +156,7 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
 
   const handleGoToParentTicket = () => {
     if (!parentNavigationSlug) return
-    router.push(`/tickets/${parentNavigationSlug}`)
+    navigate(`/tickets/${parentNavigationSlug}`)
   }
 
   if (!ticketId) return null
@@ -177,7 +177,7 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
           onTitleSave={actions.handleTitleSave}
           onTitleKeyDown={actions.handleTitleKeyDown}
           onStartTitleEdit={() => actions.setIsEditingTitle(true)}
-          onBackToTickets={() => router.push("/tickets")}
+          onBackToTickets={() => navigate("/tickets")}
           onGoToParentTicket={handleGoToParentTicket}
           onCopyTicketLabel={actions.handleCopyTicketLabel}
           onCopyShareUrl={actions.handleCopyShareUrl}

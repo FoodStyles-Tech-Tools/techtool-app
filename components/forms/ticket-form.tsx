@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
-import dynamic from "@/src/compat/dynamic"
+import { lazyComponent } from "@/lib/lazy-component"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@/components/ui/button"
@@ -31,9 +31,8 @@ import { ASSIGNEE_ALLOWED_ROLES } from "@/lib/ticket-constants"
 import { normalizeRichTextInput } from "@/lib/rich-text"
 
 const NO_PROJECT_VALUE = "__no_project__"
-const RichTextEditor = dynamic(
+const RichTextEditor = lazyComponent(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
-  { ssr: false }
 )
 const nativeSelectClassName =
   "h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-slate-400 disabled:cursor-not-allowed disabled:opacity-50"

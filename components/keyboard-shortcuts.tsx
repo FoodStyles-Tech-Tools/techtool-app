@@ -1,39 +1,34 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useLocation } from "react-router-dom"
 import { useSession } from "@/lib/auth-client"
-import { usePathname } from "@/src/compat/router"
-import dynamic from "@/src/compat/dynamic"
+import { lazyComponent } from "@/lib/lazy-component"
 import { usePermissions } from "@/hooks/use-permissions"
 import { FormDialogShell } from "@/components/ui/form-dialog-shell"
 import { useUsers } from "@/hooks/use-users"
 import { useDepartments } from "@/hooks/use-departments"
 import { toast } from "@/components/ui/toast"
 
-const GlobalTicketDialog = dynamic(
+const GlobalTicketDialog = lazyComponent(
   () => import("./global-ticket-dialog").then((mod) => mod.GlobalTicketDialog),
-  { ssr: false }
 )
-const TicketSearchOverlay = dynamic(
+const TicketSearchOverlay = lazyComponent(
   () => import("./ticket-search-overlay").then((mod) => mod.TicketSearchOverlay),
-  { ssr: false }
 )
-const UserSearchOverlay = dynamic(
+const UserSearchOverlay = lazyComponent(
   () => import("./user-search-overlay").then((mod) => mod.UserSearchOverlay),
-  { ssr: false }
 )
-const TicketDetailDialog = dynamic(
+const TicketDetailDialog = lazyComponent(
   () => import("./ticket-detail-dialog").then((mod) => mod.TicketDetailDialog),
-  { ssr: false }
 )
-const ProjectForm = dynamic(
+const ProjectForm = lazyComponent(
   () => import("@/components/forms/project-form").then((mod) => mod.ProjectForm),
-  { ssr: false }
 )
 
 export function KeyboardShortcuts() {
   const { data: session, isPending } = useSession()
-  const pathname = usePathname()
+  const pathname = useLocation().pathname
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false)
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false)
   const [isUserSearchOverlayOpen, setIsUserSearchOverlayOpen] = useState(false)

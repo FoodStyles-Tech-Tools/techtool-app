@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, type ReactNode } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import dynamic from "@/src/compat/dynamic"
+import { lazyComponent } from "@/lib/lazy-component"
 import { format } from "date-fns"
 import { getDefaultReportDateRange } from "@/lib/report-date-range"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,9 +33,8 @@ import type {
   ReportInsightKey,
 } from "@/types/api/report"
 
-const RichTextEditor = dynamic(
+const RichTextEditor = lazyComponent(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
-  { ssr: false }
 )
 
 const nativeSelectClassName =

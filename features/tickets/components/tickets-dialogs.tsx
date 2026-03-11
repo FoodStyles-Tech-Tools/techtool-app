@@ -1,18 +1,16 @@
 "use client"
 
-import dynamic from "@/src/compat/dynamic"
+import { lazyComponent } from "@/lib/lazy-component"
 import { TicketCancelReasonDialog } from "@/features/tickets/components/ticket-cancel-reason-dialog"
 import { TicketOpenSubtasksDialog } from "@/features/tickets/components/ticket-open-subtasks-dialog"
 import { TicketReturnedReasonDialog } from "@/features/tickets/components/ticket-returned-reason-dialog"
 import type { TicketSubtaskRow } from "@/features/tickets/types"
 
-const TicketDetailDialog = dynamic(
+const TicketDetailDialog = lazyComponent(
   () => import("@/features/tickets/components/ticket-detail-dialog").then((mod) => mod.TicketDetailDialog),
-  { ssr: false }
 )
-const GlobalTicketDialog = dynamic(
+const GlobalTicketDialog = lazyComponent(
   () => import("@/components/global-ticket-dialog").then((mod) => mod.GlobalTicketDialog),
-  { ssr: false }
 )
 
 type TicketsDialogsProps = {

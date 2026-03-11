@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "@/src/compat/router"
 import { Button } from "@/components/ui/button"
 import { usePermissions } from "@/hooks/use-permissions"
 import { PageHeader } from "@/components/ui/page-header"
@@ -39,7 +38,6 @@ type UsersClientProps = {
 }
 
 export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
-  const router = useRouter()
   const [users, setUsers] = useState<User[]>(initialUsers)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -84,7 +82,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
 
       if (res.ok) {
         setUsers((prev) => prev.filter((user) => user.id !== id))
-        router.refresh()
+        window.location.reload()
         toast("User deleted")
       } else {
         const error = await res.json()
@@ -250,7 +248,7 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
             setIsDialogOpen(false)
             setEditingUser(null)
             toast(editingUser ? "User updated" : "User created")
-            router.refresh()
+            window.location.reload()
           }}
         />
       </FormDialogShell>

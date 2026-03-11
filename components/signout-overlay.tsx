@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useState } from "react"
-import { usePathname } from "@/src/compat/router"
+import { useLocation } from "react-router-dom"
 
 type SignOutOverlayContextValue = {
   show: () => void
@@ -12,7 +12,7 @@ const SignOutOverlayContext = createContext<SignOutOverlayContextValue | null>(n
 
 export function SignOutOverlayProvider({ children }: { children: React.ReactNode }) {
   const [visible, setVisible] = useState(false)
-  const pathname = usePathname()
+  const location = useLocation()
 
   const show = useCallback(() => setVisible(true), [])
   const hide = useCallback(() => setVisible(false), [])
@@ -21,7 +21,7 @@ export function SignOutOverlayProvider({ children }: { children: React.ReactNode
     if (visible) {
       setVisible(false)
     }
-  }, [pathname, visible])
+  }, [location.pathname, visible])
 
   return (
     <SignOutOverlayContext.Provider value={{ show, hide }}>

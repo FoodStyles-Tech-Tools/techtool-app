@@ -1,6 +1,6 @@
 "use client"
 
-import dynamic from "@/src/compat/dynamic"
+import { lazyComponent } from "@/lib/lazy-component"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -11,9 +11,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 
-const RichTextEditor = dynamic(
+const RichTextEditor = lazyComponent(
   () => import("@/components/rich-text-editor").then((mod) => mod.RichTextEditor),
-  { ssr: false }
 )
 
 export function TicketReturnedReasonDialog({

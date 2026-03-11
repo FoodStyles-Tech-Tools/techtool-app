@@ -26,7 +26,7 @@ export async function fetchTicketOpenSubtasks(ticketId: string): Promise<TicketS
 export async function closeTicketSubtasksToStatus(subtasks: TicketSubtaskRow[], status: string) {
   if (subtasks.length === 0) return
 
-  await requestJson(`/api/tickets/batch-status`, {
+  await requestJson(`/api/v2/tickets/batch-status`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
