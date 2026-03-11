@@ -8,7 +8,7 @@ import { useProjects } from "@client/hooks/use-projects"
 import { useEpics } from "@client/hooks/use-epics"
 import { useSprints } from "@client/hooks/use-sprints"
 import { useUsers } from "@client/hooks/use-users"
-import { useUserEmail } from "@lib/supabase-context"
+import { useUserEmail } from "@client/lib/supabase-context"
 import {
   Dialog,
   DialogContent,
@@ -31,7 +31,7 @@ import { TicketDetailFooter } from "@client/features/tickets/components/ticket-d
 import { TicketDetailHeader } from "@client/features/tickets/components/ticket-detail-header"
 import { TicketDetailMainColumn } from "@client/features/tickets/components/ticket-detail-main-column"
 import { TicketDetailSidebar } from "@client/features/tickets/components/ticket-detail-sidebar"
-import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@lib/ticket-constants"
+import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@shared/ticket-constants"
 import type { TicketDetailDialogProps } from "@client/features/tickets/types"
 
 const NO_DEPARTMENT_VALUE = "no_department"

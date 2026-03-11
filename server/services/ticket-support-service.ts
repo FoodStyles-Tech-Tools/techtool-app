@@ -1,5 +1,5 @@
-import { isRichTextEmpty } from "@/lib/rich-text"
-import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
+import { isRichTextEmpty } from "@shared/rich-text"
+import { invalidateTicketCaches } from "@server/lib/ticket-cache"
 import { HttpError } from "@server/http/http-error"
 import * as ticketSupportRepository from "@server/repositories/ticket-support-repository"
 import type { CreateCommentInput, UpdateCommentInput } from "@server/validation/ticket-support"

@@ -1,7 +1,7 @@
 "use client"
 
 import { toast } from "@client/components/ui/toast"
-import type { Ticket } from "@lib/types"
+import type { Ticket } from "@shared/types"
 
 const TICKET_SHARE_BASE_URL = "https://techtool-app.vercel.app/tickets"
 

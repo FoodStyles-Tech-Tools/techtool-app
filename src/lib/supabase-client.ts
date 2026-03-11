@@ -2,7 +2,7 @@
 
 import { useMemo } from "react"
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { getBrowserSupabaseClient } from "@/lib/supabase-browser"
+import { getBrowserSupabaseClient } from "./supabase-browser"
 
 export function useSupabaseClient(): SupabaseClient {
   return useMemo(() => getBrowserSupabaseClient(), [])

@@ -3,8 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback } from "react"
 import { useRealtimeSubscription } from "@client/hooks/use-realtime"
-import { requestJson } from "@lib/client/api"
-import { prepareLinkPayload } from "@lib/links"
+import { requestJson } from "@client/lib/api"
+import { prepareLinkPayload } from "@shared/links"
 import {
   fetchTicketDetail,
   fetchTicketList,
@@ -14,8 +14,8 @@ import {
   type TicketsResponse,
 } from "@client/features/tickets/lib/client"
 import { ticketQueryKeys } from "@client/features/tickets/lib/query-keys"
-import type { Ticket } from "@lib/types"
-import type { SortColumn } from "@lib/ticket-constants"
+import type { Ticket } from "@shared/types"
+import type { SortColumn } from "@shared/ticket-constants"
 
 type UseTicketsOptions = {
   projectId?: string

@@ -1,7 +1,7 @@
 import type { Request, Response } from "express"
-import { getRequestContext } from "@/lib/auth-helpers"
-import { getOrSetServerCache } from "@/lib/server/cache"
-import { getTicketCacheVersion } from "@/lib/server/ticket-cache"
+import { getRequestContext } from "@server/lib/auth-helpers"
+import { getOrSetServerCache } from "@server/lib/cache"
+import { getTicketCacheVersion } from "@server/lib/ticket-cache"
 import { handleControllerError } from "@server/http/handle-controller-error"
 import * as ticketsService from "@server/services/tickets-service"
 import {

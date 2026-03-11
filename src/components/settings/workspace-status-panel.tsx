@@ -26,7 +26,7 @@ import {
 } from "@client/components/ui/table"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
-import { normalizeStatusKey, type TicketStatus } from "@lib/ticket-statuses"
+import { normalizeStatusKey, type TicketStatus } from "@shared/ticket-statuses"
 import { toast } from "@client/components/ui/toast"
 
 type StatusDraft = {

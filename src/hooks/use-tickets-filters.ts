@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback, useMemo, useEffect, useDeferredValue } from "react"
-import { isDoneStatus } from "@lib/ticket-statuses"
+import { isDoneStatus } from "@shared/ticket-statuses"
 
 export interface ProjectsFilterOption {
   id: string

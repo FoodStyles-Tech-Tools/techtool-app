@@ -1,6 +1,6 @@
-import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
-import { sanitizeLinkArray } from "@/lib/links"
-import { fetchUsersWithImages, type ServerUser } from "@/lib/server/users"
+import { getSupabaseWithUserContext } from "./auth-helpers"
+import { sanitizeLinkArray } from "@shared/links"
+import { fetchUsersWithImages, type ServerUser } from "./users"
 
 export type ServerAsset = {
   id: string

@@ -1,5 +1,5 @@
 import type { Request, Response } from "express"
-import { getRequestContext } from "@/lib/auth-helpers"
+import { getRequestContext } from "@server/lib/auth-helpers"
 import { handleControllerError } from "@server/http/handle-controller-error"
 import { HttpError } from "@server/http/http-error"
 import * as projectsService from "@server/services/projects-service"

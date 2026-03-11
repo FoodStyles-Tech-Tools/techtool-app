@@ -1,7 +1,7 @@
 import { HttpError } from "@server/http/http-error"
 import type { ReportSession, ReportSessionFilters } from "@shared/types/api/report"
 
-type SupabaseClient = Awaited<ReturnType<typeof import("@/lib/supabase").createServerClient>>
+type SupabaseClient = Awaited<ReturnType<typeof import("@server/lib/supabase").createServerClient>>
 
 type ReportSessionRow = {
   id: string

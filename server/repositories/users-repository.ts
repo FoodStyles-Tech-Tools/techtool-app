@@ -10,7 +10,7 @@ export type UserRecord = {
   created_at: string
 }
 
-type SupabaseClient = Awaited<ReturnType<typeof import("@/lib/supabase").createServerClient>>
+type SupabaseClient = Awaited<ReturnType<typeof import("@server/lib/supabase").createServerClient>>
 
 export async function listUsers(supabase: SupabaseClient): Promise<UserRecord[]> {
   const { data, error } = await supabase

@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
-import { requestJson } from "@lib/client/api"
+import { requestJson } from "@client/lib/api"
 
 export interface Department {
   id: string

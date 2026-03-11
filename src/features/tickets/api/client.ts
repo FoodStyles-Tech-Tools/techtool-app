@@ -1,4 +1,4 @@
-import { requestJson } from "@lib/client/api"
+import { requestJson } from "@client/lib/api"
 import { DONE_STATUS_KEYS } from "@client/features/tickets/lib/update-payloads"
 import type {
   TicketStatusGuardResult,

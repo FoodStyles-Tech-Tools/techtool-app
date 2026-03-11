@@ -1,5 +1,5 @@
-import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
-import { getISOWeekKey } from "@/lib/report-date-range"
+import { getSupabaseWithUserContext } from "./auth-helpers"
+import { getISOWeekKey } from "@shared/report-date-range"
 import type {
   ReportDataPayload,
   VolumeByWeek,

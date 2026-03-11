@@ -5,13 +5,14 @@
   "scripts": {
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "vite",
-    "dev:server": "tsx watch --include server/**/*.ts --include lib/**/*.ts server/server.ts",
+    "dev:server": "tsx watch --include server/**/*.ts --include shared/**/*.ts server/server.ts",
     "build": "vite build && tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
     "start": "node dist-backend/server/server.js",
     "audit:contrast": "node scripts/contrast-audit.js",
     "check:boundaries": "node scripts/check-runtime-boundaries.js",
     "check:migrations": "node scripts/check-migration-order.js",
-    "lint": "eslint --config eslint.config.js src lib server shared --ext .ts,.tsx",
+    "lint": "eslint --config eslint.config.js src server shared --ext .ts,.tsx",
+    "ci": "npm run lint && npm run check:boundaries && npm test",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "node scripts/test-connection.js"

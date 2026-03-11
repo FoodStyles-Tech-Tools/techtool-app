@@ -1,6 +1,6 @@
 "use client"
 
-import { signIn } from "@lib/auth-client"
+import { signIn } from "@client/lib/auth-client"
 import { useState, useEffect } from "react"
 import { useSearchParams } from "react-router-dom"
 import { Button } from "@client/components/ui/button"

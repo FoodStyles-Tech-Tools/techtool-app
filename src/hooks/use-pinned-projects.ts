@@ -2,7 +2,7 @@
 
 import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { createQueryString, requestJson } from "@lib/client/api"
+import { createQueryString, requestJson } from "@client/lib/api"
 import { useUserPreferences } from "@client/hooks/use-user-preferences"
 
 export type PinnedProject = {

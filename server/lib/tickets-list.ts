@@ -1,5 +1,5 @@
-import { sanitizeLinkArray } from "@/lib/links"
-import type { SortColumn } from "@/lib/ticket-constants"
+import { sanitizeLinkArray } from "@shared/links"
+import type { SortColumn } from "@shared/ticket-constants"
 import type { TicketListItem, TicketPerson } from "@shared/types/api/tickets"
 
 type SupabaseLike = any

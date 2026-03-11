@@ -3,7 +3,7 @@
 import type { ComponentProps } from "react"
 import { Skeleton } from "@client/components/ui/skeleton"
 import { TicketsTable } from "@client/components/tickets/tickets-table"
-import type { Ticket } from "@lib/types"
+import type { Ticket } from "@shared/types"
 
 type TicketsResultsProps = {
   loading: boolean

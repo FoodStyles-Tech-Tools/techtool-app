@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useId, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { useSupabaseClient } from "@lib/supabase-client"
+import { useSupabaseClient } from "@client/lib/supabase-client"
 import type { RealtimePostgresChangesPayload, RealtimeChannel } from "@supabase/supabase-js"
 
 interface UseRealtimeSubscriptionOptions<T extends Record<string, any> = any> {

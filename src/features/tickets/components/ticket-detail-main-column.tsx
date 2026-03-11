@@ -1,15 +1,15 @@
 "use client"
 
-import { lazyComponent } from "@lib/lazy-component"
+import { lazyComponent } from "@client/lib/lazy-component"
 import { Badge } from "@client/components/ui/badge"
 import { Button } from "@client/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@client/components/ui/card"
 import { Input } from "@client/components/ui/input"
 import { Subtasks } from "@client/components/subtasks"
 import { TicketActivity } from "@client/components/ticket-activity"
-import { getSanitizedHtmlProps } from "@lib/sanitize-html"
-import { isRichTextEmpty, toDisplayHtml } from "@lib/rich-text"
-import type { Ticket } from "@lib/types"
+import { getSanitizedHtmlProps } from "@client/lib/sanitize-html"
+import { isRichTextEmpty, toDisplayHtml } from "@shared/rich-text"
+import type { Ticket } from "@shared/types"
 import type { TicketComment } from "@client/hooks/use-ticket-comments"
 
 const RichTextEditor = lazyComponent(

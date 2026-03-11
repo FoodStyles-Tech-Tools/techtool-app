@@ -1,10 +1,10 @@
 "use client"
 
 import { memo } from "react"
-import type { Ticket } from "@lib/types"
-import { type SortColumn } from "@lib/ticket-constants"
-import { formatRelativeDate, getDueDateDisplay } from "@lib/format-dates"
-import { normalizeStatusKey, isDoneStatus } from "@lib/ticket-statuses"
+import type { Ticket } from "@shared/types"
+import { type SortColumn } from "@shared/ticket-constants"
+import { formatRelativeDate, getDueDateDisplay } from "@client/lib/format-dates"
+import { normalizeStatusKey, isDoneStatus } from "@shared/ticket-statuses"
 
 const SERVER_SORTABLE_COLUMNS = new Set<SortColumn>([
   "id",

@@ -2,8 +2,8 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
-import { requestJson } from "@lib/client/api"
-import type { User } from "@lib/types"
+import { requestJson } from "@client/lib/api"
+import type { User } from "@shared/types"
 import type { UserDto } from "@shared/types/api/users"
 
 type UseUsersOptions = {

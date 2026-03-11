@@ -1,5 +1,5 @@
 import type { Request, Response } from "express"
-import { getRequestContext } from "@/lib/auth-helpers"
+import { getRequestContext } from "@server/lib/auth-helpers"
 import { handleControllerError } from "@server/http/handle-controller-error"
 import * as reportSessionsService from "@server/services/report-sessions-service"
 import {

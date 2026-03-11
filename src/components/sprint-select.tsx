@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 import { Sprint } from "@client/hooks/use-sprints"
 
 interface SprintSelectProps {

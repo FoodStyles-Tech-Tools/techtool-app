@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@client/components/ui/button"
 import { Input } from "@client/components/ui/input"
 import { TicketTypeSelect } from "@client/components/ticket-type-select"
-import type { Ticket, User } from "@lib/types"
+import type { Ticket, User } from "@shared/types"
 import type { ParentTicketOption } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 
 const UNASSIGNED_VALUE = "unassigned"

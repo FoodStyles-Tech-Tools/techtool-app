@@ -1,10 +1,10 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { useSession } from "@lib/auth-client"
+import { useSession } from "@client/lib/auth-client"
 import { buildPermissionFlags } from "@shared/permissions"
 import type { Permission, PermissionFlags } from "@shared/types/auth"
-import type { User as BaseUser } from "@lib/types"
+import type { User as BaseUser } from "@shared/types"
 
 interface PermissionsUser extends BaseUser {
   permissions?: Permission[]

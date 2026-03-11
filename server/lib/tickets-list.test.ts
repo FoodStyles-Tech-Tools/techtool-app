@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 describe("parseTicketListQuery", () => {
   it("prefers camelCase query params and parses booleans, paging, and sorting", async () => {
-    const { parseTicketListQuery } = await import("@/lib/server/tickets-list")
+    const { parseTicketListQuery } = await import("./tickets-list")
     const params = new URLSearchParams({
       projectId: "project-1",
       parentTicketId: "ticket-1",
@@ -41,7 +41,7 @@ describe("parseTicketListQuery", () => {
   })
 
   it("falls back to snake_case params and keeps unset values nullable", async () => {
-    const { parseTicketListQuery } = await import("@/lib/server/tickets-list")
+    const { parseTicketListQuery } = await import("./tickets-list")
     const params = new URLSearchParams({
       project_id: "project-2",
       parent_ticket_id: "ticket-2",
@@ -75,7 +75,7 @@ describe("parseTicketListQuery", () => {
   })
 
   it("normalizes invalid paging and sort direction values", async () => {
-    const { parseTicketListQuery } = await import("@/lib/server/tickets-list")
+    const { parseTicketListQuery } = await import("./tickets-list")
     const params = new URLSearchParams({
       page: "0",
       limit: "-5",

@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { AppShell } from "@client/components/layout/app-shell"
-import { useSession } from "@lib/auth-client"
+import { useSession } from "@client/lib/auth-client"
 import { FullScreenMessage } from "./full-screen-message"
 
 export function ProtectedLayout() {

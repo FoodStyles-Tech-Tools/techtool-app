@@ -1,6 +1,6 @@
 "use client"
 
-import { lazyComponent } from "@lib/lazy-component"
+import { lazyComponent } from "@client/lib/lazy-component"
 import { Button } from "@client/components/ui/button"
 import {
   Dialog,

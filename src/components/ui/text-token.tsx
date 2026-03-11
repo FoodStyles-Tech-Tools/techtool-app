@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 
 type TextTokenProps = React.HTMLAttributes<HTMLSpanElement> & {
   tone?: "default" | "danger"

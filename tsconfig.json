@@ -19,8 +19,7 @@
       "@/routes/*": ["src/routes/*"],
       "@client/*": ["src/*"],
       "@server/*": ["server/*"],
-      "@shared/*": ["shared/*"],
-      "@lib/*": ["lib/*"]
+      "@shared/*": ["shared/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "vite-env.d.ts"],

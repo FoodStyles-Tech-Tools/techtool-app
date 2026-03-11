@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@client/components/ui/button"
-import type { Ticket } from "@lib/types"
+import type { Ticket } from "@shared/types"
 
 type TicketDetailFooterProps = {
   ticket: Ticket | null | undefined

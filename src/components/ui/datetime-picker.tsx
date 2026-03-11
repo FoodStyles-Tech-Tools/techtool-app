@@ -4,7 +4,7 @@ import * as React from "react"
 import { format } from "date-fns"
 import { Button } from "@client/components/ui/button"
 import { Input } from "@client/components/ui/input"
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 
 interface DateTimePickerProps {
   value: Date | null

@@ -1,6 +1,6 @@
 "use client"
 
-import { lazyComponent } from "@lib/lazy-component"
+import { lazyComponent } from "@client/lib/lazy-component"
 import { TicketCancelReasonDialog } from "@client/features/tickets/components/ticket-cancel-reason-dialog"
 import { TicketOpenSubtasksDialog } from "@client/features/tickets/components/ticket-open-subtasks-dialog"
 import { TicketReturnedReasonDialog } from "@client/features/tickets/components/ticket-returned-reason-dialog"

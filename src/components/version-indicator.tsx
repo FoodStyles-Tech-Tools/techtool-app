@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { APP_VERSION } from "@lib/version"
-import { cn } from "@lib/utils"
+import { APP_VERSION } from "@client/lib/version"
+import { cn } from "@client/lib/utils"
 
 const POLL_INTERVAL = 5 * 60_000
 

@@ -1,5 +1,5 @@
-import { buildStatusChangeBody } from "@lib/ticket-statuses"
-import type { Ticket } from "@lib/types"
+import { buildStatusChangeBody } from "@shared/ticket-statuses"
+import type { Ticket } from "@shared/types"
 
 export const DONE_STATUS_KEYS = new Set(["completed", "cancelled", "rejected"])
 

@@ -16,7 +16,7 @@ import type {
   Ticket,
   TicketDetailRelations,
   User,
-} from "@lib/types"
+} from "@shared/types"
 
 type TicketDetailSidebarProps = {
   ticket: Ticket

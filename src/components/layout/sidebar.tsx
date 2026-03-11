@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, useLocation } from "react-router-dom"
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 import { type PermissionFlags, usePermissions } from "@client/hooks/use-permissions"
 
 const ACTIVE_ITEM_CLASS = "bg-blue-50 text-blue-700"

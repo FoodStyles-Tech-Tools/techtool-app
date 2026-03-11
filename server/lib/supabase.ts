@@ -1,7 +1,7 @@
 import { createServerClient as createSupabaseServerClient } from "@supabase/ssr"
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 import { cookies } from "@server/http/headers"
-import { getServerSupabaseAnonKey, getServerSupabaseUrl } from "@/lib/config/server-env"
+import { getServerSupabaseAnonKey, getServerSupabaseUrl } from "./server-env"
 
 let serverFallbackClient: SupabaseClient | null = null
 

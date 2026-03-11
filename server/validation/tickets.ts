@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { parseTicketListQuery, type TicketListQuery } from "@/lib/server/tickets-list"
+import { parseTicketListQuery, type TicketListQuery } from "@server/lib/tickets-list"
 
 const SORT_COLUMNS = [
   "id",

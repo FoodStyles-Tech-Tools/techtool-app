@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useCallback, useMemo } from "react"
-import type { Ticket } from "@lib/types"
-import { PRIORITY_ORDER, type SortColumn } from "@lib/ticket-constants"
+import type { Ticket } from "@shared/types"
+import { PRIORITY_ORDER, type SortColumn } from "@shared/ticket-constants"
 
 const SERVER_SORT_COLUMNS = new Set<SortColumn>([
   "id",

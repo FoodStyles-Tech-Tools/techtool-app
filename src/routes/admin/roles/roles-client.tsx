@@ -21,7 +21,7 @@ import {
 import { RoleForm } from "@client/components/forms/role-form"
 import { Badge } from "@client/components/ui/badge"
 import { toast } from "@client/components/ui/toast"
-import type { Role, RolePermission } from "@lib/types"
+import type { Role, RolePermission } from "@shared/types"
 
 const resources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status"] as const
 const actions = ["view", "create", "edit", "delete", "manage"] as const

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 
 const labelVariants = cva(
   "text-sm font-medium leading-5 tracking-[0.008em] text-slate-800 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"

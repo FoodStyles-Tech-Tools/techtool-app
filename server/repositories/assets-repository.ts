@@ -1,7 +1,7 @@
-import { sanitizeLinkArray } from "@/lib/links"
+import { sanitizeLinkArray } from "@shared/links"
 import { HttpError } from "@server/http/http-error"
 
-type SupabaseClient = Awaited<ReturnType<typeof import("@/lib/supabase").createServerClient>>
+type SupabaseClient = Awaited<ReturnType<typeof import("@server/lib/supabase").createServerClient>>
 
 type AssetOwnerRecord = {
   id: string

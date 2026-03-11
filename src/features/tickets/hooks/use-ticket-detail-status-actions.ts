@@ -2,8 +2,8 @@
 
 import { useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "@client/components/ui/toast"
-import type { Ticket } from "@lib/types"
-import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@lib/rich-text"
+import type { Ticket } from "@shared/types"
+import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@shared/rich-text"
 import {
   closeTicketSubtasksToStatus,
   resolveTicketDoneStatusGuard,

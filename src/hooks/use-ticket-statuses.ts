@@ -3,12 +3,12 @@
 import { useMemo } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
-import { requestJson } from "@lib/client/api"
+import { requestJson } from "@client/lib/api"
 import {
   DEFAULT_TICKET_STATUSES,
   sortTicketStatuses,
   type TicketStatus,
-} from "@lib/ticket-statuses"
+} from "@shared/ticket-statuses"
 
 type UseTicketStatusesOptions = {
   fallback?: boolean

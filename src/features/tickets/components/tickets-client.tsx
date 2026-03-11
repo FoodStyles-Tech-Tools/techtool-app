@@ -8,11 +8,11 @@ import { useTicketsFilters } from "@client/hooks/use-tickets-filters"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import { useTicketBoardActions } from "@client/features/tickets/hooks/use-ticket-board-actions"
 import { useOpenSubtasksDialog } from "@client/features/tickets/hooks/use-open-subtasks-dialog"
-import { isArchivedStatus } from "@lib/ticket-statuses"
+import { isArchivedStatus } from "@shared/ticket-statuses"
 import {
   ROWS_PER_PAGE,
   type SortColumn,
-} from "@lib/ticket-constants"
+} from "@shared/ticket-constants"
 import {
   useTickets,
   useUpdateTicket,

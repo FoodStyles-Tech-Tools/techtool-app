@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 import { Epic } from "@client/hooks/use-epics"
 
 interface EpicSelectProps {

@@ -1,5 +1,5 @@
-import type { RequestContext } from "@/lib/auth-helpers"
-import { prepareLinkPayload } from "@/lib/links"
+import type { RequestContext } from "@server/lib/auth-helpers"
+import { prepareLinkPayload } from "@shared/links"
 import { HttpError } from "@server/http/http-error"
 import * as projectsRepository from "@server/repositories/projects-repository"
 import type {

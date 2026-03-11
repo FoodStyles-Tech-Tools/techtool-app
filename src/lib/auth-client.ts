@@ -10,9 +10,9 @@ import {
   type ReactNode,
 } from "react"
 import type { AuthChangeEvent, Provider, Session } from "@supabase/supabase-js"
-import { mapSupabaseUserToSession, type AppSession } from "@/lib/auth-session"
-import { getClientAppUrl, getClientBackendUrl } from "@/lib/config/client-env"
-import { getBrowserSupabaseClient } from "@/lib/supabase-browser"
+import { mapSupabaseUserToSession, type AppSession } from "@shared/auth-session"
+import { getClientAppUrl, getClientBackendUrl } from "./config/client-env"
+import { getBrowserSupabaseClient } from "./supabase-browser"
 
 type UseSessionResult = {
   data: AppSession | null

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react"
 import type { Editor } from "@tiptap/core"
-import { lazyComponent } from "@lib/lazy-component"
+import { lazyComponent } from "@client/lib/lazy-component"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@client/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@client/components/ui/card"
@@ -12,12 +12,12 @@ import { useTicketComments, type TicketComment } from "@client/hooks/use-ticket-
 import { useCommentNotifications } from "@client/hooks/use-comment-notifications"
 import { useTickets } from "@client/features/tickets/hooks/use-tickets"
 import { useUsers } from "@client/hooks/use-users"
-import { useSession } from "@lib/auth-client"
+import { useSession } from "@client/lib/auth-client"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { toast } from "@client/components/ui/toast"
-import { cn } from "@lib/utils"
-import { getSanitizedHtmlProps } from "@lib/sanitize-html"
-import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText, toDisplayHtml } from "@lib/rich-text"
+import { cn } from "@client/lib/utils"
+import { getSanitizedHtmlProps } from "@client/lib/sanitize-html"
+import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText, toDisplayHtml } from "@shared/rich-text"
 
 const RichTextEditor = lazyComponent(
   () => import("@client/components/rich-text-editor").then((mod) => mod.RichTextEditor),

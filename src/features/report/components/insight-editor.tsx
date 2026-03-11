@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type ReactNode } from "react"
-import { lazyComponent } from "@lib/lazy-component"
+import { lazyComponent } from "@client/lib/lazy-component"
 import { Button } from "@client/components/ui/button"
 
 const RichTextEditor = lazyComponent(

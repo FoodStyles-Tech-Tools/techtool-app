@@ -1,6 +1,6 @@
 import type { Request, Response } from "express"
-import { createServerClient } from "@/lib/supabase"
-import { processDiscordOutboxBatch } from "@/lib/server/discord-outbox"
+import { createServerClient } from "@server/lib/supabase"
+import { processDiscordOutboxBatch } from "@server/lib/discord-outbox"
 import { revalidateTag } from "@server/http/cache-tags"
 import { parseDiscordOutboxBody, parseRevalidateBody } from "@server/validation/internal"
 

@@ -14,7 +14,7 @@ import {
 } from "@client/components/ui/form"
 import { Input } from "@client/components/ui/input"
 import { toast } from "@client/components/ui/toast"
-import type { Role } from "@lib/types"
+import type { Role } from "@shared/types"
 
 const userSchema = z.object({
   email: z.string().email("Invalid email address"),

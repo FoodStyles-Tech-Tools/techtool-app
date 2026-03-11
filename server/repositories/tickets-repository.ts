@@ -1,7 +1,7 @@
-import type { TicketListQuery } from "@/lib/server/tickets-list"
-import { fetchTicketDetailPayload } from "@/lib/server/ticket-detail"
-import { fetchTicketList } from "@/lib/server/tickets-list"
-import { createServerClient } from "@/lib/supabase"
+import type { TicketListQuery } from "@server/lib/tickets-list"
+import { fetchTicketDetailPayload } from "@server/lib/ticket-detail"
+import { fetchTicketList } from "@server/lib/tickets-list"
+import { createServerClient } from "@server/lib/supabase"
 
 type SupabaseClientLike = Awaited<ReturnType<typeof createServerClient>>
 

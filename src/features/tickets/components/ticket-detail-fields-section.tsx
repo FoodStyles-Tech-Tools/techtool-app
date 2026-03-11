@@ -4,7 +4,7 @@ import { TicketDetailAssignmentSection } from "@client/features/tickets/componen
 import { TicketDetailPlanningSection } from "@client/features/tickets/components/ticket-detail-planning-section"
 import type { Epic } from "@client/hooks/use-epics"
 import type { Sprint } from "@client/hooks/use-sprints"
-import type { Department, Ticket, User } from "@lib/types"
+import type { Department, Ticket, User } from "@shared/types"
 import type { ParentTicketOption, TicketProjectOption } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 
 type TicketDetailFieldsSectionProps = {

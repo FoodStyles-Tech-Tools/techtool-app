@@ -15,7 +15,7 @@ export type RoleRecord = {
   permissions: RolePermissionRecord[]
 }
 
-type SupabaseClient = Awaited<ReturnType<typeof import("@/lib/supabase").createServerClient>>
+type SupabaseClient = Awaited<ReturnType<typeof import("@server/lib/supabase").createServerClient>>
 
 export async function listRoles(supabase: SupabaseClient): Promise<RoleRecord[]> {
   const { data, error } = await supabase

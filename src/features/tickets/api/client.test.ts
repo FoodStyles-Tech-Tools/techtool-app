@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const requestJson = vi.fn()
 
-vi.mock("@lib/client/api", () => ({
+vi.mock("@client/lib/api", () => ({
   requestJson,
 }))
 

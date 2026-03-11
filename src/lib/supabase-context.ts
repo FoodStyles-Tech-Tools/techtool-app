@@ -1,7 +1,7 @@
 "use client"
 
 import { SupabaseClient } from "@supabase/supabase-js"
-import { useSession } from "@/lib/auth-client"
+import { useSession } from "./auth-client"
 
 // Cache for user context per client instance
 // Uses WeakMap to avoid memory leaks

@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { getClientBackendUrl } from "@lib/config/client-env"
+import { getClientBackendUrl } from "@client/lib/config/client-env"
 import { useLocation } from "react-router-dom"
 import { FullScreenMessage } from "./full-screen-message"
 

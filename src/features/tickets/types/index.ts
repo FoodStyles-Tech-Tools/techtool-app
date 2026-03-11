@@ -1,4 +1,4 @@
-import type { SortColumn } from "@lib/ticket-constants"
+import type { SortColumn } from "@shared/ticket-constants"
 
 export type TicketSubtaskRow = {
   id: string

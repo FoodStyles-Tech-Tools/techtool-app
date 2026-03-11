@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "@client/components/ui/toast"
-import type { Ticket } from "@lib/types"
+import type { Ticket } from "@shared/types"
 
 type UseTicketDetailLinkActionsParams = {
   ticket: Ticket | null | undefined

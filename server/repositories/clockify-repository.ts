@@ -1,7 +1,7 @@
 import { HttpError } from "@server/http/http-error"
 import type { ClockifyReconciliationEntry } from "@server/validation/clockify"
 
-type SupabaseClient = Awaited<ReturnType<typeof import("@/lib/supabase").createServerClient>>
+type SupabaseClient = Awaited<ReturnType<typeof import("@server/lib/supabase").createServerClient>>
 
 export type ClockifySessionRecord = {
   id: string

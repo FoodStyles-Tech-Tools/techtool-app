@@ -1,4 +1,4 @@
-import { createServerClient } from "@/lib/supabase"
+import { createServerClient } from "@server/lib/supabase"
 
 type SupabaseClientLike = Awaited<ReturnType<typeof createServerClient>>
 

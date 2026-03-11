@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { normalizeStatusKey } from "@/lib/ticket-statuses"
+import { normalizeStatusKey } from "@shared/ticket-statuses"
 
 const colorRegex = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/
 

@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import { requestJson } from "@lib/client/api"
+import { requestJson } from "@client/lib/api"
 import { FullScreenMessage } from "@client/layouts/full-screen-message"
 import { TicketDetailPageClient } from "./ticket-detail-page-client"
 

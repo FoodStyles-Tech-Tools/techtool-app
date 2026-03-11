@@ -1,7 +1,7 @@
 "use client"
 
 import { DateTimePicker } from "@client/components/ui/datetime-picker"
-import type { Ticket } from "@lib/types"
+import type { Ticket } from "@shared/types"
 import type { TimestampValidation } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 
 const sectionTitleClassName = "mb-2 text-xs font-medium uppercase tracking-wide text-slate-500"

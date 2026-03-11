@@ -9,7 +9,7 @@ export type TicketStatusRecord = {
   updated_at?: string
 }
 
-type SupabaseClient = Awaited<ReturnType<typeof import("@/lib/supabase").createServerClient>>
+type SupabaseClient = Awaited<ReturnType<typeof import("@server/lib/supabase").createServerClient>>
 
 export async function listTicketStatuses(supabase: SupabaseClient): Promise<TicketStatusRecord[]> {
   const { data, error } = await supabase

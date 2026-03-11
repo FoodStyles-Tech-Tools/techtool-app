@@ -2,9 +2,9 @@
 
 import { useCallback, useState } from "react"
 import { toast } from "@client/components/ui/toast"
-import type { Ticket } from "@lib/types"
-import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@lib/rich-text"
-import { FIELD_LABELS, type TicketMutationField } from "@lib/ticket-constants"
+import type { Ticket } from "@shared/types"
+import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@shared/rich-text"
+import { FIELD_LABELS, type TicketMutationField } from "@shared/ticket-constants"
 import {
   closeTicketSubtasksToStatus,
   resolveTicketDoneStatusGuard,

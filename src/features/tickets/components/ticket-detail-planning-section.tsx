@@ -6,7 +6,7 @@ import { SprintSelect } from "@client/components/sprint-select"
 import { TicketPrioritySelect } from "@client/components/ticket-priority-select"
 import type { Epic } from "@client/hooks/use-epics"
 import type { Sprint } from "@client/hooks/use-sprints"
-import type { Department, Ticket } from "@lib/types"
+import type { Department, Ticket } from "@shared/types"
 import type { TicketProjectOption } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 
 const NO_DEPARTMENT_VALUE = "no_department"

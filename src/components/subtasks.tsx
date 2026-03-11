@@ -13,8 +13,8 @@ import { useUsers } from "@client/hooks/use-users"
 import { toast } from "@client/components/ui/toast"
 import { TicketPrioritySelect } from "@client/components/ticket-priority-select"
 import { TicketStatusSelect } from "@client/components/ticket-status-select"
-import { ASSIGNEE_ALLOWED_ROLES } from "@lib/ticket-constants"
-import { isDoneStatus } from "@lib/ticket-statuses"
+import { ASSIGNEE_ALLOWED_ROLES } from "@shared/ticket-constants"
+import { isDoneStatus } from "@shared/ticket-statuses"
 
 interface SubtasksProps {
   ticketId: string

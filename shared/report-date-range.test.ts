@@ -5,7 +5,7 @@ import {
   getDefaultReportDateRange,
   getISOWeekKey,
   startOfCurrentISOWeek,
-} from "@/lib/report-date-range"
+} from "./report-date-range"
 
 describe("report-date-range", () => {
   it("starts the ISO week on Monday", () => {

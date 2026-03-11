@@ -4,61 +4,63 @@ const fs = require("fs")
 const path = require("path")
 
 const projectRoot = process.cwd()
-const SOURCE_ROOTS = ["app", "backend", "components", "features", "hooks", "lib", "src", "shared"]
+const SOURCE_ROOTS = ["src", "server", "shared"]
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"])
-
-const APP_IMPORT = "@/app/"
-const COMPAT_IMPORT = "@/src/compat/"
-
-const allowedAppImportPaths = new Set()
 
 function normalize(filePath) {
   return filePath.replace(/\\/g, "/")
 }
 
 function collectSourceFiles(rootDir) {
-  if (!fs.existsSync(rootDir)) {
-    return []
-  }
-
+  if (!fs.existsSync(rootDir)) return []
   const entries = fs.readdirSync(rootDir, { withFileTypes: true })
   const files = []
-
   for (const entry of entries) {
     const fullPath = path.join(rootDir, entry.name)
     if (entry.isDirectory()) {
       files.push(...collectSourceFiles(fullPath))
-      continue
-    }
-
-    if (SOURCE_EXTENSIONS.has(path.extname(entry.name))) {
+    } else if (SOURCE_EXTENSIONS.has(path.extname(entry.name))) {
       files.push(fullPath)
     }
   }
-
   return files
 }
 
 function extractImports(sourceText) {
-  const matches = sourceText.matchAll(/(?:import|export)\s+(?:[^"'`]+?\s+from\s+)?["'`]([^"'`]+)["'`]|import\(\s*["'`]([^"'`]+)["'`]\s*\)/g)
-  const imports = []
-
-  for (const match of matches) {
-    const importPath = match[1] || match[2]
-    if (importPath) {
-      imports.push(importPath)
-    }
-  }
-
-  return imports
+  const matches = sourceText.matchAll(
+    /(?:import|export)\s+(?:[^"'`]+?\s+from\s+)?["'`]([^"'`]+)["'`]|import\(\s*["'`]([^"'`]+)["'`]\s*\)/g
+  )
+  return Array.from(matches, (m) => m[1] || m[2]).filter(Boolean)
 }
 
-function isAllowedAppImport(relativePath) {
-  if (relativePath.startsWith("src/routes/")) {
-    return true
-  }
+function getZone(relativePath) {
+  if (relativePath.startsWith("src/")) return "client"
+  if (relativePath.startsWith("server/")) return "server"
+  if (relativePath.startsWith("shared/")) return "shared"
+  return null
+}
 
-  return allowedAppImportPaths.has(relativePath)
+function getImportZone(importPath) {
+  if (importPath.startsWith("@client/") || importPath.startsWith("@/src/")) return "client"
+  if (importPath.startsWith("@server/") || importPath.startsWith("@/server/")) return "server"
+  if (importPath.startsWith("@shared/")) return "shared"
+  if (importPath.startsWith("@/lib/") || importPath.startsWith("@lib/")) return "removed-lib"
+  return null
+}
+
+const RULES = {
+  client: {
+    forbidden: ["server"],
+    label: "Client code (src/) cannot import from server/.",
+  },
+  server: {
+    forbidden: ["client"],
+    label: "Server code (server/) cannot import from client (src/).",
+  },
+  shared: {
+    forbidden: ["client", "server"],
+    label: "Shared code (shared/) cannot import from client or server.",
+  },
 }
 
 function main() {
@@ -70,30 +72,43 @@ function main() {
 
     for (const filePath of files) {
       const relativePath = normalize(path.relative(projectRoot, filePath))
+      const zone = getZone(relativePath)
+      if (!zone) continue
+
+      const rule = RULES[zone]
+      if (!rule) continue
+
       const sourceText = fs.readFileSync(filePath, "utf8")
       const imports = extractImports(sourceText)
 
       for (const importPath of imports) {
-        if (importPath.startsWith(APP_IMPORT) && !isAllowedAppImport(relativePath)) {
-          violations.push(`${relativePath}: forbidden runtime import ${importPath}`)
+        const importZone = getImportZone(importPath)
+
+        if (importZone === "removed-lib") {
+          violations.push(
+            `${relativePath}: uses removed @lib/ alias → ${importPath}`
+          )
+          continue
         }
 
-        if (importPath.startsWith(COMPAT_IMPORT)) {
-          violations.push(`${relativePath}: forbidden compat import ${importPath}`)
+        if (importZone && rule.forbidden.includes(importZone)) {
+          violations.push(
+            `${relativePath}: ${rule.label} Found: ${importPath}`
+          )
         }
       }
     }
   }
 
   if (violations.length > 0) {
-    console.error("Runtime boundary check failed:")
-    for (const violation of violations.sort()) {
-      console.error(`  - ${violation}`)
+    console.error(`Architecture boundary check failed (${violations.length} violations):`)
+    for (const v of violations.sort()) {
+      console.error(`  - ${v}`)
     }
     process.exit(1)
   }
 
-  console.log("Runtime boundary check passed.")
+  console.log("Architecture boundary check passed.")
 }
 
 main()

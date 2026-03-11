@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useDeferredValue, useMemo } f
 import { Input } from "@client/components/ui/input"
 import { Badge } from "@client/components/ui/badge"
 import { useUsers } from "@client/hooks/use-users"
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@client/components/ui/avatar"
 
 const MAX_SEARCH_RESULTS = 50

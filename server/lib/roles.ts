@@ -1,4 +1,4 @@
-import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
+import { getSupabaseWithUserContext } from "./auth-helpers"
 
 export type ServerPermission = {
   id: string

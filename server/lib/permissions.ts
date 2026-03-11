@@ -1,7 +1,7 @@
-import { createServerClient } from "@/lib/supabase"
-import { auth } from "@/lib/auth"
-import { getServerCache, setServerCache } from "@/lib/server/cache"
-import { buildPermissionFlags } from "@/shared/permissions"
+import { createServerClient } from "./supabase"
+import { auth } from "./auth"
+import { getServerCache, setServerCache } from "./cache"
+import { buildPermissionFlags } from "@shared/permissions"
 import type { PermissionFlags } from "@shared/types/auth"
 
 export { buildPermissionFlags } from "@/shared/permissions"

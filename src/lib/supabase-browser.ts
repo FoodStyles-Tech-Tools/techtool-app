@@ -1,7 +1,7 @@
 "use client"
 
 import { createBrowserClient } from "@supabase/ssr"
-import { getClientSupabaseAnonKey, getClientSupabaseUrl } from "@/lib/config/client-env"
+import { getClientSupabaseAnonKey, getClientSupabaseUrl } from "./config/client-env"
 
 let browserClient: ReturnType<typeof createBrowserClient> | null = null
 

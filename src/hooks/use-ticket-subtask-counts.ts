@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { createQueryString, requestJson } from "@lib/client/api"
+import { createQueryString, requestJson } from "@client/lib/api"
 
 type SubtaskCountResponse = {
   counts: Record<string, number>

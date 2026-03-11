@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type KeyboardEvent } from "react"
 import { toast } from "@client/components/ui/toast"
-import type { Ticket } from "@lib/types"
-import { normalizeRichTextInput } from "@lib/rich-text"
+import type { Ticket } from "@shared/types"
+import { normalizeRichTextInput } from "@shared/rich-text"
 import {
   getTimestampValidation,
   getTimestampWarningMessage,

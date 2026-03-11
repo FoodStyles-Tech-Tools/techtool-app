@@ -4,9 +4,9 @@ import { Link, useNavigate } from "react-router-dom"
 import { formatDistanceToNow } from "date-fns"
 import { Button } from "@client/components/ui/button"
 import { useCommentNotifications, type CommentNotification } from "@client/hooks/use-comment-notifications"
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 import { TextToken } from "@client/components/ui/text-token"
-import { richTextToPlainText } from "@lib/rich-text"
+import { richTextToPlainText } from "@shared/rich-text"
 
 function NotificationItem({
   notification,

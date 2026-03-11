@@ -1,4 +1,4 @@
-import type { RequestContext } from "@/lib/auth-helpers"
+import type { RequestContext } from "@server/lib/auth-helpers"
 import { HttpError } from "@server/http/http-error"
 import * as ticketStatusesRepository from "@server/repositories/ticket-statuses-repository"
 import type {

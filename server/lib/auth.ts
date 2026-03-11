@@ -1,5 +1,5 @@
-import { mapSupabaseUserToSession } from "@/lib/auth-session"
-import { createServerClient } from "@/lib/supabase"
+import { mapSupabaseUserToSession } from "@shared/auth-session"
+import { createServerClient } from "./supabase"
 
 async function getSession() {
   const supabase = createServerClient()

@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 import { TextToken } from "@client/components/ui/text-token"
 
 interface TicketPrioritySelectProps {

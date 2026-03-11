@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { buildAssignmentPayload, buildStatusPayload } from "@client/features/tickets/lib/update-payloads"
-import type { Ticket } from "@lib/types"
+import type { Ticket } from "@shared/types"
 
 function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
   return {

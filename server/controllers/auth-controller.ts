@@ -1,10 +1,10 @@
 import type { Request, Response } from "express"
-import { auth } from "@/lib/auth"
-import { getServerAppUrl } from "@/lib/config/server-env"
-import { getUserDisplayName, getUserImage } from "@/lib/auth-session"
-import { createServerClient } from "@/lib/supabase"
-import { APP_VERSION } from "@/lib/version"
-import { buildPermissionFlags, getCurrentUserPermissions } from "@/lib/server/permissions"
+import { auth } from "@server/lib/auth"
+import { getServerAppUrl } from "@server/lib/server-env"
+import { getUserDisplayName, getUserImage } from "@shared/auth-session"
+import { createServerClient } from "@server/lib/supabase"
+import { APP_VERSION } from "@server/lib/version"
+import { buildPermissionFlags, getCurrentUserPermissions } from "@server/lib/permissions"
 import type { PermissionSnapshot } from "@shared/types/auth"
 
 function normalizeNextPath(value: string | null) {

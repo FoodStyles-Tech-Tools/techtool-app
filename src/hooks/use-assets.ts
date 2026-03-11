@@ -1,26 +1,13 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { prepareLinkPayload, sanitizeLinkArray } from "@lib/links"
-import { requestJson } from "@lib/client/api"
-import type { Asset } from "@lib/types"
+import { prepareLinkPayload } from "@shared/links"
+import { requestJson } from "@client/lib/api"
+import type { Asset } from "@shared/types"
+import { normalizeAsset } from "@shared/types/asset-mappers"
 import type { AssetDto } from "@shared/types/api/assets"
 
 export type { Asset }
-
-function mapAssetDtoToDomain(dto: AssetDto): Asset {
-  return dto
-}
-
-function normalizeAsset(dto: AssetDto): Asset {
-  const asset = mapAssetDtoToDomain(dto)
-  return {
-    ...asset,
-    links: sanitizeLinkArray(asset.links),
-    collaborator_ids: Array.isArray(asset.collaborator_ids) ? asset.collaborator_ids : [],
-    collaborators: Array.isArray(asset.collaborators) ? asset.collaborators : [],
-  }
-}
 
 export function useAssets() {
   return useQuery<Asset[]>({

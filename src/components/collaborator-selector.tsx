@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { Input } from "@client/components/ui/input"
 import { Avatar, AvatarImage, AvatarFallback } from "@client/components/ui/avatar"
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 
 interface Collaborator {
   role?: string | null

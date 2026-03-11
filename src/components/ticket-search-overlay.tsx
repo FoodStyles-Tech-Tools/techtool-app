@@ -4,10 +4,10 @@ import { useState, useEffect, useRef, useCallback, useDeferredValue, useMemo } f
 import { useQuery } from "@tanstack/react-query"
 import { Input } from "@client/components/ui/input"
 import { Badge } from "@client/components/ui/badge"
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 import { TicketStatusIcon } from "@client/components/ticket-status-select"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
-import { formatStatusLabel, normalizeStatusKey } from "@lib/ticket-statuses"
+import { formatStatusLabel, normalizeStatusKey } from "@shared/ticket-statuses"
 import { TicketPriorityIcon } from "@client/components/ticket-priority-select"
 import { TicketTypeIcon } from "@client/components/ticket-type-select"
 

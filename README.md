@@ -70,24 +70,26 @@ npm start
 Notes:
 
 - `npm run dev` starts Vite and Express together.
-- The backend watcher includes `server/**/*.ts` and `lib/**/*.ts`.
+- The backend watcher includes `server/**/*.ts` and `shared/**/*.ts`.
 - Set `DEBUG_ROUTES=true` to print the full Express route manifest on startup.
 
 ## Architecture
 
-The codebase is split into **client**, **server**, and **shared**:
+The codebase is split into three top-level zones:
 
-- **`src/`** – Frontend only (Vite + React). Entry: `src/main.tsx` → `src/app.tsx` → `src/router.tsx`. Route screens live in `src/routes/`, feature UI and hooks in `src/features/`, shared UI in `src/components/`, app-level hooks in `src/hooks/`. Use `@client/` for imports under `src/`.
-- **`server/`** – Backend only (Express). Entry: `server/server.ts`. Handlers live in `server/routes/`, `server/controllers/`, `server/services/`, `server/repositories/`, `server/validation/`. Use `@server/` for server imports.
-- **`shared/`** – Cross-stack contracts: `shared/types/` (API/domain types), `shared/permissions.ts`, `shared/constants.ts`. Use `@shared/` for types and shared logic. Client and server must not import each other; use `shared/` and the API boundary instead.
+```
+src/          → Frontend (Vite + React SPA)
+server/       → Backend (Express API)
+shared/       → Contracts and pure helpers (used by both)
+```
 
-Path aliases: `@client/*` → `src/*`, `@server/*` → `server/*`, `@shared/*` → `shared/*`, `@lib/*` → `lib/*`. ESLint enforces that code under `src/` cannot import from `server/` or `lib/server/`, and server code cannot import from `src/`.
+- **`src/`** – Frontend only. Entry: `src/main.tsx` → `src/app.tsx` → `src/router.tsx`. Route screens in `src/routes/`, feature modules in `src/features/`, shared UI in `src/components/`, app hooks in `src/hooks/`, client infra in `src/lib/`. Import via `@client/`.
+- **`server/`** – Backend only. Entry: `server/server.ts`. Layers: `routes/` → `controllers/` → `services/` → `repositories/`. Server infra and helpers in `server/lib/`. Import via `@server/`.
+- **`shared/`** – Pure types, constants, and mappers. Domain types in `shared/types/domain.ts`, API DTOs in `shared/types/api/`, mappers in `shared/types/*-mappers.ts`. Import via `@shared/`.
 
-**Where to add things**
+Path aliases: `@client/*` → `src/*`, `@server/*` → `server/*`, `@shared/*` → `shared/*`. ESLint enforces that `src/` cannot import from `server/` and vice versa. Both may import from `shared/`. `shared/` must not import from `src/` or `server/`.
 
-- New page/screen: `src/routes/<area>/` and/or a component in `src/features/<feature>/`.
-- New API: `server/routes/`, `server/controllers/`, `server/services/`, `server/repositories/`, plus validation in `server/validation/`.
-- New shared type or DTO: `shared/types/`.
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for a detailed contribution guide.
 
 ## Build and production
 

@@ -54,8 +54,12 @@ module.exports = [
         {
           patterns: [
             {
-              group: ["@server/*", "@/server/*", "@/lib/server/*", "**/lib/server/*"],
-              message: "Client code (src/) cannot import from server or lib/server.",
+              group: ["@server/*", "@/server/*", "**/server/*"],
+              message: "Client code (src/) cannot import from server/.",
+            },
+            {
+              group: ["@/lib/*", "@lib/*"],
+              message: "The @lib alias is removed. Use @client/lib/, @server/lib/, or @shared/ instead.",
             },
           ],
         },
@@ -63,15 +67,43 @@ module.exports = [
     },
   },
   {
-    files: ["server/**/*.ts", "lib/server/**/*.ts"],
+    files: ["server/**/*.ts"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
           patterns: [
             {
-              group: ["@client/*", "@/src/*", "**/src/components/*", "**/src/features/*", "**/src/hooks/*", "**/src/routes/*"],
+              group: ["@client/*", "@/src/*", "**/src/*"],
               message: "Server code cannot import from client (src/).",
+            },
+            {
+              group: ["@/lib/*", "@lib/*"],
+              message: "The @lib alias is removed. Use @server/lib/, @client/lib/, or @shared/ instead.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["shared/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@client/*", "@/src/*", "**/src/*"],
+              message: "Shared code cannot import from client (src/).",
+            },
+            {
+              group: ["@server/*", "@/server/*", "**/server/*"],
+              message: "Shared code cannot import from server/.",
+            },
+            {
+              group: ["@/lib/*", "@lib/*"],
+              message: "The @lib alias is removed. Use @shared/ for shared utilities.",
             },
           ],
         },

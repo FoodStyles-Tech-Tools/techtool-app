@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
-import { getSupabaseWithUserContext } from "@/lib/auth-helpers"
+import { getSupabaseWithUserContext } from "./auth-helpers"
 
 export type ServerUser = {
   id: string

@@ -1,7 +1,7 @@
 "use client"
 
 import { format } from "date-fns"
-import type { Ticket, TicketDetailRelations } from "@lib/types"
+import type { Ticket, TicketDetailRelations } from "@shared/types"
 
 const fieldLabelClassName =
   "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"

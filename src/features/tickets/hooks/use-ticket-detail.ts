@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "@client/hooks/use-realtime"
 import { fetchTicketDetail } from "@client/features/tickets/lib/client"
 import { ticketQueryKeys } from "@client/features/tickets/lib/query-keys"
-import type { Ticket, TicketDetailRelations } from "@lib/types"
+import type { Ticket, TicketDetailRelations } from "@shared/types"
 import type { TicketComment } from "@client/hooks/use-ticket-comments"
 
 interface TicketDetailResponse {

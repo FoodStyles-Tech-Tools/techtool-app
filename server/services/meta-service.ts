@@ -1,5 +1,5 @@
-import { getCurrentUserWithSupabase } from "@/lib/current-user"
-import type { RequestContext } from "@/lib/auth-helpers"
+import { getCurrentUserWithSupabase } from "@server/lib/current-user"
+import type { RequestContext } from "@server/lib/auth-helpers"
 import * as metaRepository from "@server/repositories/meta-repository"
 
 export async function listDepartments(context: RequestContext) {

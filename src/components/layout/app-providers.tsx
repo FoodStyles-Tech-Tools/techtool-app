@@ -1,8 +1,8 @@
 "use client"
 
-import { lazyComponent } from "@lib/lazy-component"
-import { ReactQueryProvider } from "@lib/react-query"
-import { AuthProvider } from "@lib/auth-client"
+import { lazyComponent } from "@client/lib/lazy-component"
+import { ReactQueryProvider } from "@client/lib/react-query"
+import { AuthProvider } from "@client/lib/auth-client"
 import { SignOutOverlayProvider } from "@client/components/signout-overlay"
 import { RichTextActionsListener } from "@client/components/layout/rich-text-actions-listener"
 import { Toaster } from "@client/components/ui/toast"

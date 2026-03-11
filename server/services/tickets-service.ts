@@ -1,8 +1,8 @@
-import { normalizeRichTextInput, isRichTextEmpty } from "@/lib/rich-text"
-import { prepareLinkPayload } from "@/lib/links"
-import { buildStatusChangeBody } from "@/lib/ticket-statuses"
-import { enqueueTicketStatusDiscordNotifications } from "@/lib/server/discord-outbox"
-import { invalidateTicketCaches } from "@/lib/server/ticket-cache"
+import { normalizeRichTextInput, isRichTextEmpty } from "@shared/rich-text"
+import { prepareLinkPayload } from "@shared/links"
+import { buildStatusChangeBody } from "@shared/ticket-statuses"
+import { enqueueTicketStatusDiscordNotifications } from "@server/lib/discord-outbox"
+import { invalidateTicketCaches } from "@server/lib/ticket-cache"
 import { HttpError } from "@server/http/http-error"
 import * as ticketsRepository from "@server/repositories/tickets-repository"
 import type {
@@ -11,7 +11,7 @@ import type {
   UpdateTicketInput,
   UpdateTicketStatusWithReasonInput,
 } from "@server/validation/tickets"
-import type { TicketListQuery } from "@/lib/server/tickets-list"
+import type { TicketListQuery } from "@server/lib/tickets-list"
 
 type TicketRequestContext = {
   supabase: Parameters<typeof ticketsRepository.listTickets>[0]

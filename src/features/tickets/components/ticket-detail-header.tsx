@@ -7,10 +7,10 @@ import { Input } from "@client/components/ui/input"
 import { TicketStatusSelect } from "@client/components/ticket-status-select"
 import { TicketPriorityIcon } from "@client/components/ticket-priority-select"
 import { TicketTypeIcon } from "@client/components/ticket-type-select"
-import { getDueDateDisplay } from "@lib/format-dates"
-import { isDoneStatus, normalizeStatusKey } from "@lib/ticket-statuses"
-import { cn } from "@lib/utils"
-import type { Ticket } from "@lib/types"
+import { getDueDateDisplay } from "@client/lib/format-dates"
+import { isDoneStatus, normalizeStatusKey } from "@shared/ticket-statuses"
+import { cn } from "@client/lib/utils"
+import type { Ticket } from "@shared/types"
 
 type TicketDetailHeaderProps = {
   ticketId: string

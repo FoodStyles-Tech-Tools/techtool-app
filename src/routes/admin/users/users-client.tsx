@@ -22,7 +22,7 @@ import {
 import { UserForm } from "@client/components/forms/user-form"
 import { Badge } from "@client/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@client/components/ui/avatar"
-import type { User } from "@lib/types"
+import type { User } from "@shared/types"
 
 type UsersClientProps = {
   initialUsers: User[]

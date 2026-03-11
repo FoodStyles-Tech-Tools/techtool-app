@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
-import { lazyComponent } from "@lib/lazy-component"
+import { lazyComponent } from "@client/lib/lazy-component"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@client/components/ui/button"
@@ -27,9 +27,9 @@ import { EpicSelect } from "@client/components/epic-select"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { useSprints } from "@client/hooks/use-sprints"
 import { SprintSelect } from "@client/components/sprint-select"
-import { ASSIGNEE_ALLOWED_ROLES } from "@lib/ticket-constants"
-import { normalizeRichTextInput } from "@lib/rich-text"
-import type { User } from "@lib/types"
+import { ASSIGNEE_ALLOWED_ROLES } from "@shared/ticket-constants"
+import { normalizeRichTextInput } from "@shared/rich-text"
+import type { User } from "@shared/types"
 
 const NO_PROJECT_VALUE = "__no_project__"
 const RichTextEditor = lazyComponent(

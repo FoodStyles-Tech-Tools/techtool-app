@@ -4,7 +4,7 @@ import { Sidebar } from "./sidebar"
 import { PermissionsBootstrap } from "@client/components/permissions-bootstrap"
 import { CommentNotificationsDropdown } from "@client/components/comment-notifications-dropdown"
 import { NavUser } from "@client/components/layout/nav-user"
-import { signOut, useSession } from "@lib/auth-client"
+import { signOut, useSession } from "@client/lib/auth-client"
 import { useSignOutOverlay } from "@client/components/signout-overlay"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "techtool.sidebarCollapsed"

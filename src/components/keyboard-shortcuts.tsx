@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { useLocation } from "react-router-dom"
-import { useSession } from "@lib/auth-client"
-import { lazyComponent } from "@lib/lazy-component"
+import { useSession } from "@client/lib/auth-client"
+import { lazyComponent } from "@client/lib/lazy-component"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import { useUsers } from "@client/hooks/use-users"

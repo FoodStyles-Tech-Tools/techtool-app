@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Label } from "@client/components/ui/label"
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 
 type FieldGroupProps = React.HTMLAttributes<HTMLDivElement>
 

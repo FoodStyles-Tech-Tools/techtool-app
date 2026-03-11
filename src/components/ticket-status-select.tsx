@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import {
   filterStatusesBySqaRequirement,
@@ -10,7 +10,7 @@ import {
   isDoneStatus,
   normalizeStatusKey,
   type TicketStatus,
-} from "@lib/ticket-statuses"
+} from "@shared/ticket-statuses"
 
 interface TicketStatusSelectProps {
   value: string

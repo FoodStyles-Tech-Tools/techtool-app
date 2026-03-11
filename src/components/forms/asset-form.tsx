@@ -1,7 +1,7 @@
 "use client"
 
 import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
-import { lazyComponent } from "@lib/lazy-component"
+import { lazyComponent } from "@client/lib/lazy-component"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Button } from "@client/components/ui/button"

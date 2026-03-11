@@ -1,4 +1,4 @@
-import { cn } from "@lib/utils"
+import { cn } from "@client/lib/utils"
 
 type EntityPageLayoutProps = {
   header?: React.ReactNode
