@@ -1,4 +1,5 @@
 import { Router } from "express"
+import { withRequestContext } from "@/server/http/with-request-context"
 import {
   batchUpdateTicketStatusController,
   createTicketController,
@@ -36,19 +37,19 @@ export const explicitTicketRouteSignatures = new Set([
 export function createTicketsRouter() {
   const router = Router()
 
-  router.get("/api/v2/tickets", listTicketsController)
-  router.post("/api/v2/tickets", createTicketController)
-  router.post("/api/v2/tickets/batch-status", batchUpdateTicketStatusController)
-  router.get("/api/v2/tickets/:id", getTicketDetailController)
-  router.patch("/api/v2/tickets/:id", updateTicketController)
-  router.post("/api/v2/tickets/:id/status-with-reason", updateTicketStatusWithReasonController)
-  router.get("/api/tickets/by-display-id/:displayId", getTicketByDisplayIdController)
-  router.get("/api/tickets/subtask-counts", getTicketSubtaskCountsController)
-  router.get("/api/tickets/:id/activity", getTicketActivityController)
-  router.get("/api/tickets/:id/comments", listTicketCommentsController)
-  router.post("/api/tickets/:id/comments", createTicketCommentController)
-  router.patch("/api/tickets/:id/comments/:commentId", updateTicketCommentController)
-  router.delete("/api/tickets/:id/comments/:commentId", deleteTicketCommentController)
+  router.get("/api/v2/tickets", withRequestContext(listTicketsController))
+  router.post("/api/v2/tickets", withRequestContext(createTicketController))
+  router.post("/api/v2/tickets/batch-status", withRequestContext(batchUpdateTicketStatusController))
+  router.get("/api/v2/tickets/:id", withRequestContext(getTicketDetailController))
+  router.patch("/api/v2/tickets/:id", withRequestContext(updateTicketController))
+  router.post("/api/v2/tickets/:id/status-with-reason", withRequestContext(updateTicketStatusWithReasonController))
+  router.get("/api/tickets/by-display-id/:displayId", withRequestContext(getTicketByDisplayIdController))
+  router.get("/api/tickets/subtask-counts", withRequestContext(getTicketSubtaskCountsController))
+  router.get("/api/tickets/:id/activity", withRequestContext(getTicketActivityController))
+  router.get("/api/tickets/:id/comments", withRequestContext(listTicketCommentsController))
+  router.post("/api/tickets/:id/comments", withRequestContext(createTicketCommentController))
+  router.patch("/api/tickets/:id/comments/:commentId", withRequestContext(updateTicketCommentController))
+  router.delete("/api/tickets/:id/comments/:commentId", withRequestContext(deleteTicketCommentController))
 
   return router
 }

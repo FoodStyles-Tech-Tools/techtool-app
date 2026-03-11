@@ -1,4 +1,4 @@
-import { notFound } from "@/src/compat/router"
+import { notFound } from "@/lib/server/legacy-page-navigation"
 import { requirePagePermission } from "@/lib/server/require-page-permission"
 import { createServerClient } from "@/lib/supabase"
 import { TicketDetailPageClient } from "@/features/tickets/components/ticket-detail-page-client"

@@ -12,19 +12,6 @@ const COMPAT_IMPORT = "@/src/compat/"
 
 const allowedAppImportPaths = new Set()
 
-const allowedCompatImportPaths = new Set([
-  normalize("app/(app)/(dashboard)/tickets/[displayId]/page.tsx"),
-  normalize("app/(app)/(dashboard)/report/page.tsx"),
-  normalize("app/(app)/(dashboard)/dashboard/page.tsx"),
-  normalize("app/(app)/(admin)/workspace/status/page.tsx"),
-  normalize("app/(app)/(admin)/workspace/sprint/page.tsx"),
-  normalize("app/(app)/(admin)/workspace/page.tsx"),
-  normalize("app/(app)/(admin)/workspace/epic/page.tsx"),
-  normalize("app/(app)/(admin)/settings/page.tsx"),
-  normalize("components/layout/protected-layout.tsx"),
-  normalize("lib/server/require-page-permission.ts"),
-])
-
 function normalize(filePath) {
   return filePath.replace(/\\/g, "/")
 }
@@ -74,10 +61,6 @@ function isAllowedAppImport(relativePath) {
   return allowedAppImportPaths.has(relativePath)
 }
 
-function isAllowedCompatImport(relativePath) {
-  return allowedCompatImportPaths.has(relativePath)
-}
-
 function main() {
   const violations = []
 
@@ -95,7 +78,7 @@ function main() {
           violations.push(`${relativePath}: forbidden runtime import ${importPath}`)
         }
 
-        if (importPath.startsWith(COMPAT_IMPORT) && !isAllowedCompatImport(relativePath)) {
+        if (importPath.startsWith(COMPAT_IMPORT)) {
           violations.push(`${relativePath}: forbidden compat import ${importPath}`)
         }
       }

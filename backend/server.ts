@@ -7,7 +7,24 @@ import { pathToFileURL } from "node:url"
 import { createRequestContext, getContextResponseHeaders, runWithRequestContext } from "./compat/request-context"
 import type { NextRequest } from "./compat/server"
 import { getServerPort } from "@/lib/config/server-env"
+import { createAuthRouter, explicitAuthRouteSignatures } from "@/server/routes/auth-router"
+import { createAssetsRouter, explicitAssetRouteSignatures } from "@/server/routes/assets-router"
+import {
+  createClockifyRouter,
+  explicitClockifyRouteSignatures,
+} from "@/server/routes/clockify-router"
+import {
+  createProjectPlanningRouter,
+  explicitProjectPlanningRouteSignatures,
+} from "@/server/routes/project-planning-router"
+import { createProjectsRouter, explicitProjectRouteSignatures } from "@/server/routes/projects-router"
+import {
+  createTicketStatusesRouter,
+  explicitTicketStatusRouteSignatures,
+} from "@/server/routes/ticket-statuses-router"
 import { createTicketsRouter, explicitTicketRouteSignatures } from "@/server/routes/tickets-router"
+import { createRolesRouter, explicitRoleRouteSignatures } from "@/server/routes/roles-router"
+import { createUsersRouter, explicitUserRouteSignatures } from "@/server/routes/users-router"
 
 type RouteHandlerModule = Partial<Record<"GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "OPTIONS", RouteHandler>>
 type RouteHandler = (request: NextRequest, context?: { params: Record<string, string> }) => Promise<Response>
@@ -25,11 +42,29 @@ const isCompiledRuntime = path.basename(runtimeRoot) === "dist-backend"
 const workspaceRoot = isCompiledRuntime ? path.resolve(runtimeRoot, "..") : runtimeRoot
 const routesRoot = path.join(isCompiledRuntime ? runtimeRoot : workspaceRoot, "backend", "routes")
 const clientDistDir = path.join(workspaceRoot, "dist")
-const explicitRouteSignatures = new Set(explicitTicketRouteSignatures)
+const explicitRouteSignatures = new Set([
+  ...explicitAuthRouteSignatures,
+  ...explicitAssetRouteSignatures,
+  ...explicitClockifyRouteSignatures,
+  ...explicitProjectRouteSignatures,
+  ...explicitProjectPlanningRouteSignatures,
+  ...explicitTicketStatusRouteSignatures,
+  ...explicitTicketRouteSignatures,
+  ...explicitRoleRouteSignatures,
+  ...explicitUserRouteSignatures,
+])
 
 app.use(express.json({ limit: "5mb" }))
 app.use(express.urlencoded({ extended: true }))
+app.use(createAuthRouter())
+app.use(createAssetsRouter())
+app.use(createClockifyRouter())
+app.use(createProjectsRouter())
+app.use(createProjectPlanningRouter())
+app.use(createTicketStatusesRouter())
 app.use(createTicketsRouter())
+app.use(createRolesRouter())
+app.use(createUsersRouter())
 
 function getHealthPayload() {
   return {

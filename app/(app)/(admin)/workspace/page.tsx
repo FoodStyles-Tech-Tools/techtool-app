@@ -1,4 +1,4 @@
-import { redirect } from "@/src/compat/router"
+import { redirect } from "@/lib/server/legacy-page-navigation"
 
 export default function WorkspacePage() {
   redirect("/status")

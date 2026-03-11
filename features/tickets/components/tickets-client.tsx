@@ -166,7 +166,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
       const slug = (ticket.displayId || ticketId.slice(0, 8)).toLowerCase()
       navigate(`/tickets/${slug}`)
     },
-    [allTickets, router]
+    [allTickets, navigate]
   )
 
   return (

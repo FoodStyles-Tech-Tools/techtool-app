@@ -1,4 +1,4 @@
-import { redirect } from "@/src/compat/router"
+import { redirect } from "@/lib/server/legacy-page-navigation"
 import { AppShell } from "./app-shell"
 import { buildPermissionFlags, getCurrentUserPermissions } from "@/lib/server/permissions"
 
