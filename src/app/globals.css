@@ -3,38 +3,39 @@
 /* Theme tokens: light (default) */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --primary: 221 83% 53%;
+    /* Jira light: N20 page #F4F5F7, white cards, N800 #172B4D, N300 #DFE1E6, selected #EBF5FF */
+    --background: 220 13% 97%;       /* #F4F5F7 N20 page */
+    --foreground: 215 30% 23%;      /* #172B4D N800 */
+    --muted: 220 13% 92%;           /* #EBECF0 N30 table header, default buttons */
+    --muted-foreground: 218 19% 46%; /* #6B778C N500 */
+    --primary: 212 100% 40%;        /* #0052CC Atlassian blue */
     --primary-foreground: 0 0% 100%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --accent: 210 100% 97%;         /* #EBF5FF selected/highlight tint */
+    --accent-foreground: 215 30% 23%;
+    --border: 220 13% 87%;          /* #DFE1E6 N300 */
+    --input: 220 13% 87%;
+    --ring: 212 100% 40%;
+    --card: 0 0% 100%;              /* #FFFFFF panels */
+    --card-foreground: 215 30% 23%;
     --ring-offset: 0 0% 100%;
   }
 
   .dark {
-    /* Palette: #18191a, #1f1f21, #2c2c2e | Border: #37373a | Better contrast for text and highlights */
-    --background: 228 4% 10%;   /* #18191a */
-    --foreground: 210 40% 98%;
-    --muted: 240 2% 18%;        /* #2c2c2e */
-    --muted-foreground: 215 18% 72%;  /* Brighter for readable body text */
-    --primary: 217 91% 60%;
+    /* Palette: #18191a, #1f1f21, #2c2c2e | Border: #37373a | Text #B6D4E8 / #C7D1DB, primary #4C9AFF */
+    --background: 228 4% 10%;        /* #18191a */
+    --foreground: 210 40% 82%;      /* #B6D4E8 primary text */
+    --muted: 240 2% 18%;            /* #2c2c2e */
+    --muted-foreground: 215 25% 82%; /* #C7D1DB secondary text */
+    --primary: 212 100% 65%;         /* #4C9AFF */
     --primary-foreground: 222 47% 11%;
-    --accent: 240 2% 22%;       /* Slightly lighter than muted for clearer hover/active */
-    --accent-foreground: 210 40% 98%;
-    --border: 240 2% 22%;       /* #37373a */
-    --input: 240 2% 22%;        /* #37373a */
-    --ring: 217 91% 60%;
-    --card: 240 4% 13%;         /* #1f1f21 */
-    --card-foreground: 210 40% 98%;
-    --ring-offset: 228 4% 10%;  /* #18191a */
+    --accent: 240 2% 22%;            /* Slightly lighter than muted, hover */
+    --accent-foreground: 210 40% 82%;
+    --border: 240 3% 22%;            /* #37373a */
+    --input: 240 3% 22%;
+    --ring: 212 100% 65%;
+    --card: 240 3% 12%;              /* #1f1f21 */
+    --card-foreground: 210 40% 82%;
+    --ring-offset: 228 4% 10%;       /* #18191a */
   }
 }
 
@@ -98,6 +99,22 @@
   a {
     color: inherit;
     text-decoration: none;
+    cursor: pointer;
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  select,
+  summary {
+    cursor: pointer;
   }
 
   input::placeholder,
@@ -376,7 +393,7 @@
 }
 
 .mention-ticket:hover {
-  background: rgba(37, 99, 235, 0.18);
+  background: hsl(var(--primary) / 0.18);
 }
 
 .mention-ticket-status {

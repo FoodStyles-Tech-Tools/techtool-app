@@ -14,7 +14,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
         type="checkbox"
         id={id}
         className={cn(
-          "h-4 w-4 rounded border-input text-foreground disabled:cursor-not-allowed disabled:opacity-50",
+          "h-4 w-4 cursor-pointer rounded border-input text-foreground disabled:cursor-not-allowed disabled:opacity-50",
           focusRing,
           className
         )}
@@ -28,7 +28,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
     return (
       <label
         htmlFor={id}
-        className="flex h-9 items-center gap-2 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+        className="flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm text-foreground"
       >
         {input}
         {label}

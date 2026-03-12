@@ -132,7 +132,7 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
       )}
     >
       <div className="flex h-full flex-col px-3 py-4">
-        <div className="border-b border-border pb-4">
+        <div className="pb-4">
           <div className="flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-2">
               <img

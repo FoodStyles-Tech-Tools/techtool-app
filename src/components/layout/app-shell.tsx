@@ -147,15 +147,20 @@ export function AppShell({
                 <span className="sr-only">Open navigation</span>
                 <Bars3Icon className="h-5 w-5" />
               </button>
-              <div className="block md:hidden">
-                <div className="flex items-center gap-2">
-                  <img
-                    src="/techtool-logo.png"
-                    alt="Techtool logo"
-                    className="h-5 w-5 rounded-sm object-contain"
-                  />
-                  <p className="text-sm font-semibold text-foreground">Techtool</p>
-                </div>
+              {/* Logo in header when sidebar collapsed (desktop) or always on mobile */}
+              <div
+                className={
+                  desktopSidebarCollapsed
+                    ? "flex items-center gap-2"
+                    : "flex items-center gap-2 md:hidden"
+                }
+              >
+                <img
+                  src="/techtool-logo.png"
+                  alt="Techtool logo"
+                  className="h-6 w-6 rounded-sm object-contain"
+                />
+                <p className="text-sm font-semibold text-foreground">Techtool</p>
               </div>
             </div>
             <div className="flex flex-1 items-center justify-center px-4 md:max-w-md">
