@@ -20,20 +20,21 @@
   }
 
   .dark {
-    --background: 222 47% 11%;
+    /* Palette: #18191a, #1f1f21, #2c2c2e | Border: #37373a | Better contrast for text and highlights */
+    --background: 228 4% 10%;   /* #18191a */
     --foreground: 210 40% 98%;
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 240 2% 18%;        /* #2c2c2e */
+    --muted-foreground: 215 18% 72%;  /* Brighter for readable body text */
     --primary: 217 91% 60%;
     --primary-foreground: 222 47% 11%;
-    --accent: 217 33% 17%;
+    --accent: 240 2% 22%;       /* Slightly lighter than muted for clearer hover/active */
     --accent-foreground: 210 40% 98%;
-    --border: 217 18% 40%;
-    --input: 217 18% 40%;
+    --border: 240 2% 22%;       /* #37373a */
+    --input: 240 2% 22%;        /* #37373a */
     --ring: 217 91% 60%;
-    --card: 222 47% 11%;
+    --card: 240 4% 13%;         /* #1f1f21 */
     --card-foreground: 210 40% 98%;
-    --ring-offset: 222 47% 11%;
+    --ring-offset: 228 4% 10%;  /* #18191a */
   }
 }
 

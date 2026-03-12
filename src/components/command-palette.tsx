@@ -106,7 +106,7 @@ export function CommandPalette({ open, onOpenChange, actions, onSelect }: Comman
   return (
     <>
       <div
-        className="fixed inset-0 z-[100] bg-foreground/60 transition-opacity"
+        className="fixed inset-0 z-[100] bg-black/40 transition-opacity dark:bg-black/70"
         onClick={() => onOpenChange(false)}
         aria-hidden
       />

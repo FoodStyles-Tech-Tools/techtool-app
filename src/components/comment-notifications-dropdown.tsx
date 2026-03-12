@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { formatDistanceToNow } from "date-fns"
 import {
@@ -91,28 +92,49 @@ function NotificationItem({
 
 export function CommentNotificationsDropdown() {
   const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
   const { notifications, unreadCount, isLoading, markRead, markAllRead } = useCommentNotifications()
+
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener("click", handleClickOutside, true)
+    return () => document.removeEventListener("click", handleClickOutside, true)
+  }, [open])
 
   const handleNavigate = (notification: CommentNotification) => {
     const displayId = notification.ticket?.displayId
     if (displayId) {
       navigate(`/tickets/${displayId}`)
+      setOpen(false)
     }
   }
 
   return (
-    <details className="relative">
-      <summary className="list-none [&::-webkit-details-marker]:hidden">
-        <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0" title="Comment notifications" aria-label="Notifications">
-          <BellIcon className="h-5 w-5" />
-          {unreadCount > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-medium text-white">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          ) : null}
-        </Button>
-      </summary>
-      <div className="absolute right-0 z-30 mt-2 ml-2 w-[360px] rounded-lg border border-border bg-card p-0 shadow-md">
+    <div className="relative" ref={containerRef}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="relative h-9 w-9 p-0"
+        title="Comment notifications"
+        aria-label="Notifications"
+        aria-expanded={open}
+        onClick={() => setOpen((prev) => !prev)}
+      >
+        <BellIcon className="h-5 w-5" />
+        {unreadCount > 0 ? (
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-medium text-white">
+            {unreadCount > 99 ? "99+" : unreadCount}
+          </span>
+        ) : null}
+      </Button>
+      {open ? (
+      <div className="absolute right-0 z-30 mt-2 w-[360px] rounded-lg border border-border bg-card p-0 shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-4 py-2">
           <span className="text-sm font-semibold">Notifications</span>
           {unreadCount > 0 ? (
@@ -147,7 +169,8 @@ export function CommentNotificationsDropdown() {
           </div>
         ) : null}
       </div>
-    </details>
+      ) : null}
+    </div>
   )
 }
 

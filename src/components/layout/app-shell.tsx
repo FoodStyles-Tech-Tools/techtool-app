@@ -105,7 +105,7 @@ export function AppShell({
       {mobileSidebarOpen ? (
         <div className="fixed inset-0 z-40 flex md:hidden">
           <div
-            className="fixed inset-0 bg-foreground/40"
+            className="fixed inset-0 bg-black/40 dark:bg-black/70"
             onClick={() => setMobileSidebarOpen(false)}
           />
           <Sidebar

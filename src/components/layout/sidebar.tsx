@@ -17,7 +17,8 @@ import {
 import { cn } from "@client/lib/utils"
 import { type PermissionFlags, usePermissions } from "@client/hooks/use-permissions"
 
-const ACTIVE_ITEM_CLASS = "bg-primary/10 text-primary"
+const ACTIVE_ITEM_CLASS =
+  "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary dark:font-medium"
 
 type NavItem = {
   title: string

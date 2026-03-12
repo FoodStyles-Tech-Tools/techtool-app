@@ -115,7 +115,7 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
       {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 z-[100] bg-foreground/70 transition-opacity",
+          "fixed inset-0 z-[100] bg-black/40 transition-opacity dark:bg-black/70",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={() => onOpenChange(false)}
