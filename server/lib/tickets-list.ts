@@ -65,6 +65,8 @@ export type TicketListQuery = {
   epicId?: string | null
   sprintId?: string | null
   excludeDone: boolean
+  /** When set, exclude tickets with these statuses (overrides excludeDone for those statuses). */
+  excludeStatuses?: string[]
   excludeSubtasks: boolean
   queryText?: string | null
   cursor?: string | null
@@ -91,6 +93,15 @@ function firstNonEmpty(searchParams: URLSearchParams, keys: string[]): string | 
 function parseBoolean(searchParams: URLSearchParams, keys: string[]): boolean {
   const value = firstNonEmpty(searchParams, keys)
   return value === "true"
+}
+
+function parseExcludeStatuses(searchParams: URLSearchParams, keys: string[]): string[] {
+  const value = firstNonEmpty(searchParams, keys)
+  if (!value) return []
+  return value
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
 }
 
 function parsePositiveInt(value: string | null, fallback: number): number {
@@ -149,6 +160,7 @@ export function parseTicketListQuery(searchParams: URLSearchParams): TicketListQ
     epicId: firstNonEmpty(searchParams, ["epicId", "epic_id"]),
     sprintId: firstNonEmpty(searchParams, ["sprintId", "sprint_id"]),
     excludeDone: parseBoolean(searchParams, ["excludeDone", "exclude_done"]),
+    excludeStatuses: parseExcludeStatuses(searchParams, ["excludeStatuses", "exclude_statuses"]),
     excludeSubtasks: parseBoolean(searchParams, ["excludeSubtasks", "exclude_subtasks"]),
     queryText: firstNonEmpty(searchParams, ["q"]),
     cursor: firstNonEmpty(searchParams, ["cursor"]),
@@ -287,7 +299,9 @@ export async function fetchTicketList(
       ticketsQuery = ticketsQuery.eq("sprint_id", query.sprintId)
     }
   }
-  if (
+  if (query.excludeStatuses?.length) {
+    ticketsQuery = ticketsQuery.not("status", "in", `(${query.excludeStatuses.join(",")})`)
+  } else if (
     query.excludeDone &&
     query.status !== "completed" &&
     query.status !== "cancelled" &&

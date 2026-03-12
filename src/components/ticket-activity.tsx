@@ -13,9 +13,13 @@ import { useDepartments } from "@client/hooks/use-departments"
 import { useProjects } from "@client/hooks/use-projects"
 import { useEpics } from "@client/hooks/use-epics"
 import { useSprints } from "@client/hooks/use-sprints"
-import { formatStatusLabel } from "@shared/ticket-statuses"
+import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
+import { formatStatusLabel, normalizeStatusKey } from "@shared/ticket-statuses"
+import type { TicketStatus } from "@shared/ticket-statuses"
 import { cn } from "@client/lib/utils"
 import { richTextToPlainText } from "@shared/rich-text"
+import { StatusPill } from "@client/components/tickets/status-pill"
+import { PriorityPill } from "@client/components/tickets/priority-pill"
 
 interface TicketActivityProps {
   ticketId: string
@@ -180,7 +184,8 @@ function renderHistoryValue(
   fieldName: string | null,
   value: unknown,
   isNewValue: boolean,
-  resolveLabel: HistoryLabelResolver | null
+  resolveLabel: HistoryLabelResolver | null,
+  statusMap?: Map<string, TicketStatus>
 ) {
   const text = formatHistoryValueText(fieldName, value, resolveLabel)
 
@@ -190,6 +195,17 @@ function renderHistoryValue(
 
   const isStatus = fieldName === "status"
   const isPriority = fieldName === "priority"
+
+  if (isStatus && typeof value === "string" && statusMap) {
+    const status = statusMap.get(normalizeStatusKey(value))
+    if (status?.color) {
+      return <StatusPill label={status.label} color={status.color} />
+    }
+  }
+
+  if (isPriority && typeof value === "string") {
+    return <PriorityPill priority={value} />
+  }
 
   if (isStatus || isPriority) {
     return (
@@ -224,6 +240,7 @@ export function TicketActivity({ ticketId, displayId, initialComments, readOnly 
   const { data: projectsData = [] } = useProjects({ realtime: false })
   const { epics } = useEpics()
   const { sprints } = useSprints()
+  const { statusMap } = useTicketStatuses({ realtime: false })
 
   const resolveLabel = useMemo((): HistoryLabelResolver => {
     const usersById = new Map(usersData.map((u) => [u.id, u.name?.trim() || u.email || u.id]))
@@ -316,9 +333,9 @@ export function TicketActivity({ ticketId, displayId, initialComments, readOnly 
 
                         {showValueTransition && (
                           <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                            {renderHistoryValue(item.field_name, item.old_value, false, resolveLabel)}
+                            {renderHistoryValue(item.field_name, item.old_value, false, resolveLabel, statusMap)}
                             <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">to</span>
-                            {renderHistoryValue(item.field_name, item.new_value, true, resolveLabel)}
+                            {renderHistoryValue(item.field_name, item.new_value, true, resolveLabel, statusMap)}
                           </div>
                         )}
                       </div>

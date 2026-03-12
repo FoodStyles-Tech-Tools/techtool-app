@@ -34,7 +34,7 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
     <PageLayout>
       <EntityPageLayout
         header={
-          <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-4 pb-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-1 min-w-0">
               <div className="mb-1">
                 <Breadcrumb items={breadcrumbItems} />

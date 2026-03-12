@@ -12,6 +12,7 @@ import {
   normalizeStatusKey,
   type TicketStatus,
 } from "@shared/ticket-statuses"
+import { StatusPill } from "@client/components/tickets/status-pill"
 
 interface TicketStatusSelectProps {
   value: string
@@ -47,12 +48,20 @@ export function TicketStatusSelect({
   const currentLabel = currentStatus?.label || formatStatusLabel(value || "")
 
   return (
-    <div className={cn("relative w-[120px]", className)}>
+    <div className={cn("relative flex min-h-8 w-[120px] min-w-[120px] items-center", className)}>
+      {value && currentStatus?.color ? (
+        <StatusPill label={currentStatus.label} color={currentStatus.color} className="pointer-events-none shrink-0" />
+      ) : value ? (
+        <span className="pointer-events-none shrink-0 text-xs font-medium text-foreground">{currentLabel}</span>
+      ) : (
+        <span className="pointer-events-none text-xs text-muted-foreground">{currentLabel}</span>
+      )}
       <select
         value={value}
         onChange={(event) => onValueChange(event.target.value)}
         disabled={disabled}
-        className={cn(selectStyleInputSmPx2, triggerClassName)}
+        className={cn(selectStyleInputSmPx2, "absolute inset-0 cursor-pointer opacity-0", triggerClassName)}
+        aria-label="Status"
       >
         {selectableStatuses.map((status) => (
           <option key={status.key} value={status.key}>
@@ -60,24 +69,39 @@ export function TicketStatusSelect({
           </option>
         ))}
       </select>
-      {!value ? (
-        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-          {currentLabel}
-        </span>
-      ) : null}
     </div>
   )
 }
 
 export function TicketStatusIcon({
   status,
-  className: _className,
-  statusMap: _statusMap,
+  className,
+  statusMap: statusMapProp,
 }: {
   status: string
   className?: string
   statusMap?: Map<string, TicketStatus>
 }) {
-  void status
-  return null
+  const fromHook = useTicketStatuses({ realtime: false }).statusMap
+  const statusMap = statusMapProp ?? fromHook
+  const normalized = normalizeStatusKey(status || "")
+  const resolved = statusMap.get(normalized) ?? statusMap.get(status || "")
+  const color = resolved?.color
+
+  if (!color) {
+    return (
+      <span
+        className={cn("h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/60", className)}
+        aria-hidden
+      />
+    )
+  }
+
+  return (
+    <span
+      className={cn("h-1.5 w-1.5 shrink-0 rounded-full", className)}
+      style={{ backgroundColor: color }}
+      aria-hidden
+    />
+  )
 }

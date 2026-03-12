@@ -39,7 +39,6 @@ export function DeletedTicketsPanel() {
     <PageLayout>
       <PageHeader
         title="Deleted tickets"
-        description="Archived tickets that have been removed from the active queue."
         actions={
           <Badge variant="outline" className="text-xs">
             {rows.length} ticket{rows.length === 1 ? "" : "s"}

@@ -3,10 +3,12 @@
 /* Theme tokens: light (default) */
 @layer base {
   :root {
-    /* Jira light: N20 page #F4F5F7, white cards, N800 #172B4D, N300 #DFE1E6, selected #EBF5FF */
-    --background: 220 13% 97%;       /* #F4F5F7 N20 page */
+    /* Jira light: white page, white cards, N800 #172B4D, N300 #DFE1E6, selected #EBF5FF */
+    --background: 0 0% 100%;        /* #FFFFFF page */
+    --form-bg: 0 0% 100%;           /* form controls, same as background in light */
     --foreground: 215 30% 23%;      /* #172B4D N800 */
-    --muted: 220 13% 92%;           /* #EBECF0 N30 table header, default buttons */
+    --muted: 220 13% 92%;           /* #EBECF0 N30 default buttons */
+    --table-header: 220 14% 92%;    /* #e8eaed table header */
     --muted-foreground: 218 19% 46%; /* #6B778C N500 */
     --primary: 212 100% 40%;        /* #0052CC Atlassian blue */
     --primary-foreground: 0 0% 100%;
@@ -18,31 +20,41 @@
     --card: 0 0% 100%;              /* #FFFFFF panels */
     --card-foreground: 215 30% 23%;
     --ring-offset: 0 0% 100%;
+    --shadow-elevation-1: 0 1px 3px 0 rgba(0, 0, 0, 0.12);
+    --shadow-edge-r: 2px 0 6px -2px rgba(0, 0, 0, 0.1);
   }
 
   .dark {
-    /* Palette: #18191a, #1f1f21, #2c2c2e | Border: #37373a | Text #B6D4E8 / #C7D1DB, primary #4C9AFF */
-    --background: 228 4% 10%;        /* #18191a */
-    --foreground: 210 40% 82%;      /* #B6D4E8 primary text */
+    /* App bg #1f1f21, table header #18191b | Border #37373a | Text #dddee1, primary #4C9AFF */
+    --table-header: 220 4% 10%;      /* #18191b */
+    --background: 240 3% 12%;        /* #1f1f21 app */
+    --form-bg: 225 4% 18%;           /* #2b2c2f form controls */
+    --foreground: 224 6% 87%;        /* #dddee1 primary text */
     --muted: 240 2% 18%;            /* #2c2c2e */
     --muted-foreground: 215 25% 82%; /* #C7D1DB secondary text */
     --primary: 212 100% 65%;         /* #4C9AFF */
     --primary-foreground: 222 47% 11%;
     --accent: 240 2% 22%;            /* Slightly lighter than muted, hover */
-    --accent-foreground: 210 40% 82%;
+    --accent-foreground: 224 6% 87%;
     --border: 240 3% 22%;            /* #37373a */
     --input: 240 3% 22%;
     --ring: 212 100% 65%;
     --card: 240 3% 12%;              /* #1f1f21 */
-    --card-foreground: 210 40% 82%;
+    --card-foreground: 224 6% 87%;
     --ring-offset: 228 4% 10%;       /* #18191a */
+    --shadow-elevation-1: 0 1px 4px 0 rgba(255, 255, 255, 0.06);
+    --shadow-edge-r: 2px 0 8px -2px rgba(255, 255, 255, 0.08);
   }
 }
 
 @theme {
+  --default-border-width: 1.5px;
+  --shadow-elevation: var(--shadow-elevation-1);
   --color-background: hsl(var(--background));
+  --color-form-bg: hsl(var(--form-bg));
   --color-foreground: hsl(var(--foreground));
   --color-muted: hsl(var(--muted));
+  --color-table-header: hsl(var(--table-header));
   --color-muted-foreground: hsl(var(--muted-foreground));
   --color-primary: hsl(var(--primary));
   --color-primary-foreground: hsl(var(--primary-foreground));
@@ -135,6 +147,45 @@
   *:focus:not(:focus-visible) {
     outline: none;
   }
+
+  .shadow-edge-r {
+    box-shadow: var(--shadow-edge-r);
+  }
+}
+
+/* Navigation progress bar: sliding segment, GPU-friendly */
+@keyframes nav-progress-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.nav-progress-bar-shimmer {
+  animation: nav-progress-slide 1.2s ease-in-out infinite;
+}
+
+/* Gentle spinner pulse so it feels less static */
+@keyframes loading-spinner-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-spinner {
+  animation: loading-spin 0.8s linear infinite, loading-spinner-pulse 1.5s ease-in-out infinite;
 }
 
 .tiptap {

@@ -95,7 +95,6 @@ export default function ReportSessionsListClient() {
     <PageLayout>
       <PageHeader
         title="Guild Lead Report"
-        description="Ticket analytics by date range. Create a report session or open one to view volume, requesters, status, and lead time."
         actions={
           <Button type="button" onClick={openCreateSessionDialog}>
             <PlusIcon className="h-4 w-4" />

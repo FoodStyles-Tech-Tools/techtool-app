@@ -67,7 +67,6 @@ export function WorkspaceSprintsPanel() {
     <PageLayout>
       <PageHeader
         title="Sprints"
-        description="Sprints can be used across all projects."
         actions={
           <Button
             type="button"

@@ -1,11 +1,16 @@
 "use client"
 
+import { useMemo, useState } from "react"
 import { MagnifyingGlassIcon } from "@heroicons/react/20/solid"
 import { Input } from "@client/components/ui/input"
 import { Select } from "@client/components/ui/select"
-import { Checkbox } from "@client/components/ui/checkbox"
 import { FilterBar } from "@client/components/ui/filter-bar"
 import { FilterField } from "@client/components/ui/filter-field"
+import { StatusPill } from "@client/components/tickets/status-pill"
+import { StatusFilterDropdown } from "@client/components/tickets/status-filter-dropdown"
+import { PriorityPill } from "@client/components/tickets/priority-pill"
+import { normalizeStatusKey } from "@shared/ticket-statuses"
+import { cn } from "@client/lib/utils"
 
 interface ProjectOption {
   id: string
@@ -34,11 +39,9 @@ export interface TicketsToolbarProps {
   projectFilter: string
   setProjectFilter: (value: string) => void
   projectOptions: ProjectOption[]
-  statusFilter: string
-  setStatusFilter: (value: string) => void
   statusOptions: StatusOption[]
-  excludeDone: boolean
-  setExcludeDone: (value: boolean) => void
+  excludedStatuses: string[]
+  toggleStatusExcluded: (statusKey: string) => void
   assigneeFilter: string
   setAssigneeFilter: (value: string) => void
   reporterFilter: string
@@ -57,7 +60,11 @@ export interface TicketsToolbarProps {
   setSprintFilter: (value: string) => void
   sprintOptions: EpicSprintOption[]
   resetToolbarFilters: () => void
+  /** When provided, used instead of computing from filter values (e.g. "differs from session default"). */
+  hasActiveFilters?: boolean
   currentUserId: string | null
+  /** When provided, status filter displays as StatusPill when a status is selected. */
+  statusMap?: Map<string, { label: string; color: string }>
 }
 
 export function TicketsToolbar({
@@ -66,11 +73,9 @@ export function TicketsToolbar({
   projectFilter,
   setProjectFilter,
   projectOptions,
-  statusFilter,
-  setStatusFilter,
   statusOptions,
-  excludeDone,
-  setExcludeDone,
+  excludedStatuses,
+  toggleStatusExcluded,
   assigneeFilter,
   setAssigneeFilter,
   reporterFilter,
@@ -89,19 +94,29 @@ export function TicketsToolbar({
   setSprintFilter,
   sprintOptions,
   resetToolbarFilters,
+  hasActiveFilters: hasActiveFiltersProp,
   currentUserId,
+  statusMap,
 }: TicketsToolbarProps) {
+  const defaultExcludedSet = useMemo(
+    () => new Set(["cancelled", "completed"]),
+    []
+  )
+  const excludedSet = useMemo(() => new Set(excludedStatuses.map((s) => s.toLowerCase())), [excludedStatuses])
+  const statusFilterDiffersFromDefault =
+    excludedSet.size !== defaultExcludedSet.size ||
+    [...excludedSet].some((s) => !defaultExcludedSet.has(s))
   const hasActiveFilters =
-    searchQuery.trim() !== "" ||
-    projectFilter !== "all" ||
-    statusFilter !== "all" ||
-    assigneeFilter !== "all" ||
-    reporterFilter !== "all" ||
-    sqaFilter !== "all" ||
-    priorityFilter !== "all" ||
-    epicFilter !== "all" ||
-    sprintFilter !== "all" ||
-    excludeDone
+    hasActiveFiltersProp ??
+    (searchQuery.trim() !== "" ||
+      projectFilter !== "all" ||
+      statusFilterDiffersFromDefault ||
+      assigneeFilter !== "all" ||
+      reporterFilter !== "all" ||
+      sqaFilter !== "all" ||
+      priorityFilter !== "all" ||
+      epicFilter !== "all" ||
+      sprintFilter !== "all")
 
   return (
     <FilterBar
@@ -139,19 +154,13 @@ export function TicketsToolbar({
           </FilterField>
 
           <FilterField label="Status" id="tickets-filter-status">
-            <Select
+            <StatusFilterDropdown
               id="tickets-filter-status"
-              value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value)}
-              className="min-w-[120px]"
-            >
-              <option value="all">All</option>
-              {statusOptions.map((status) => (
-                <option key={status.id} value={status.id}>
-                  {status.label}
-                </option>
-              ))}
-            </Select>
+              statusOptions={statusOptions}
+              excludedStatuses={excludedStatuses}
+              toggleStatusExcluded={toggleStatusExcluded}
+              statusMap={statusMap}
+            />
           </FilterField>
 
           <FilterField label="Assignee" id="tickets-filter-assignee">
@@ -201,19 +210,26 @@ export function TicketsToolbar({
           </FilterField>
 
           <FilterField label="Priority" id="tickets-filter-priority">
-            <Select
-              id="tickets-filter-priority"
-              value={priorityFilter}
-              onChange={(event) => setPriorityFilter(event.target.value)}
-              className="min-w-[120px]"
-            >
-              <option value="all">All</option>
-              {priorityOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.label}
-                </option>
-              ))}
-            </Select>
+            <div className="relative flex min-h-9 min-w-[120px] items-center rounded-md border border-input bg-form-bg px-3">
+              {priorityFilter !== "all" ? (
+                <PriorityPill priority={priorityFilter} className="pointer-events-none shrink-0" />
+              ) : (
+                <span className="pointer-events-none text-sm text-muted-foreground">All</span>
+              )}
+              <Select
+                id="tickets-filter-priority"
+                value={priorityFilter}
+                onChange={(event) => setPriorityFilter(event.target.value)}
+                className={cn("absolute inset-0 cursor-pointer opacity-0")}
+              >
+                <option value="all">All</option>
+                {priorityOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </Select>
+            </div>
           </FilterField>
 
           <FilterField label="Epic" id="tickets-filter-epic">
@@ -250,14 +266,6 @@ export function TicketsToolbar({
             </Select>
           </FilterField>
 
-          <FilterField label="Hide done">
-            <Checkbox
-              id="tickets-filter-exclude-done"
-              checked={excludeDone}
-              onChange={(event) => setExcludeDone(event.target.checked)}
-              label=""
-            />
-          </FilterField>
         </>
       }
     />

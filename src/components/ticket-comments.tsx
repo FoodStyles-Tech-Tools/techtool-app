@@ -170,14 +170,22 @@ const RepliesBlock = memo(function RepliesBlock({
           See {count} {count === 1 ? "reply" : "replies"}
         </button>
       ) : (
-        <>
-          <button
-            type="button"
-            onClick={() => setExpanded(false)}
-            className="mb-2 text-xs text-muted-foreground hover:text-foreground hover:underline"
-          >
-            Hide replies
-          </button>
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="mb-2 text-xs text-muted-foreground hover:text-foreground hover:underline"
+        >
+          Hide replies
+        </button>
+      )}
+      <div
+        className={
+          expanded
+            ? "grid grid-rows-[1fr] transition-[grid-template-rows] duration-200 ease-out"
+            : "grid grid-rows-[0fr] transition-[grid-template-rows] duration-200 ease-out"
+        }
+      >
+        <div className="min-h-0 overflow-hidden">
           <div className="space-y-1">
             {replies.map((reply) => (
               <CommentRow
@@ -196,8 +204,8 @@ const RepliesBlock = memo(function RepliesBlock({
               />
             ))}
           </div>
-        </>
-      )}
+        </div>
+      </div>
     </div>
   )
 })

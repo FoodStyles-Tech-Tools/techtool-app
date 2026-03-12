@@ -25,11 +25,15 @@ describe("parseTicketListQuery", () => {
       projectId: "project-1",
       parentTicketId: "ticket-1",
       assigneeId: "user-1",
+      sqaAssigneeId: null,
       status: "open",
+      priority: null,
       departmentId: "dept-1",
       requestedById: "user-2",
+      epicId: null,
       sprintId: "sprint-1",
       excludeDone: true,
+      excludeStatuses: [],
       excludeSubtasks: true,
       queryText: "search term",
       cursor: "2026-03-10T00:00:00.000Z|ticket-9",
@@ -59,11 +63,15 @@ describe("parseTicketListQuery", () => {
       projectId: "project-2",
       parentTicketId: "ticket-2",
       assigneeId: "unassigned",
+      sqaAssigneeId: null,
       status: null,
+      priority: null,
       departmentId: "no_department",
       requestedById: "user-3",
+      epicId: null,
       sprintId: "no_sprint",
       excludeDone: false,
+      excludeStatuses: [],
       excludeSubtasks: false,
       queryText: null,
       cursor: null,
@@ -86,11 +94,15 @@ describe("parseTicketListQuery", () => {
       projectId: null,
       parentTicketId: null,
       assigneeId: null,
+      sqaAssigneeId: null,
       status: null,
+      priority: null,
       departmentId: null,
       requestedById: null,
+      epicId: null,
       sprintId: null,
       excludeDone: false,
+      excludeStatuses: [],
       excludeSubtasks: false,
       queryText: null,
       cursor: null,
@@ -100,6 +112,16 @@ describe("parseTicketListQuery", () => {
       sortDirection: null,
     })
   })
+
+  it("parses excludeStatuses from comma-separated list", async () => {
+    const { parseTicketListQuery } = await import("./tickets-list")
+    const params = new URLSearchParams({
+      excludeStatuses: "cancelled,completed",
+      exclude_done: "false",
+    })
+    expect(parseTicketListQuery(params)).toMatchObject({
+      excludeStatuses: ["cancelled", "completed"],
+      excludeDone: false,
+    })
+  })
 })
-
-

@@ -150,10 +150,7 @@ export function AuditLogPage() {
 
   return (
     <PageLayout>
-      <PageHeader
-        title="Audit Log"
-        description="All workspace activity across projects, tickets, assets, users, and roles."
-      />
+      <PageHeader title="Audit Log" />
       <DataState
         loading={isLoading}
         error={error?.message ?? null}

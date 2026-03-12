@@ -556,7 +556,6 @@ export default function ClockifyClient() {
     <PageLayout>
       <PageHeader
         title="Clockify"
-        description="Reconcile Clockify time entries with tickets and manage report sessions."
         breadcrumb={
           isSessionDetailMode && selectedSession ? (
             <Breadcrumb

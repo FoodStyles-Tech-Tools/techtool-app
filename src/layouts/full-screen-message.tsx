@@ -1,3 +1,5 @@
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
+
 export function FullScreenMessage({
   title,
   description,
@@ -21,11 +23,7 @@ export function FullScreenMessage({
 export function RouteLoadingFallback() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-muted">
-      <div
-        className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-primary"
-        aria-hidden
-      />
-      <p className="text-sm text-muted-foreground">Loading…</p>
+      <LoadingIndicator variant="block" />
     </div>
   )
 }

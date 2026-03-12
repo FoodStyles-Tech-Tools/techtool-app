@@ -1,10 +1,11 @@
 "use client"
 
 import { Link } from "react-router-dom"
-import { useDeferredValue, useMemo, useState } from "react"
-import { PlusIcon } from "@heroicons/react/20/solid"
+import { useDeferredValue, useEffect, useMemo, useState } from "react"
+import { PlusIcon, StarIcon } from "@heroicons/react/20/solid"
 import { ProjectForm } from "@client/components/forms/project-form"
 import { usePermissions } from "@client/hooks/use-permissions"
+import { useUserPreferences } from "@client/hooks/use-user-preferences"
 import { toast } from "@client/components/ui/toast"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
@@ -15,7 +16,6 @@ import { DataState } from "@client/components/ui/data-state"
 import { Button } from "@client/components/ui/button"
 import { Input } from "@client/components/ui/input"
 import { Select } from "@client/components/ui/select"
-import { Checkbox } from "@client/components/ui/checkbox"
 import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import {
   Table,
@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@client/components/ui/table"
+import { cn } from "@client/lib/utils"
 
 const ROWS_PER_PAGE = 20
 
@@ -64,12 +65,38 @@ export default function ProjectsClient({
   initialUsers,
 }: ProjectsClientProps) {
   const { flags, user: currentUser } = usePermissions()
+  const { preferences, updatePreferences, isUpdating } = useUserPreferences()
+  const currentUserId = currentUser?.id ?? null
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active")
-  const [assignedToMeOnly, setAssignedToMeOnly] = useState(false)
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [isProjectFormOpen, setProjectFormOpen] = useState(false)
   const deferredSearchQuery = useDeferredValue(searchQuery)
+
+  const pinnedIds = useMemo(
+    () => (Array.isArray(preferences.pinned_project_ids) ? preferences.pinned_project_ids : []),
+    [preferences.pinned_project_ids]
+  )
+
+  const togglePin = async (projectId: string) => {
+    const isPinned = pinnedIds.includes(projectId)
+    const next = isPinned
+      ? pinnedIds.filter((id) => id !== projectId)
+      : [...pinnedIds, projectId]
+    try {
+      await updatePreferences({ pinned_project_ids: next })
+      toast(isPinned ? "Project unpinned" : "Project pinned")
+    } catch {
+      toast("Failed to update pin")
+    }
+  }
+
+  useEffect(() => {
+    if (currentUserId) {
+      setAssigneeFilter((prev) => (prev === "all" ? currentUserId : prev))
+    }
+  }, [currentUserId])
 
   const users = useMemo(
     () =>
@@ -94,17 +121,17 @@ export default function ProjectsClient({
           return false
         }
 
-        if (assignedToMeOnly && currentUserId) {
-          const isOwner = project.owner?.id === currentUserId
-          const isRequester = project.requesters.some((requester) => requester.id === currentUserId)
-          const isCollaborator = project.collaborators.some((collaborator) => collaborator.id === currentUserId)
+        if (assigneeFilter !== "all") {
+          const isOwner = project.owner?.id === assigneeFilter
+          const isRequester = project.requesters.some((r) => r.id === assigneeFilter)
+          const isCollaborator = project.collaborators.some((c) => c.id === assigneeFilter)
           if (!isOwner && !isRequester && !isCollaborator) return false
         }
 
         return true
       })
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
-  }, [currentUser?.id, deferredSearchQuery, initialProjects, assignedToMeOnly, statusFilter])
+  }, [currentUser?.id, deferredSearchQuery, initialProjects, assigneeFilter, statusFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / ROWS_PER_PAGE))
   const startIndex = (currentPage - 1) * ROWS_PER_PAGE
@@ -115,7 +142,6 @@ export default function ProjectsClient({
     <PageLayout>
       <PageHeader
         title="Projects"
-        description="Projects organize ticket work. Open a project to review ownership and jump into its queue."
         actions={
           canCreateProjects ? (
             <Button type="button" onClick={() => setProjectFormOpen(true)}>
@@ -128,12 +154,14 @@ export default function ProjectsClient({
 
       <FilterBar
         hasActiveFilters={
-          searchQuery.trim() !== "" || statusFilter !== "active" || assignedToMeOnly
+          searchQuery.trim() !== "" ||
+          statusFilter !== "active" ||
+          (currentUserId ? assigneeFilter !== currentUserId : assigneeFilter !== "all")
         }
         onResetFilters={() => {
           setSearchQuery("")
           setStatusFilter("active")
-          setAssignedToMeOnly(false)
+          setAssigneeFilter(currentUserId ?? "all")
           setCurrentPage(1)
         }}
         filters={
@@ -165,16 +193,28 @@ export default function ProjectsClient({
                 <option value="all">All</option>
               </Select>
             </FilterField>
-            <FilterField label="Assigned to me">
-              <Checkbox
-                id="projects-assigned-to-me"
-                checked={assignedToMeOnly}
+            <FilterField label="Assignee" id="projects-assignee">
+              <Select
+                id="projects-assignee"
+                value={assigneeFilter}
                 onChange={(event) => {
-                  setAssignedToMeOnly(event.target.checked)
+                  setAssigneeFilter(event.target.value)
                   setCurrentPage(1)
                 }}
-                label=""
-              />
+                className="min-w-[140px]"
+              >
+                <option value="all">All</option>
+                {currentUserId ? (
+                  <option value={currentUserId}>Assigned to me</option>
+                ) : null}
+                {users
+                  .filter((u) => u.id !== currentUserId)
+                  .map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name || u.email}
+                    </option>
+                  ))}
+              </Select>
             </FilterField>
           </>
         }
@@ -221,6 +261,7 @@ export default function ProjectsClient({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
+                <TableHead className="h-9 w-9 py-2" aria-label="Pin" />
                 <TableHead className="h-9 py-2">Project Name</TableHead>
                 <TableHead className="h-9 py-2">Project Owner</TableHead>
                 <TableHead className="h-9 py-2">Collaborators</TableHead>
@@ -236,8 +277,24 @@ export default function ProjectsClient({
                         .map((collaborator) => collaborator.name || collaborator.email)
                         .join(", ")
                     : "-"
+                const isPinned = pinnedIds.includes(project.id)
                 return (
                   <TableRow key={project.id}>
+                    <TableCell className="w-9 py-2">
+                      <button
+                        type="button"
+                        onClick={() => togglePin(project.id)}
+                        disabled={isUpdating}
+                        className={cn(
+                          "inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50",
+                          isPinned && "text-yellow-500"
+                        )}
+                        title={isPinned ? "Unpin project" : "Pin project"}
+                        aria-label={isPinned ? "Unpin project" : "Pin project"}
+                      >
+                        <StarIcon className="h-4 w-4" />
+                      </button>
+                    </TableCell>
                     <TableCell className="py-2">
                       <Link
                         to={`/projects/${project.id}`}

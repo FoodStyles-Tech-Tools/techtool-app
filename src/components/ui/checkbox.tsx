@@ -28,7 +28,7 @@ const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
     return (
       <label
         htmlFor={id}
-        className="flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+        className="flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-form-bg px-3 text-sm text-foreground"
       >
         {input}
         {label}

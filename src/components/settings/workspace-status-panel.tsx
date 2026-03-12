@@ -163,7 +163,6 @@ export function WorkspaceStatusPanel() {
     <PageLayout>
       <PageHeader
         title="Status"
-        description="Global ticket statuses used across projects."
         actions={
           <Button type="button" size="sm" variant="outline" onClick={openCreate}>
             <PlusIcon className="h-4 w-4" />

@@ -236,7 +236,6 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
         header={
           <PageHeader
             title="Roles"
-            description="Create roles and manage permission sets across the workspace."
             actions={
               canCreateRoles ? (
                 <Button type="button" onClick={handleAddRole}>

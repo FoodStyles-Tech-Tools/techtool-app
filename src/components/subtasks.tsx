@@ -137,10 +137,10 @@ export function Subtasks({
         emptyDescription="Create subtasks here to break this work into smaller pieces."
       >
         <div className="overflow-hidden rounded-md border border-border bg-card">
-          <div className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">
+          <div className="grid grid-cols-[1.7fr_1fr_0.8fr_1fr] bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">
             <div>Work</div>
-            <div>Priority</div>
             <div>Assignee</div>
+            <div>Priority</div>
             <div>Status</div>
           </div>
 
@@ -148,7 +148,7 @@ export function Subtasks({
             {subtasks.map((subtask) => (
               <div
                 key={subtask.id}
-                className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] items-center gap-2 px-3 py-2"
+                className="grid grid-cols-[1.7fr_1fr_0.8fr_1fr] items-center gap-2 px-3 py-2"
               >
                 <Link
                   to={`/tickets/${String(subtask.displayId || subtask.id).toLowerCase()}`}
@@ -156,12 +156,6 @@ export function Subtasks({
                 >
                   {(subtask.displayId || subtask.id.slice(0, 8)).toUpperCase()} {subtask.title}
                 </Link>
-                <TicketPrioritySelect
-                  value={subtask.priority}
-                  onValueChange={(value) => handleUpdateField(subtask.id, "priority", value)}
-                  disabled={!canEditTickets || updatingId === subtask.id}
-                  triggerClassName="h-8 w-full"
-                />
                 <select
                   value={subtask.assignee?.id || UNASSIGNED_VALUE}
                   onChange={(event) =>
@@ -181,6 +175,12 @@ export function Subtasks({
                     </option>
                   ))}
                 </select>
+                <TicketPrioritySelect
+                  value={subtask.priority}
+                  onValueChange={(value) => handleUpdateField(subtask.id, "priority", value)}
+                  disabled={!canEditTickets || updatingId === subtask.id}
+                  triggerClassName="h-8 w-full"
+                />
                 <TicketStatusSelect
                   value={subtask.status}
                   onValueChange={(value) => handleUpdateField(subtask.id, "status", value)}

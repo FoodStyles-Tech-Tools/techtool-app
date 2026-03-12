@@ -50,9 +50,9 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
       const userRow = document.querySelector(`[data-user-id="${userId}"]`)
       if (userRow) {
         userRow.scrollIntoView({ behavior: "smooth", block: "center" })
-        userRow.classList.add("bg-accent")
+        userRow.classList.add("border", "border-primary", "bg-primary/10")
         setTimeout(() => {
-          userRow.classList.remove("bg-accent")
+          userRow.classList.remove("border", "border-primary", "bg-primary/10")
         }, 2000)
       }
     }
@@ -121,7 +121,6 @@ export default function UsersClient({ initialUsers, roles }: UsersClientProps) {
         header={
           <PageHeader
             title="Users"
-            description="Manage who can access the workspace and what role they hold."
             actions={
               canCreateUsers ? (
                 <Button type="button" onClick={handleAddUser}>

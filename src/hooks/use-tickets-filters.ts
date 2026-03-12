@@ -1,13 +1,15 @@
 "use client"
 
 import { useState, useCallback, useMemo, useEffect, useDeferredValue } from "react"
-import { isDoneStatus } from "@shared/ticket-statuses"
 
 export interface ProjectsFilterOption {
   id: string
   name: string
   status?: string | null
 }
+
+/** Default statuses excluded from the list (unchecked in Status multi-select). */
+export const DEFAULT_EXCLUDED_STATUSES = ["cancelled", "completed"]
 
 interface UseTicketsFiltersOptions {
   user: { id: string; role?: string | null } | null
@@ -22,7 +24,7 @@ export function useTicketsFilters({
 }: UseTicketsFiltersOptions) {
   const [searchQuery, setSearchQuery] = useState("")
   const deferredSearchQuery = useDeferredValue(searchQuery)
-  const [statusFilter, setStatusFilter] = useState<string>("all")
+  const [excludedStatuses, setExcludedStatuses] = useState<string[]>(() => [...DEFAULT_EXCLUDED_STATUSES])
   const [projectFilter, setProjectFilter] = useState<string>(initialProjectId ?? "all")
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [requestedByFilter, setRequestedByFilter] = useState<string>("all")
@@ -31,7 +33,6 @@ export function useTicketsFilters({
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [epicFilter, setEpicFilter] = useState<string>("all")
   const [sprintFilter, setSprintFilter] = useState<string>("all")
-  const [excludeDone, setExcludeDone] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
 
   // Default assignee/requestedBy by role (run once when user is ready)
@@ -44,15 +45,7 @@ export function useTicketsFilters({
     } else {
       setAssigneeFilter((prev) => (prev === "all" ? user.id : prev))
     }
-     
   }, [user?.id, user?.role])
-
-  // Reset status filter when excludeDone is on and current status is done
-  useEffect(() => {
-    if (excludeDone && statusFilter !== "all" && isDoneStatus(statusFilter)) {
-      setStatusFilter("all")
-    }
-  }, [excludeDone, statusFilter])
 
   // Clear project filter if selected project becomes inactive (unless including inactive)
   useEffect(() => {
@@ -65,8 +58,38 @@ export function useTicketsFilters({
 
   const resetPage = useCallback(() => setCurrentPage(1), [])
 
-  const setStatusFilterAndResetPage = useCallback((value: string) => {
-    setStatusFilter(value)
+  // Default assignee/requestedBy by role — same as "first load" so Reset restores session default
+  const defaultAssignee = useMemo(() => {
+    if (!user?.id || !user?.role) return "all"
+    const userRole = user.role.toLowerCase()
+    return userRole === "admin" || userRole === "member" ? user.id : "all"
+  }, [user?.id, user?.role])
+  const defaultRequestedBy = useMemo(() => {
+    if (!user?.id || !user?.role) return "all"
+    const userRole = user.role.toLowerCase()
+    return userRole === "admin" || userRole === "member" ? "all" : user.id
+  }, [user?.id, user?.role])
+
+  const resetToolbarFilters = useCallback(() => {
+    setSearchQuery("")
+    setExcludedStatuses([...DEFAULT_EXCLUDED_STATUSES])
+    setDepartmentFilter("all")
+    setRequestedByFilter(defaultRequestedBy)
+    setProjectFilter(initialProjectId ?? "all")
+    setAssigneeFilter(defaultAssignee)
+    setSqaFilter("all")
+    setPriorityFilter("all")
+    setEpicFilter("all")
+    setSprintFilter("all")
+    setCurrentPage(1)
+  }, [defaultAssignee, defaultRequestedBy, initialProjectId])
+
+  const toggleStatusExcluded = useCallback((statusKey: string) => {
+    const key = statusKey.trim().toLowerCase()
+    setExcludedStatuses((prev) => {
+      const next = prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]
+      return next
+    })
     setCurrentPage(1)
   }, [])
   const setProjectFilterAndResetPage = useCallback((value: string) => {
@@ -101,53 +124,48 @@ export function useTicketsFilters({
     setSprintFilter(value)
     setCurrentPage(1)
   }, [])
-  const setExcludeDoneAndResetPage = useCallback((value: boolean) => {
-    setExcludeDone(value)
-    setCurrentPage(1)
-  }, [])
+  const defaultProject = initialProjectId ?? "all"
 
-  const resetToolbarFilters = useCallback(() => {
-    setSearchQuery("")
-    setStatusFilter("all")
-    setDepartmentFilter("all")
-    setRequestedByFilter("all")
-    setProjectFilter("all")
-    setAssigneeFilter("all")
-    setSqaFilter("all")
-    setPriorityFilter("all")
-    setEpicFilter("all")
-    setSprintFilter("all")
-    setExcludeDone(true)
-    setCurrentPage(1)
-  }, [])
+  const defaultExcludedSet = useMemo(() => new Set(DEFAULT_EXCLUDED_STATUSES), [])
 
+  // Active = differs from session default (what user had on first load)
   const activeFilterCount = useMemo(() => {
     let count = 0
     if (searchQuery.trim()) count += 1
-    if (statusFilter !== "all") count += 1
-    if (projectFilter !== "all") count += 1
+    const excludedSet = new Set(excludedStatuses)
+    if (
+      excludedSet.size !== defaultExcludedSet.size ||
+      [...excludedSet].some((s) => !defaultExcludedSet.has(s))
+    ) {
+      count += 1
+    }
+    if (projectFilter !== defaultProject) count += 1
     if (departmentFilter !== "all") count += 1
-    if (requestedByFilter !== "all") count += 1
-    if (assigneeFilter !== "all") count += 1
+    if (requestedByFilter !== defaultRequestedBy) count += 1
+    if (assigneeFilter !== defaultAssignee) count += 1
     if (sqaFilter !== "all") count += 1
     if (priorityFilter !== "all") count += 1
     if (epicFilter !== "all") count += 1
     if (sprintFilter !== "all") count += 1
-    if (!excludeDone) count += 1
     return count
   }, [
     searchQuery,
-    statusFilter,
+    excludedStatuses,
+    defaultExcludedSet,
     projectFilter,
+    defaultProject,
     departmentFilter,
     requestedByFilter,
+    defaultRequestedBy,
     assigneeFilter,
+    defaultAssignee,
     sqaFilter,
     priorityFilter,
     epicFilter,
     sprintFilter,
-    excludeDone,
   ])
+
+  const hasActiveFilters = activeFilterCount > 0
 
   const selectedProjectLabel = useMemo(() => {
     if (projectFilter === "all") return "All Projects"
@@ -158,8 +176,8 @@ export function useTicketsFilters({
     searchQuery,
     setSearchQuery,
     deferredSearchQuery,
-    statusFilter,
-    setStatusFilter: setStatusFilterAndResetPage,
+    excludedStatuses,
+    toggleStatusExcluded,
     projectFilter,
     setProjectFilter: setProjectFilterAndResetPage,
     departmentFilter,
@@ -176,13 +194,12 @@ export function useTicketsFilters({
     setEpicFilter: setEpicFilterAndResetPage,
     sprintFilter,
     setSprintFilter: setSprintFilterAndResetPage,
-    excludeDone,
-    setExcludeDone: setExcludeDoneAndResetPage,
     currentPage,
     setCurrentPage,
     resetPage,
     resetToolbarFilters,
     activeFilterCount,
+    hasActiveFilters,
     selectedProjectLabel,
   }
 }

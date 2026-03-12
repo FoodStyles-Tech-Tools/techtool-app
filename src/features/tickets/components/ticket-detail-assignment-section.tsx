@@ -252,8 +252,8 @@ export function TicketDetailAssignmentSection({
                             key={candidate.id}
                             type="button"
                             className={cn(
-                              "flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent",
-                              isSelected && "bg-muted"
+                              "flex w-full items-start rounded-md border px-2 py-1.5 text-left text-xs transition-colors hover:bg-accent",
+                              isSelected && "border-primary bg-primary/10"
                             )}
                             onClick={() => {
                               void onParentTicketChange(candidate.id)

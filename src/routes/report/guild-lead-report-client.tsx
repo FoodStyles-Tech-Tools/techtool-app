@@ -235,10 +235,7 @@ export default function GuildLeadReportClient() {
 
   return (
     <PageLayout>
-      <PageHeader
-        title="Guild Lead Report"
-        description="Ticket analytics by date range: volume, requesters, status, response time, and lead time."
-      />
+      <PageHeader title="Guild Lead Report" />
 
       <Card className="border-border shadow-none">
         <CardHeader className="border-b border-border bg-muted">

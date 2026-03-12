@@ -150,8 +150,8 @@ export function CommandPalette({ open, onOpenChange, actions, onSelect }: Comman
                   className={cn(
                     "flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors",
                     index === selectedIndex
-                      ? "bg-accent text-accent-foreground"
-                      : "text-foreground hover:bg-muted"
+                      ? "border border-primary bg-primary/10 text-foreground"
+                      : "text-foreground hover:bg-muted border border-transparent"
                   )}
                 >
                   <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />

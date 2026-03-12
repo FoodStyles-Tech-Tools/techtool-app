@@ -46,8 +46,8 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     deferredSearchQuery,
     searchQuery,
     setSearchQuery,
-    statusFilter,
-    setStatusFilter,
+    excludedStatuses,
+    toggleStatusExcluded,
     projectFilter,
     setProjectFilter,
     assigneeFilter,
@@ -62,16 +62,14 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     setEpicFilter,
     sprintFilter,
     setSprintFilter,
-    excludeDone,
-    setExcludeDone,
     currentPage,
     setCurrentPage,
     resetToolbarFilters,
+    hasActiveFilters,
     selectedProjectLabel,
   } = filters
 
   const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
-    status: statusFilter !== "all" ? statusFilter : undefined,
     projectId: projectFilter !== "all" ? projectFilter : undefined,
     assigneeId: assigneeFilter !== "all" ? assigneeFilter : undefined,
     requestedById: requestedByFilter !== "all" ? requestedByFilter : undefined,
@@ -79,7 +77,8 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     priority: priorityFilter !== "all" ? priorityFilter : undefined,
     epicId: epicFilter !== "all" ? epicFilter : undefined,
     sprintId: sprintFilter !== "all" ? sprintFilter : undefined,
-    excludeDone,
+    excludeStatuses:
+      excludedStatuses.length > 0 ? excludedStatuses : undefined,
     excludeSubtasks: true,
     q: deferredSearchQuery.trim() || undefined,
     limit: ROWS_PER_PAGE,
@@ -88,7 +87,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
 
   const updateTicket = useUpdateTicket()
   const updateTicketWithReasonComment = useUpdateTicketWithReasonComment()
-  const { statuses: ticketStatuses } = useTicketStatuses()
+  const { statuses: ticketStatuses, statusMap } = useTicketStatuses()
 
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
   const filteredTickets = useMemo(
@@ -128,11 +127,17 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   const { epics } = useEpics()
   const { sprints } = useSprints()
   const epicOptions = useMemo(
-    () => epics.map((e) => ({ id: e.id, name: e.name })),
+    () =>
+      [...epics]
+        .map((e) => ({ id: e.id, name: e.name }))
+        .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })),
     [epics]
   )
   const sprintOptions = useMemo(
-    () => sprints.map((s) => ({ id: s.id, name: s.name })),
+    () =>
+      [...sprints]
+        .map((s) => ({ id: s.id, name: s.name }))
+        .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })),
     [sprints]
   )
 
@@ -195,7 +200,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         header={
           <PageHeader
           title="Tickets"
-          description={`Track and update work in ${selectedProjectLabel}. Keep the queue clean and move quickly.`}
           actions={
             canCreateTickets ? (
               <Button type="button" onClick={() => setTicketDialogOpen(true)}>
@@ -213,11 +217,9 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           projectFilter={projectFilter}
           setProjectFilter={setProjectFilter}
           projectOptions={projectOptions}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
           statusOptions={statusOptions}
-          excludeDone={excludeDone}
-          setExcludeDone={setExcludeDone}
+          excludedStatuses={excludedStatuses}
+          toggleStatusExcluded={toggleStatusExcluded}
           assigneeFilter={assigneeFilter}
           setAssigneeFilter={setAssigneeFilter}
           reporterFilter={requestedByFilter}
@@ -236,7 +238,9 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           setSprintFilter={setSprintFilter}
           sprintOptions={sprintOptions}
           resetToolbarFilters={resetToolbarFilters}
+          hasActiveFilters={hasActiveFilters}
           currentUserId={user?.id ?? null}
+          statusMap={statusMap}
         />
       }
     >

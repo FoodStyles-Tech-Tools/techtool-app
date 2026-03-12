@@ -93,7 +93,6 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
         header={
           <PageHeader
             title="Assets"
-            description="Maintain shared assets, owners, collaborators, and source links."
             actions={
               canCreateAssets ? (
                 <Button type="button" onClick={handleAddAsset}>

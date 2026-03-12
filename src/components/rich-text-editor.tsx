@@ -298,7 +298,7 @@ interface RichTextEditorProps {
 const toolbarButtonClassName =
   "inline-flex h-7 w-7 items-center justify-center rounded-md border border-transparent transition-colors"
 const toolbarMutedButtonClassName = "text-muted-foreground hover:bg-accent hover:text-foreground"
-const activeToolbarButtonClassName = "bg-primary/10 text-primary border-primary/30"
+const activeToolbarButtonClassName = "border border-primary bg-primary/10 text-primary"
 
 export function RichTextEditor({
   value,

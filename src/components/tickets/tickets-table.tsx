@@ -5,8 +5,11 @@ import type { Ticket } from "@shared/types"
 import { cn } from "@client/lib/utils"
 import { formatRelativeDate, getDueDateDisplay } from "@client/lib/format-dates"
 import { normalizeStatusKey, isDoneStatus, formatStatusLabel } from "@shared/ticket-statuses"
+import type { TicketStatus } from "@shared/ticket-statuses"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import { Button } from "@client/components/ui/button"
+import { StatusPill } from "@client/components/tickets/status-pill"
+import { PriorityPill } from "@client/components/tickets/priority-pill"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import {
   Table,
@@ -32,9 +35,10 @@ interface TicketRowProps {
   ticket: Ticket
   onSelectTicket: (ticketId: string) => void
   getStatusLabel: (statusKey: string) => string
+  statusMap: Map<string, TicketStatus>
 }
 
-const TicketRow = memo(function TicketRow({ ticket, onSelectTicket, getStatusLabel }: TicketRowProps) {
+const TicketRow = memo(function TicketRow({ ticket, onSelectTicket, getStatusLabel, statusMap }: TicketRowProps) {
   const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
   const requesterLabel = ticket.requestedBy?.name || ticket.requestedBy?.email || "-"
   const sqaLabel = ticket.sqaAssignee?.name || ticket.sqaAssignee?.email || "-"
@@ -42,26 +46,31 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket, getStatusLab
     ticket.dueDate,
     isDoneStatus(normalizeStatusKey(ticket.status))
   )
+  const statusInfo = statusMap.get(normalizeStatusKey(ticket.status))
 
   return (
     <TableRow>
       <TableCell className="py-2 text-sm text-muted-foreground">
         {ticket.displayId || ticket.id.slice(0, 8)}
       </TableCell>
-      <TableCell className="w-[400px] min-w-[300px] py-2">
+      <TableCell className="w-[400px] min-w-[300px] py-2 align-top">
         <button
           type="button"
           onClick={() => onSelectTicket(ticket.id)}
-          className="truncate text-sm text-left font-normal text-foreground hover:underline"
+          className="text-left text-sm font-normal text-foreground hover:underline"
         >
           {ticket.title}
         </button>
       </TableCell>
-      <TableCell className="py-2 text-sm text-foreground">
-        {getStatusLabel(ticket.status)}
+      <TableCell className="whitespace-nowrap py-2 text-sm text-foreground">
+        {statusInfo?.color ? (
+          <StatusPill label={statusInfo.label} color={statusInfo.color} />
+        ) : (
+          getStatusLabel(ticket.status)
+        )}
       </TableCell>
-      <TableCell className="py-2 text-sm capitalize text-foreground">
-        {ticket.priority}
+      <TableCell className="whitespace-nowrap py-2 text-sm text-foreground">
+        <PriorityPill priority={ticket.priority} />
       </TableCell>
       <TableCell className="py-2 text-sm text-foreground">
         {assigneeLabel}
@@ -157,6 +166,7 @@ export function TicketsTable({
               ticket={ticket}
               onSelectTicket={onSelectTicket}
               getStatusLabel={getStatusLabel}
+              statusMap={statusMap}
             />
           ))}
         </TableBody>

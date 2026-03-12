@@ -5,17 +5,22 @@ import { useQuery } from "@tanstack/react-query"
 import { Input } from "@client/components/ui/input"
 import { Badge } from "@client/components/ui/badge"
 import { cn } from "@client/lib/utils"
-import { TicketStatusIcon } from "@client/components/ticket-status-select"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import { formatStatusLabel, normalizeStatusKey } from "@shared/ticket-statuses"
 import { TicketTypeIcon } from "@client/components/ticket-type-select"
+import { StatusPill } from "@client/components/tickets/status-pill"
+import { PriorityPill } from "@client/components/tickets/priority-pill"
 
 const MAX_SEARCH_RESULTS = 50
+
+/** Segment for ticket URL: displayId when available, else ticket id (e.g. for UUID lookup). */
+export type TicketUrlSegment = string
 
 interface TicketSearchOverlayProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSelectTicket?: (ticketId: string) => void
+  /** Called with URL segment (displayId or id) so the parent can navigate to /tickets/:segment */
+  onSelectTicket?: (urlSegment: TicketUrlSegment) => void
 }
 
 export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: TicketSearchOverlayProps) {
@@ -78,12 +83,16 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
   )
   const isLoading = ticketsQuery.isLoading
 
-  const handleSelectTicket = useCallback((ticketId: string) => {
-    if (onSelectTicket) {
-      onSelectTicket(ticketId)
-    }
-    onOpenChange(false)
-  }, [onOpenChange, onSelectTicket])
+  const handleSelectTicket = useCallback(
+    (ticket: { id: string; displayId: string | null }) => {
+      if (onSelectTicket) {
+        const urlSegment = ticket.displayId ?? ticket.id
+        onSelectTicket(urlSegment)
+      }
+      onOpenChange(false)
+    },
+    [onOpenChange, onSelectTicket]
+  )
 
   // Focus input when overlay opens, restore focus when it closes
   useEffect(() => {
@@ -127,7 +136,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
       } else if (e.key === "Enter" && filteredTickets[selectedIndex]) {
         e.preventDefault()
         e.stopPropagation()
-        handleSelectTicket(filteredTickets[selectedIndex].id)
+        handleSelectTicket(filteredTickets[selectedIndex])
       } else if (e.key === "Escape") {
         e.preventDefault()
         e.stopPropagation()
@@ -166,7 +175,6 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
         <div className="mx-4 rounded-lg border border-border bg-card shadow-lg">
           {/* Search Input */}
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Find</span>
             <Input
               ref={inputRef}
               type="text"
@@ -194,7 +202,7 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
                 {filteredTickets.map((ticket, index) => (
                   <div
                     key={ticket.id}
-                    onClick={() => handleSelectTicket(ticket.id)}
+                    onClick={() => handleSelectTicket(ticket)}
                     className={cn(
                       "flex cursor-pointer items-start gap-3 rounded-md px-3 py-2.5 transition-colors",
                       index === selectedIndex
@@ -207,14 +215,17 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
                         <span className="text-xs font-mono text-muted-foreground">
                           {ticket.displayId || ticket.id.slice(0, 8)}
                         </span>
-                        <Badge variant="outline" className="text-xs flex items-center gap-1">
-                          <TicketStatusIcon status={ticket.status} statusMap={statusMap} />
-                          {statusMap.get(normalizeStatusKey(ticket.status))?.label ||
-                            formatStatusLabel(ticket.status)}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs flex items-center gap-1">
-                          {ticket.priority}
-                        </Badge>
+                        {(() => {
+                          const statusInfo = statusMap.get(normalizeStatusKey(ticket.status))
+                          return statusInfo?.color ? (
+                            <StatusPill label={statusInfo.label} color={statusInfo.color} />
+                          ) : (
+                            <Badge variant="outline" className="text-xs">
+                              {formatStatusLabel(ticket.status)}
+                            </Badge>
+                          )
+                        })()}
+                        <PriorityPill priority={ticket.priority} />
                         <Badge variant="outline" className="text-xs flex items-center gap-1">
                           <TicketTypeIcon type={ticket.type || "task"} />
                           {ticket.type || "task"}

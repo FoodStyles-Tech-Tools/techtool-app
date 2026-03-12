@@ -16,10 +16,10 @@ function getButtonClasses(variant: ButtonVariant, size: ButtonSize) {
   const variantClasses: Record<ButtonVariant, string> = {
     primary: "bg-primary text-primary-foreground hover:opacity-90",
     secondary: "bg-muted text-foreground hover:bg-muted/80",
-    outline: "border border-input bg-background text-foreground hover:bg-accent",
+    outline: "border border-input bg-form-bg text-foreground hover:bg-accent",
     ghost: "text-foreground hover:bg-accent",
     destructive: "bg-red-600 text-white hover:bg-red-700",
-    selected: "border border-input bg-background text-foreground shadow-sm",
+    selected: "border border-input bg-form-bg text-foreground shadow-sm",
   }
 
   const sizeClasses: Record<ButtonSize, string> = {

@@ -26,12 +26,6 @@ const TicketSearchOverlay = lazyComponent(
 const UserSearchOverlay = lazyComponent(
   () => import("./user-search-overlay").then((mod) => mod.UserSearchOverlay),
 )
-const TicketDetailDialog = lazyComponent(
-  () =>
-    import("@client/features/tickets/components/ticket-detail-dialog").then(
-      (mod) => mod.TicketDetailDialog
-    ),
-)
 const ProjectForm = lazyComponent(
   () => import("@client/components/forms/project-form").then((mod) => mod.ProjectForm),
 )
@@ -53,7 +47,6 @@ export function KeyboardShortcuts() {
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false)
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false)
   const [isUserSearchOverlayOpen, setIsUserSearchOverlayOpen] = useState(false)
-  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false)
   const [isDepartmentDialogOpen, setIsDepartmentDialogOpen] = useState(false)
@@ -149,11 +142,9 @@ export function KeyboardShortcuts() {
   const handleCommandPaletteSelect = (actionId: string) => {
     switch (actionId) {
       case "create-ticket":
-        if (selectedTicketId) setSelectedTicketId(null)
         setIsTicketDialogOpen(true)
         break
       case "create-project":
-        if (selectedTicketId) setSelectedTicketId(null)
         setIsProjectDialogOpen(true)
         break
       case "create-epic":
@@ -166,7 +157,6 @@ export function KeyboardShortcuts() {
         setIsSprintDialogOpen(true)
         break
       case "find-ticket":
-        if (selectedTicketId) setSelectedTicketId(null)
         setIsSearchOverlayOpen(true)
         break
       case "find-project":
@@ -250,7 +240,6 @@ export function KeyboardShortcuts() {
         e.stopPropagation()
         e.stopImmediatePropagation()
         if (!isInputElement) {
-          if (selectedTicketId) setSelectedTicketId(null)
           if (isUsersPage) {
             if (!isUserSearchOverlayOpen) setIsUserSearchOverlayOpen(true)
           } else {
@@ -349,7 +338,6 @@ export function KeyboardShortcuts() {
     isTicketDialogOpen,
     isSearchOverlayOpen,
     isUserSearchOverlayOpen,
-    selectedTicketId,
     isProjectDialogOpen,
     isEpicDialogOpen,
     isDepartmentDialogOpen,
@@ -390,7 +378,6 @@ export function KeyboardShortcuts() {
 
   useEffect(() => {
     const handleOpenSearchOverlay = () => {
-      if (selectedTicketId) setSelectedTicketId(null)
       if (isUsersPage) {
         if (!isUserSearchOverlayOpen) setIsUserSearchOverlayOpen(true)
       } else {
@@ -408,7 +395,7 @@ export function KeyboardShortcuts() {
       window.removeEventListener("open-search-overlay", handleOpenSearchOverlay)
       window.removeEventListener("open-command-palette", handleOpenCommandPalette)
     }
-  }, [isUsersPage, isSearchOverlayOpen, isUserSearchOverlayOpen, selectedTicketId, isCommandPaletteOpen])
+  }, [isUsersPage, isSearchOverlayOpen, isUserSearchOverlayOpen, isCommandPaletteOpen])
 
   // Don't render dialogs if not authenticated
   if (isPending || !session) {
@@ -430,9 +417,9 @@ export function KeyboardShortcuts() {
         <TicketSearchOverlay
           open={isSearchOverlayOpen}
           onOpenChange={setIsSearchOverlayOpen}
-          onSelectTicket={(ticketId) => {
-            setSelectedTicketId(ticketId)
+          onSelectTicket={(urlSegment) => {
             setIsSearchOverlayOpen(false)
+            navigate(`/tickets/${encodeURIComponent(urlSegment)}`)
           }}
         />
       ) : null}
@@ -441,17 +428,6 @@ export function KeyboardShortcuts() {
           open={isUserSearchOverlayOpen}
           onOpenChange={setIsUserSearchOverlayOpen}
           onSelectUser={handleSelectUser}
-        />
-      ) : null}
-      {selectedTicketId ? (
-        <TicketDetailDialog
-          ticketId={selectedTicketId}
-          open={!!selectedTicketId}
-          onOpenChange={(open) => {
-            if (!open) {
-              setSelectedTicketId(null)
-            }
-          }}
         />
       ) : null}
       {canCreateProjects && (

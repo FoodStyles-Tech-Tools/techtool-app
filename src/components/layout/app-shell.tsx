@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { cn } from "@client/lib/utils"
+import { NavigationProgressBar } from "@client/components/ui/navigation-progress-bar"
 import { Bars3Icon, Bars3CenterLeftIcon, SunIcon, MoonIcon, MagnifyingGlassIcon } from "@heroicons/react/20/solid"
 import { Sidebar } from "./sidebar"
 import { PermissionsBootstrap } from "@client/components/permissions-bootstrap"
@@ -10,6 +12,32 @@ import { signOut, useSession } from "@client/lib/auth-client"
 import { useSignOutOverlay } from "@client/components/signout-overlay"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "techtool.sidebarCollapsed"
+
+function MobileSidebarOverlay({ onClose }: { onClose: () => void }) {
+  const [entered, setEntered] = useState(false)
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setEntered(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+  return (
+    <div className="fixed inset-0 z-40 flex md:hidden">
+      <div
+        className={cn(
+          "fixed inset-0 bg-black/40 dark:bg-black/70 transition-opacity duration-200",
+          entered ? "opacity-100" : "opacity-0"
+        )}
+        onClick={onClose}
+      />
+      <Sidebar
+        className={cn(
+          "relative z-50 h-full w-64 shrink-0 bg-card shadow-xl transition-transform duration-200 ease-out",
+          entered ? "translate-x-0" : "-translate-x-full"
+        )}
+        onNavigate={onClose}
+      />
+    </div>
+  )
+}
 
 type PermissionsBootstrapPayload = {
   user: {
@@ -98,33 +126,31 @@ export function AppShell({
   }
 
   return (
-    <div className="flex min-h-screen bg-muted text-foreground">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      <NavigationProgressBar />
       {permissionsBootstrap ? <PermissionsBootstrap payload={permissionsBootstrap} /> : null}
 
       {/* Mobile sidebar + overlay */}
       {mobileSidebarOpen ? (
-        <div className="fixed inset-0 z-40 flex md:hidden">
-          <div
-            className="fixed inset-0 bg-black/40 dark:bg-black/70"
-            onClick={() => setMobileSidebarOpen(false)}
-          />
-          <Sidebar
-            className="relative z-50 h-full w-64 shrink-0 bg-card shadow-xl"
-            onNavigate={() => setMobileSidebarOpen(false)}
-          />
-        </div>
+        <MobileSidebarOverlay
+          onClose={() => setMobileSidebarOpen(false)}
+        />
       ) : null}
 
-      {/* Desktop sidebar */}
-      {desktopSidebarCollapsed ? null : (
+      {/* Desktop sidebar: always mounted, width transition for collapse/expand; does not scroll */}
+      <div
+        className={`hidden shrink-0 overflow-hidden transition-[width] duration-200 ease-out md:block ${
+          desktopSidebarCollapsed ? "w-0" : "w-60"
+        }`}
+      >
         <Sidebar
           onToggleCollapsed={() => setDesktopSidebarCollapsed(true)}
-          className="sticky top-0 hidden h-screen w-60 shrink-0 md:block"
+          className="h-full w-60 shrink-0"
         />
-      )}
+      </div>
 
-      <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 border-b border-border bg-card">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <header className="z-30 shrink-0 bg-card shadow-elevation">
           <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
             <div className="flex items-center gap-2">
               {desktopSidebarCollapsed ? (
@@ -167,7 +193,7 @@ export function AppShell({
               <button
                 type="button"
                 onClick={openCommandPalette}
-                className="flex w-full items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="flex w-full items-center gap-2 rounded-lg border border-border/40 bg-muted/50 px-3 py-2 text-left text-sm text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 aria-label={`Search commands (${searchShortcutLabel})`}
               >
                 <MagnifyingGlassIcon className="h-4 w-4 shrink-0" />
@@ -203,7 +229,7 @@ export function AppShell({
             </div>
           </div>
         </header>
-        <main className="min-h-0">
+        <main className="min-h-0 flex-1 overflow-y-auto">
           <div className="px-4 py-4 sm:px-6">
             {children}
           </div>

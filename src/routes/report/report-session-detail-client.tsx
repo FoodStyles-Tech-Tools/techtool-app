@@ -166,7 +166,6 @@ export default function ReportSessionDetailClient() {
     <PageLayout>
       <PageHeader
         title={pageTitle}
-        description="Ticket analytics for this report session. Update the date range and save to refresh charts."
         actions={
           <>
             <Button

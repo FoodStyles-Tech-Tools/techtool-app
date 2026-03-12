@@ -77,7 +77,6 @@ export function WorkspaceEpicsPanel() {
     <PageLayout>
       <PageHeader
         title="Epics"
-        description="Epics can be used across all projects."
         actions={
           <Button type="button" size="sm" variant="outline" onClick={() => { setEditingEpic(null); setDialogOpen(true) }}>
             <PlusIcon className="h-4 w-4" />

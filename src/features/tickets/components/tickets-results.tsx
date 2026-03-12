@@ -2,6 +2,7 @@
 
 import type { ComponentProps } from "react"
 import { TicketsTable } from "@client/components/tickets/tickets-table"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import type { Ticket } from "@shared/types"
 
 type TicketsResultsProps = {
@@ -18,7 +19,11 @@ export function TicketsResults({
   tableProps,
 }: TicketsResultsProps) {
   if (loading) {
-    return <div className="rounded-md border border-border" />
+    return (
+      <div className="flex min-h-[200px] items-center justify-center rounded-md border border-border bg-card">
+        <LoadingIndicator variant="block" label="Loading tickets…" />
+      </div>
+    )
   }
 
   if (filteredTickets.length === 0) {

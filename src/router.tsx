@@ -21,16 +21,24 @@ import { TicketDetailRoute } from "@client/features/tickets/components/ticket-de
 import { normalizeProject } from "@shared/types/project-mappers"
 import type { ProjectDto } from "@shared/types/api/projects"
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 async function ticketDetailLoader({
   params,
 }: {
   params: { displayId?: string }
 }) {
-  const displayId = params.displayId
-  if (!displayId) return { ticketId: null as string | null }
+  const segment = params.displayId
+  if (!segment) return { ticketId: null as string | null }
   try {
+    if (UUID_REGEX.test(segment)) {
+      const data = await requestJson<{ ticket: { id: string } }>(
+        `/api/v2/tickets/${encodeURIComponent(segment)}?view=detail`
+      )
+      return { ticketId: data?.ticket?.id ?? null }
+    }
     const data = await requestJson<{ ticket: { id: string } }>(
-      `/api/tickets/by-display-id/${encodeURIComponent(displayId)}`
+      `/api/tickets/by-display-id/${encodeURIComponent(segment)}`
     )
     return { ticketId: data.ticket?.id ?? null }
   } catch {
