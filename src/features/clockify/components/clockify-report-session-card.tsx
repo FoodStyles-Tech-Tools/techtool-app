@@ -3,7 +3,11 @@
 import type { Dispatch, SetStateAction } from "react"
 import { Badge } from "@client/components/ui/badge"
 import { Input } from "@client/components/ui/input"
+import { Select } from "@client/components/ui/select"
+import { FilterBar } from "@client/components/ui/filter-bar"
+import { FilterField } from "@client/components/ui/filter-field"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
+import { cn } from "@client/lib/utils"
 import {
   Table,
   TableBody,
@@ -84,49 +88,68 @@ export function ClockifyReportSessionCard({
     )
   }
 
+  const hasActiveFilters =
+    (selectedUser && selectedUser !== "all") || !!selectedProject || !!selectedTask
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
-        <select
-            id="clockify-filter-user"
-            value={selectedUser || "all"}
-            onChange={(e) => setSelectedUser(e.target.value)}
-            className={nativeSelectClassName}
-          >
-            <option value="all">All</option>
-            {userOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        <select
-            id="clockify-filter-project"
-            value={selectedProject || ""}
-            onChange={(e) => setSelectedProject(e.target.value)}
-            className={nativeSelectClassName}
-          >
-            <option value="">All Project</option>
-            {sessionProjectOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        <select
-            id="clockify-filter-task"
-            value={selectedTask || ""}
-            onChange={(e) => setSelectedTask(e.target.value)}
-            className={nativeSelectClassName}
-          >
-            <option value="">All Task</option>
-            {sessionTaskOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-      </div>
+      <FilterBar
+        hasActiveFilters={hasActiveFilters}
+        onResetFilters={() => {
+          setSelectedUser("all")
+          setSelectedProject("")
+          setSelectedTask("")
+        }}
+        filters={
+          <>
+            <FilterField label="User" id="clockify-filter-user">
+              <Select
+                id="clockify-filter-user"
+                value={selectedUser || "all"}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                className={cn("min-w-[120px]", nativeSelectClassName)}
+              >
+                <option value="all">All</option>
+                {userOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </Select>
+            </FilterField>
+            <FilterField label="Project" id="clockify-filter-project">
+              <Select
+                id="clockify-filter-project"
+                value={selectedProject || ""}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                className={cn("min-w-[120px]", nativeSelectClassName)}
+              >
+                <option value="">All</option>
+                {sessionProjectOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </Select>
+            </FilterField>
+            <FilterField label="Task" id="clockify-filter-task">
+              <Select
+                id="clockify-filter-task"
+                value={selectedTask || ""}
+                onChange={(e) => setSelectedTask(e.target.value)}
+                className={cn("min-w-[120px]", nativeSelectClassName)}
+              >
+                <option value="">All</option>
+                {sessionTaskOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </Select>
+            </FilterField>
+          </>
+        }
+      />
 
       {reportEntries.length === 0 ? (
         <div className="rounded-md border border-border bg-card p-8 text-center shadow-sm">

@@ -38,5 +38,6 @@ export function buildPermissionFlags(permissions: Permission[] = []): Permission
     canManageStatus: has("status", "manage"),
     canManageSettings: has("settings", "manage"),
     canAccessSettings,
+    canViewAuditLog: has("audit_log", "view"),
   }
 }

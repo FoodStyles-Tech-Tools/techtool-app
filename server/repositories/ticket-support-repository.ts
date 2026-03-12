@@ -60,7 +60,7 @@ export function findTicketById(supabase: SupabaseClientLike, ticketId: string) {
 
 export function listTicketActivity(supabase: SupabaseClientLike, ticketId: string) {
   return supabase
-    .from("ticket_activity")
+    .from("audit_log")
     .select(
       `
       id,
@@ -72,7 +72,7 @@ export function listTicketActivity(supabase: SupabaseClientLike, ticketId: strin
       new_value,
       metadata,
       created_at,
-      actor:users!ticket_activity_actor_id_fkey(id, name, email, avatar_url)
+      actor:users!audit_log_actor_id_fkey(id, name, email, avatar_url)
     `
     )
     .eq("ticket_id", ticketId)

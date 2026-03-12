@@ -15,7 +15,8 @@
     "ci": "npm run lint && npm run check:boundaries && npm test",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:db": "node scripts/test-connection.js"
+    "test:db": "node scripts/test-connection.js",
+    "backup:db": "node scripts/backup-database.js"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

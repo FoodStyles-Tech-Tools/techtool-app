@@ -15,6 +15,7 @@ import { ProjectDetailRoute } from "@client/routes/projects/project-detail-route
 import { AssetsPage } from "@client/routes/assets/assets-page"
 import { UsersPage } from "@client/routes/admin/users/users-page"
 import { RolesPage } from "@client/routes/admin/roles/roles-page"
+import { AuditLogPage } from "@client/routes/audit-log/audit-log-page"
 import { TicketsPage } from "@client/features/tickets/components/tickets-page"
 import { TicketDetailRoute } from "@client/features/tickets/components/ticket-detail-route"
 import { normalizeProject } from "@shared/types/project-mappers"
@@ -131,6 +132,7 @@ export const router = createBrowserRouter([
           { path: "assets", element: <AssetsPage /> },
           { path: "users", element: <UsersPage /> },
           { path: "roles", element: <RolesPage /> },
+          { path: "audit-log", element: <AuditLogPage /> },
           { path: "status", element: <WorkspaceStatusPanel /> },
           { path: "epics", element: <WorkspaceEpicsPanel /> },
           { path: "sprints", element: <WorkspaceSprintsPanel /> },

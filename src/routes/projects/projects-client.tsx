@@ -9,6 +9,7 @@ import { toast } from "@client/components/ui/toast"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
 import { FilterBar } from "@client/components/ui/filter-bar"
+import { FilterField } from "@client/components/ui/filter-field"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import { DataState } from "@client/components/ui/data-state"
 import { Button } from "@client/components/ui/button"
@@ -126,51 +127,56 @@ export default function ProjectsClient({
       />
 
       <FilterBar
+        hasActiveFilters={
+          searchQuery.trim() !== "" || statusFilter !== "active" || assignedToMeOnly
+        }
+        onResetFilters={() => {
+          setSearchQuery("")
+          setStatusFilter("active")
+          setAssignedToMeOnly(false)
+          setCurrentPage(1)
+        }}
         filters={
           <>
-            <div className="w-full min-w-[220px] md:w-72">
-              <Input
-                placeholder="Search projects..."
-                value={searchQuery}
+            <FilterField label="Search" id="projects-search">
+              <div className="w-full min-w-[200px] md:w-72">
+                <Input
+                  id="projects-search"
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(event) => {
+                    setSearchQuery(event.target.value)
+                    setCurrentPage(1)
+                  }}
+                />
+              </div>
+            </FilterField>
+            <FilterField label="Status" id="projects-status">
+              <Select
+                id="projects-status"
+                value={statusFilter}
                 onChange={(event) => {
-                  setSearchQuery(event.target.value)
+                  setStatusFilter(event.target.value as "active" | "all")
                   setCurrentPage(1)
                 }}
+                className="min-w-[120px]"
+              >
+                <option value="active">Active only</option>
+                <option value="all">All</option>
+              </Select>
+            </FilterField>
+            <FilterField label="Assigned to me">
+              <Checkbox
+                id="projects-assigned-to-me"
+                checked={assignedToMeOnly}
+                onChange={(event) => {
+                  setAssignedToMeOnly(event.target.checked)
+                  setCurrentPage(1)
+                }}
+                label=""
               />
-            </div>
-            <Select
-              value={statusFilter}
-              onChange={(event) => {
-                setStatusFilter(event.target.value as "active" | "all")
-                setCurrentPage(1)
-              }}
-            >
-              <option value="active">Active only</option>
-              <option value="all">All projects</option>
-            </Select>
-            <Checkbox
-              checked={assignedToMeOnly}
-              onChange={(event) => {
-                setAssignedToMeOnly(event.target.checked)
-                setCurrentPage(1)
-              }}
-              label="Assigned to me"
-            />
+            </FilterField>
           </>
-        }
-        actions={
-          <Button
-            variant="outline"
-            type="button"
-            onClick={() => {
-              setSearchQuery("")
-              setStatusFilter("active")
-              setAssignedToMeOnly(false)
-              setCurrentPage(1)
-            }}
-          >
-            Reset
-          </Button>
         }
       />
 

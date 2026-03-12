@@ -79,6 +79,7 @@ const settingsParents: SettingsParent[] = [
     children: [
       { title: "Users", href: "/users", flag: "canViewUsers" },
       { title: "Roles", href: "/roles", flag: "canViewRoles" },
+      { title: "Audit Log", href: "/audit-log", flag: "canViewAuditLog" },
     ],
   },
   {

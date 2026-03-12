@@ -8,6 +8,11 @@ import { DataState } from "@client/components/ui/data-state"
 import { TicketComments } from "@client/components/ticket-comments"
 import { useTicketActivity, type TicketActivityItem } from "@client/hooks/use-ticket-activity"
 import type { TicketComment } from "@client/hooks/use-ticket-comments"
+import { useUsers } from "@client/hooks/use-users"
+import { useDepartments } from "@client/hooks/use-departments"
+import { useProjects } from "@client/hooks/use-projects"
+import { useEpics } from "@client/hooks/use-epics"
+import { useSprints } from "@client/hooks/use-sprints"
 import { formatStatusLabel } from "@shared/ticket-statuses"
 import { cn } from "@client/lib/utils"
 import { richTextToPlainText } from "@shared/rich-text"
@@ -118,7 +123,14 @@ function isEmptyValue(value: unknown): boolean {
   )
 }
 
-function formatHistoryValueText(fieldName: string | null, value: unknown): string {
+/** Resolve a field's UUID to a display label (e.g. assignee_id → user name). Returns null if not resolved. */
+type HistoryLabelResolver = (fieldName: string, id: string) => string | null
+
+function formatHistoryValueText(
+  fieldName: string | null,
+  value: unknown,
+  resolveLabel: HistoryLabelResolver | null
+): string {
   if (isEmptyValue(value)) return "None"
 
   if (typeof value === "string") {
@@ -133,6 +145,10 @@ function formatHistoryValueText(fieldName: string | null, value: unknown): strin
       return sentenceCase(trimmed.toLowerCase())
     }
 
+    if (fieldName === "type") {
+      return sentenceCase(trimmed.toLowerCase())
+    }
+
     if (fieldName === "due_date" || fieldName?.endsWith("_at")) {
       const parsed = new Date(trimmed)
       if (!Number.isNaN(parsed.getTime())) {
@@ -140,7 +156,9 @@ function formatHistoryValueText(fieldName: string | null, value: unknown): strin
       }
     }
 
-    if (fieldName?.endsWith("_id") && /^[0-9a-f]{8}-/i.test(trimmed)) {
+    if (fieldName?.endsWith("_id") && /^[0-9a-f-]{36}$/i.test(trimmed)) {
+      const label = resolveLabel?.(fieldName, trimmed) ?? null
+      if (label) return label
       return `${trimmed.slice(0, 8)}...`
     }
 
@@ -158,8 +176,13 @@ function formatHistoryValueText(fieldName: string | null, value: unknown): strin
   return asShortText(value)
 }
 
-function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue: boolean) {
-  const text = formatHistoryValueText(fieldName, value)
+function renderHistoryValue(
+  fieldName: string | null,
+  value: unknown,
+  isNewValue: boolean,
+  resolveLabel: HistoryLabelResolver | null
+) {
+  const text = formatHistoryValueText(fieldName, value, resolveLabel)
 
   if (text === "None") {
     return <span className="text-sm text-muted-foreground">None</span>
@@ -187,12 +210,36 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
   return <span className="text-sm text-foreground">{text}</span>
 }
 
+const USER_ID_FIELDS = new Set(["assignee_id", "sqa_assignee_id", "requested_by_id"])
+
 export function TicketActivity({ ticketId, displayId, initialComments, readOnly = false }: TicketActivityProps) {
   const panelId = useId()
   const [activeTab, setActiveTab] = useState<ActivityTab>("comments")
   const { data, isLoading, error } = useTicketActivity(ticketId, {
     enabled: !!ticketId && activeTab === "history",
   })
+
+  const { data: usersData = [] } = useUsers({ realtime: false })
+  const { departments } = useDepartments({ realtime: false })
+  const { data: projectsData = [] } = useProjects({ realtime: false })
+  const { epics } = useEpics()
+  const { sprints } = useSprints()
+
+  const resolveLabel = useMemo((): HistoryLabelResolver => {
+    const usersById = new Map(usersData.map((u) => [u.id, u.name?.trim() || u.email || u.id]))
+    const departmentsById = new Map(departments.map((d) => [d.id, d.name]))
+    const projectsById = new Map(projectsData.map((p) => [p.id, p.name]))
+    const epicsById = new Map(epics.map((e) => [e.id, e.name]))
+    const sprintsById = new Map(sprints.map((s) => [s.id, s.name]))
+    return (fieldName: string, id: string) => {
+      if (USER_ID_FIELDS.has(fieldName)) return usersById.get(id) ?? null
+      if (fieldName === "department_id") return departmentsById.get(id) ?? null
+      if (fieldName === "project_id") return projectsById.get(id) ?? null
+      if (fieldName === "epic_id") return epicsById.get(id) ?? null
+      if (fieldName === "sprint_id") return sprintsById.get(id) ?? null
+      return null
+    }
+  }, [usersData, departments, projectsData, epics, sprints])
 
   const activities = useMemo(() => data?.activities ?? [], [data?.activities])
   const historyItems = useMemo(
@@ -269,9 +316,9 @@ export function TicketActivity({ ticketId, displayId, initialComments, readOnly 
 
                         {showValueTransition && (
                           <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                            {renderHistoryValue(item.field_name, item.old_value, false)}
+                            {renderHistoryValue(item.field_name, item.old_value, false, resolveLabel)}
                             <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">to</span>
-                            {renderHistoryValue(item.field_name, item.new_value, true)}
+                            {renderHistoryValue(item.field_name, item.new_value, true, resolveLabel)}
                           </div>
                         )}
                       </div>

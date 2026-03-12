@@ -28,6 +28,7 @@ export type PermissionFlags = {
   canManageStatus: boolean
   canManageSettings: boolean
   canAccessSettings: boolean
+  canViewAuditLog: boolean
 }
 
 export type PermissionSnapshot = {

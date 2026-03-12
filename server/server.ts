@@ -6,6 +6,7 @@ import path from "node:path"
 import { getServerPort } from "@server/lib/server-env"
 import { createRequestLoggingMiddleware } from "@server/http/request-logger"
 import { createAssetsRouter } from "@server/routes/assets-router"
+import { createAuditLogRouter } from "@server/routes/audit-log-router"
 import { createAuthRouter } from "@server/routes/auth-router"
 import { createClockifyRouter } from "@server/routes/clockify-router"
 import { createInternalRouter } from "@server/routes/internal-router"
@@ -30,6 +31,7 @@ app.use(express.json({ limit: "5mb" }))
 app.use(express.urlencoded({ extended: true }))
 
 app.use(createAuthRouter())
+app.use(createAuditLogRouter())
 app.use(createAssetsRouter())
 app.use(createClockifyRouter())
 app.use(createInternalRouter())

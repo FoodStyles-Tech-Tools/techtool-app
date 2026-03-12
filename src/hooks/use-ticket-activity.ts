@@ -31,7 +31,7 @@ export function useTicketActivity(ticketId: string, options?: { enabled?: boolea
   const enabled = !!ticketId && (options?.enabled !== false)
 
   useRealtimeSubscription({
-    table: "ticket_activity",
+    table: "audit_log",
     filter: `ticket_id=eq.${ticketId}`,
     enabled,
     onInsert: () => {

@@ -23,7 +23,7 @@ import { Badge } from "@client/components/ui/badge"
 import { toast } from "@client/components/ui/toast"
 import type { Role, RolePermission } from "@shared/types"
 
-const resources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status"] as const
+const resources = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status", "audit_log"] as const
 const actions = ["view", "create", "edit", "delete", "manage"] as const
 
 const resourceLabels: Record<string, string> = {
@@ -35,6 +35,7 @@ const resourceLabels: Record<string, string> = {
   assets: "Assets",
   clockify: "Clockify",
   status: "Status",
+  audit_log: "Audit Log",
 }
 
 type RolesClientProps = {

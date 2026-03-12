@@ -20,7 +20,7 @@ export type PermissionsUser = {
   permissions: Permission[]
 }
 
-const ALL_RESOURCES = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status"] as const
+const ALL_RESOURCES = ["projects", "tickets", "users", "roles", "settings", "assets", "clockify", "status", "audit_log"] as const
 const ALL_ACTIONS = ["view", "create", "edit", "delete", "manage"] as const
 const PERMISSIONS_CACHE_TTL_MS = 60 * 1000
 

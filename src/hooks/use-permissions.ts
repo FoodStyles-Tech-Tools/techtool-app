@@ -124,8 +124,16 @@ export function usePermissions() {
       return
     }
 
+    // If cached flags are from an older app version (missing new keys), refetch so we get full shape
+    const defaultFlags = buildPermissionFlags()
+    const hasFullShape = cache.flags && "canViewAuditLog" in cache.flags
+    if (!hasFullShape) {
+      void refresh()
+      return
+    }
+
     setUser(cache.user ?? null)
-    setFlags(cache.flags ?? buildPermissionFlags(cache.user?.permissions))
+    setFlags({ ...defaultFlags, ...cache.flags })
     setLoading(false)
 
     const isStale = Date.now() - cache.ts > CACHE_TTL_MS

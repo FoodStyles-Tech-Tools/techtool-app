@@ -140,12 +140,12 @@ export function DateTimePicker({
   }
 
   return (
-    <div ref={panelRef} className="relative inline-flex">
+    <div ref={panelRef} className="relative flex w-full min-w-0">
       <Button
         type="button"
         variant="outline"
         className={cn(
-          "h-7 w-[180px] justify-start text-left text-xs font-normal",
+          "h-7 w-full min-w-0 justify-start text-left text-xs font-normal",
           !value && !renderTriggerContent && "text-muted-foreground",
           className
         )}

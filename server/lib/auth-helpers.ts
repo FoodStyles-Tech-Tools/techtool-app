@@ -10,6 +10,7 @@ export type PermissionResource =
   | "assets"
   | "clockify"
   | "status"
+  | "audit_log"
 
 export type PermissionAction = "view" | "create" | "edit" | "delete" | "manage"
 
