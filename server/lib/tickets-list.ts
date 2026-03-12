@@ -1,8 +1,45 @@
 import { sanitizeLinkArray } from "@shared/links"
 import type { SortColumn } from "@shared/ticket-constants"
-import type { TicketListItem, TicketPerson } from "@shared/types/api/tickets"
+import type {
+  TicketListItem,
+  TicketPerson,
+  TicketRelation,
+  TicketEpicRelation,
+  TicketSprintRelation,
+} from "@shared/types/api/tickets"
+import type { ServerSupabaseClient } from "@server/lib/supabase"
 
-type SupabaseLike = any
+type UserRow = { id: string; name: string | null; email: string; avatar_url?: string | null }
+type DepartmentRow = { id: string; name: string }
+type TicketListRawRow = {
+  id: string
+  display_id: string | null
+  parent_ticket_id: string | null
+  title: string
+  due_date: string | null
+  status: string
+  priority: string
+  type: string | null
+  links: string[] | null
+  reason: unknown
+  assigned_at: string | null
+  sqa_assigned_at: string | null
+  started_at: string | null
+  completed_at: string | null
+  created_at: string
+  updated_at: string
+  project: TicketRelation | TicketRelation[] | null
+  assignee: UserRow | UserRow[] | null
+  sqa_assignee: UserRow | UserRow[] | null
+  requested_by: UserRow | UserRow[] | null
+  department: DepartmentRow | DepartmentRow[] | null
+  epic: TicketEpicRelation | TicketEpicRelation[] | null
+  sprint: TicketSprintRelation | TicketSprintRelation[] | null
+}
+
+interface QueryWithOrder {
+  order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }): QueryWithOrder
+}
 
 type TicketListCursor = {
   createdAt: string
@@ -80,22 +117,18 @@ function normalizeRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? value[0] ?? null : value
 }
 
-function normalizeUser(
-  value: any
-): { id: string; name: string | null; email: string; avatar_url?: string | null } | null {
+function normalizeUser(value: UserRow | UserRow[] | null | undefined): UserRow | null {
   if (!value) return null
-  return Array.isArray(value) ? value[0] || null : value
+  return Array.isArray(value) ? value[0] ?? null : value
 }
 
-function toTicketPerson(
-  user: { id: string; name: string | null; email: string; avatar_url?: string | null } | null
-): TicketPerson | null {
+function toTicketPerson(user: UserRow | null): TicketPerson | null {
   if (!user) return null
   return {
     id: user.id,
     name: user.name,
     email: user.email,
-    image: user.avatar_url || null,
+    image: user.avatar_url ?? null,
   }
 }
 
@@ -131,31 +164,35 @@ export function parseTicketListQuery(searchParams: URLSearchParams): TicketListQ
   }
 }
 
-function applyTicketOrdering(query: any, sortBy?: SortColumn | null, sortDirection?: "asc" | "desc" | null) {
+function applyTicketOrdering<T extends QueryWithOrder>(
+  query: T,
+  sortBy?: SortColumn | null,
+  sortDirection?: "asc" | "desc" | null
+): T {
   const ascending = sortDirection === "asc"
 
   switch (sortBy) {
     case "id":
-      return query.order("display_id", { ascending }).order("id", { ascending })
+      return query.order("display_id", { ascending }).order("id", { ascending }) as T
     case "title":
-      return query.order("title", { ascending }).order("id", { ascending: false })
+      return query.order("title", { ascending }).order("id", { ascending: false }) as T
     case "due_date":
-      return query.order("due_date", { ascending, nullsFirst: false }).order("id", { ascending: false })
+      return query.order("due_date", { ascending, nullsFirst: false }).order("id", { ascending: false }) as T
     case "type":
-      return query.order("type", { ascending }).order("id", { ascending: false })
+      return query.order("type", { ascending }).order("id", { ascending: false }) as T
     case "status":
-      return query.order("status", { ascending }).order("id", { ascending: false })
+      return query.order("status", { ascending }).order("id", { ascending: false }) as T
     case "priority":
-      return query.order("priority", { ascending }).order("id", { ascending: false })
+      return query.order("priority", { ascending }).order("id", { ascending: false }) as T
     case "sqa_assigned_at":
-      return query.order("sqa_assigned_at", { ascending, nullsFirst: false }).order("id", { ascending: false })
+      return query.order("sqa_assigned_at", { ascending, nullsFirst: false }).order("id", { ascending: false }) as T
     default:
-      return query.order("created_at", { ascending: false }).order("id", { ascending: false })
+      return query.order("created_at", { ascending: false }).order("id", { ascending: false }) as T
   }
 }
 
 export async function fetchTicketList(
-  supabase: SupabaseLike,
+  supabase: ServerSupabaseClient,
   query: TicketListQuery
 ): Promise<TicketListResult> {
   const limit = query.limit ? Math.min(Math.max(query.limit, 1), 100) : null
@@ -311,7 +348,7 @@ export async function fetchTicketList(
     }
   }
 
-  const items: TicketListItem[] = (pageRows as any[]).map((row) => {
+  const items: TicketListItem[] = (pageRows as TicketListRawRow[]).map((row) => {
     const assignee = normalizeUser(row.assignee)
     const sqaAssignee = normalizeUser(row.sqa_assignee)
     const requestedBy = normalizeUser(row.requested_by)
@@ -333,13 +370,13 @@ export async function fetchTicketList(
       completed_at: row.completed_at ?? null,
       created_at: row.created_at,
       updated_at: row.updated_at,
-      project: normalizeRelation(row.project),
+      project: normalizeRelation(row.project) as TicketListItem["project"],
       assignee: toTicketPerson(assignee),
       sqa_assignee: toTicketPerson(sqaAssignee),
       requested_by: toTicketPerson(requestedBy),
-      department: normalizeRelation(row.department),
-      epic: normalizeRelation(row.epic),
-      sprint: normalizeRelation(row.sprint),
+      department: normalizeRelation(row.department) as TicketListItem["department"],
+      epic: normalizeRelation(row.epic) as TicketListItem["epic"],
+      sprint: normalizeRelation(row.sprint) as TicketListItem["sprint"],
     }
   })
 

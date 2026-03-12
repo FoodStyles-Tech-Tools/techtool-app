@@ -57,12 +57,26 @@ export async function getProjectsPageData(): Promise<{
 
   const userMap = new Map<string, ServerUser>()
   users.forEach((user) => userMap.set(user.id, user))
+  type ProjectRow = {
+    id: string
+    name: string
+    description: string | null
+    status: string
+    require_sqa: boolean
+    links: string[] | string | null
+    created_at: string
+    owner_id: string | null
+    collaborator_ids: string[] | null
+    requester_ids: string[] | null
+    department_id: string | null
+    department: { id: string; name: string } | { id: string; name: string }[] | null
+  }
   const currentUserRole = users.find((user) => user.id === userId)?.role?.toLowerCase()
   const visibleProjects = currentUserRole === "sqa"
-    ? (projectsResult.data || []).filter((project: any) => project.require_sqa === true)
+    ? (projectsResult.data || []).filter((p: ProjectRow) => p.require_sqa === true)
     : (projectsResult.data || [])
 
-  const projects: ServerProject[] = visibleProjects.map((project: any) => {
+  const projects: ServerProject[] = visibleProjects.map((project: ProjectRow) => {
     const collaboratorIds = Array.isArray(project.collaborator_ids)
       ? project.collaborator_ids
       : []
@@ -89,9 +103,11 @@ export async function getProjectsPageData(): Promise<{
       }))
 
     const owner = project.owner_id ? userMap.get(project.owner_id) : null
+    const department = Array.isArray(project.department) ? project.department[0] ?? null : project.department ?? null
 
     return {
       ...project,
+      status: project.status as "active" | "inactive",
       links: sanitizeLinkArray(project.links),
       collaborator_ids: collaboratorIds,
       requester_ids: requesterIds,
@@ -100,6 +116,7 @@ export async function getProjectsPageData(): Promise<{
         : null,
       collaborators,
       requesters,
+      department,
     }
   })
 
@@ -115,7 +132,8 @@ export async function getProjectsPageData(): Promise<{
     if (ticketError) {
       console.error("Failed to load ticket stats:", ticketError)
     } else if (ticketRows) {
-      ticketRows.forEach((ticket: any) => {
+      type TicketStatRow = { project_id: string; status: string }
+      ticketRows.forEach((ticket: TicketStatRow) => {
         const projectId = ticket.project_id
         if (!projectId) return
         if (!ticketStats[projectId]) {

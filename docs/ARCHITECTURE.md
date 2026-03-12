@@ -1,5 +1,15 @@
 # Architecture & Contribution Guide
 
+## Quick reference
+
+| I want to… | Do this |
+|------------|--------|
+| Add a new page/screen | Create a route component in `src/routes/<area>/`, add the route in `src/router.tsx`. Put feature logic in `src/features/<feature>/`. |
+| Add a new API endpoint | Add route in `server/routes/`, handler in `server/controllers/`, logic in `server/services/`, data access in `server/repositories/`, Zod schemas in `server/validation/`. |
+| Add a domain or API type | Domain types → `shared/types/domain.ts`. API DTOs → `shared/types/api/<entity>.ts`. Mappers → `shared/types/<entity>-mappers.ts`. |
+| Add a shared utility | Pure (no I/O/DOM/React) → `shared/`. Client-only → `src/lib/`. Server-only → `server/lib/`. |
+| Import from another layer | `src/` may only use `@client/*` and `@shared/*`. `server/` may only use `@server/*` and `@shared/*`. `shared/` may only use `@shared/*`. |
+
 ## Directory Layout
 
 ```
@@ -96,3 +106,9 @@ Domain types go in `shared/types/`, not in feature folders.
 ### New shared utility
 
 If it's pure (no I/O, no env, no DOM), it belongs in `shared/`. If it touches `window`, `import.meta.env`, or React, it belongs in `src/lib/`. If it touches `process.env`, Supabase, or Express, it belongs in `server/lib/`.
+
+## Performance
+
+- **Expensive derivations or callbacks passed to memoized children:** use `useMemo` / `useCallback` so references stay stable and children don’t re-render unnecessarily.
+- **List rows:** Table/list row components (e.g. tickets table) are wrapped in `React.memo` where it matters; keep row props stable (e.g. pass callbacks with `useCallback`) to avoid unnecessary re-renders.
+- **Data fetching:** React Query with `staleTime` and server-side caching is used for list and detail endpoints; avoid duplicate or redundant requests by reusing query keys and cache updates.

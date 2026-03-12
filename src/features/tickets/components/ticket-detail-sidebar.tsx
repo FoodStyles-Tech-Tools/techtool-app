@@ -3,11 +3,9 @@
 import { Card } from "@client/components/ui/card"
 import { TicketStatusSelect } from "@client/components/ticket-status-select"
 import { TicketDetailFieldsSection } from "@client/features/tickets/components/ticket-detail-fields-section"
-import { TicketDetailTimestampsSection } from "@client/features/tickets/components/ticket-detail-timestamps-section"
 import type {
   ParentTicketOption,
   TicketProjectOption,
-  TimestampValidation,
 } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 import type { Epic } from "@client/hooks/use-epics"
 import type { Sprint } from "@client/hooks/use-sprints"
@@ -33,9 +31,7 @@ type TicketDetailSidebarProps = {
   selectedParentTicketId: string | null
   selectedParentTicketOption: ParentTicketOption | null
   parentNavigationSlug: string | null
-  timestampValidation: TimestampValidation
   parseTimestamp: (timestamp: string | null | undefined) => Date | null
-  getTimestampWarningMessage: (field: "assigned_at" | "started_at" | "completed_at") => string | null
   onAssigneeChange: (value: string | null) => void | Promise<void>
   onRequestedByChange: (value: string) => void | Promise<void>
   onSqaAssigneeChange: (value: string | null) => void | Promise<void>
@@ -47,10 +43,6 @@ type TicketDetailSidebarProps = {
   onEpicChange: (value: string | null) => void | Promise<void>
   onSprintChange: (value: string | null) => void | Promise<void>
   onProjectChange: (value: string) => void | Promise<void>
-  onTimestampChange: (
-    field: "created_at" | "assigned_at" | "sqa_assigned_at" | "started_at" | "completed_at",
-    value: Date | null
-  ) => void | Promise<void>
   onStatusChange: (value: string) => void | Promise<void>
 }
 
@@ -74,9 +66,7 @@ export function TicketDetailSidebar({
   selectedParentTicketId,
   selectedParentTicketOption,
   parentNavigationSlug,
-  timestampValidation,
   parseTimestamp,
-  getTimestampWarningMessage,
   onAssigneeChange,
   onRequestedByChange,
   onSqaAssigneeChange,
@@ -88,7 +78,6 @@ export function TicketDetailSidebar({
   onEpicChange,
   onSprintChange,
   onProjectChange,
-  onTimestampChange,
   onStatusChange,
 }: TicketDetailSidebarProps) {
   return (
@@ -141,16 +130,6 @@ export function TicketDetailSidebar({
             onEpicChange={onEpicChange}
             onSprintChange={onSprintChange}
             onProjectChange={onProjectChange}
-          />
-          <TicketDetailTimestampsSection
-            ticket={ticket}
-            canEditTickets={canEditTickets}
-            isAssignmentLocked={isAssignmentLocked}
-            updatingFields={updatingFields}
-            timestampValidation={timestampValidation}
-            parseTimestamp={parseTimestamp}
-            getTimestampWarningMessage={getTimestampWarningMessage}
-            onTimestampChange={onTimestampChange}
           />
         </div>
       </Card>

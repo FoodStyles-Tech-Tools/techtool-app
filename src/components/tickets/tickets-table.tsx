@@ -1,10 +1,11 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useCallback } from "react"
 import type { Ticket } from "@shared/types"
 import { cn } from "@client/lib/utils"
 import { formatRelativeDate, getDueDateDisplay } from "@client/lib/format-dates"
-import { normalizeStatusKey, isDoneStatus } from "@shared/ticket-statuses"
+import { normalizeStatusKey, isDoneStatus, formatStatusLabel } from "@shared/ticket-statuses"
+import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import { Button } from "@client/components/ui/button"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import {
@@ -30,9 +31,10 @@ export interface TicketsTableProps {
 interface TicketRowProps {
   ticket: Ticket
   onSelectTicket: (ticketId: string) => void
+  getStatusLabel: (statusKey: string) => string
 }
 
-const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowProps) {
+const TicketRow = memo(function TicketRow({ ticket, onSelectTicket, getStatusLabel }: TicketRowProps) {
   const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
   const requesterLabel = ticket.requestedBy?.name || ticket.requestedBy?.email || "-"
   const sqaLabel = ticket.sqaAssignee?.name || ticket.sqaAssignee?.email || "-"
@@ -56,7 +58,7 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
         </button>
       </TableCell>
       <TableCell className="py-2 text-sm text-foreground">
-        {ticket.status}
+        {getStatusLabel(ticket.status)}
       </TableCell>
       <TableCell className="py-2 text-sm capitalize text-foreground">
         {ticket.priority}
@@ -93,6 +95,13 @@ export function TicketsTable({
   endIndex,
   onSelectTicket,
 }: TicketsTableProps) {
+  const { statusMap } = useTicketStatuses()
+  const getStatusLabel = useCallback(
+    (statusKey: string) =>
+      statusMap.get(normalizeStatusKey(statusKey))?.label ?? formatStatusLabel(statusKey),
+    [statusMap]
+  )
+
   return (
     <EntityTableShell
       footer={
@@ -143,7 +152,12 @@ export function TicketsTable({
         </TableHeader>
         <TableBody>
           {tickets.map((ticket) => (
-            <TicketRow key={ticket.id} ticket={ticket} onSelectTicket={onSelectTicket} />
+            <TicketRow
+              key={ticket.id}
+              ticket={ticket}
+              onSelectTicket={onSelectTicket}
+              getStatusLabel={getStatusLabel}
+            />
           ))}
         </TableBody>
       </Table>

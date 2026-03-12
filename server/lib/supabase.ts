@@ -12,6 +12,8 @@ function getFallbackClient(): SupabaseClient {
   return serverFallbackClient
 }
 
+export type ServerSupabaseClient = Awaited<ReturnType<typeof createServerClient>>
+
 export function createServerClient() {
   const cookieStore = cookies()
 

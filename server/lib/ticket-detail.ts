@@ -1,4 +1,21 @@
-type SupabaseLike = any
+import type { ServerSupabaseClient } from "@server/lib/supabase"
+
+type UserRow = { id: string; name: string | null; email: string; avatar_url?: string | null }
+type MentionRow = { user_id: string; user: UserRow | UserRow[] | null }
+type CommentRow = {
+  id: string
+  ticket_id: string
+  parent_id: string | null
+  author_id: string
+  body: string
+  created_at: string
+  updated_at: string
+  author: UserRow | UserRow[] | null
+  mentions: MentionRow[] | null
+}
+type CommentWithReplies = CommentRow & { replies?: CommentWithReplies[] }
+type SubtaskRow = { id: string; display_id: string | null; title: string; status: string; type: string | null }
+type TicketMentionRow = { id: string; display_id: string | null; title: string; status: string; type: string | null }
 
 const TICKET_LINK_REGEX = /(?:https?:\/\/techtool-app\.vercel\.app)?\/tickets\/([a-z]{2,}-\d+)\b/gi
 
@@ -15,18 +32,20 @@ function extractMentionedTicketSlugs(input: string): string[] {
   return Array.from(slugs)
 }
 
-function normalizeUser(user: any) {
+function normalizeUser(
+  user: UserRow | UserRow[] | null | undefined
+): (UserRow & { image: string | null }) | null {
   if (!user) return null
   const normalized = Array.isArray(user) ? user[0] : user
   if (!normalized) return null
 
   return {
     ...normalized,
-    image: normalized.avatar_url || null,
+    image: normalized.avatar_url ?? null,
   }
 }
 
-export async function fetchTicketDetailPayload(supabase: SupabaseLike, ticketId: string) {
+export async function fetchTicketDetailPayload(supabase: ServerSupabaseClient, ticketId: string) {
   const [ticketResult, commentsResult, subtasksResult] = await Promise.all([
     (async () => {
       const baseSelect = `
@@ -107,15 +126,15 @@ export async function fetchTicketDetailPayload(supabase: SupabaseLike, ticketId:
         return { comments: [] }
       }
 
-      const normalizedComments = (comments || []).map((comment: any) => {
+      const normalizedComments = (comments || []).map((comment: CommentRow) => {
         const author = Array.isArray(comment.author) ? comment.author[0] : comment.author
         const mentions = Array.isArray(comment.mentions)
           ? comment.mentions
-              .map((mention: any) => ({
-                user_id: mention.user_id as string,
+              .map((mention: MentionRow) => ({
+                user_id: mention.user_id,
                 user: Array.isArray(mention.user) ? mention.user[0] : mention.user,
               }))
-              .filter((mention: any) => mention.user)
+              .filter((m): m is { user_id: string; user: UserRow } => m.user != null)
           : []
 
         return {
@@ -125,17 +144,17 @@ export async function fetchTicketDetailPayload(supabase: SupabaseLike, ticketId:
         }
       })
 
-      const rootComments = normalizedComments.filter((comment: any) => !comment.parent_id)
-      const repliesByParent = normalizedComments.reduce((acc: Record<string, any[]>, comment: any) => {
+      const rootComments = normalizedComments.filter((c) => !c.parent_id)
+      const repliesByParent = normalizedComments.reduce<Record<string, CommentRow[]>>((acc, comment) => {
         if (!comment.parent_id) return acc
         if (!acc[comment.parent_id]) acc[comment.parent_id] = []
         acc[comment.parent_id].push(comment)
         return acc
       }, {})
 
-      const enrichComment = (comment: any): any => ({
+      const enrichComment = (comment: CommentRow): CommentWithReplies => ({
         ...comment,
-        replies: (repliesByParent[comment.id] || []).map(enrichComment),
+        replies: (repliesByParent[comment.id] ?? []).map(enrichComment),
       })
 
       return { comments: rootComments.map(enrichComment) }
@@ -163,13 +182,14 @@ export async function fetchTicketDetailPayload(supabase: SupabaseLike, ticketId:
     return { ticket: null, error: "Ticket not found", status: 404 as const }
   }
 
-  const ticket = ticketResult.ticket as any
-  const comments = commentsResult.comments ?? []
+  const ticket = ticketResult.ticket as Record<string, unknown> & { display_id?: string | null; parent_ticket?: unknown }
+  const comments: Array<{ id: string; body: string; replies?: unknown[] }> =
+    (commentsResult.comments ?? []) as Array<{ id: string; body: string; replies?: unknown[] }>
   const relatedSubtasks = subtasksResult.subtasks ?? []
-  const parentTicket = Array.isArray(ticket.parent_ticket) ? ticket.parent_ticket[0] || null : ticket.parent_ticket || null
+  const parentTicket = Array.isArray(ticket.parent_ticket) ? ticket.parent_ticket[0] ?? null : ticket.parent_ticket ?? null
 
   const mentionCommentIdsBySlug = new Map<string, Set<string>>()
-  const visitComments = (nodes: Array<{ id: string; body: string; replies?: any[] }>) => {
+  const visitComments = (nodes: Array<{ id: string; body: string; replies?: unknown[] }>) => {
     nodes.forEach((node) => {
       extractMentionedTicketSlugs(node.body || "").forEach((slug) => {
         if (!mentionCommentIdsBySlug.has(slug)) {
@@ -178,13 +198,13 @@ export async function fetchTicketDetailPayload(supabase: SupabaseLike, ticketId:
         mentionCommentIdsBySlug.get(slug)?.add(node.id)
       })
       if (node.replies?.length) {
-        visitComments(node.replies)
+        visitComments(node.replies as Array<{ id: string; body: string; replies?: unknown[] }>)
       }
     })
   }
   visitComments(comments)
 
-  const currentDisplaySlug = String(ticket.display_id || "").toLowerCase()
+  const currentDisplaySlug = String(ticket.display_id ?? "").toLowerCase()
   const mentionDisplayIds = Array.from(mentionCommentIdsBySlug.keys())
     .filter((slug) => slug && slug !== currentDisplaySlug)
     .map((slug) => slug.toUpperCase())
@@ -201,9 +221,9 @@ export async function fetchTicketDetailPayload(supabase: SupabaseLike, ticketId:
       .in("display_id", mentionDisplayIds)
 
     if (!error && Array.isArray(mentionedTickets)) {
-      const ticketBySlug = new Map<string, any>()
-      mentionedTickets.forEach((item) => {
-        const slug = String(item.display_id || "").toLowerCase()
+      const ticketBySlug = new Map<string, TicketMentionRow>()
+      mentionedTickets.forEach((item: TicketMentionRow) => {
+        const slug = String(item.display_id ?? "").toLowerCase()
         if (slug) ticketBySlug.set(slug, item)
       })
 
@@ -243,12 +263,12 @@ export async function fetchTicketDetailPayload(supabase: SupabaseLike, ticketId:
             type: parentTicket.type || null,
           }
         : null,
-      subtasks: relatedSubtasks.map((item: any) => ({
+      subtasks: (relatedSubtasks as SubtaskRow[]).map((item) => ({
         id: item.id,
         display_id: item.display_id,
         title: item.title,
         status: item.status,
-        type: item.type || null,
+        type: item.type ?? null,
       })),
       mentioned_in_comments: mentionedInComments,
     },

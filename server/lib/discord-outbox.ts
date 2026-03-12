@@ -1,6 +1,19 @@
+import type { ServerSupabaseClient } from "@server/lib/supabase"
+
 const DISCORD_TICKET_BASE_URL = "https://techtool-app.vercel.app/tickets"
 
-type SupabaseLike = any
+/** Minimal ticket shape used for Discord message building. Accepts normalized ticket from services. */
+export type DiscordTicketPayload = {
+  id?: string
+  display_id?: string | null
+  title?: string | null
+  status?: string | null
+  assignee_id?: string | null
+  assignee?: unknown
+  project?: unknown
+  sqa_assignee_id?: string | null
+  sqa_assignee?: unknown
+}
 
 function normalizeRelation<T>(value: T | T[] | null | undefined): T | null {
   if (!value) return null
@@ -27,8 +40,8 @@ function escapeDiscordMarkdown(value: string): string {
   return value.replace(/([\\\[\]])/g, "\\$1")
 }
 
-function buildDiscordTicketLine(ticket: any): string {
-  const ticketLabel = String(ticket.display_id ?? ticket.id)
+function buildDiscordTicketLine(ticket: DiscordTicketPayload): string {
+  const ticketLabel = String(ticket.display_id ?? ticket.id ?? "")
   const ticketTitle = escapeDiscordMarkdown(ticket.title ?? "Untitled ticket")
   const ticketSlug = String(ticket.display_id ?? ticket.id).toLowerCase()
   const ticketUrl = `${DISCORD_TICKET_BASE_URL}/${encodeURIComponent(ticketSlug)}`
@@ -36,7 +49,7 @@ function buildDiscordTicketLine(ticket: any): string {
 }
 
 async function resolveDiscordUserIdByEmail(
-  supabase: SupabaseLike,
+  supabase: ServerSupabaseClient,
   email: string,
   logContext: string
 ): Promise<string | null> {
@@ -55,20 +68,22 @@ async function resolveDiscordUserIdByEmail(
 }
 
 async function buildForQaDiscordContent(
-  supabase: SupabaseLike,
-  ticket: any,
+  supabase: ServerSupabaseClient,
+  ticket: DiscordTicketPayload,
   previousStatus: string | null | undefined
 ): Promise<string | null> {
   if (!process.env.DISCORD_WEBHOOK_URL) return null
 
-  const project = normalizeRelation<{ require_sqa?: boolean }>(ticket.project)
+  const project = normalizeRelation(
+    ticket.project as { require_sqa?: boolean } | { require_sqa?: boolean }[] | null
+  )
   if (!project?.require_sqa) return null
 
   const currentStatus = typeof ticket.status === "string" ? ticket.status : null
   if (currentStatus !== "for_qa" || previousStatus === "for_qa") return null
 
-  const sqaAssignee = normalizeRelation<{ role?: string; email?: string; discord_id?: string | null }>(
-    ticket.sqa_assignee
+  const sqaAssignee = normalizeRelation(
+    ticket.sqa_assignee as { role?: string; email?: string; discord_id?: string | null } | null
   )
   const sqaRoleEnvKey = buildDiscordRoleEnvKey(sqaAssignee?.role)
   const defaultRoleId = process.env.DISCORD_ROLE_ID
@@ -96,20 +111,22 @@ async function buildForQaDiscordContent(
 }
 
 async function buildReturnedToDevDiscordContent(
-  supabase: SupabaseLike,
-  ticket: any,
+  supabase: ServerSupabaseClient,
+  ticket: DiscordTicketPayload,
   previousStatus: string | null | undefined
 ): Promise<string | null> {
   if (!process.env.DISCORD_WEBHOOK_URL) return null
 
-  const project = normalizeRelation<{ require_sqa?: boolean }>(ticket.project)
+  const project = normalizeRelation(
+    ticket.project as { require_sqa?: boolean } | { require_sqa?: boolean }[] | null
+  )
   if (!project?.require_sqa) return null
 
   const currentStatus = typeof ticket.status === "string" ? ticket.status : null
   if (currentStatus !== "returned_to_dev" || previousStatus === "returned_to_dev") return null
 
-  const assignee = normalizeRelation<{ role?: string; email?: string; discord_id?: string | null }>(
-    ticket.assignee
+  const assignee = normalizeRelation(
+    ticket.assignee as { role?: string; email?: string; discord_id?: string | null } | null
   )
   const assigneeRoleEnvKey = buildDiscordRoleEnvKey(assignee?.role)
   const defaultRoleId = process.env.DISCORD_ROLE_ID
@@ -136,8 +153,8 @@ async function buildReturnedToDevDiscordContent(
 }
 
 export async function enqueueTicketStatusDiscordNotifications(
-  supabase: SupabaseLike,
-  ticket: any,
+  supabase: ServerSupabaseClient,
+  ticket: DiscordTicketPayload,
   previousStatus: string | null | undefined
 ): Promise<void> {
   if (!process.env.DISCORD_WEBHOOK_URL) return
@@ -183,7 +200,7 @@ export async function enqueueTicketStatusDiscordNotifications(
 }
 
 export async function processDiscordOutboxBatch(
-  supabase: SupabaseLike,
+  supabase: ServerSupabaseClient,
   limit = 20
 ): Promise<{
   processed: number
@@ -279,14 +296,15 @@ export async function processDiscordOutboxBatch(
           })
           .eq("id", claimed.id)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       failed += 1
       const backoffMinutes = Math.min(Math.pow(2, claimed.attempt_count || 1), 60)
+      const message = err instanceof Error ? err.message : String(err ?? "Request error")
       await supabase
         .from("discord_outbox")
         .update({
           status: "failed",
-          last_error: String(err?.message || err || "Request error").slice(0, 2000),
+          last_error: message.slice(0, 2000),
           next_attempt_at: new Date(Date.now() + backoffMinutes * 60 * 1000).toISOString(),
         })
         .eq("id", claimed.id)

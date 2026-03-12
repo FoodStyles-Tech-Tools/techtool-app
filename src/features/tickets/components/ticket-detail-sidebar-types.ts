@@ -7,12 +7,6 @@ export type ParentTicketOption = {
   title: string
 }
 
-export type TimestampValidation = {
-  assigned_at: boolean
-  started_at: boolean
-  completed_at: boolean
-}
-
 export type TicketProjectOption = {
   id: string
   name: string | null

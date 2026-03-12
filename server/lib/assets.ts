@@ -2,6 +2,17 @@ import { getSupabaseWithUserContext } from "./auth-helpers"
 import { sanitizeLinkArray } from "@shared/links"
 import { fetchUsersWithImages, type ServerUser } from "./users"
 
+type AssetRow = {
+  id: string
+  name: string
+  description: string | null
+  links: string[] | string | null
+  production_url: string | null
+  owner_id: string
+  collaborator_ids: string[] | null
+  created_at: string
+}
+
 export type ServerAsset = {
   id: string
   name: string
@@ -39,7 +50,7 @@ export async function getAssetsPageData(): Promise<{
   const userMap = new Map<string, ServerUser>()
   users.forEach((user) => userMap.set(user.id, user))
 
-  const assets: ServerAsset[] = (assetsResult.data || []).map((asset: any) => {
+  const assets: ServerAsset[] = (assetsResult.data || []).map((asset: AssetRow) => {
     const collaboratorIds = Array.isArray(asset.collaborator_ids) ? asset.collaborator_ids : []
     const collaborators = collaboratorIds
       .map((id: string) => userMap.get(id))

@@ -20,7 +20,10 @@ const UserSearchOverlay = lazyComponent(
   () => import("./user-search-overlay").then((mod) => mod.UserSearchOverlay),
 )
 const TicketDetailDialog = lazyComponent(
-  () => import("./ticket-detail-dialog").then((mod) => mod.TicketDetailDialog),
+  () =>
+    import("@client/features/tickets/components/ticket-detail-dialog").then(
+      (mod) => mod.TicketDetailDialog
+    ),
 )
 const ProjectForm = lazyComponent(
   () => import("@client/components/forms/project-form").then((mod) => mod.ProjectForm),

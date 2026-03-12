@@ -19,13 +19,6 @@ type TicketRequestContext = {
   userRole?: string | null
 }
 
-type TimestampMap = {
-  created_at: string | null
-  assigned_at: string | null
-  started_at: string | null
-  completed_at: string | null
-}
-
 function isSupabaseDataInconsistencyError(message: string | undefined) {
   return Boolean(message?.includes("coerce") || message?.includes("single JSON"))
 }
@@ -41,43 +34,6 @@ function parseOptionalTimestamp(value: string | null | undefined) {
   }
 
   return value
-}
-
-function validateTimestampOrder(
-  field: keyof TimestampMap,
-  value: string | null,
-  timestamps: TimestampMap
-) {
-  if (!value) return true
-
-  const fieldDate = new Date(value)
-  if (Number.isNaN(fieldDate.getTime())) return false
-
-  if (field === "created_at") {
-    if (timestamps.assigned_at && fieldDate > new Date(timestamps.assigned_at)) return false
-    if (timestamps.started_at && fieldDate > new Date(timestamps.started_at)) return false
-    if (timestamps.completed_at && fieldDate > new Date(timestamps.completed_at)) return false
-  }
-
-  if (field === "assigned_at") {
-    if (timestamps.created_at && fieldDate < new Date(timestamps.created_at)) return false
-    if (timestamps.started_at && fieldDate > new Date(timestamps.started_at)) return false
-    if (timestamps.completed_at && fieldDate > new Date(timestamps.completed_at)) return false
-  }
-
-  if (field === "started_at") {
-    if (timestamps.created_at && fieldDate < new Date(timestamps.created_at)) return false
-    if (timestamps.assigned_at && fieldDate < new Date(timestamps.assigned_at)) return false
-    if (timestamps.completed_at && fieldDate > new Date(timestamps.completed_at)) return false
-  }
-
-  if (field === "completed_at") {
-    if (timestamps.created_at && fieldDate < new Date(timestamps.created_at)) return false
-    if (timestamps.assigned_at && fieldDate < new Date(timestamps.assigned_at)) return false
-    if (timestamps.started_at && fieldDate < new Date(timestamps.started_at)) return false
-  }
-
-  return true
 }
 
 async function assertValidParentTicket(
@@ -373,53 +329,17 @@ export async function updateTicket(
   if (hasField("reason")) updates.reason = input.reason
   if (hasField("sqaAssignedAt", "sqa_assigned_at")) updates.sqa_assigned_at = input.sqaAssignedAt || null
 
-  const timestamps: TimestampMap = {
-    created_at: hasField("createdAt", "created_at")
-      ? parseOptionalTimestamp(input.createdAt)
-      : currentTicket.created_at || null,
-    assigned_at: hasField("assignedAt", "assigned_at")
-      ? parseOptionalTimestamp(input.assignedAt)
-      : typeof updates.assigned_at === "string" || updates.assigned_at === null
-        ? (updates.assigned_at as string | null)
-        : currentTicket.assigned_at || null,
-    started_at: hasField("startedAt", "started_at")
-      ? parseOptionalTimestamp(input.startedAt)
-      : typeof updates.started_at === "string" || updates.started_at === null
-        ? (updates.started_at as string | null)
-        : currentTicket.started_at || null,
-    completed_at: hasField("completedAt", "completed_at")
-      ? parseOptionalTimestamp(input.completedAt)
-      : typeof updates.completed_at === "string" || updates.completed_at === null
-        ? (updates.completed_at as string | null)
-        : currentTicket.completed_at || null,
-  }
-
   if (hasField("createdAt", "created_at")) {
-    if (!validateTimestampOrder("created_at", timestamps.created_at, timestamps)) {
-      throw new HttpError(400, "created_at cannot be higher than assigned_at, started_at, or completed_at")
-    }
-    updates.created_at = timestamps.created_at
+    updates.created_at = parseOptionalTimestamp(input.createdAt)
   }
-
   if (hasField("assignedAt", "assigned_at")) {
-    if (!validateTimestampOrder("assigned_at", timestamps.assigned_at, timestamps)) {
-      throw new HttpError(400, "assigned_at must be >= created_at and <= started_at, completed_at")
-    }
-    updates.assigned_at = timestamps.assigned_at
+    updates.assigned_at = parseOptionalTimestamp(input.assignedAt)
   }
-
   if (hasField("startedAt", "started_at")) {
-    if (!validateTimestampOrder("started_at", timestamps.started_at, timestamps)) {
-      throw new HttpError(400, "started_at must be >= created_at, assigned_at and <= completed_at")
-    }
-    updates.started_at = timestamps.started_at
+    updates.started_at = parseOptionalTimestamp(input.startedAt)
   }
-
   if (hasField("completedAt", "completed_at")) {
-    if (!validateTimestampOrder("completed_at", timestamps.completed_at, timestamps)) {
-      throw new HttpError(400, "completed_at must be >= created_at, assigned_at, and started_at")
-    }
-    updates.completed_at = timestamps.completed_at
+    updates.completed_at = parseOptionalTimestamp(input.completedAt)
   }
 
   const previousStatus = currentTicket.status || null

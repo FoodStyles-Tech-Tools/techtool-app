@@ -166,9 +166,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                 selectedParentTicketId={selectedParentTicketId}
                 selectedParentTicketOption={selectedParentTicketOption}
                 parentNavigationSlug={parentNavigationSlug}
-                timestampValidation={actions.timestampValidation}
                 parseTimestamp={actions.parseTimestamp}
-                getTimestampWarningMessage={actions.getTimestampWarningMessage}
                 onAssigneeChange={actions.handleAssigneeChange}
                 onRequestedByChange={actions.handleRequestedByChange}
                 onSqaAssigneeChange={actions.handleSqaAssigneeChange}
@@ -185,9 +183,6 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                 onSprintChange={actions.handleSprintChange}
                 onProjectChange={(nextProjectId) =>
                   actions.handleProjectChange(nextProjectId, NO_PROJECT_VALUE)
-                }
-                onTimestampChange={(field, value) =>
-                  void actions.handleTimestampChange(field, value)
                 }
                 onStatusChange={(status) => actions.handleStatusChange(status)}
               />

@@ -4,13 +4,7 @@ import { useEffect, useState, type KeyboardEvent } from "react"
 import { toast } from "@client/components/ui/toast"
 import type { Ticket } from "@shared/types"
 import { normalizeRichTextInput } from "@shared/rich-text"
-import {
-  getTimestampValidation,
-  getTimestampWarningMessage,
-  parseTimestamp,
-  validateTimestampOrder,
-  type TicketTimestampField,
-} from "@client/features/tickets/lib/timestamp-validation"
+import { parseTimestamp } from "@client/features/tickets/lib/timestamp-validation"
 import { buildAssignmentPayload } from "@client/features/tickets/lib/update-payloads"
 import { useTicketDetailLinkActions } from "@client/features/tickets/hooks/use-ticket-detail-link-actions"
 import { useTicketDetailSharing } from "@client/features/tickets/hooks/use-ticket-detail-sharing"
@@ -19,14 +13,6 @@ import type { TicketSubtaskDecision, TicketSubtaskRow } from "@client/features/t
 
 const toUTCISOStringPreserveLocal = (date: Date) =>
   new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString()
-
-const TIMESTAMP_FIELD_TO_UPDATE_KEY: Record<TicketTimestampField, string> = {
-  created_at: "createdAt",
-  assigned_at: "assignedAt",
-  sqa_assigned_at: "sqaAssignedAt",
-  started_at: "startedAt",
-  completed_at: "completedAt",
-}
 
 type MutationClient = {
   mutateAsync: (input: any) => Promise<unknown>
@@ -281,62 +267,6 @@ export function useTicketDetailActions({
     }
   }
 
-  const handleTimestampChange = async (field: TicketTimestampField, value: Date | null) => {
-    if (!ensureCanEdit()) return
-    if (!ticket) return
-
-    const dateValue = value ? value.toISOString() : null
-    const status = ticket.status
-    const effectiveCompletedAt =
-      status === "completed" || status === "cancelled" || status === "rejected"
-        ? field === "completed_at"
-          ? dateValue
-          : ticket.completedAt || null
-        : null
-
-    const timestampMap: Record<string, string | null> = {
-      created_at: field === "created_at" ? dateValue : ticket.createdAt || null,
-      assigned_at: field === "assigned_at" ? dateValue : ticket.assignedAt || null,
-      sqa_assigned_at: field === "sqa_assigned_at" ? dateValue : ticket.sqaAssignedAt || null,
-      started_at: field === "started_at" ? dateValue : ticket.startedAt || null,
-      completed_at: effectiveCompletedAt,
-    }
-
-    if (!validateTimestampOrder(field, dateValue, timestampMap)) {
-      toast(
-        "Invalid timestamp: Timestamps must follow the order: created_at <= assigned_at <= started_at <= completed_at",
-        "error"
-      )
-      return
-    }
-
-    const updates: any = { [field]: dateValue }
-    if (
-      field === "started_at" &&
-      (status === "in_progress" || status === "blocked") &&
-      ticket.completedAt
-    ) {
-      updates.completedAt = null
-    }
-
-    if (
-      field === "completed_at" &&
-      status !== "completed" &&
-      status !== "cancelled" &&
-      status !== "rejected"
-    ) {
-      toast("Cannot set completed_at when status is not completed, cancelled, or rejected", "error")
-      return
-    }
-
-    await updateTicketWithToast(
-      updates,
-      `${field.replace("_", " ")} updated`,
-      TIMESTAMP_FIELD_TO_UPDATE_KEY[field]
-    )
-  }
-
-  const timestampValidation = getTimestampValidation(ticket)
   const linkActions = useTicketDetailLinkActions({
     ticket,
     ensureCanEdit,
@@ -366,10 +296,7 @@ export function useTicketDetailActions({
     updatingFields,
     isSubtasksCollapsed,
     setIsSubtasksCollapsed,
-    timestampValidation,
     parseTimestamp,
-    getTimestampWarningMessage: (field: "assigned_at" | "started_at" | "completed_at") =>
-      getTimestampWarningMessage(ticket, timestampValidation, field),
     handleTypeChange,
     handlePriorityChange,
     handleDueDateChange,
@@ -384,7 +311,6 @@ export function useTicketDetailActions({
     handleTitleSave,
     handleDescriptionSave,
     handleTitleKeyDown,
-    handleTimestampChange,
     ...linkActions,
     ...sharing,
     ...statusActions,

@@ -92,7 +92,10 @@ export async function getReportData(
 
   const tickets = (rows ?? []) as TicketRow[]
 
-  function normalizeUser(u: any): { id: string; name: string | null; email: string } | null {
+  type UserLike = { id: string; name: string | null; email: string }
+  function normalizeUser(
+    u: UserLike | UserLike[] | null | undefined
+  ): { id: string; name: string | null; email: string } | null {
     if (!u) return null
     const arr = Array.isArray(u) ? u : [u]
     const v = arr[0]
