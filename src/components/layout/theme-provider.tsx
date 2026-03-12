@@ -22,13 +22,21 @@ function getSystemTheme(): Theme {
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
 }
 
+const THEME_TRANSITION_MS = 200
+
 function applyTheme(theme: Theme) {
   const root = document.documentElement
+  root.classList.add("theme-transition")
+  // Force reflow so the transition runs when we toggle .dark
+  root.offsetHeight
   if (theme === "dark") {
     root.classList.add("dark")
   } else {
     root.classList.remove("dark")
   }
+  window.setTimeout(() => {
+    root.classList.remove("theme-transition")
+  }, THEME_TRANSITION_MS)
 }
 
 type ThemeContextValue = {

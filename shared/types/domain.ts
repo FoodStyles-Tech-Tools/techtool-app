@@ -89,6 +89,7 @@ export interface Project {
   links: string[]
   department: Department | null
   owner: User | null
+  owner_id: string | null
   collaborator_ids: string[]
   collaborators: ProjectCollaborator[]
   requester_ids: string[]

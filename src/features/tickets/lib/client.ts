@@ -19,6 +19,8 @@ export type TicketListParams = {
   status?: string
   /** Exclude tickets with these status keys (e.g. ["cancelled", "completed"]). */
   excludeStatuses?: string[]
+  /** Only show tickets whose status is in this list (allow-list; preferred over excludeStatuses). */
+  includeStatuses?: string[]
   priority?: string
   departmentId?: string
   requestedById?: string
@@ -92,6 +94,8 @@ export function buildTicketListQueryString(params: TicketListParams) {
     status: params.status,
     excludeStatuses:
       params.excludeStatuses?.length ? params.excludeStatuses.join(",") : undefined,
+    includeStatuses:
+      params.includeStatuses?.length ? params.includeStatuses.join(",") : undefined,
     priority: params.priority,
     departmentId: params.departmentId,
     requestedById: params.requestedById,

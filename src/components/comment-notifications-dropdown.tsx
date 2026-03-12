@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { Link } from "react-router-dom"
 import { formatDistanceToNow } from "date-fns"
 import {
   BellIcon,
@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/20/solid"
 import { Button } from "@client/components/ui/button"
 import { useCommentNotifications, type CommentNotification } from "@client/hooks/use-comment-notifications"
+import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 import { cn } from "@client/lib/utils"
 import { richTextToPlainText } from "@shared/rich-text"
 
@@ -91,7 +92,7 @@ function NotificationItem({
 }
 
 export function CommentNotificationsDropdown() {
-  const navigate = useNavigate()
+  const { openPreview } = useTicketPreview()
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const { notifications, unreadCount, isLoading, markRead, markAllRead } = useCommentNotifications()
@@ -109,8 +110,13 @@ export function CommentNotificationsDropdown() {
 
   const handleNavigate = (notification: CommentNotification) => {
     const displayId = notification.ticket?.displayId
-    if (displayId) {
-      navigate(`/tickets/${displayId}`)
+    const slug = displayId ? String(displayId).toLowerCase() : notification.ticket_id?.toLowerCase()
+    if (slug) {
+      openPreview(
+        notification.ticket_id
+          ? { ticketId: notification.ticket_id, slug }
+          : { slug }
+      )
       setOpen(false)
     }
   }

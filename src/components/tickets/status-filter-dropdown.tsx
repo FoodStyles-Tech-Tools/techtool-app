@@ -42,12 +42,17 @@ export function StatusFilterDropdown({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [open])
 
+  const excludedSet = new Set(excludedStatuses.map((s) => s.toLowerCase()))
+  const includedCount = statusOptions.filter(
+    (o) => !excludedSet.has(o.id.toLowerCase())
+  ).length
+  const totalCount = statusOptions.length
   const summaryText =
-    excludedStatuses.length === 0
+    includedCount === totalCount
       ? "All statuses"
-      : excludedStatuses.length === statusOptions.length
+      : includedCount === 0
         ? "None"
-        : `${statusOptions.length - excludedStatuses.length} of ${statusOptions.length}`
+        : `${includedCount} of ${totalCount}`
 
   return (
     <div className="relative min-w-[140px]" ref={containerRef}>

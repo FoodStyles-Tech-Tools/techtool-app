@@ -75,6 +75,7 @@ export function buildTicketListCacheKey(
     listQuery.status || "all",
     listQuery.priority || "all",
     listQuery.excludeDone ? "exclude_done" : "include_done",
+    listQuery.includeStatuses?.length ? listQuery.includeStatuses.join(",") : listQuery.excludeStatuses?.length ? listQuery.excludeStatuses.join(",") : "all",
     listQuery.excludeSubtasks ? "exclude_subtasks" : "include_subtasks",
     listQuery.queryText || "",
     listQuery.cursor || "",

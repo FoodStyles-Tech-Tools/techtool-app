@@ -89,6 +89,14 @@
     color: hsl(var(--foreground));
   }
 
+  /* Smooth light ↔ dark transition (only during theme switch) */
+  .theme-transition,
+  .theme-transition * {
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-property: background-color, color, border-color, box-shadow, fill, stroke;
+  }
+
   p,
   h1,
   h2,

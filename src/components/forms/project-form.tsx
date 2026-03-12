@@ -37,6 +37,7 @@ const projectSchema = z.object({
     .optional(),
   collaborator_ids: z.array(z.string().uuid()).default([]),
   requester_ids: z.array(z.string().uuid()).default([]),
+  owner_id: z.union([z.string().uuid(), z.literal("")]).optional(),
   links: z.array(z.string().url("Enter a valid URL")).default([]),
 })
 
@@ -76,7 +77,8 @@ export function ProjectForm({
       require_sqa: initialData?.require_sqa ?? false,
       department_id: initialData?.department_id || NO_DEPARTMENT_VALUE,
       collaborator_ids: initialData?.collaborator_ids || [],
-      requester_ids: initialData?.requester_ids || [],
+      requester_ids: (initialData?.requester_ids || []).slice(0, 1),
+      owner_id: initialData?.owner_id ?? "",
       links: initialData?.links || [],
     },
   })
@@ -98,6 +100,7 @@ export function ProjectForm({
           values.department_id && values.department_id !== NO_DEPARTMENT_VALUE ? values.department_id : undefined,
         collaborator_ids: values.collaborator_ids || [],
         requester_ids: values.requester_ids || [],
+        owner_id: values.owner_id && values.owner_id !== "" ? values.owner_id : undefined,
         links: sanitizedLinks,
       }
 
@@ -219,17 +222,54 @@ export function ProjectForm({
           name="requester_ids"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Project Requesters</FormLabel>
-              <CollaboratorSelector
-                users={users || []}
-                value={field.value || []}
-                onChange={field.onChange}
-                placeholder="Add requesters"
-              />
+              <FormLabel>Project Requester</FormLabel>
+              <FormControl>
+                <select
+                  value={field.value?.[0] ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    field.onChange(v ? [v] : [])
+                  }}
+                  className={nativeSelectClassName}
+                >
+                  <option value="">Select requester</option>
+                  {(users || []).map((user) => (
+                    <option key={user.id} value={user.id}>
+                      {user.name || user.email}
+                    </option>
+                  ))}
+                </select>
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+        {isEditing && (
+          <FormField
+            control={form.control}
+            name="owner_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Project Owner</FormLabel>
+                <FormControl>
+                  <select
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value || "")}
+                    className={nativeSelectClassName}
+                  >
+                    <option value="">Select owner</option>
+                    {(users || []).map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name || user.email}
+                      </option>
+                    ))}
+                  </select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
         <FormField
           control={form.control}
           name="department_id"

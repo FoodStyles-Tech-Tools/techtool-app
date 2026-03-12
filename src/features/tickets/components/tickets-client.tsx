@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useMemo, useCallback } from "react"
-import { useNavigate } from "react-router-dom"
+import { useMemo, useCallback } from "react"
 import { PlusIcon } from "@heroicons/react/20/solid"
 import { useProjects } from "@client/hooks/use-projects"
 import { usePermissions } from "@client/hooks/use-permissions"
@@ -23,13 +22,14 @@ import type { TicketsClientProps } from "@client/features/tickets/types"
 import { TicketsToolbar } from "@client/components/tickets/tickets-toolbar"
 import { TicketsDialogs } from "@client/features/tickets/components/tickets-dialogs"
 import { TicketsResults } from "@client/features/tickets/components/tickets-results"
+import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 import { PageHeader } from "@client/components/ui/page-header"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { Button } from "@client/components/ui/button"
 
 export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
-  const navigate = useNavigate()
+  const { openPreview } = useTicketPreview()
 
   const { user, flags } = usePermissions()
   const { openSubtasksDialog, askHowToHandleOpenSubtasks, resolveOpenSubtasksDialog } = useOpenSubtasksDialog()
@@ -69,6 +69,26 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     selectedProjectLabel,
   } = filters
 
+  const { statuses: ticketStatuses, statusMap } = useTicketStatuses()
+  const statusOptions = useMemo(
+    () =>
+      ticketStatuses
+        .filter((status) => !isArchivedStatus(status.key))
+        .map((status) => ({ id: status.key, label: status.label })),
+    [ticketStatuses]
+  )
+  const excludedSet = useMemo(
+    () => new Set(excludedStatuses.map((s) => s.toLowerCase())),
+    [excludedStatuses]
+  )
+  const includeStatuses = useMemo(
+    () =>
+      statusOptions
+        .filter((o) => !excludedSet.has(o.id.toLowerCase()))
+        .map((o) => o.id),
+    [statusOptions, excludedSet]
+  )
+
   const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
     projectId: projectFilter !== "all" ? projectFilter : undefined,
     assigneeId: assigneeFilter !== "all" ? assigneeFilter : undefined,
@@ -77,8 +97,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     priority: priorityFilter !== "all" ? priorityFilter : undefined,
     epicId: epicFilter !== "all" ? epicFilter : undefined,
     sprintId: sprintFilter !== "all" ? sprintFilter : undefined,
-    excludeStatuses:
-      excludedStatuses.length > 0 ? excludedStatuses : undefined,
+    includeStatuses: statusOptions.length > 0 ? includeStatuses : undefined,
     excludeSubtasks: true,
     q: deferredSearchQuery.trim() || undefined,
     limit: ROWS_PER_PAGE,
@@ -87,7 +106,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
 
   const updateTicket = useUpdateTicket()
   const updateTicketWithReasonComment = useUpdateTicketWithReasonComment()
-  const { statuses: ticketStatuses, statusMap } = useTicketStatuses()
 
   const allTickets = useMemo(() => ticketsData || [], [ticketsData])
   const filteredTickets = useMemo(
@@ -103,13 +121,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
       )
     },
     [projects]
-  )
-  const statusOptions = useMemo(
-    () =>
-      ticketStatuses
-        .filter((status) => !isArchivedStatus(status.key))
-        .map((status) => ({ id: status.key, label: status.label })),
-    [ticketStatuses]
   )
 
   const { data: usersData } = useUsers({ realtime: false })
@@ -187,11 +198,12 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   const handleSelectTicket = useCallback(
     (ticketId: string) => {
       const ticket = allTickets.find((t) => t.id === ticketId)
-      if (!ticket) return
-      const slug = (ticket.displayId || ticketId.slice(0, 8)).toLowerCase()
-      navigate(`/tickets/${slug}`)
+      const slug = ticket
+        ? (ticket.displayId || ticketId.slice(0, 8)).toLowerCase()
+        : ticketId.slice(0, 8).toLowerCase()
+      openPreview({ ticketId, slug })
     },
-    [allTickets, navigate]
+    [allTickets, openPreview]
   )
 
   return (
@@ -284,6 +296,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         onReturnedReasonCancel={handleReturnedReasonCancel}
         onReturnedReasonConfirm={handleReturnedReasonConfirm}
       />
+
       </EntityPageLayout>
     </PageLayout>
   )

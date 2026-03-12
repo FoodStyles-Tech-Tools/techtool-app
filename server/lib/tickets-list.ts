@@ -67,6 +67,8 @@ export type TicketListQuery = {
   excludeDone: boolean
   /** When set, exclude tickets with these statuses (overrides excludeDone for those statuses). */
   excludeStatuses?: string[]
+  /** When set, only show tickets whose status is in this list (allow-list; takes precedence over excludeStatuses). */
+  includeStatuses?: string[]
   excludeSubtasks: boolean
   queryText?: string | null
   cursor?: string | null
@@ -95,7 +97,7 @@ function parseBoolean(searchParams: URLSearchParams, keys: string[]): boolean {
   return value === "true"
 }
 
-function parseExcludeStatuses(searchParams: URLSearchParams, keys: string[]): string[] {
+function parseStatusList(searchParams: URLSearchParams, keys: string[]): string[] {
   const value = firstNonEmpty(searchParams, keys)
   if (!value) return []
   return value
@@ -103,6 +105,9 @@ function parseExcludeStatuses(searchParams: URLSearchParams, keys: string[]): st
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean)
 }
+
+const parseExcludeStatuses = parseStatusList
+const parseIncludeStatuses = parseStatusList
 
 function parsePositiveInt(value: string | null, fallback: number): number {
   const parsed = Number(value)
@@ -161,6 +166,7 @@ export function parseTicketListQuery(searchParams: URLSearchParams): TicketListQ
     sprintId: firstNonEmpty(searchParams, ["sprintId", "sprint_id"]),
     excludeDone: parseBoolean(searchParams, ["excludeDone", "exclude_done"]),
     excludeStatuses: parseExcludeStatuses(searchParams, ["excludeStatuses", "exclude_statuses"]),
+    includeStatuses: parseIncludeStatuses(searchParams, ["includeStatuses", "include_statuses"]),
     excludeSubtasks: parseBoolean(searchParams, ["excludeSubtasks", "exclude_subtasks"]),
     queryText: firstNonEmpty(searchParams, ["q"]),
     cursor: firstNonEmpty(searchParams, ["cursor"]),
@@ -267,7 +273,19 @@ export async function fetchTicketList(
     }
   }
   if (query.status) {
-    ticketsQuery = ticketsQuery.eq("status", query.status)
+    const statusNorm = String(query.status).trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "")
+    if (statusNorm === "archived") {
+      ticketsQuery = ticketsQuery.ilike("status", "archived")
+    } else {
+      ticketsQuery = ticketsQuery.eq("status", query.status)
+    }
+  }
+  // Archived tickets only appear when explicitly requested (e.g. Deleted Tickets page); exclude everywhere else
+  const isOnlyArchivedRequest =
+    query.status != null &&
+    String(query.status).trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") === "archived"
+  if (!isOnlyArchivedRequest) {
+    ticketsQuery = ticketsQuery.not("status", "ilike", "archived")
   }
   if (query.priority) {
     ticketsQuery = ticketsQuery.eq("priority", query.priority)
@@ -299,15 +317,36 @@ export async function fetchTicketList(
       ticketsQuery = ticketsQuery.eq("sprint_id", query.sprintId)
     }
   }
-  if (query.excludeStatuses?.length) {
-    ticketsQuery = ticketsQuery.not("status", "in", `(${query.excludeStatuses.join(",")})`)
-  } else if (
+  // Allow-list: only show tickets whose status is in includeStatuses (multi-select "checked" = include)
+  if (query.includeStatuses !== undefined) {
+    if (query.includeStatuses.length === 0) {
+      ticketsQuery = ticketsQuery.in("status", [])
+    } else {
+      const sanitized = query.includeStatuses.map((s) =>
+        s.replace(/[^a-z0-9_\s-]/gi, "").trim()
+      ).filter(Boolean)
+      if (sanitized.length) {
+        ticketsQuery = ticketsQuery.or(
+          sanitized.map((s) => `status.ilike.${s}`).join(",")
+        )
+      }
+    }
+  } else if (query.excludeStatuses?.length) {
+    // Case-insensitive exclusion when includeStatuses not used
+    for (const status of query.excludeStatuses) {
+      ticketsQuery = ticketsQuery.not("status", "ilike", status)
+    }
+  }
+  if (
+    !query.includeStatuses?.length &&
     query.excludeDone &&
     query.status !== "completed" &&
     query.status !== "cancelled" &&
     query.status !== "rejected"
   ) {
-    ticketsQuery = ticketsQuery.not("status", "in", "(completed,cancelled,rejected)")
+    for (const status of ["completed", "cancelled", "rejected"]) {
+      ticketsQuery = ticketsQuery.not("status", "ilike", status)
+    }
   }
   if (query.queryText) {
     const escaped = query.queryText.replace(/,/g, " ").trim()

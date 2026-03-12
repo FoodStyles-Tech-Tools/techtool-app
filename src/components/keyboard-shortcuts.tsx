@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from "@client/components/ui/dialog"
 import { CommandPalette, type CommandPaletteAction } from "@client/components/command-palette"
+import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 
 const GlobalTicketDialog = lazyComponent(
   () => import("./global-ticket-dialog").then((mod) => mod.GlobalTicketDialog),
@@ -43,6 +44,7 @@ export function KeyboardShortcuts() {
   const { data: session, isPending } = useSession()
   const pathname = useLocation().pathname
   const navigate = useNavigate()
+  const { openPreview: openTicketPreview } = useTicketPreview()
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false)
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false)
@@ -419,7 +421,7 @@ export function KeyboardShortcuts() {
           onOpenChange={setIsSearchOverlayOpen}
           onSelectTicket={(urlSegment) => {
             setIsSearchOverlayOpen(false)
-            navigate(`/tickets/${encodeURIComponent(urlSegment)}`)
+            openTicketPreview({ slug: String(urlSegment).toLowerCase() })
           }}
         />
       ) : null}

@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Link } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { PlusIcon } from "@heroicons/react/20/solid"
 import { Button } from "@client/components/ui/button"
@@ -9,6 +8,7 @@ import { DataState } from "@client/components/ui/data-state"
 import { CreateSubtaskDialog } from "@client/components/create-subtask-dialog"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { useTickets, useUpdateTicket } from "@client/features/tickets/hooks/use-tickets"
+import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 import { useRealtimeSubscription } from "@client/hooks/use-realtime"
 import { useUsers } from "@client/hooks/use-users"
 import { toast } from "@client/components/ui/toast"
@@ -47,6 +47,7 @@ export function Subtasks({
   allowSqaStatuses = true,
   allowCreate = true,
 }: SubtasksProps) {
+  const { openPreview } = useTicketPreview()
   const [createSubtaskOpen, setCreateSubtaskOpen] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const { flags } = usePermissions()
@@ -150,12 +151,18 @@ export function Subtasks({
                 key={subtask.id}
                 className="grid grid-cols-[1.7fr_1fr_0.8fr_1fr] items-center gap-2 px-3 py-2"
               >
-                <Link
-                  to={`/tickets/${String(subtask.displayId || subtask.id).toLowerCase()}`}
-                  className="min-w-0 truncate text-sm hover:underline"
+                <button
+                  type="button"
+                  onClick={() =>
+                    openPreview({
+                      ticketId: subtask.id,
+                      slug: String(subtask.displayId || subtask.id).toLowerCase(),
+                    })
+                  }
+                  className="min-w-0 truncate text-left text-sm hover:underline"
                 >
                   {(subtask.displayId || subtask.id.slice(0, 8)).toUpperCase()} {subtask.title}
-                </Link>
+                </button>
                 <select
                   value={subtask.assignee?.id || UNASSIGNED_VALUE}
                   onChange={(event) =>

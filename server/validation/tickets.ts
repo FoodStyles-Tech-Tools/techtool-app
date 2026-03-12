@@ -121,6 +121,8 @@ const ticketListQuerySchema: z.ZodType<TicketListQuery & { view: "list" }> = z.o
   epicId: optionalNullableString,
   sprintId: optionalNullableString,
   excludeDone: z.boolean(),
+  excludeStatuses: z.array(z.string()).optional(),
+  includeStatuses: z.array(z.string()).optional(),
   excludeSubtasks: z.boolean(),
   queryText: optionalNullableString,
   cursor: optionalNullableString,

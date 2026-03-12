@@ -7,6 +7,7 @@ import { ThemeProvider } from "@client/components/layout/theme-provider"
 import { SignOutOverlayProvider } from "@client/components/signout-overlay"
 import { RichTextActionsListener } from "@client/components/layout/rich-text-actions-listener"
 import { Toaster } from "@client/components/ui/toast"
+import { TicketPreviewProvider } from "@client/features/tickets/context/ticket-preview-context"
 
 const KeyboardShortcuts = lazyComponent(
   () => import("@client/components/keyboard-shortcuts").then((mod) => mod.KeyboardShortcuts),
@@ -17,12 +18,14 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <AuthProvider>
         <ReactQueryProvider>
-          <SignOutOverlayProvider>
-            {children}
-          <RichTextActionsListener />
-          <Toaster />
-            <KeyboardShortcuts />
-          </SignOutOverlayProvider>
+          <TicketPreviewProvider>
+            <SignOutOverlayProvider>
+              {children}
+              <RichTextActionsListener />
+              <Toaster />
+              <KeyboardShortcuts />
+            </SignOutOverlayProvider>
+          </TicketPreviewProvider>
         </ReactQueryProvider>
       </AuthProvider>
     </ThemeProvider>

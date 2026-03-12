@@ -1,6 +1,5 @@
 "use client"
 
-import { Link } from "react-router-dom"
 import { useMemo } from "react"
 import { format } from "date-fns"
 import { Badge } from "@client/components/ui/badge"
@@ -9,8 +8,10 @@ import { PageHeader } from "@client/components/ui/page-header"
 import { DataState } from "@client/components/ui/data-state"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import { useTickets } from "@client/features/tickets/hooks/use-tickets"
+import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 
 export function DeletedTicketsPanel() {
+  const { openPreview } = useTicketPreview()
   const { data: tickets = [], isLoading } = useTickets({
     status: "archived",
     realtime: false,
@@ -69,12 +70,18 @@ export function DeletedTicketsPanel() {
                 {rows.map((row) => (
                   <tr key={row.id} className="border-b border-border">
                     <td className="px-3 py-2">
-                      <Link
-                        to={`/tickets/${String(row.displayId).toLowerCase()}`}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openPreview({
+                            ticketId: row.id,
+                            slug: String(row.displayId).toLowerCase(),
+                          })
+                        }
                         className="text-foreground hover:underline"
                       >
                         {row.displayId}
-                      </Link>
+                      </button>
                     </td>
                     <td className="px-3 py-2 text-foreground">{row.title}</td>
                     <td className="px-3 py-2 text-muted-foreground">

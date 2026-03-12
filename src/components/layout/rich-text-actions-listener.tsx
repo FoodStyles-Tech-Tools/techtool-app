@@ -1,9 +1,14 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { toast } from "@client/components/ui/toast"
+import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 
 export function RichTextActionsListener() {
+  const { openPreview } = useTicketPreview()
+  const openPreviewRef = useRef(openPreview)
+  openPreviewRef.current = openPreview
+
   useEffect(() => {
     const statusCache = new Map<string, string>()
     const statusInFlight = new Set<string>()
@@ -109,8 +114,30 @@ export function RichTextActionsListener() {
       subtree: true,
     })
 
+    const getTicketSlugFromHref = (href: string | null): string | null => {
+      if (!href) return null
+      try {
+        const url = new URL(href, window.location.origin)
+        const match = url.pathname.match(/\/tickets\/([^/?#]+)/)
+        return match?.[1]?.toLowerCase() ?? null
+      } catch {
+        return null
+      }
+    }
+
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null
+
+      const ticketLink = target?.closest?.('a[href*="/tickets/"]') as HTMLAnchorElement | null
+      if (ticketLink?.href) {
+        const slug = getTicketSlugFromHref(ticketLink.getAttribute("href"))
+        if (slug) {
+          event.preventDefault()
+          openPreviewRef.current({ slug })
+          return
+        }
+      }
+
       const copyButton = target?.closest?.("[data-code-copy='true']") as HTMLElement | null
       if (!copyButton) return
 

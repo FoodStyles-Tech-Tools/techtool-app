@@ -1,7 +1,7 @@
 "use client"
 
-import { Link } from "react-router-dom"
 import { useCallback, useDeferredValue, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
 import { MagnifyingGlassIcon } from "@heroicons/react/20/solid"
 import { useProject } from "@client/hooks/use-projects"
 import { useDepartments } from "@client/hooks/use-departments"
@@ -20,7 +20,6 @@ import { Breadcrumb } from "@client/components/ui/breadcrumb"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { DataState } from "@client/components/ui/data-state"
-import { Card } from "@client/components/ui/card"
 import { Button } from "@client/components/ui/button"
 import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import { ProjectForm } from "@client/components/forms/project-form"
@@ -38,6 +37,7 @@ import {
   TableRow,
 } from "@client/components/ui/table"
 import { toast } from "@client/components/ui/toast"
+import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 import type { Project } from "@shared/types"
 import type { Ticket } from "@shared/types"
 
@@ -65,6 +65,7 @@ export default function ProjectDetailClient({
   projectId,
   initialProject,
 }: ProjectDetailClientProps) {
+  const { openPreview } = useTicketPreview()
   const { flags, user: currentUser } = usePermissions()
   const { data, isLoading } = useProject(projectId, {
     initialData: initialProject,
@@ -102,6 +103,28 @@ export default function ProjectDetailClient({
     )
   }, [])
 
+  const { statuses: ticketStatuses, statusMap } = useTicketStatuses()
+  const { epics } = useEpics()
+  const { sprints } = useSprints()
+  const statusOptions = useMemo(
+    () =>
+      ticketStatuses
+        .filter((s) => !isArchivedStatus(s.key))
+        .map((s) => ({ id: s.key, label: s.label })),
+    [ticketStatuses]
+  )
+  const excludedSet = useMemo(
+    () => new Set(excludedStatuses.map((s) => s.toLowerCase())),
+    [excludedStatuses]
+  )
+  const includeStatuses = useMemo(
+    () =>
+      statusOptions
+        .filter((o) => !excludedSet.has(o.id.toLowerCase()))
+        .map((o) => o.id),
+    [statusOptions, excludedSet]
+  )
+
   const { data: tickets = [], isLoading: ticketsLoading } = useTickets({
     projectId: project?.id,
     epicId: epicFilter !== "all" ? epicFilter : undefined,
@@ -110,15 +133,12 @@ export default function ProjectDetailClient({
     requestedById: reporterFilter !== "all" ? reporterFilter : undefined,
     sqaAssigneeId: sqaFilter !== "all" ? sqaFilter : undefined,
     priority: priorityFilter !== "all" ? priorityFilter : undefined,
-    excludeStatuses: excludedStatuses.length > 0 ? excludedStatuses : undefined,
+    includeStatuses: statusOptions.length > 0 ? includeStatuses : undefined,
     q: deferredSearchQuery.trim() || undefined,
     excludeSubtasks: true,
     limit: 500,
     enabled: !!project?.id,
   })
-  const { statuses: ticketStatuses, statusMap } = useTicketStatuses()
-  const { epics } = useEpics()
-  const { sprints } = useSprints()
   const epicOptionsAsc = useMemo(
     () =>
       [...epics].sort((a, b) =>
@@ -132,14 +152,6 @@ export default function ProjectDetailClient({
         (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
       ),
     [sprints]
-  )
-
-  const statusOptions = useMemo(
-    () =>
-      ticketStatuses
-        .filter((s) => !isArchivedStatus(s.key))
-        .map((s) => ({ id: s.key, label: s.label })),
-    [ticketStatuses]
   )
 
   const userOptions = useMemo(
@@ -168,7 +180,6 @@ export default function ProjectDetailClient({
       <EntityPageLayout
         header={
           <PageHeader
-          title={project?.name || "Project"}
           breadcrumb={
             <Breadcrumb
               items={[
@@ -203,8 +214,8 @@ export default function ProjectDetailClient({
         emptyDescription="The requested project could not be loaded."
       >
         {project ? (
-          <div className="space-y-4">
-            <Card className="p-5 shadow-none">
+          <div className="space-y-6">
+            <section>
               <h2 className="text-sm font-semibold text-foreground">Details</h2>
               <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 <div>
@@ -236,16 +247,16 @@ export default function ProjectDetailClient({
                   <dd className="mt-1 text-sm text-foreground">{collaboratorsLabel}</dd>
                 </div>
               </dl>
-            </Card>
+            </section>
 
-            <Card className="p-5 shadow-none">
+            <section>
               <h2 className="text-sm font-semibold text-foreground">Overview</h2>
               <p className="mt-3 text-sm leading-6 text-muted-foreground">
                 {project.description || "No project description provided."}
               </p>
-            </Card>
+            </section>
 
-            <Card className="p-5 shadow-none">
+            <section>
               <h2 className="text-sm font-semibold text-foreground">Tickets</h2>
               <div className="mt-3 flex flex-wrap gap-6">
                 <FilterField label="Search" id="project-tickets-search">
@@ -398,12 +409,18 @@ export default function ProjectDetailClient({
                               {ticket.displayId || ticket.id.slice(0, 8)}
                             </TableCell>
                             <TableCell className="py-2">
-                              <Link
-                                to={`/tickets/${ticket.id}`}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openPreview({
+                                    ticketId: ticket.id,
+                                    slug: (ticket.displayId || ticket.id).toLowerCase(),
+                                  })
+                                }
                                 className="text-sm font-normal text-foreground hover:underline"
                               >
                                 {ticket.title}
-                              </Link>
+                              </button>
                             </TableCell>
                             <TableCell className="py-2">
                               {statusInfo ? (
@@ -422,7 +439,7 @@ export default function ProjectDetailClient({
                   </Table>
                 </div>
               )}
-            </Card>
+            </section>
           </div>
         ) : null}
       </DataState>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { XMarkIcon } from "@heroicons/react/20/solid"
 import { Input } from "@client/components/ui/input"
 import { Avatar, AvatarImage, AvatarFallback } from "@client/components/ui/avatar"
 import { cn } from "@client/lib/utils"
@@ -18,8 +19,14 @@ interface CollaboratorSelectorProps {
   value: string[]
   onChange: (ids: string[]) => void
   placeholder?: string
+  /** Placeholder for the search input inside the dropdown (e.g. "Search requesters"). */
+  searchPlaceholder?: string
+  /** "namesOnly" shows only names in the list (no avatar, no email). */
+  listVariant?: "full" | "namesOnly"
   buttonClassName?: string
   disabled?: boolean
+  /** When 1, only a single person can be selected (radio behavior). */
+  maxSelection?: number
 }
 
 export function CollaboratorSelector({
@@ -27,12 +34,16 @@ export function CollaboratorSelector({
   value,
   onChange,
   placeholder = "Select collaborators",
+  searchPlaceholder = "Search collaborators",
+  listVariant = "full",
   buttonClassName,
   disabled,
+  maxSelection,
 }: CollaboratorSelectorProps) {
   const [search, setSearch] = useState("")
+  const single = maxSelection === 1
 
-  const selectedIds = useMemo(() => value || [], [value])
+  const selectedIds = useMemo(() => (value || []).slice(0, single ? 1 : undefined), [value, single])
 
   const selectedUsers = useMemo(() => {
     if (!selectedIds.length) return []
@@ -53,38 +64,50 @@ export function CollaboratorSelector({
   const toggleUser = (id: string) => {
     if (selectedIds.includes(id)) {
       onChange(selectedIds.filter((val) => val !== id))
+    } else if (single) {
+      onChange([id])
     } else {
       onChange([...selectedIds, id])
     }
   }
 
+  const removeUser = (e: React.MouseEvent, id: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    onChange(selectedIds.filter((val) => val !== id))
+  }
+
   return (
     <details className={cn("w-full rounded-md border border-border bg-card", disabled && "opacity-70", buttonClassName)}>
-      <summary className="flex h-8 cursor-pointer list-none items-center justify-between gap-2 px-2 text-left">
+      <summary className="flex min-h-9 cursor-pointer list-none flex-wrap items-center gap-1.5 px-2 py-1.5 text-left">
         {selectedUsers.length === 0 ? (
-          <span className="truncate text-xs text-muted-foreground">{placeholder}</span>
+          <span className="truncate text-sm text-muted-foreground">{placeholder}</span>
         ) : (
-          <div className="flex items-center gap-1 overflow-hidden">
-            <div className="flex -space-x-2">
-              {selectedUsers.slice(0, 3).map((user) => (
-                <Avatar key={user.id} className="h-5 w-5 border border-white">
-                  <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
-                  <AvatarFallback className="text-xs">
-                    {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              ))}
-            </div>
-            {selectedUsers.length > 3 && (
-              <span className="text-xs text-muted-foreground">+{selectedUsers.length - 3}</span>
-            )}
+          <div className="flex flex-wrap items-center gap-1.5 overflow-hidden">
+            {selectedUsers.map((user) => (
+              <span
+                key={user.id}
+                className="inline-flex items-center gap-1 rounded-md border border-transparent bg-muted px-2 py-0.5 text-sm text-foreground"
+              >
+                {user.name || user.email}
+                <button
+                  type="button"
+                  onClick={(e) => removeUser(e, user.id)}
+                  disabled={disabled}
+                  className="rounded p-0.5 text-muted-foreground hover:bg-muted-foreground/20 hover:text-foreground focus:outline-none disabled:pointer-events-none"
+                  aria-label={`Remove ${user.name || user.email}`}
+                >
+                  <XMarkIcon className="h-3.5 w-3.5" />
+                </button>
+              </span>
+            ))}
           </div>
         )}
-        <span className="text-xs text-muted-foreground">Select</span>
+        <span className="ml-auto shrink-0 text-xs text-muted-foreground">Select</span>
       </summary>
       <div className="border-t border-border p-3">
         <Input
-          placeholder="Search collaborators"
+          placeholder={searchPlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-8"
@@ -102,23 +125,31 @@ export function CollaboratorSelector({
                 className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
               >
                 <input
-                  type="checkbox"
+                  type={single ? "radio" : "checkbox"}
+                  name={single ? "collaborator-selector-single" : undefined}
                   checked={checked}
                   onChange={() => toggleUser(user.id)}
                   disabled={disabled}
-                  className="h-4 w-4 rounded border-input text-foreground"
-                  aria-label={`Toggle ${user.name || user.email}`}
+                  className={single ? "h-4 w-4 border-input text-foreground" : "h-4 w-4 rounded border-input text-foreground"}
+                  aria-label={single ? `Select ${user.name || user.email}` : `Toggle ${user.name || user.email}`}
                 />
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
-                  <AvatarFallback className="text-xs">
-                    {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm">{user.name || user.email}</p>
-                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-                </div>
+                {listVariant === "full" && (
+                  <>
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
+                      <AvatarFallback className="text-xs">
+                        {user.name?.[0]?.toUpperCase() || user.email[0].toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm">{user.name || user.email}</p>
+                      <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                    </div>
+                  </>
+                )}
+                {listVariant === "namesOnly" && (
+                  <span className="min-w-0 flex-1 truncate text-sm">{user.name || user.email}</span>
+                )}
               </label>
             )
           })}

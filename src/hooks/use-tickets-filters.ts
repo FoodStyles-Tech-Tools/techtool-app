@@ -8,8 +8,8 @@ export interface ProjectsFilterOption {
   status?: string | null
 }
 
-/** Default statuses excluded from the list (unchecked in Status multi-select). */
-export const DEFAULT_EXCLUDED_STATUSES = ["cancelled", "completed"]
+/** Default statuses excluded from the list (unchecked in Status multi-select). Archived only appears in Deleted Tickets. */
+export const DEFAULT_EXCLUDED_STATUSES = ["cancelled", "completed", "archived"]
 
 interface UseTicketsFiltersOptions {
   user: { id: string; role?: string | null } | null

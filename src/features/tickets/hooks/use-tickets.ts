@@ -24,6 +24,8 @@ type UseTicketsOptions = {
   status?: string
   /** Exclude tickets with these status keys (e.g. ["cancelled", "completed"]). */
   excludeStatuses?: string[]
+  /** Only show tickets whose status is in this list (allow-list). */
+  includeStatuses?: string[]
   priority?: string
   departmentId?: string
   requestedById?: string
@@ -54,6 +56,7 @@ export function useTickets(options?: UseTicketsOptions) {
   const sprintId = options?.sprintId
   const excludeDone = options?.excludeDone
   const excludeStatuses = options?.excludeStatuses
+  const includeStatuses = options?.includeStatuses
   const excludeSubtasks = options?.excludeSubtasks ?? true
   const queryKey = ticketQueryKeys.list({
     projectId,
@@ -62,6 +65,7 @@ export function useTickets(options?: UseTicketsOptions) {
     sqaAssigneeId,
     status: options?.status,
     excludeStatuses: excludeStatuses?.length ? excludeStatuses.join(",") : undefined,
+    includeStatuses: includeStatuses?.length ? includeStatuses.join(",") : undefined,
     priority: options?.priority,
     departmentId,
     requestedById,
@@ -184,6 +188,7 @@ export function useTickets(options?: UseTicketsOptions) {
         sqaAssigneeId,
         status: options?.status,
         excludeStatuses: options?.excludeStatuses,
+        includeStatuses: options?.includeStatuses,
         priority: options?.priority,
         departmentId,
         requestedById,
