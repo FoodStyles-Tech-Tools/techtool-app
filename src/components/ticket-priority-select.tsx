@@ -25,11 +25,11 @@ export function TicketPrioritySelect({
   isLoading = false,
 }: TicketPrioritySelectProps) {
   const options = [
-    { value: "high", label: "High" },
     { value: "low", label: "Low" },
     { value: "medium", label: "Medium" },
+    { value: "high", label: "High" },
     { value: "urgent", label: "Urgent" },
-  ].sort((a, b) => a.label.localeCompare(b.label))
+  ]
 
   return (
     <div className={cn("relative flex min-h-8 w-[120px] min-w-[120px] items-center", className)}>

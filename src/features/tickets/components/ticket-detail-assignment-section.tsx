@@ -99,7 +99,7 @@ export function TicketDetailAssignmentSection({
             {!ticket.assignee && currentUser ? (
               <button
                 type="button"
-                className="whitespace-nowrap text-xs text-primary underline disabled:opacity-50"
+                className="whitespace-nowrap text-sm text-primary underline disabled:opacity-50"
                 onClick={() => void onAssigneeChange(currentUser.id)}
                 disabled={updatingFields["assigneeId"] || !canEditTickets}
               >

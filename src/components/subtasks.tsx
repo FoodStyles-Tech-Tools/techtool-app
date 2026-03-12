@@ -168,7 +168,7 @@ export function Subtasks({
                         ) : user ? (
                           <button
                             type="button"
-                            className="whitespace-nowrap text-xs text-primary underline disabled:opacity-50"
+                            className="whitespace-nowrap text-sm text-primary underline disabled:opacity-50"
                             onClick={() => {
                               setAssigningSubtaskId(subtask.id)
                               updateTicket.mutate(
@@ -250,7 +250,7 @@ export function Subtasks({
                       ) : user ? (
                         <button
                           type="button"
-                          className="whitespace-nowrap text-xs text-primary underline disabled:opacity-50"
+                          className="whitespace-nowrap text-sm text-primary underline disabled:opacity-50"
                           onClick={() => {
                             setAssigningSubtaskId(subtask.id)
                             updateTicket.mutate(

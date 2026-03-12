@@ -1,6 +1,8 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { createPortal } from "react-dom"
+import { CheckCircleIcon, XCircleIcon, XMarkIcon } from "@heroicons/react/20/solid"
 import { cn } from "@client/lib/utils"
 
 interface Toast {
@@ -110,48 +112,95 @@ export function useToast() {
   return toastList
 }
 
-export function Toaster() {
-  const toasts = useToast()
+function ToastPortal({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false)
 
-  if (toasts.length === 0) return null
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
+  return createPortal(children, document.body)
+}
+
+function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+  const isSuccess = t.type === "success"
 
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
+    <div
+      role="status"
+      aria-live="polite"
+      className={cn(
+        "pointer-events-auto flex w-full max-w-xs items-center gap-2 rounded-lg border px-3 py-2 shadow-lg shadow-black/15",
+        isSuccess
+          ? "border-emerald-200 bg-white dark:border-emerald-500/30 dark:bg-emerald-950/90"
+          : "border-red-200 bg-white dark:border-red-500/30 dark:bg-red-950/90"
+      )}
+    >
+      {/* Icon */}
+      {isSuccess ? (
+        <CheckCircleIcon className="h-4 w-4 shrink-0 text-emerald-500 dark:text-emerald-400" />
+      ) : (
+        <XCircleIcon className="h-4 w-4 shrink-0 text-red-500 dark:text-red-400" />
+      )}
+
+      {/* Content */}
+      <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
+        <span
           className={cn(
-            "flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-lg",
-            toast.type === "success" && "border-border",
-            toast.type === "error" && "border-red-200"
+            "shrink-0 text-[10px] font-bold uppercase tracking-widest",
+            isSuccess
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-red-600 dark:text-red-400"
           )}
         >
-          <span
-            className={cn(
-              "text-xs font-semibold uppercase tracking-wide",
-              toast.type === "success" && "text-foreground",
-              toast.type === "error" && "text-red-700"
-            )}
-          >
-            {toast.type === "success" ? "Success" : "Error"}
-          </span>
-          <p
-            className={cn(
-              "text-sm font-medium leading-5",
-              toast.type === "success" && "text-foreground",
-              toast.type === "error" && "text-red-700"
-            )}
-          >
-            {toast.message}
-          </p>
-          <button
-            onClick={() => removeToast(toast.id)}
-            className="ml-auto rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
-          >
-            Close
-          </button>
-        </div>
-      ))}
+          {isSuccess ? "Success" : "Error"}
+        </span>
+        <p
+          className={cn(
+            "truncate text-xs font-medium",
+            isSuccess
+              ? "text-emerald-950 dark:text-emerald-50"
+              : "text-red-950 dark:text-red-50"
+          )}
+        >
+          {t.message}
+        </p>
+      </div>
+
+      {/* Close button */}
+      <button
+        type="button"
+        aria-label="Dismiss notification"
+        onClick={onDismiss}
+        className={cn(
+          "shrink-0 transition-colors",
+          isSuccess
+            ? "text-emerald-400 hover:text-emerald-600 dark:text-emerald-500 dark:hover:text-emerald-300"
+            : "text-red-400 hover:text-red-600 dark:text-red-500 dark:hover:text-red-300"
+        )}
+      >
+        <XMarkIcon className="h-3.5 w-3.5" />
+      </button>
     </div>
+  )
+}
+
+export function Toaster() {
+  const toastList = useToast()
+
+  return (
+    <ToastPortal>
+      {/* z-[9999] ensures toasts always render above all overlays, dialogs and sign-out screens */}
+      <div
+        aria-label="Notifications"
+        className="pointer-events-none fixed inset-x-0 top-4 z-[9999] flex flex-col items-end gap-2.5 px-4 sm:px-6"
+      >
+        {toastList.map((t) => (
+          <ToastItem key={t.id} toast={t} onDismiss={() => removeToast(t.id)} />
+        ))}
+      </div>
+    </ToastPortal>
   )
 }
