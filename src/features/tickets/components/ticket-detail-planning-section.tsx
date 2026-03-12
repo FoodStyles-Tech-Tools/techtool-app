@@ -51,7 +51,7 @@ export function TicketDetailPlanningSection({
   onSprintChange,
   onProjectChange,
 }: TicketDetailPlanningSectionProps) {
-  const projectId = ticket.project?.id || null
+  const isTicketUnassigned = !ticket.assignee?.id
 
   return (
     <>
@@ -61,7 +61,10 @@ export function TicketDetailPlanningSection({
           <TicketPrioritySelect
             value={ticket.priority}
             onValueChange={(value) => void onPriorityChange(value)}
-            disabled={!canEditTickets || isAssignmentLocked || updatingFields["priority"]}
+            disabled={
+              isTicketUnassigned || !canEditTickets || isAssignmentLocked || updatingFields["priority"]
+            }
+            hideNativeSelect={isTicketUnassigned}
             isLoading={!!updatingFields["priority"]}
             triggerClassName="h-8 w-full"
           />

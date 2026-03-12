@@ -69,6 +69,8 @@ export function TicketDetailSidebar({
   onProjectChange,
   onStatusChange,
 }: TicketDetailSidebarProps) {
+  const isTicketUnassigned = !ticket.assignee?.id
+
   return (
     <aside className="min-w-0 space-y-4">
       {!hideStatusRow ? (
@@ -79,7 +81,10 @@ export function TicketDetailSidebar({
             <TicketStatusSelect
               value={ticket.status}
               onValueChange={onStatusChange}
-              disabled={!canEditTickets || isAssignmentLocked || !!updatingFields.status}
+              disabled={
+                isTicketUnassigned || !canEditTickets || isAssignmentLocked || !!updatingFields.status
+              }
+              hideNativeSelect={isTicketUnassigned}
               allowSqaStatuses={ticket.project?.require_sqa === true}
               triggerClassName="h-8"
               isLoading={!!updatingFields.status}

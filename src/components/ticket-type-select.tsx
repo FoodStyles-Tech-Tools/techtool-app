@@ -76,6 +76,7 @@ interface TicketTypeSelectProps {
   value: string
   onValueChange: (value: string) => void
   disabled?: boolean
+  hideNativeSelect?: boolean
   className?: string
   triggerClassName?: string
   /** When true, hide the native select and show a small loading indicator instead. */
@@ -86,6 +87,7 @@ export function TicketTypeSelect({
   value,
   onValueChange,
   disabled,
+  hideNativeSelect = false,
   className,
   triggerClassName,
   isLoading = false,
@@ -107,19 +109,25 @@ export function TicketTypeSelect({
       ) : (
         <>
           <TicketTypePill type={resolvedValue} className="pointer-events-none shrink-0" />
-          <select
-            value={resolvedValue}
-            onChange={(event) => onValueChange(event.target.value)}
-            disabled={disabled}
-            className={cn(selectStyleInputSm, "absolute inset-0 cursor-pointer opacity-0", triggerClassName)}
-            aria-label="Type"
-          >
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          {!hideNativeSelect ? (
+            <select
+              value={resolvedValue}
+              onChange={(event) => onValueChange(event.target.value)}
+              disabled={disabled}
+              className={cn(
+                selectStyleInputSm,
+                "absolute inset-0 cursor-pointer opacity-0",
+                triggerClassName
+              )}
+              aria-label="Type"
+            >
+              {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
         </>
       )}
     </div>

@@ -8,6 +8,7 @@ interface TicketPrioritySelectProps {
   value: string
   onValueChange: (value: string) => void
   disabled?: boolean
+  hideNativeSelect?: boolean
   className?: string
   triggerClassName?: string
   /** When true, hide the native select and show a small loading indicator instead. */
@@ -18,6 +19,7 @@ export function TicketPrioritySelect({
   value,
   onValueChange,
   disabled,
+  hideNativeSelect = false,
   className,
   triggerClassName,
   isLoading = false,
@@ -42,19 +44,25 @@ export function TicketPrioritySelect({
           ) : (
             <span className="pointer-events-none text-xs text-muted-foreground">Priority</span>
           )}
-          <select
-            value={value}
-            onChange={(event) => onValueChange(event.target.value)}
-            disabled={disabled}
-            className={cn(selectStyleInputSm, "absolute inset-0 cursor-pointer opacity-0", triggerClassName)}
-            aria-label="Priority"
-          >
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          {!hideNativeSelect ? (
+            <select
+              value={value}
+              onChange={(event) => onValueChange(event.target.value)}
+              disabled={disabled}
+              className={cn(
+                selectStyleInputSm,
+                "absolute inset-0 cursor-pointer opacity-0",
+                triggerClassName
+              )}
+              aria-label="Priority"
+            >
+              {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
         </>
       )}
     </div>

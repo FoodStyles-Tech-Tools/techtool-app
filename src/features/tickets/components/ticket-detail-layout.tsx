@@ -43,6 +43,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
     NO_PROJECT_VALUE,
     NO_PARENT_TICKET_VALUE,
   } = surface
+  const isTicketUnassigned = !ticket?.assignee?.id
 
   const gridContent = (
     <DataState
@@ -91,7 +92,13 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                   <TicketStatusSelect
                     value={ticket.status}
                     onValueChange={(status) => actions.handleStatusChange(status)}
-                    disabled={!canEditTickets || isAssignmentLocked || !!actions.updatingFields.status}
+                    disabled={
+                      isTicketUnassigned ||
+                      !canEditTickets ||
+                      isAssignmentLocked ||
+                      !!actions.updatingFields.status
+                    }
+                    hideNativeSelect={isTicketUnassigned}
                     allowSqaStatuses={ticket.project?.require_sqa === true}
                     triggerClassName="h-8"
                     isLoading={!!actions.updatingFields.status}

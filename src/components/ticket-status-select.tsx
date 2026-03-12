@@ -18,6 +18,7 @@ interface TicketStatusSelectProps {
   value: string
   onValueChange: (value: string) => void
   disabled?: boolean
+  hideNativeSelect?: boolean
   className?: string
   triggerClassName?: string
   excludeDone?: boolean
@@ -30,6 +31,7 @@ export function TicketStatusSelect({
   value, 
   onValueChange, 
   disabled,
+  hideNativeSelect = false,
   className,
   triggerClassName,
   excludeDone = false,
@@ -69,19 +71,25 @@ export function TicketStatusSelect({
           ) : (
             <span className="pointer-events-none text-xs text-muted-foreground">{currentLabel}</span>
           )}
-          <select
-            value={value}
-            onChange={(event) => onValueChange(event.target.value)}
-            disabled={disabled}
-            className={cn(selectStyleInputSmPx2, "absolute inset-0 cursor-pointer opacity-0", triggerClassName)}
-            aria-label="Status"
-          >
-            {selectableStatuses.map((status) => (
-              <option key={status.key} value={status.key}>
-                {status.label}
-              </option>
-            ))}
-          </select>
+          {!hideNativeSelect ? (
+            <select
+              value={value}
+              onChange={(event) => onValueChange(event.target.value)}
+              disabled={disabled}
+              className={cn(
+                selectStyleInputSmPx2,
+                "absolute inset-0 cursor-pointer opacity-0",
+                triggerClassName
+              )}
+              aria-label="Status"
+            >
+              {selectableStatuses.map((status) => (
+                <option key={status.key} value={status.key}>
+                  {status.label}
+                </option>
+              ))}
+            </select>
+          ) : null}
         </>
       )}
     </div>

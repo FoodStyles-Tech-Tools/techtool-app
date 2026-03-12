@@ -42,6 +42,7 @@ export function TicketDetailAssignmentSection({
   onSqaAssigneeChange,
   onTypeChange,
 }: TicketDetailAssignmentSectionProps) {
+  const isTicketUnassigned = !ticket.assignee?.id
   const sortedAssigneeEligibleUsers = useMemo(
     () =>
       [...assigneeEligibleUsers].sort((a, b) => {
@@ -169,7 +170,10 @@ export function TicketDetailAssignmentSection({
             <TicketTypeSelect
               value={ticket.type || "task"}
               onValueChange={(value) => void onTypeChange(value)}
-              disabled={!canEditTickets || isAssignmentLocked || updatingFields["type"]}
+              disabled={
+                isTicketUnassigned || !canEditTickets || isAssignmentLocked || updatingFields["type"]
+              }
+              hideNativeSelect={isTicketUnassigned}
               isLoading={!!updatingFields["type"]}
               triggerClassName="h-8 w-full"
             />
