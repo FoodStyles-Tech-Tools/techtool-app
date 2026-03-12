@@ -285,7 +285,7 @@ export async function fetchTicketList(
       ticketsQuery = ticketsQuery.eq("status", query.status)
     }
   }
-  // Archived tickets only appear when explicitly requested (e.g. Deleted Tickets page); exclude everywhere else
+  // Archived tickets only appear when explicitly requested (e.g. archive views); exclude everywhere else
   const isOnlyArchivedRequest =
     query.status != null &&
     String(query.status).trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "") === "archived"

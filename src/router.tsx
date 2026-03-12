@@ -102,14 +102,6 @@ const WorkspaceSprintsPanel = lazyComponent(
   { loading: RouteLoadingFallback }
 )
 
-const DeletedTicketsPanel = lazyComponent(
-  () =>
-    import("@client/components/settings/deleted-tickets-panel").then(
-      (module) => module.DeletedTicketsPanel
-    ),
-  { loading: RouteLoadingFallback }
-)
-
 export const router = createBrowserRouter([
   {
     element: (
@@ -144,7 +136,6 @@ export const router = createBrowserRouter([
           { path: "status", element: <WorkspaceStatusPanel /> },
           { path: "epics", element: <WorkspaceEpicsPanel /> },
           { path: "sprints", element: <WorkspaceSprintsPanel /> },
-          { path: "deleted-tickets", element: <DeletedTicketsPanel /> },
           { path: "clockify", element: <ClockifyClient /> },
           { path: "clockify/sessions/:sessionId", element: <ClockifyClient /> },
           { path: "report", element: <ReportSessionsListClient /> },

@@ -21,6 +21,7 @@ export async function getUserPreferences() {
       user_id: user.id,
       group_by_epic: false,
       pinned_project_ids: [],
+      tickets_view: "table" as const,
     },
   }
 }
@@ -28,17 +29,21 @@ export async function getUserPreferences() {
 export async function updateUserPreferences(input: {
   group_by_epic?: boolean
   pinned_project_ids?: string[]
+  tickets_view?: "table" | "kanban"
 }) {
   const { supabase, user } = await getCurrentUserWithSupabase()
   const existing = await metaRepository.getUserPreferencesByUserId(supabase, user.id)
 
   if (existing) {
-    const updates: { group_by_epic?: boolean; pinned_project_ids?: string[] } = {}
+    const updates: { group_by_epic?: boolean; pinned_project_ids?: string[]; tickets_view?: "table" | "kanban" } = {}
     if (input.group_by_epic !== undefined) {
       updates.group_by_epic = input.group_by_epic
     }
     if (input.pinned_project_ids !== undefined) {
       updates.pinned_project_ids = input.pinned_project_ids
+    }
+    if (input.tickets_view !== undefined) {
+      updates.tickets_view = input.tickets_view
     }
 
     return {
@@ -51,6 +56,7 @@ export async function updateUserPreferences(input: {
       user_id: user.id,
       group_by_epic: input.group_by_epic ?? false,
       pinned_project_ids: input.pinned_project_ids ?? [],
+      tickets_view: input.tickets_view ?? "table",
     }),
   }
 }

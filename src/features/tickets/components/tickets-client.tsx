@@ -1,7 +1,8 @@
 "use client"
 
-import { useMemo, useCallback } from "react"
+import { useMemo, useCallback, useState, useEffect } from "react"
 import { PlusIcon } from "@heroicons/react/20/solid"
+import { TableCellsIcon, ViewColumnsIcon } from "@heroicons/react/24/outline"
 import { useProjects } from "@client/hooks/use-projects"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { useTicketsFilters } from "@client/hooks/use-tickets-filters"
@@ -11,6 +12,7 @@ import { useEpics } from "@client/hooks/use-epics"
 import { useSprints } from "@client/hooks/use-sprints"
 import { useTicketBoardActions } from "@client/features/tickets/hooks/use-ticket-board-actions"
 import { useOpenSubtasksDialog } from "@client/features/tickets/hooks/use-open-subtasks-dialog"
+import { useUserPreferences } from "@client/hooks/use-user-preferences"
 import { isArchivedStatus } from "@shared/ticket-statuses"
 import { ROWS_PER_PAGE } from "@shared/ticket-constants"
 import {
@@ -27,6 +29,56 @@ import { PageHeader } from "@client/components/ui/page-header"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { Button } from "@client/components/ui/button"
+import { cn } from "@client/lib/utils"
+
+type ViewMode = "table" | "kanban"
+
+function ViewToggle({
+  viewMode,
+  onViewModeChange,
+}: {
+  viewMode: ViewMode
+  onViewModeChange: (mode: ViewMode) => void
+}) {
+  return (
+    <div
+      className="inline-flex items-center rounded-md border border-border bg-form-bg p-0.5 gap-0.5"
+      role="group"
+      aria-label="View mode"
+    >
+      <button
+        type="button"
+        onClick={() => onViewModeChange("table")}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors",
+          viewMode === "table"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground hover:bg-accent"
+        )}
+        aria-pressed={viewMode === "table"}
+        title="Table view"
+      >
+        <TableCellsIcon className="h-3.5 w-3.5" aria-hidden />
+        <span>Table</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => onViewModeChange("kanban")}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors",
+          viewMode === "kanban"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground hover:bg-accent"
+        )}
+        aria-pressed={viewMode === "kanban"}
+        title="Kanban board"
+      >
+        <ViewColumnsIcon className="h-3.5 w-3.5" aria-hidden />
+        <span>Board</span>
+      </button>
+    </div>
+  )
+}
 
 export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   const { openPreview } = useTicketPreview()
@@ -35,6 +87,27 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   const { openSubtasksDialog, askHowToHandleOpenSubtasks, resolveOpenSubtasksDialog } = useOpenSubtasksDialog()
   const { data: projectsData } = useProjects()
   const projects = useMemo(() => projectsData || [], [projectsData])
+
+  // --- User preferences for view mode ---
+  const { preferences, updatePreferences } = useUserPreferences()
+  const [viewMode, setViewModeLocal] = useState<ViewMode>("table")
+
+  // Sync view mode from preferences once loaded
+  useEffect(() => {
+    if (preferences.user_id) {
+      setViewModeLocal(preferences.tickets_view ?? "table")
+    }
+  }, [preferences.user_id, preferences.tickets_view])
+
+  const handleViewModeChange = useCallback(
+    (mode: ViewMode) => {
+      setViewModeLocal(mode)
+      updatePreferences({ tickets_view: mode }).catch(() => {
+        // non-critical; view mode just won't persist
+      })
+    },
+    [updatePreferences]
+  )
 
   const filters = useTicketsFilters({
     user: user ?? null,
@@ -68,7 +141,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     setCurrentPage,
     resetToolbarFilters,
     hasActiveFilters,
-    selectedProjectLabel,
   } = filters
 
   const { statuses: ticketStatuses, statusMap } = useTicketStatuses()
@@ -91,6 +163,10 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     [statusOptions, excludedSet]
   )
 
+  // For Kanban, we want to load ALL tickets without pagination so the board is complete.
+  // For table, use normal pagination.
+  const isKanban = viewMode === "kanban"
+
   const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
     projectId: projectFilter !== "all" ? projectFilter : undefined,
     assigneeId: assigneeFilter !== "all" ? assigneeFilter : undefined,
@@ -103,8 +179,8 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     includeStatuses: statusOptions.length > 0 ? includeStatuses : undefined,
     excludeSubtasks: true,
     q: deferredSearchQuery.trim() || undefined,
-    limit: ROWS_PER_PAGE,
-    page: currentPage,
+    limit: isKanban ? 500 : ROWS_PER_PAGE,
+    page: isKanban ? 1 : currentPage,
   })
 
   const updateTicket = useUpdateTicket()
@@ -183,6 +259,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     handleCancelReasonConfirm,
     handleReturnedReasonCancel,
     handleReturnedReasonConfirm,
+    handleKanbanDrop,
   } = useTicketBoardActions({
     allTickets,
     projectFilter,
@@ -191,7 +268,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     updateTicketWithReasonComment,
   })
 
-  // Memoize callbacks before early return to maintain hook order
   const hasSearchQuery = deferredSearchQuery.trim().length > 0
   const totalPages = Math.max(1, ticketsPagination?.totalPages || 1)
   const startIndex = (currentPage - 1) * ROWS_PER_PAGE
@@ -214,97 +290,107 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
       <EntityPageLayout
         header={
           <PageHeader
-          title="Tickets"
-          actions={
-            canCreateTickets ? (
-              <Button type="button" onClick={() => setTicketDialogOpen(true)}>
-                <PlusIcon className="h-4 w-4" />
-                Create Ticket
-              </Button>
-            ) : null
-          }
+            title="Tickets"
+            actions={
+              <div className="flex items-center gap-2">
+                <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+                {canCreateTickets ? (
+                  <Button type="button" onClick={() => setTicketDialogOpen(true)}>
+                    <PlusIcon className="h-4 w-4" />
+                    Create Ticket
+                  </Button>
+                ) : null}
+              </div>
+            }
+          />
+        }
+        toolbar={
+          <TicketsToolbar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            projectFilter={projectFilter}
+            setProjectFilter={setProjectFilter}
+            projectOptions={projectOptions}
+            statusOptions={statusOptions}
+            excludedStatuses={excludedStatuses}
+            toggleStatusExcluded={toggleStatusExcluded}
+            assigneeFilter={assigneeFilter}
+            setAssigneeFilter={setAssigneeFilter}
+            reporterFilter={requestedByFilter}
+            setReporterFilter={setRequestedByFilter}
+            reporterOptions={userOptions}
+            sqaFilter={sqaFilter}
+            setSqaFilter={setSqaFilter}
+            sqaOptions={userOptions}
+            priorityFilter={priorityFilter}
+            setPriorityFilter={setPriorityFilter}
+            priorityOptions={priorityOptions}
+            typeFilter={typeFilter}
+            setTypeFilter={setTypeFilter}
+            epicFilter={epicFilter}
+            setEpicFilter={setEpicFilter}
+            epicOptions={epicOptions}
+            sprintFilter={sprintFilter}
+            setSprintFilter={setSprintFilter}
+            sprintOptions={sprintOptions}
+            resetToolbarFilters={resetToolbarFilters}
+            hasActiveFilters={hasActiveFilters}
+            currentUserId={user?.id ?? null}
+            statusMap={statusMap}
+          />
+        }
+      >
+        <TicketsResults
+          loading={loading}
+          filteredTickets={filteredTickets}
+          hasSearchQuery={hasSearchQuery}
+          viewMode={viewMode}
+          tableProps={{
+            tickets: paginatedTickets,
+            totalCount: ticketsPagination?.total || sortedTickets.length,
+            currentPage,
+            totalPages: totalPages || 1,
+            onPageChange: setCurrentPage,
+            startIndex,
+            endIndex,
+            onSelectTicket: handleSelectTicket,
+          }}
+          boardProps={{
+            statuses: ticketStatuses,
+            excludedStatuses,
+            onSelectTicket: handleSelectTicket,
+            onKanbanDrop: handleKanbanDrop,
+            onResetFilters: hasActiveFilters ? resetToolbarFilters : undefined,
+            onCreateTicket: canCreateTickets ? () => setTicketDialogOpen(true) : undefined,
+          }}
         />
-      }
-      toolbar={
-        <TicketsToolbar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          projectFilter={projectFilter}
-          setProjectFilter={setProjectFilter}
-          projectOptions={projectOptions}
-          statusOptions={statusOptions}
-          excludedStatuses={excludedStatuses}
-          toggleStatusExcluded={toggleStatusExcluded}
-          assigneeFilter={assigneeFilter}
-          setAssigneeFilter={setAssigneeFilter}
-          reporterFilter={requestedByFilter}
-          setReporterFilter={setRequestedByFilter}
-          reporterOptions={userOptions}
-          sqaFilter={sqaFilter}
-          setSqaFilter={setSqaFilter}
-          sqaOptions={userOptions}
-          priorityFilter={priorityFilter}
-          setPriorityFilter={setPriorityFilter}
-          priorityOptions={priorityOptions}
-          typeFilter={typeFilter}
-          setTypeFilter={setTypeFilter}
-          epicFilter={epicFilter}
-          setEpicFilter={setEpicFilter}
-          epicOptions={epicOptions}
-          sprintFilter={sprintFilter}
-          setSprintFilter={setSprintFilter}
-          sprintOptions={sprintOptions}
-          resetToolbarFilters={resetToolbarFilters}
-          hasActiveFilters={hasActiveFilters}
-          currentUserId={user?.id ?? null}
-          statusMap={statusMap}
-        />
-      }
-    >
-      <TicketsResults
-        loading={loading}
-        filteredTickets={filteredTickets}
-        hasSearchQuery={hasSearchQuery}
-        tableProps={{
-          tickets: paginatedTickets,
-          totalCount: ticketsPagination?.total || sortedTickets.length,
-          currentPage,
-          totalPages: totalPages || 1,
-          onPageChange: setCurrentPage,
-          startIndex,
-          endIndex,
-          onSelectTicket: handleSelectTicket,
-        }}
-      />
 
-      <TicketsDialogs
-        canCreateTickets={canCreateTickets}
-        isTicketDialogOpen={isTicketDialogOpen}
-        setTicketDialogOpen={setTicketDialogOpen}
-        selectedTicketId={selectedTicketId}
-        setSelectedTicketId={setSelectedTicketId}
-        showCancelReasonDialog={showCancelReasonDialog}
-        pendingStatusKind={pendingStatusKind}
-        cancelReason={cancelReason}
-        setCancelReason={setCancelReason}
-        onCancelReasonCancel={handleCancelReasonCancel}
-        onCancelReasonConfirm={handleCancelReasonConfirm}
-        showOpenSubtasksDialog={!!openSubtasksDialog}
-        openSubtasksTargetStatus={openSubtasksDialog?.targetStatus ?? null}
-        openSubtasks={openSubtasksDialog?.subtasks || []}
-        onOpenSubtasksCancel={() => resolveOpenSubtasksDialog("cancel")}
-        onOpenSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}
-        onOpenSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
-        showReturnedReasonDialog={showReturnedReasonDialog}
-        returnedReason={returnedReason}
-        setReturnedReason={setReturnedReason}
-        onReturnedReasonCancel={handleReturnedReasonCancel}
-        onReturnedReasonConfirm={handleReturnedReasonConfirm}
-      />
+        <TicketsDialogs
+          canCreateTickets={canCreateTickets}
+          isTicketDialogOpen={isTicketDialogOpen}
+          setTicketDialogOpen={setTicketDialogOpen}
+          selectedTicketId={selectedTicketId}
+          setSelectedTicketId={setSelectedTicketId}
+          showCancelReasonDialog={showCancelReasonDialog}
+          pendingStatusKind={pendingStatusKind}
+          cancelReason={cancelReason}
+          setCancelReason={setCancelReason}
+          onCancelReasonCancel={handleCancelReasonCancel}
+          onCancelReasonConfirm={handleCancelReasonConfirm}
+          showOpenSubtasksDialog={!!openSubtasksDialog}
+          openSubtasksTargetStatus={openSubtasksDialog?.targetStatus ?? null}
+          openSubtasks={openSubtasksDialog?.subtasks || []}
+          onOpenSubtasksCancel={() => resolveOpenSubtasksDialog("cancel")}
+          onOpenSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}
+          onOpenSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
+          showReturnedReasonDialog={showReturnedReasonDialog}
+          returnedReason={returnedReason}
+          setReturnedReason={setReturnedReason}
+          onReturnedReasonCancel={handleReturnedReasonCancel}
+          onReturnedReasonConfirm={handleReturnedReasonConfirm}
+        />
 
       </EntityPageLayout>
     </PageLayout>
   )
 }
-
-

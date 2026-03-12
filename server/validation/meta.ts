@@ -10,6 +10,7 @@ const createDepartmentBodySchema = z.object({
 const updateUserPreferencesBodySchema = z.object({
   group_by_epic: z.boolean().optional(),
   pinned_project_ids: z.array(z.unknown()).optional(),
+  tickets_view: z.enum(["table", "kanban"]).optional(),
 })
 
 export function parseCreateDepartmentBody(input: unknown) {
@@ -45,5 +46,6 @@ export function parseUpdateUserPreferencesBody(input: unknown) {
   return {
     group_by_epic: parsed.group_by_epic,
     pinned_project_ids: normalizedPinnedProjectIds,
+    tickets_view: parsed.tickets_view,
   }
 }

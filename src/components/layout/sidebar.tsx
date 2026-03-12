@@ -92,7 +92,6 @@ const settingsParents: SettingsParent[] = [
       { title: "Status", href: "/status", flag: "canManageStatus" },
       { title: "Epics", href: "/epics", flag: "canEditProjects" },
       { title: "Sprints", href: "/sprints", flag: "canEditProjects" },
-      { title: "Deleted Tickets", href: "/deleted-tickets", flag: "canViewTickets" },
     ],
   },
 ]

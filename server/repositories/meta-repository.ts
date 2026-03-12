@@ -11,21 +11,25 @@ type UserPreferencesRow = {
   user_id: unknown
   group_by_epic: unknown
   pinned_project_ids: unknown
+  tickets_view?: unknown
 }
 
 export type UserPreferencesRecord = {
   user_id: string
   group_by_epic: boolean
   pinned_project_ids: string[]
+  tickets_view: "table" | "kanban"
 }
 
 function sanitizePreferences(preferences: UserPreferencesRow): UserPreferencesRecord {
+  const ticketsView = preferences.tickets_view === "kanban" ? "kanban" : "table"
   return {
     user_id: typeof preferences.user_id === "string" ? preferences.user_id : "",
     group_by_epic: preferences.group_by_epic === true,
     pinned_project_ids: Array.isArray(preferences.pinned_project_ids)
       ? (preferences.pinned_project_ids as string[])
       : [],
+    tickets_view: ticketsView,
   }
 }
 
@@ -85,7 +89,7 @@ export async function getUserPreferencesByUserId(
 export async function updateUserPreferencesByUserId(
   supabase: SupabaseClient,
   userId: string,
-  updates: { group_by_epic?: boolean; pinned_project_ids?: string[] }
+  updates: { group_by_epic?: boolean; pinned_project_ids?: string[]; tickets_view?: "table" | "kanban" }
 ): Promise<UserPreferencesRecord> {
   const { data, error } = await supabase
     .from("user_preferences")
@@ -104,7 +108,7 @@ export async function updateUserPreferencesByUserId(
 
 export async function createUserPreferences(
   supabase: SupabaseClient,
-  input: { user_id: string; group_by_epic: boolean; pinned_project_ids: string[] }
+  input: { user_id: string; group_by_epic: boolean; pinned_project_ids: string[]; tickets_view?: "table" | "kanban" }
 ): Promise<UserPreferencesRecord> {
   const { data, error } = await supabase
     .from("user_preferences")

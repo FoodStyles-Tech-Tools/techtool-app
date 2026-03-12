@@ -123,9 +123,6 @@ export function KeyboardShortcuts() {
       list.push({ id: "open-epics", label: "Open Epics", keywords: "epics workspace go", icon: "open" })
       list.push({ id: "open-sprints", label: "Open Sprints", keywords: "sprints workspace go", icon: "open" })
     }
-    if (canViewTickets) {
-      list.push({ id: "open-deleted-tickets", label: "Open Deleted Tickets", keywords: "deleted tickets trash go", icon: "open" })
-    }
     return list
   }, [
     canCreateTickets,
@@ -196,9 +193,6 @@ export function KeyboardShortcuts() {
         break
       case "open-sprints":
         navigate("/sprints")
-        break
-      case "open-deleted-tickets":
-        navigate("/deleted-tickets")
         break
       default:
         break
