@@ -3,44 +3,40 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
 import { toast } from "@client/components/ui/toast"
-import { createQueryString, requestJson } from "@client/lib/api"
+import { requestJson } from "@client/lib/api"
 
 export interface Sprint {
   id: string
   name: string
   description: string | null
-  project_id: string
-  status: "planned" | "active" | "completed" | "cancelled"
   start_date: string | null
   end_date: string | null
   created_at: string
   updated_at: string
 }
 
-export function useSprints(projectId: string | null) {
+export function useSprints() {
   const queryClient = useQueryClient()
 
   useRealtimeSubscription({
     table: "sprints",
-    filter: projectId ? `project_id=eq.${projectId}` : undefined,
     enabled: true,
     onInsert: () => {
-      queryClient.invalidateQueries({ queryKey: ["sprints", projectId] })
+      queryClient.invalidateQueries({ queryKey: ["sprints"] })
     },
     onUpdate: () => {
-      queryClient.invalidateQueries({ queryKey: ["sprints", projectId] })
+      queryClient.invalidateQueries({ queryKey: ["sprints"] })
     },
     onDelete: () => {
-      queryClient.invalidateQueries({ queryKey: ["sprints", projectId] })
+      queryClient.invalidateQueries({ queryKey: ["sprints"] })
     },
   })
 
   const { data, isLoading, refetch } = useQuery<Sprint[]>({
-    queryKey: ["sprints", projectId],
+    queryKey: ["sprints"],
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
-      const query = projectId ? createQueryString({ project_id: projectId }) : ""
-      const response = await requestJson<{ sprints: Sprint[] }>(`/api/sprints${query}`)
+      const response = await requestJson<{ sprints: Sprint[] }>("/api/sprints")
       return response.sprints || []
     },
   })
@@ -59,8 +55,6 @@ export function useCreateSprint() {
     mutationFn: async (sprint: {
       name: string
       description?: string
-      project_id: string
-      status?: "planned" | "active" | "completed" | "cancelled"
       start_date?: string | null
       end_date?: string | null
     }) => requestJson<{ sprint: Sprint }>("/api/sprints", {
@@ -68,8 +62,8 @@ export function useCreateSprint() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(sprint),
     }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["sprints", data.sprint.project_id] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sprints"] })
       toast("Sprint created successfully")
     },
     onError: (error: Error) => {
@@ -89,7 +83,6 @@ export function useUpdateSprint() {
       id: string
       name?: string
       description?: string
-      status?: "planned" | "active" | "completed" | "cancelled"
       start_date?: string | null
       end_date?: string | null
     }) => requestJson<{ sprint: Sprint }>(`/api/sprints/${id}`, {
@@ -97,8 +90,8 @@ export function useUpdateSprint() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["sprints", data.sprint.project_id] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sprints"] })
       toast("Sprint updated successfully")
     },
     onError: (error: Error) => {

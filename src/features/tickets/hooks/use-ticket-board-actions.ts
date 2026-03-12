@@ -63,20 +63,12 @@ export function useTicketBoardActions({
   )
 
   const handleOpenCreateEpic = useCallback(() => {
-    if (projectFilter === "all") {
-      toast("Select a project before creating an epic", "error")
-      return
-    }
     setIsEpicDialogOpen(true)
-  }, [projectFilter])
+  }, [])
 
   const handleOpenCreateSprint = useCallback(() => {
-    if (projectFilter === "all") {
-      toast("Select a project before creating a sprint", "error")
-      return
-    }
     setIsSprintDialogOpen(true)
-  }, [projectFilter])
+  }, [])
 
   const handleKanbanDrop = useCallback(
     async (ticketId: string, columnId: string): Promise<boolean> => {

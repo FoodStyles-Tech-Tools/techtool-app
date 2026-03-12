@@ -292,16 +292,24 @@ export function TicketDetailMainColumn({
               ticketId={ticketId}
               projectName={ticket.project?.name || null}
               displayId={ticket.displayId}
-              projectId={ticket.project?.id || null}
+              projectId={ticket.project?.id ?? null}
+              parentTitle={ticket.title}
+              parentDepartmentId={ticket.department?.id ?? null}
+              parentRequestedById={ticket.requestedBy?.id ?? null}
               allowSqaStatuses={ticket.project?.require_sqa === true}
-              allowCreate={ticket.type !== "subtask"}
+              allowCreate={canEditTickets && ticket.type !== "subtask"}
             />
           </div>
         </Card>
       ) : null}
 
       <Card className="p-5 shadow-none">
-        <TicketActivity ticketId={ticketId} displayId={ticket.displayId} initialComments={detailComments} />
+        <TicketActivity
+          ticketId={ticketId}
+          displayId={ticket.displayId}
+          initialComments={detailComments}
+          readOnly={!canEditTickets}
+        />
       </Card>
     </div>
   )

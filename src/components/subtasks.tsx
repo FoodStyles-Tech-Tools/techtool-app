@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
-import { Input } from "@client/components/ui/input"
+import { PlusIcon } from "@heroicons/react/20/solid"
 import { Button } from "@client/components/ui/button"
 import { DataState } from "@client/components/ui/data-state"
+import { CreateSubtaskDialog } from "@client/components/create-subtask-dialog"
 import { usePermissions } from "@client/hooks/use-permissions"
-import { useCreateTicket, useTickets, useUpdateTicket } from "@client/features/tickets/hooks/use-tickets"
+import { useTickets, useUpdateTicket } from "@client/features/tickets/hooks/use-tickets"
 import { useRealtimeSubscription } from "@client/hooks/use-realtime"
 import { useUsers } from "@client/hooks/use-users"
 import { toast } from "@client/components/ui/toast"
@@ -22,6 +23,12 @@ interface SubtasksProps {
   projectName?: string | null
   displayId?: string | null
   projectId?: string | null
+  /** Parent ticket title for "Create Subtask" modal header */
+  parentTitle?: string
+  /** Parent ticket department id so subtask follows parent */
+  parentDepartmentId?: string | null
+  /** Parent ticket reporter id; subtask reporter defaults to this (required) */
+  parentRequestedById?: string | null
   allowSqaStatuses?: boolean
   allowCreate?: boolean
 }
@@ -34,17 +41,18 @@ export function Subtasks({
   projectName,
   displayId,
   projectId,
+  parentTitle = "",
+  parentDepartmentId,
+  parentRequestedById,
   allowSqaStatuses = true,
   allowCreate = true,
 }: SubtasksProps) {
-  const [newSubtaskTitle, setNewSubtaskTitle] = useState("")
-  const [creating, setCreating] = useState(false)
+  const [createSubtaskOpen, setCreateSubtaskOpen] = useState(false)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
   const { flags } = usePermissions()
   const canEditTickets = flags?.canEditTickets ?? false
   const queryClient = useQueryClient()
   const { data: usersData } = useUsers({ realtime: false })
-  const createTicket = useCreateTicket()
   const updateTicket = useUpdateTicket()
 
   useRealtimeSubscription({
@@ -92,30 +100,6 @@ export function Subtasks({
 
   const doneCount = subtasks.filter((ticket) => isDoneStatus(ticket.status)).length
   const donePercent = subtasks.length ? Math.round((doneCount / subtasks.length) * 100) : 0
-
-  const handleCreateSubtask = async () => {
-    if (!canEditTickets || creating || !allowCreate) return
-    const title = newSubtaskTitle.trim()
-    if (!title) return
-
-    setCreating(true)
-    try {
-      await createTicket.mutateAsync({
-        title,
-        type: "subtask",
-        status: "open",
-        priority: "medium",
-        parentTicketId: ticketId,
-        projectId: projectId || undefined,
-      })
-      setNewSubtaskTitle("")
-      toast("Subtask ticket created")
-    } catch (error: any) {
-      toast(error?.message || "Failed to create subtask ticket", "error")
-    } finally {
-      setCreating(false)
-    }
-  }
 
   const handleUpdateField = async (
     subtaskId: string,
@@ -211,29 +195,31 @@ export function Subtasks({
       </DataState>
 
       {canEditTickets && allowCreate ? (
-        <div className="flex items-center gap-2">
-          <Input
-            value={newSubtaskTitle}
-            onChange={(e) => setNewSubtaskTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault()
-                void handleCreateSubtask()
-              }
-            }}
-            placeholder="Create subtask ticket..."
-            className="h-8"
-            disabled={creating}
-          />
+        <>
           <Button
+            type="button"
+            variant="outline"
             size="sm"
-            className="h-8"
-            onClick={handleCreateSubtask}
-            disabled={!newSubtaskTitle.trim() || creating}
+            className="h-8 gap-1.5"
+            onClick={() => setCreateSubtaskOpen(true)}
           >
-            Add
+            <PlusIcon className="h-4 w-4" />
+            Add subtask
           </Button>
-        </div>
+          <CreateSubtaskDialog
+            open={createSubtaskOpen}
+            onOpenChange={setCreateSubtaskOpen}
+            parentTicketId={ticketId}
+            parentDisplayId={displayId ?? null}
+            parentTitle={parentTitle}
+            projectId={projectId ?? null}
+            departmentId={parentDepartmentId ?? null}
+            parentRequestedById={parentRequestedById ?? null}
+            onSuccess={() => {
+              queryClient.invalidateQueries({ queryKey: ["tickets"] })
+            }}
+          />
+        </>
       ) : null}
       {canEditTickets && !allowCreate ? (
         <p className="text-xs text-slate-500">Subtask tickets cannot contain subtasks.</p>

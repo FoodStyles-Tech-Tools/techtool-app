@@ -20,7 +20,6 @@ export type TicketEpicRelation = {
 export type TicketSprintRelation = {
   id: string
   name: string
-  status: string
 }
 
 export type TicketReasonMap = {

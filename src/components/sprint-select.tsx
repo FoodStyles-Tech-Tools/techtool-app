@@ -40,7 +40,6 @@ export function SprintSelect({
       {sprints.map((sprint) => (
         <option key={sprint.id} value={sprint.id}>
           {sprint.name}
-          {sprint.status ? ` (${sprint.status})` : ""}
         </option>
       ))}
     </select>

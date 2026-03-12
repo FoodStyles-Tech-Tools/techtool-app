@@ -37,7 +37,7 @@ export async function fetchTicketDetailPayload(supabase: SupabaseLike, ticketId:
         requested_by:users!tickets_requested_by_id_fkey(id, name, email, avatar_url),
         department:departments(id, name),
         epic:epics(id, name, color),
-        sprint:sprints(id, name, status, start_date, end_date)
+        sprint:sprints(id, name, start_date, end_date)
       `
       const relationSelect = `${baseSelect}, parent_ticket:tickets!tickets_parent_ticket_id_fkey(id, display_id, title, status, type)`
 

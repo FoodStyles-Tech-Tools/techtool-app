@@ -22,6 +22,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
     ticket,
     detailComments,
     loading,
+    isArchivedTicket,
     canEditTickets,
     isAssignmentLocked,
     isSqaEditLocked,
@@ -87,13 +88,17 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                 )}
               </div>
               <div className="flex justify-start">
-                <TicketStatusSelect
-                  value={ticket.status}
-                  onValueChange={(status) => actions.handleStatusChange(status)}
-                  disabled={!canEditTickets || isAssignmentLocked || !!actions.updatingFields.status}
-                  allowSqaStatuses={ticket.project?.require_sqa === true}
-                  triggerClassName="h-8"
-                />
+                {isArchivedTicket ? (
+                  <span className="flex h-8 items-center text-sm font-medium text-slate-600">Archived</span>
+                ) : (
+                  <TicketStatusSelect
+                    value={ticket.status}
+                    onValueChange={(status) => actions.handleStatusChange(status)}
+                    disabled={!canEditTickets || isAssignmentLocked || !!actions.updatingFields.status}
+                    allowSqaStatuses={ticket.project?.require_sqa === true}
+                    triggerClassName="h-8"
+                  />
+                )}
               </div>
             </div>
           ) : null}
@@ -143,6 +148,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
             <div className="space-y-4">
               <TicketDetailSidebar
                 hideStatusRow={!showHeader}
+                isArchivedTicket={isArchivedTicket}
                 ticket={ticket}
                 canEditTickets={canEditTickets}
                 isAssignmentLocked={isAssignmentLocked}

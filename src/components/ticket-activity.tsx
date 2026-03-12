@@ -16,6 +16,8 @@ interface TicketActivityProps {
   ticketId: string
   displayId?: string | null
   initialComments?: TicketComment[]
+  /** When true, comments are read-only (no add/reply/edit/delete). Used for archived tickets. */
+  readOnly?: boolean
 }
 
 type ActivityTab = "comments" | "history"
@@ -185,7 +187,7 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
   return <span className="text-sm text-slate-900">{text}</span>
 }
 
-export function TicketActivity({ ticketId, displayId, initialComments }: TicketActivityProps) {
+export function TicketActivity({ ticketId, displayId, initialComments, readOnly = false }: TicketActivityProps) {
   const panelId = useId()
   const [activeTab, setActiveTab] = useState<ActivityTab>("comments")
   const { data, isLoading, error } = useTicketActivity(ticketId, {
@@ -229,6 +231,7 @@ export function TicketActivity({ ticketId, displayId, initialComments }: TicketA
               initialComments={initialComments}
               showHeader={false}
               composerFirst
+              readOnly={readOnly}
             />
           ) : (
             <DataState

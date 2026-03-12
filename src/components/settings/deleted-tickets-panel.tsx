@@ -27,9 +27,9 @@ export function DeletedTicketsPanel() {
           id: ticket.id,
           displayId: ticket.displayId || ticket.id.slice(0, 8).toUpperCase(),
           title: ticket.title,
-          project: ticket.project?.name || "No Project",
-          archivedAt: archivedInfo?.archivedAt || null,
-          archivedReason: archivedInfo?.reason || "",
+          deletedAt: archivedInfo?.archivedAt || null,
+          deletedBy: null as string | null,
+          reason: archivedInfo?.reason || "",
         }
       }),
     [tickets]
@@ -55,41 +55,41 @@ export function DeletedTicketsPanel() {
         loadingDescription="Please wait while deleted tickets are loaded."
       >
         <EntityTableShell>
-          <div className="grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.6fr)] gap-3 border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-            <div>Ticket</div>
-            <div>Title</div>
-            <div>Project</div>
-            <div>Deleted</div>
+          <div className="max-h-[420px] overflow-y-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="px-3 py-2 text-left font-medium text-slate-700">Ticket Id</th>
+                  <th className="px-3 py-2 text-left font-medium text-slate-700">Title</th>
+                  <th className="px-3 py-2 text-left font-medium text-slate-700">Deleted At</th>
+                  <th className="px-3 py-2 text-left font-medium text-slate-700">Deleted By</th>
+                  <th className="px-3 py-2 text-left font-medium text-slate-700">Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id} className="border-b border-slate-200">
+                    <td className="px-3 py-2">
+                      <Link
+                        to={`/tickets/${String(row.displayId).toLowerCase()}`}
+                        className="text-slate-900 hover:underline"
+                      >
+                        {row.displayId}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 text-slate-900">{row.title}</td>
+                    <td className="px-3 py-2 text-slate-600">
+                      {row.deletedAt ? format(new Date(row.deletedAt), "MMM d, yyyy h:mm a") : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-slate-600">{row.deletedBy ?? "—"}</td>
+                    <td className="px-3 py-2 text-slate-600">{row.reason || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="max-h-[420px] overflow-y-auto divide-y divide-slate-200">
-            {rows.map((row) => (
-              <div
-                key={row.id}
-                className="grid grid-cols-[140px_minmax(0,2fr)_minmax(0,1.2fr)_minmax(0,1.6fr)] items-start gap-3 px-3 py-2.5 text-xs"
-              >
-                <div className="flex items-center gap-2">
-                  <Link
-                    to={`/tickets/${String(row.displayId).toLowerCase()}`}
-                    className="inline-flex h-7 items-center rounded-md px-2 font-mono text-xs hover:bg-slate-100"
-                  >
-                    {row.displayId}
-                  </Link>
-                </div>
-                <div className="truncate text-xs">{row.title}</div>
-                <div className="truncate text-xs text-slate-500">{row.project}</div>
-                <div className="space-y-0.5 text-xs text-slate-500">
-                  {row.archivedAt ? (
-                    <div>{format(new Date(row.archivedAt), "MMM d, yyyy 'at' h:mm a")}</div>
-                  ) : (
-                    <div>-</div>
-                  )}
-                  {row.archivedReason ? <div className="line-clamp-2 text-xs">{row.archivedReason}</div> : null}
-                </div>
-            </div>
-          ))}
-        </div>
-      </EntityTableShell>
-    </DataState>
+        </EntityTableShell>
+      </DataState>
     </PageLayout>
   )
 }

@@ -160,8 +160,8 @@ export function TicketForm({
     () => users.filter((u) => (u.role ? ASSIGNEE_ALLOWED_ROLES.has(u.role.toLowerCase()) : false)),
     [users]
   )
-  const { epics } = useEpics(effectiveProjectId)
-  const { sprints } = useSprints(effectiveProjectId)
+  const { epics } = useEpics()
+  const { sprints } = useSprints()
 
   useEffect(() => {
     if (projectId) return

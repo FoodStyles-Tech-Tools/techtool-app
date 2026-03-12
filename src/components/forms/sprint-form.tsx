@@ -15,12 +15,10 @@ import {
 import { Input } from "@client/components/ui/input"
 import { Textarea } from "@client/components/ui/textarea"
 import { useCreateSprint, useUpdateSprint } from "@client/hooks/use-sprints"
-import { inputClassNameLg } from "@client/lib/form-styles"
 
 const sprintSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
-  status: z.enum(["planned", "active", "completed", "cancelled"]).default("planned"),
   start_date: z.string().optional().nullable(),
   end_date: z.string().optional().nullable(),
 })
@@ -28,14 +26,11 @@ const sprintSchema = z.object({
 type SprintFormValues = z.infer<typeof sprintSchema>
 
 interface SprintFormProps {
-  projectId: string
   onSuccess?: () => void
   initialData?: Partial<SprintFormValues> & { id?: string }
 }
 
-const nativeSelectClassName = inputClassNameLg
-
-export function SprintForm({ projectId, onSuccess, initialData }: SprintFormProps) {
+export function SprintForm({ onSuccess, initialData }: SprintFormProps) {
   const createSprint = useCreateSprint()
   const updateSprint = useUpdateSprint()
   const isEditing = Boolean(initialData?.id)
@@ -45,7 +40,6 @@ export function SprintForm({ projectId, onSuccess, initialData }: SprintFormProp
     defaultValues: {
       name: initialData?.name || "",
       description: initialData?.description || "",
-      status: initialData?.status || "planned",
       start_date: initialData?.start_date || null,
       end_date: initialData?.end_date || null,
     },
@@ -56,17 +50,13 @@ export function SprintForm({ projectId, onSuccess, initialData }: SprintFormProp
       const payload = {
         name: values.name,
         description: values.description,
-        status: values.status,
         start_date: values.start_date || null,
         end_date: values.end_date || null,
       }
       if (initialData?.id) {
         await updateSprint.mutateAsync({ id: initialData.id, ...payload })
       } else {
-        await createSprint.mutateAsync({
-          ...payload,
-          project_id: projectId,
-        })
+        await createSprint.mutateAsync(payload)
       }
 
       form.reset()
@@ -104,28 +94,6 @@ export function SprintForm({ projectId, onSuccess, initialData }: SprintFormProp
                   {...field}
                   value={field.value || ""}
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="status"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Status</FormLabel>
-              <FormControl>
-                <select
-                  value={field.value}
-                  onChange={(event) => field.onChange(event.target.value)}
-                  className={nativeSelectClassName}
-                >
-                  <option value="planned">Planned</option>
-                  <option value="active">Active</option>
-                  <option value="completed">Completed</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
               </FormControl>
               <FormMessage />
             </FormItem>

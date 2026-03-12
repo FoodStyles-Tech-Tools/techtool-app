@@ -3,43 +3,39 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "./use-realtime"
 import { toast } from "@client/components/ui/toast"
-import { createQueryString, requestJson } from "@client/lib/api"
+import { requestJson } from "@client/lib/api"
 
 export interface Epic {
   id: string
   name: string
   description: string | null
-  project_id: string
   color: string
-  sprint_id: string | null
   created_at: string
   updated_at: string
 }
 
-export function useEpics(projectId: string | null) {
+export function useEpics() {
   const queryClient = useQueryClient()
 
   useRealtimeSubscription({
     table: "epics",
-    filter: projectId ? `project_id=eq.${projectId}` : undefined,
     enabled: true,
     onInsert: () => {
-      queryClient.invalidateQueries({ queryKey: ["epics", projectId] })
+      queryClient.invalidateQueries({ queryKey: ["epics"] })
     },
     onUpdate: () => {
-      queryClient.invalidateQueries({ queryKey: ["epics", projectId] })
+      queryClient.invalidateQueries({ queryKey: ["epics"] })
     },
     onDelete: () => {
-      queryClient.invalidateQueries({ queryKey: ["epics", projectId] })
+      queryClient.invalidateQueries({ queryKey: ["epics"] })
     },
   })
 
   const { data, isLoading, refetch } = useQuery<Epic[]>({
-    queryKey: ["epics", projectId],
+    queryKey: ["epics"],
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
-      const query = projectId ? createQueryString({ project_id: projectId }) : ""
-      const response = await requestJson<{ epics: Epic[] }>(`/api/epics${query}`)
+      const response = await requestJson<{ epics: Epic[] }>("/api/epics")
       return response.epics || []
     },
   })
@@ -58,16 +54,15 @@ export function useCreateEpic() {
     mutationFn: async (epic: {
       name: string
       description?: string
-      project_id: string
       color?: string
-      sprint_id?: string | null
-    }) => requestJson<{ epic: Epic }>("/api/epics", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(epic),
-    }),
+    }) =>
+      requestJson<{ epic: Epic }>("/api/epics", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(epic),
+      }),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["epics", data.epic.project_id] })
+      queryClient.invalidateQueries({ queryKey: ["epics"] })
       toast("Epic created successfully")
     },
     onError: (error: Error) => {
@@ -88,14 +83,13 @@ export function useUpdateEpic() {
       name?: string
       description?: string
       color?: string
-      sprint_id?: string | null
     }) => requestJson<{ epic: Epic }>(`/api/epics/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     }),
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["epics", data.epic.project_id] })
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["epics"] })
       toast("Epic updated successfully")
     },
     onError: (error: Error) => {

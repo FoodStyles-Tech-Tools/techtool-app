@@ -6,7 +6,6 @@ import {
   parseCreateEpicBody,
   parseCreateSprintBody,
   parseEntityIdParams,
-  parseProjectScopedQuery,
   parseUpdateEpicBody,
   parseUpdateSprintBody,
 } from "@server/validation/project-planning"
@@ -16,8 +15,7 @@ export async function listEpicsController(request: Request, response: Response) 
     const context = await getRequestContext({
       permission: { resource: "projects", action: "view" },
     })
-    const { project_id } = parseProjectScopedQuery(request.query)
-    const payload = await projectPlanningService.listEpics(context, project_id)
+    const payload = await projectPlanningService.listEpics(context)
     response.json(payload)
   } catch (error) {
     handleControllerError(response, error, "Error in GET /api/epics")
@@ -87,8 +85,7 @@ export async function listSprintsController(request: Request, response: Response
     const context = await getRequestContext({
       permission: { resource: "projects", action: "view" },
     })
-    const { project_id } = parseProjectScopedQuery(request.query)
-    const payload = await projectPlanningService.listSprints(context, project_id)
+    const payload = await projectPlanningService.listSprints(context)
     response.json(payload)
   } catch (error) {
     handleControllerError(response, error, "Error in GET /api/sprints")

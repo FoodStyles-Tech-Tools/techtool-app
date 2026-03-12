@@ -17,6 +17,7 @@ import {
   useUpdateTicket,
   useUpdateTicketWithReasonComment,
 } from "@client/features/tickets/hooks/use-tickets"
+import { isArchivedStatus } from "@shared/ticket-statuses"
 import { ASSIGNEE_ALLOWED_ROLES, SQA_ALLOWED_ROLES } from "@shared/ticket-constants"
 
 const NO_DEPARTMENT_VALUE = "no_department"
@@ -34,7 +35,7 @@ export function useTicketDetailSurface(
   const enabled = options.enabled ?? true
   const navigate = useNavigate()
   const { flags } = usePermissions()
-  const canEditTickets = flags?.canEditTickets ?? false
+  const canEditTicketsFromPermission = flags?.canEditTickets ?? false
   const { departments } = useDepartments({ realtime: false })
   const { data: projectsData } = useProjects({ realtime: false })
   const projects = useMemo(() => projectsData || [], [projectsData])
@@ -61,9 +62,8 @@ export function useTicketDetailSurface(
     return usersData.find((user) => user.email.toLowerCase() === lower) || null
   }, [usersData, userEmail])
 
-  const projectId = ticket?.project?.id || ""
-  const { epics } = useEpics(projectId)
-  const { sprints } = useSprints(projectId)
+  const { epics } = useEpics()
+  const { sprints } = useSprints()
   const users = useMemo(() => usersData || [], [usersData])
 
   const selectedParentTicketId = ticket?.parentTicketId || null
@@ -114,6 +114,8 @@ export function useTicketDetailSurface(
   }, [relations?.parent?.displayId, selectedParentTicketOption?.displayId])
 
   const loading = !ticket && isLoading
+  const isArchivedTicket = !!ticket && isArchivedStatus(ticket.status)
+  const canEditTickets = canEditTicketsFromPermission && !isArchivedTicket
   const isAssignmentLocked = !!ticket && !ticket.assignee
   const isSqaUser = (currentUser?.role || "").toLowerCase() === "sqa"
   const currentTicketSqaAssigneeId = ticket?.sqaAssignee?.id || null
@@ -165,6 +167,7 @@ export function useTicketDetailSurface(
     detailComments,
     relations,
     loading,
+    isArchivedTicket,
 
     canEditTickets,
     isAssignmentLocked,

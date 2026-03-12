@@ -15,26 +15,16 @@ import {
 import { Input } from "@client/components/ui/input"
 import { Textarea } from "@client/components/ui/textarea"
 import { useCreateEpic, useUpdateEpic } from "@client/hooks/use-epics"
-import { useSprints } from "@client/hooks/use-sprints"
-import { SprintSelect } from "@client/components/sprint-select"
 
 const epicSchema = z.object({
   name: z.string().min(1, "Name is required"),
   description: z.string().optional(),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Color must be a valid hex color"),
-  sprint_id: z
-    .union([
-      z.string().uuid(),
-      z.literal(""),
-      z.null(),
-    ])
-    .optional(),
 })
 
 type EpicFormValues = z.infer<typeof epicSchema>
 
 interface EpicFormProps {
-  projectId: string
   onSuccess?: () => void
   initialData?: Partial<EpicFormValues> & { id?: string }
 }
@@ -50,10 +40,9 @@ const DEFAULT_COLORS = [
   "#84cc16", // lime
 ]
 
-export function EpicForm({ projectId, onSuccess, initialData }: EpicFormProps) {
+export function EpicForm({ onSuccess, initialData }: EpicFormProps) {
   const createEpic = useCreateEpic()
   const updateEpic = useUpdateEpic()
-  const { sprints } = useSprints(projectId)
   const isEditing = Boolean(initialData?.id)
 
   const form = useForm<EpicFormValues>({
@@ -62,7 +51,6 @@ export function EpicForm({ projectId, onSuccess, initialData }: EpicFormProps) {
       name: initialData?.name || "",
       description: initialData?.description || "",
       color: initialData?.color || "#3b82f6",
-      sprint_id: initialData?.sprint_id || "",
     },
   })
 
@@ -72,17 +60,12 @@ export function EpicForm({ projectId, onSuccess, initialData }: EpicFormProps) {
         name: values.name,
         description: values.description,
         color: values.color,
-        sprint_id: values.sprint_id || undefined,
       }
       if (initialData?.id) {
         await updateEpic.mutateAsync({ id: initialData.id, ...payload })
       } else {
-        await createEpic.mutateAsync({
-          ...payload,
-          project_id: projectId,
-        })
+        await createEpic.mutateAsync(payload)
       }
-
       form.reset()
       onSuccess?.()
     } catch (error) {
@@ -159,25 +142,6 @@ export function EpicForm({ projectId, onSuccess, initialData }: EpicFormProps) {
             </FormItem>
           )}
         />
-        {sprints.length > 0 && (
-          <FormField
-            control={form.control}
-            name="sprint_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Sprint</FormLabel>
-                <FormControl>
-                  <SprintSelect
-                    value={field.value || null}
-                    onValueChange={(value) => field.onChange(value || "")}
-                    sprints={sprints}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        )}
         <Button
           type="submit"
           className="w-full"

@@ -38,6 +38,8 @@ interface TicketCommentsProps {
   showHeader?: boolean
   /** Place root comment composer before list. */
   composerFirst?: boolean
+  /** When true, no add/reply/edit/delete (e.g. archived ticket). */
+  readOnly?: boolean
 }
 
 type TicketBadgeInfo = { displayId: string; status: string }
@@ -808,10 +810,11 @@ export function TicketComments({
   initialComments,
   showHeader = true,
   composerFirst = false,
+  readOnly = false,
 }: TicketCommentsProps) {
   const { data: session } = useSession()
   const { flags } = usePermissions()
-  const canEdit = flags?.canEditTickets ?? false
+  const canEdit = readOnly ? false : (flags?.canEditTickets ?? false)
   const { data: usersData } = useUsers()
   const users = usersData || []
   const { data: mentionTicketsData } = useTickets({

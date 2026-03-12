@@ -125,9 +125,8 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     [users]
   )
 
-  const projectIdForEpicsSprints = projectFilter !== "all" ? projectFilter : null
-  const { epics } = useEpics(projectIdForEpicsSprints)
-  const { sprints } = useSprints(projectIdForEpicsSprints)
+  const { epics } = useEpics()
+  const { sprints } = useSprints()
   const epicOptions = useMemo(
     () => epics.map((e) => ({ id: e.id, name: e.name })),
     [epics]

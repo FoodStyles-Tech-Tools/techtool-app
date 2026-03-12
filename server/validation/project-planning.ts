@@ -21,9 +21,7 @@ const optionalNullableString = z
 const createEpicBodySchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   description: optionalNullableString,
-  project_id: z.string().trim().min(1, "project_id is required"),
   color: optionalNullableString,
-  sprint_id: optionalNullableString,
 })
 
 const updateEpicBodySchema = z
@@ -31,26 +29,20 @@ const updateEpicBodySchema = z
     name: z.string().optional(),
     description: optionalNullableString,
     color: optionalNullableString,
-    sprint_id: optionalNullableString,
   })
   .refine(
     (body) =>
       body.name !== undefined ||
       body.description !== undefined ||
-      body.color !== undefined ||
-      body.sprint_id !== undefined,
+      body.color !== undefined,
     {
       message: "No updates provided",
     }
   )
 
-const sprintStatusSchema = z.enum(["planned", "active", "completed", "cancelled"])
-
 const createSprintBodySchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   description: optionalNullableString,
-  project_id: z.string().trim().min(1, "project_id is required"),
-  status: sprintStatusSchema.optional(),
   start_date: optionalNullableString,
   end_date: optionalNullableString,
 })
@@ -59,7 +51,6 @@ const updateSprintBodySchema = z
   .object({
     name: z.string().optional(),
     description: optionalNullableString,
-    status: sprintStatusSchema.optional(),
     start_date: optionalNullableString,
     end_date: optionalNullableString,
   })
@@ -67,7 +58,6 @@ const updateSprintBodySchema = z
     (body) =>
       body.name !== undefined ||
       body.description !== undefined ||
-      body.status !== undefined ||
       body.start_date !== undefined ||
       body.end_date !== undefined,
     {
@@ -80,14 +70,12 @@ export type UpdateEpicInput = {
   name?: string
   description?: string | null
   color?: string | null
-  sprint_id?: string | null
 }
 
 export type CreateSprintInput = z.infer<typeof createSprintBodySchema>
 export type UpdateSprintInput = {
   name?: string
   description?: string | null
-  status?: "planned" | "active" | "completed" | "cancelled"
   start_date?: string | null
   end_date?: string | null
 }

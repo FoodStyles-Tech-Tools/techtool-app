@@ -29,14 +29,11 @@ export function TicketProjectEntityDialogs({
           <DialogHeader>
             <DialogTitle>Create Epic</DialogTitle>
           </DialogHeader>
-          {projectId ? (
-            <EpicForm
-              projectId={projectId}
-              onSuccess={() => {
-                onEpicOpenChange(false)
-              }}
-            />
-          ) : null}
+          <EpicForm
+            onSuccess={() => {
+              onEpicOpenChange(false)
+            }}
+          />
         </DialogContent>
       </Dialog>
       <Dialog open={sprintOpen} onOpenChange={onSprintOpenChange}>
@@ -44,14 +41,11 @@ export function TicketProjectEntityDialogs({
           <DialogHeader>
             <DialogTitle>Create Sprint</DialogTitle>
           </DialogHeader>
-          {projectId ? (
-            <SprintForm
-              projectId={projectId}
-              onSuccess={() => {
-                onSprintOpenChange(false)
-              }}
-            />
-          ) : null}
+          <SprintForm
+            onSuccess={() => {
+              onSprintOpenChange(false)
+            }}
+          />
         </DialogContent>
       </Dialog>
     </>

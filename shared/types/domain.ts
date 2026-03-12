@@ -130,7 +130,6 @@ export interface TicketEpic {
 export interface TicketSprint {
   id: string
   name: string
-  status: string
 }
 
 /** Related ticket for parent/subtask/mention relation display */

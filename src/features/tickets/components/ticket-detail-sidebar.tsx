@@ -15,6 +15,7 @@ import type { Department, Ticket, User } from "@shared/types"
 
 type TicketDetailSidebarProps = {
   hideStatusRow?: boolean
+  isArchivedTicket?: boolean
   ticket: Ticket
   canEditTickets: boolean
   isAssignmentLocked: boolean
@@ -55,6 +56,7 @@ type TicketDetailSidebarProps = {
 
 export function TicketDetailSidebar({
   hideStatusRow,
+  isArchivedTicket = false,
   ticket,
   canEditTickets,
   isAssignmentLocked,
@@ -93,13 +95,17 @@ export function TicketDetailSidebar({
     <aside className="min-w-0 space-y-4">
       {!hideStatusRow ? (
         <div className="flex justify-start">
-          <TicketStatusSelect
-            value={ticket.status}
-            onValueChange={onStatusChange}
-            disabled={!canEditTickets || isAssignmentLocked || !!updatingFields.status}
-            allowSqaStatuses={ticket.project?.require_sqa === true}
-            triggerClassName="h-8"
-          />
+          {isArchivedTicket ? (
+            <span className="flex h-8 items-center text-sm font-medium text-slate-600">Archived</span>
+          ) : (
+            <TicketStatusSelect
+              value={ticket.status}
+              onValueChange={onStatusChange}
+              disabled={!canEditTickets || isAssignmentLocked || !!updatingFields.status}
+              allowSqaStatuses={ticket.project?.require_sqa === true}
+              triggerClassName="h-8"
+            />
+          )}
         </div>
       ) : null}
       <Card className="p-5 shadow-none">

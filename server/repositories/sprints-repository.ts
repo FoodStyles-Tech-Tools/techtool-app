@@ -6,8 +6,6 @@ export type SprintRecord = {
   id: string
   name: string
   description: string | null
-  project_id: string
-  status: "planned" | "active" | "completed" | "cancelled"
   start_date: string | null
   end_date: string | null
   created_at: string
@@ -15,7 +13,7 @@ export type SprintRecord = {
 }
 
 const SPRINT_SELECT =
-  "id, name, description, project_id, status, start_date, end_date, created_at, updated_at"
+  "id, name, description, start_date, end_date, created_at, updated_at"
 
 function mapCreateError(error: { message?: string; code?: string; hint?: string } | null) {
   const errorMessage = error?.message || "Failed to create sprint"
@@ -35,20 +33,11 @@ function mapCreateError(error: { message?: string; code?: string; hint?: string 
   return new HttpError(500, errorMessage)
 }
 
-export async function listSprints(
-  supabase: SupabaseClient,
-  projectId?: string
-): Promise<SprintRecord[]> {
-  let query = supabase
+export async function listSprints(supabase: SupabaseClient): Promise<SprintRecord[]> {
+  const { data, error } = await supabase
     .from("sprints")
     .select(SPRINT_SELECT)
     .order("created_at", { ascending: false })
-
-  if (projectId) {
-    query = query.eq("project_id", projectId)
-  }
-
-  const { data, error } = await query
 
   if (error) {
     console.error("Error fetching sprints:", error)
@@ -81,8 +70,6 @@ export async function createSprint(
   input: {
     name: string
     description: string | null
-    project_id: string
-    status: "planned" | "active" | "completed" | "cancelled"
     start_date: string | null
     end_date: string | null
   }

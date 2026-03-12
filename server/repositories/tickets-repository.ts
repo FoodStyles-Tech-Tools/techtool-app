@@ -13,7 +13,7 @@ const TICKET_SELECT = `
   requested_by:users!tickets_requested_by_id_fkey(id, name, email, avatar_url),
   department:departments(id, name),
   epic:epics(id, name, color),
-  sprint:sprints(id, name, status)
+  sprint:sprints(id, name)
 `
 
 function normalizeRelation<T>(value: T | T[] | null | undefined): T | null {

@@ -107,7 +107,7 @@ export function TicketDetailPlanningSection({
             value={ticket.epic?.id || null}
             onValueChange={(value) => void onEpicChange(value)}
             epics={epics}
-            disabled={!canEditTickets || isAssignmentLocked || updatingFields["epicId"] || !projectId}
+            disabled={!canEditTickets || isAssignmentLocked || updatingFields["epicId"]}
             triggerClassName="h-8 w-full"
           />
         </div>
@@ -120,7 +120,7 @@ export function TicketDetailPlanningSection({
             value={ticket.sprint?.id || null}
             onValueChange={(value) => void onSprintChange(value)}
             sprints={sprints}
-            disabled={!canEditTickets || isAssignmentLocked || updatingFields["sprintId"] || !projectId}
+            disabled={!canEditTickets || isAssignmentLocked || updatingFields["sprintId"]}
             triggerClassName="h-8 w-full"
           />
         </div>
