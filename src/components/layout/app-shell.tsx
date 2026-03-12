@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Bars3Icon, Bars3CenterLeftIcon, SunIcon, MoonIcon } from "@heroicons/react/20/solid"
+import { Bars3Icon, Bars3CenterLeftIcon, SunIcon, MoonIcon, MagnifyingGlassIcon } from "@heroicons/react/20/solid"
 import { Sidebar } from "./sidebar"
 import { PermissionsBootstrap } from "@client/components/permissions-bootstrap"
 import { CommentNotificationsDropdown } from "@client/components/comment-notifications-dropdown"
@@ -60,6 +60,12 @@ export function AppShell({
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false)
   const navigate = useNavigate()
   const { data: session } = useSession()
+  const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0
+  const searchShortcutLabel = isMac ? "⌘K" : "Ctrl+K"
+
+  const openCommandPalette = () => {
+    window.dispatchEvent(new CustomEvent("open-command-palette"))
+  }
   const { theme, setTheme } = useTheme()
   const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()
 
@@ -151,6 +157,20 @@ export function AppShell({
                   <p className="text-sm font-semibold text-foreground">Techtool</p>
                 </div>
               </div>
+            </div>
+            <div className="flex flex-1 items-center justify-center px-4 md:max-w-md">
+              <button
+                type="button"
+                onClick={openCommandPalette}
+                className="flex w-full items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                aria-label={`Search commands (${searchShortcutLabel})`}
+              >
+                <MagnifyingGlassIcon className="h-4 w-4 shrink-0" />
+                <span className="flex-1 truncate">Search…</span>
+                <kbd className="hidden shrink-0 rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-xs font-medium sm:inline-block">
+                  {searchShortcutLabel}
+                </kbd>
+              </button>
             </div>
             <div className="flex items-center gap-1">
               <button

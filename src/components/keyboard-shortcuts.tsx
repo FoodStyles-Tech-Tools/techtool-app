@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useLocation } from "react-router-dom"
+import { useEffect, useState, useMemo } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import { useSession } from "@client/lib/auth-client"
 import { lazyComponent } from "@client/lib/lazy-component"
 import { usePermissions } from "@client/hooks/use-permissions"
@@ -9,6 +9,13 @@ import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import { useUsers } from "@client/hooks/use-users"
 import { useDepartments } from "@client/hooks/use-departments"
 import { toast } from "@client/components/ui/toast"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@client/components/ui/dialog"
+import { CommandPalette, type CommandPaletteAction } from "@client/components/command-palette"
 
 const GlobalTicketDialog = lazyComponent(
   () => import("./global-ticket-dialog").then((mod) => mod.GlobalTicketDialog),
@@ -28,18 +35,29 @@ const TicketDetailDialog = lazyComponent(
 const ProjectForm = lazyComponent(
   () => import("@client/components/forms/project-form").then((mod) => mod.ProjectForm),
 )
+const EpicForm = lazyComponent(
+  () => import("@client/components/forms/epic-form").then((mod) => mod.EpicForm),
+)
+const DepartmentForm = lazyComponent(
+  () => import("@client/components/forms/department-form").then((mod) => mod.DepartmentForm),
+)
 
 export function KeyboardShortcuts() {
   const { data: session, isPending } = useSession()
   const pathname = useLocation().pathname
+  const navigate = useNavigate()
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false)
   const [isSearchOverlayOpen, setIsSearchOverlayOpen] = useState(false)
   const [isUserSearchOverlayOpen, setIsUserSearchOverlayOpen] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
+  const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false)
+  const [isDepartmentDialogOpen, setIsDepartmentDialogOpen] = useState(false)
   const { flags } = usePermissions()
   const canCreateTickets = flags?.canCreateTickets ?? false
   const canCreateProjects = flags?.canCreateProjects ?? false
+  const canEditProjects = flags?.canEditProjects ?? false
   const shouldLoadProjectDialogData = canCreateProjects && isProjectDialogOpen
   const { data: usersData } = useUsers({
     enabled: shouldLoadProjectDialogData,
@@ -50,6 +68,51 @@ export function KeyboardShortcuts() {
     realtime: false,
   })
   const isUsersPage = pathname === "/users"
+
+  const commandPaletteActions = useMemo((): CommandPaletteAction[] => {
+    const list: CommandPaletteAction[] = []
+    if (canCreateTickets) {
+      list.push({ id: "create-ticket", label: "Create ticket", keywords: "new ticket", icon: "ticket" })
+    }
+    if (canCreateProjects) {
+      list.push({ id: "create-project", label: "Create project", keywords: "new project", icon: "project" })
+    }
+    if (canEditProjects) {
+      list.push({ id: "create-epic", label: "Create epic", keywords: "new epic", icon: "epic" })
+      list.push({ id: "create-department", label: "Create department", keywords: "new department", icon: "department" })
+    }
+    list.push({ id: "find-ticket", label: "Find ticket", keywords: "search ticket", icon: "find-ticket" })
+    list.push({ id: "find-project", label: "Find project", keywords: "search project go projects", icon: "find-project" })
+    return list
+  }, [canCreateTickets, canCreateProjects, canEditProjects])
+
+  const handleCommandPaletteSelect = (actionId: string) => {
+    switch (actionId) {
+      case "create-ticket":
+        if (selectedTicketId) setSelectedTicketId(null)
+        setIsTicketDialogOpen(true)
+        break
+      case "create-project":
+        if (selectedTicketId) setSelectedTicketId(null)
+        setIsProjectDialogOpen(true)
+        break
+      case "create-epic":
+        setIsEpicDialogOpen(true)
+        break
+      case "create-department":
+        setIsDepartmentDialogOpen(true)
+        break
+      case "find-ticket":
+        if (selectedTicketId) setSelectedTicketId(null)
+        setIsSearchOverlayOpen(true)
+        break
+      case "find-project":
+        navigate("/projects")
+        break
+      default:
+        break
+    }
+  }
 
   useEffect(() => {
     // Don't set up shortcuts if not authenticated
@@ -63,54 +126,53 @@ export function KeyboardShortcuts() {
       const modifierKey = isMac ? e.metaKey : e.ctrlKey
       const altKey = e.altKey
 
-      // CTRL+F / COMMAND+F: Always prevent browser's default find and open our search overlay
-      if (modifierKey && (e.key === "f" || e.key === "F")) {
-        // Always prevent default to block browser's find dialog
+      const targetForInput = e.target as HTMLElement | null
+      const isInputElement = targetForInput && (
+        targetForInput.tagName === "INPUT" ||
+        targetForInput.tagName === "TEXTAREA" ||
+        targetForInput.tagName === "SELECT" ||
+        targetForInput.isContentEditable
+      )
+
+      // CTRL+K / COMMAND+K: Open command palette (platform: Mac = Meta, Windows/Linux = Ctrl)
+      if (modifierKey && (e.key === "k" || e.key === "K")) {
         e.preventDefault()
         e.stopPropagation()
         e.stopImmediatePropagation()
-        
-        // Don't trigger if user is typing in an input, textarea, or select
-        const target = e.target as HTMLElement | null
-        const isInputElement = target && (
-          target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable
-        )
-        
-        // Only open our overlay if not in an input field
+        if (!isInputElement && !isCommandPaletteOpen) {
+          setIsCommandPaletteOpen(true)
+        }
+        return
+      }
+
+      // CTRL+F / COMMAND+F: Open search overlay directly (quick find)
+      if (modifierKey && (e.key === "f" || e.key === "F")) {
+        e.preventDefault()
+        e.stopPropagation()
+        e.stopImmediatePropagation()
         if (!isInputElement) {
-          // Close ticket detail dialog if open so the overlay can take focus
-          if (selectedTicketId) {
-            setSelectedTicketId(null)
-          }
-          // If on Users page, open user search overlay, otherwise open ticket search overlay
+          if (selectedTicketId) setSelectedTicketId(null)
           if (isUsersPage) {
-            if (!isUserSearchOverlayOpen) {
-              setIsUserSearchOverlayOpen(true)
-            }
+            if (!isUserSearchOverlayOpen) setIsUserSearchOverlayOpen(true)
           } else {
-            if (!isSearchOverlayOpen) {
-              setIsSearchOverlayOpen(true)
-            }
+            if (!isSearchOverlayOpen) setIsSearchOverlayOpen(true)
           }
         }
         return
       }
 
-      // Don't trigger if user is typing in an input, textarea, or select
-      const target = e.target as HTMLElement
-      const isInputElement =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.tagName === "SELECT" ||
-        target.isContentEditable
-
       // Don't trigger if a dialog/modal is already open (except our own)
-      // Check if there are any open dialogs by looking for data-state="open" on dialog elements
       const hasOpenDialog = document.querySelector('[role="dialog"][data-state="open"]')
-      if (hasOpenDialog && !isTicketDialogOpen && !isSearchOverlayOpen && !isUserSearchOverlayOpen && !isProjectDialogOpen) {
+      if (
+        hasOpenDialog &&
+        !isTicketDialogOpen &&
+        !isSearchOverlayOpen &&
+        !isUserSearchOverlayOpen &&
+        !isProjectDialogOpen &&
+        !isCommandPaletteOpen &&
+        !isEpicDialogOpen &&
+        !isDepartmentDialogOpen
+      ) {
         return
       }
 
@@ -141,9 +203,8 @@ export function KeyboardShortcuts() {
         return
       }
 
-      // ESC: Close dialogs/overlays
-      // Note: Search overlays handle their own ESC key, so we only handle ticket/project dialogs here
-      if (e.key === "Escape" && !isSearchOverlayOpen && !isUserSearchOverlayOpen) {
+      // ESC: Close dialogs/overlays (command palette and search overlays handle their own ESC)
+      if (e.key === "Escape" && !isSearchOverlayOpen && !isUserSearchOverlayOpen && !isCommandPaletteOpen) {
         if (isTicketDialogOpen) {
           e.preventDefault()
           setIsTicketDialogOpen(false)
@@ -152,6 +213,16 @@ export function KeyboardShortcuts() {
         if (isProjectDialogOpen) {
           e.preventDefault()
           setIsProjectDialogOpen(false)
+          return
+        }
+        if (isEpicDialogOpen) {
+          e.preventDefault()
+          setIsEpicDialogOpen(false)
+          return
+        }
+        if (isDepartmentDialogOpen) {
+          e.preventDefault()
+          setIsDepartmentDialogOpen(false)
           return
         }
       }
@@ -169,11 +240,14 @@ export function KeyboardShortcuts() {
   }, [
     session,
     isPending,
+    isCommandPaletteOpen,
     isTicketDialogOpen,
     isSearchOverlayOpen,
     isUserSearchOverlayOpen,
     selectedTicketId,
     isProjectDialogOpen,
+    isEpicDialogOpen,
+    isDepartmentDialogOpen,
     canCreateProjects,
     isUsersPage,
   ])
@@ -208,6 +282,28 @@ export function KeyboardShortcuts() {
     }
   }, [canCreateProjects])
 
+  useEffect(() => {
+    const handleOpenSearchOverlay = () => {
+      if (selectedTicketId) setSelectedTicketId(null)
+      if (isUsersPage) {
+        if (!isUserSearchOverlayOpen) setIsUserSearchOverlayOpen(true)
+      } else {
+        if (!isSearchOverlayOpen) setIsSearchOverlayOpen(true)
+      }
+    }
+
+    const handleOpenCommandPalette = () => {
+      if (!isCommandPaletteOpen) setIsCommandPaletteOpen(true)
+    }
+
+    window.addEventListener("open-search-overlay", handleOpenSearchOverlay)
+    window.addEventListener("open-command-palette", handleOpenCommandPalette)
+    return () => {
+      window.removeEventListener("open-search-overlay", handleOpenSearchOverlay)
+      window.removeEventListener("open-command-palette", handleOpenCommandPalette)
+    }
+  }, [isUsersPage, isSearchOverlayOpen, isUserSearchOverlayOpen, selectedTicketId, isCommandPaletteOpen])
+
   // Don't render dialogs if not authenticated
   if (isPending || !session) {
     return null
@@ -215,6 +311,12 @@ export function KeyboardShortcuts() {
 
   return (
     <>
+      <CommandPalette
+        open={isCommandPaletteOpen}
+        onOpenChange={setIsCommandPaletteOpen}
+        actions={commandPaletteActions}
+        onSelect={handleCommandPaletteSelect}
+      />
       {isTicketDialogOpen ? (
         <GlobalTicketDialog open={isTicketDialogOpen} onOpenChange={setIsTicketDialogOpen} />
       ) : null}
@@ -267,6 +369,44 @@ export function KeyboardShortcuts() {
             />
           ) : null}
         </FormDialogShell>
+      )}
+      {canEditProjects && (
+        <Dialog open={isEpicDialogOpen} onOpenChange={setIsEpicDialogOpen}>
+          <DialogContent showCloseButton className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Epic</DialogTitle>
+            </DialogHeader>
+            <div className="px-6 pb-6">
+              {isEpicDialogOpen ? (
+                <EpicForm
+                  onSuccess={() => {
+                    setIsEpicDialogOpen(false)
+                    toast("Epic created successfully")
+                  }}
+                />
+              ) : null}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+      {canEditProjects && (
+        <Dialog open={isDepartmentDialogOpen} onOpenChange={setIsDepartmentDialogOpen}>
+          <DialogContent showCloseButton className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Department</DialogTitle>
+            </DialogHeader>
+            <div className="px-6 pb-6">
+              {isDepartmentDialogOpen ? (
+                <DepartmentForm
+                  onSuccess={() => {
+                    setIsDepartmentDialogOpen(false)
+                    toast("Department created successfully")
+                  }}
+                />
+              ) : null}
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   )

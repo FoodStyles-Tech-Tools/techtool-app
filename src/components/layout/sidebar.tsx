@@ -221,7 +221,7 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
               </button>
 
               {settingsExpanded && (
-                <div className="mt-1 space-y-0.5 border-l-2 border-border pl-3">
+                <div className="mt-1 space-y-0.5 pl-6">
                   {visibleSettingsChildren.map((child) => {
                     const isActive = isPathActive(pathname, child.href)
                     return (
