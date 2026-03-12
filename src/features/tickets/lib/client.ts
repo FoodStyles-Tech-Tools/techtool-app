@@ -15,9 +15,12 @@ export type TicketListParams = {
   projectId?: string
   parentTicketId?: string
   assigneeId?: string
+  sqaAssigneeId?: string
   status?: string
+  priority?: string
   departmentId?: string
   requestedById?: string
+  epicId?: string
   sprintId?: string
   excludeDone?: boolean
   excludeSubtasks?: boolean
@@ -83,9 +86,12 @@ export function buildTicketListQueryString(params: TicketListParams) {
     projectId: params.projectId,
     parentTicketId: params.parentTicketId,
     assigneeId: params.assigneeId,
+    sqaAssigneeId: params.sqaAssigneeId,
     status: params.status,
+    priority: params.priority,
     departmentId: params.departmentId,
     requestedById: params.requestedById,
+    epicId: params.epicId,
     sprintId: params.sprintId,
     excludeDone: params.excludeDone,
     excludeSubtasks: params.excludeSubtasks,

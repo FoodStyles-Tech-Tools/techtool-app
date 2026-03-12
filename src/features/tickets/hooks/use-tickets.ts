@@ -21,9 +21,12 @@ type UseTicketsOptions = {
   projectId?: string
   parentTicketId?: string
   assigneeId?: string
+  sqaAssigneeId?: string
   status?: string
+  priority?: string
   departmentId?: string
   requestedById?: string
+  epicId?: string
   sprintId?: string
   excludeDone?: boolean
   excludeSubtasks?: boolean
@@ -43,8 +46,10 @@ export function useTickets(options?: UseTicketsOptions) {
   const projectId = options?.projectId
   const parentTicketId = options?.parentTicketId
   const assigneeId = options?.assigneeId
+  const sqaAssigneeId = options?.sqaAssigneeId
   const departmentId = options?.departmentId
   const requestedById = options?.requestedById
+  const epicId = options?.epicId
   const sprintId = options?.sprintId
   const excludeDone = options?.excludeDone
   const excludeSubtasks = options?.excludeSubtasks ?? true
@@ -52,9 +57,12 @@ export function useTickets(options?: UseTicketsOptions) {
     projectId,
     parentTicketId,
     assigneeId,
+    sqaAssigneeId,
     status: options?.status,
+    priority: options?.priority,
     departmentId,
     requestedById,
+    epicId,
     sprintId,
     excludeDone,
     excludeSubtasks,
@@ -170,9 +178,12 @@ export function useTickets(options?: UseTicketsOptions) {
         projectId,
         parentTicketId,
         assigneeId,
+        sqaAssigneeId,
         status: options?.status,
+        priority: options?.priority,
         departmentId,
         requestedById,
+        epicId,
         sprintId,
         excludeDone,
         excludeSubtasks,

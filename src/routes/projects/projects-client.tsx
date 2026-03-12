@@ -2,7 +2,7 @@
 
 import { Link } from "react-router-dom"
 import { useDeferredValue, useMemo, useState } from "react"
-import { Plus } from "lucide-react"
+import { PlusIcon } from "@heroicons/react/20/solid"
 import { ProjectForm } from "@client/components/forms/project-form"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { toast } from "@client/components/ui/toast"
@@ -118,7 +118,7 @@ export default function ProjectsClient({
         actions={
           canCreateProjects ? (
             <Button type="button" onClick={() => setProjectFormOpen(true)}>
-              <Plus className="h-4 w-4" />
+              <PlusIcon className="h-4 w-4" />
               Create Project
             </Button>
           ) : null

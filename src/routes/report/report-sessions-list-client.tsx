@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Plus } from "lucide-react"
+import { PlusIcon } from "@heroicons/react/20/solid"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { getDefaultReportDateRange } from "@shared/report-date-range"
@@ -98,7 +98,7 @@ export default function ReportSessionsListClient() {
         description="Ticket analytics by date range. Create a report session or open one to view volume, requesters, status, and lead time."
         actions={
           <Button type="button" onClick={openCreateSessionDialog}>
-            <Plus className="h-4 w-4" />
+            <PlusIcon className="h-4 w-4" />
             Add session
           </Button>
         }
@@ -114,7 +114,7 @@ export default function ReportSessionsListClient() {
               weeks (ISO week), or customize the range before creating.
             </p>
             <Button className="mt-3" variant="outline" size="sm" onClick={openCreateSessionDialog}>
-              <Plus className="h-4 w-4" />
+              <PlusIcon className="h-4 w-4" />
               Add session
             </Button>
           </div>

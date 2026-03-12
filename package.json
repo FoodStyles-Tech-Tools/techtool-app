@@ -18,6 +18,7 @@
     "test:db": "node scripts/test-connection.js"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.10.0",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.39.0",
@@ -37,7 +38,6 @@
     "cookie": "^1.0.2",
     "date-fns": "^3.0.0",
     "express": "^4.21.2",
-    "lucide-react": "^0.577.0",
     "postgres": "^3.4.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
@@ -48,6 +48,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
     "@types/express": "^5.0.1",
     "@types/node": "^20.11.0",
     "@types/react": "^18.2.0",
@@ -55,7 +56,6 @@
     "@typescript-eslint/eslint-plugin": "^8.57.0",
     "@typescript-eslint/parser": "^8.57.0",
     "@vitejs/plugin-react": "^4.4.1",
-    "@tailwindcss/vite": "^4.0.0",
     "concurrently": "^9.2.1",
     "dotenv": "^17.2.3",
     "eslint": "^9.39.4",

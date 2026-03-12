@@ -13,6 +13,7 @@ export type ClockifySessionRecord = {
   report_data: unknown
   reconciliation?: Record<string, ClockifyReconciliationEntry>
   requested_by_id: string | null
+  requested_by?: { id: string; name: string | null } | null
   created_at?: string
 }
 
@@ -35,7 +36,9 @@ export async function listClockifySessions(
 ) {
   let query = supabase
     .from("clockify_report_sessions")
-    .select("*")
+    .select(
+      "*, requested_by:users!clockify_report_sessions_requested_by_id_fkey(id, name)"
+    )
     .order("fetched_at", { ascending: false })
 
   if (options.start) {
@@ -69,6 +72,23 @@ export async function clearClockifySessions(supabase: SupabaseClient) {
   if (error) {
     console.error("Error clearing Clockify sessions:", error)
     throw new HttpError(500, "Failed to clear Clockify sessions")
+  }
+}
+
+export async function deleteClockifySessionsByRange(
+  supabase: SupabaseClient,
+  startDate: string,
+  endDate: string
+) {
+  const { error } = await supabase
+    .from("clockify_report_sessions")
+    .delete()
+    .eq("start_date", startDate)
+    .eq("end_date", endDate)
+
+  if (error) {
+    console.error("Error deleting Clockify sessions by range:", error)
+    throw new HttpError(500, "Failed to delete sessions for range")
   }
 }
 

@@ -15,25 +15,25 @@ import TableHeader from "@tiptap/extension-table-header"
 import TaskList from "@tiptap/extension-task-list"
 import TaskItem from "@tiptap/extension-task-item"
 import {
-  Bold,
-  Italic,
-  Underline as UnderlineIcon,
-  Strikethrough,
-  Heading1,
-  Heading2,
-  Heading3,
-  List,
-  ListOrdered,
-  ListChecks,
-  Quote,
-  Code,
-  SquareCode,
-  Link as LinkIcon,
-  RemoveFormatting,
-  Palette,
-  ImageIcon,
-  TableIcon,
-} from "lucide-react"
+  BoldIcon,
+  ItalicIcon,
+  UnderlineIcon,
+  StrikethroughIcon,
+  H1Icon,
+  H2Icon,
+  H3Icon,
+  ListBulletIcon,
+  NumberedListIcon,
+  ClipboardDocumentCheckIcon,
+  ChatBubbleLeftIcon,
+  CodeBracketIcon,
+  CodeBracketSquareIcon,
+  LinkIcon,
+  NoSymbolIcon,
+  SwatchIcon,
+  PhotoIcon,
+  TableCellsIcon,
+} from "@heroicons/react/20/solid"
 import { cn } from "@client/lib/utils"
 
 declare module "@tiptap/core" {
@@ -509,7 +509,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleBold().run()}
           title="Bold"
         >
-          <Bold className="h-4 w-4" strokeWidth={1} />
+          <BoldIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -521,7 +521,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleItalic().run()}
           title="Italic"
         >
-          <Italic className="h-4 w-4" strokeWidth={1} />
+          <ItalicIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -533,7 +533,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleUnderline().run()}
           title="Underline"
         >
-          <UnderlineIcon className="h-4 w-4" strokeWidth={1} />
+          <UnderlineIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -545,7 +545,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleStrike().run()}
           title="Strikethrough"
         >
-          <Strikethrough className="h-4 w-4" strokeWidth={1} />
+          <StrikethroughIcon className="h-4 w-4" />
         </button>
         <span className="mx-0.5 h-5 w-px bg-slate-200" />
         <button
@@ -560,7 +560,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
           title="Heading 1"
         >
-          <Heading1 className="h-4 w-4" strokeWidth={1} />
+          <H1Icon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -574,7 +574,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
           title="Heading 2"
         >
-          <Heading2 className="h-4 w-4" strokeWidth={1} />
+          <H2Icon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -588,7 +588,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
           title="Heading 3"
         >
-          <Heading3 className="h-4 w-4" strokeWidth={1} />
+          <H3Icon className="h-4 w-4" />
         </button>
         <span className="mx-0.5 h-5 w-px bg-slate-200" />
         <button
@@ -601,7 +601,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleBulletList().run()}
           title="Bullet list"
         >
-          <List className="h-4 w-4" strokeWidth={1} />
+          <ListBulletIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -613,7 +613,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleOrderedList().run()}
           title="Numbered list"
         >
-          <ListOrdered className="h-4 w-4" strokeWidth={1} />
+          <NumberedListIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -625,7 +625,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleTaskList().run()}
           title="Checklist"
         >
-          <ListChecks className="h-4 w-4" strokeWidth={1} />
+          <ClipboardDocumentCheckIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -637,7 +637,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleBlockquote().run()}
           title="Quote"
         >
-          <Quote className="h-4 w-4" strokeWidth={1} />
+          <ChatBubbleLeftIcon className="h-4 w-4" />
         </button>
         <span className="mx-0.5 h-5 w-px bg-slate-200" />
         <button
@@ -650,7 +650,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleCode().run()}
           title="Inline code"
         >
-          <Code className="h-4 w-4" strokeWidth={1} />
+          <CodeBracketIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -662,7 +662,7 @@ export function RichTextEditor({
           onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
           title="Code block"
         >
-          <SquareCode className="h-4 w-4" strokeWidth={1} />
+          <CodeBracketSquareIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -674,7 +674,7 @@ export function RichTextEditor({
           onClick={toggleLink}
           title="Link"
         >
-          <LinkIcon className="h-4 w-4" strokeWidth={1} />
+          <LinkIcon className="h-4 w-4" />
         </button>
         <span className="mx-0.5 h-5 w-px bg-slate-200" />
         <button
@@ -684,7 +684,7 @@ export function RichTextEditor({
           onClick={setColor}
           title="Clear text color"
         >
-          <RemoveFormatting className="h-4 w-4" strokeWidth={1} />
+          <NoSymbolIcon className="h-4 w-4" />
         </button>
         <label
           onMouseDown={(event) => event.preventDefault()}
@@ -694,7 +694,7 @@ export function RichTextEditor({
           )}
           title="Pick text color"
         >
-          <Palette className="h-4 w-4" strokeWidth={1} />
+          <SwatchIcon className="h-4 w-4" />
           <span
             className="absolute bottom-0.5 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full"
             style={{ backgroundColor: activeTextColor || "currentColor" }}
@@ -714,7 +714,7 @@ export function RichTextEditor({
           onClick={insertImage}
           title="Insert image"
         >
-          <ImageIcon className="h-4 w-4" strokeWidth={1} />
+          <PhotoIcon className="h-4 w-4" />
         </button>
         <button
           type="button"
@@ -725,7 +725,7 @@ export function RichTextEditor({
           }
           title="Insert table"
         >
-          <TableIcon className="h-4 w-4" strokeWidth={1} />
+          <TableCellsIcon className="h-4 w-4" />
         </button>
       </div>
       )}

@@ -36,6 +36,7 @@ const createSessionBodySchema = z.object({
   startDate: optionalDateString,
   endDate: optionalDateString,
   clearSessions: z.boolean().optional(),
+  replaceInRange: z.boolean().optional(),
 })
 
 const deleteSessionQuerySchema = z.object({

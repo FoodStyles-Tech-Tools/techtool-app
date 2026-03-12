@@ -2,7 +2,11 @@
 
 import { Link, useNavigate } from "react-router-dom"
 import { formatDistanceToNow } from "date-fns"
-import { Bell, AtSign, MessageSquareText } from "lucide-react"
+import {
+  BellIcon,
+  AtSymbolIcon,
+  ChatBubbleBottomCenterTextIcon,
+} from "@heroicons/react/20/solid"
 import { Button } from "@client/components/ui/button"
 import { useCommentNotifications, type CommentNotification } from "@client/hooks/use-comment-notifications"
 import { cn } from "@client/lib/utils"
@@ -42,9 +46,9 @@ function NotificationItem({
     >
       <div className="mt-0.5 shrink-0">
         {notification.type === "mention" ? (
-          <AtSign className="h-4 w-4 text-blue-500" />
+          <AtSymbolIcon className="h-4 w-4 text-blue-500" />
         ) : (
-          <MessageSquareText className="h-4 w-4 text-slate-500" />
+          <ChatBubbleBottomCenterTextIcon className="h-4 w-4 text-slate-500" />
         )}
       </div>
       <div className="min-w-0 flex-1">
@@ -100,7 +104,7 @@ export function CommentNotificationsDropdown() {
     <details className="relative">
       <summary className="list-none [&::-webkit-details-marker]:hidden">
         <Button variant="ghost" size="sm" className="relative h-9 w-9 p-0" title="Comment notifications" aria-label="Notifications">
-          <Bell className="h-5 w-5" />
+          <BellIcon className="h-5 w-5" />
           {unreadCount > 0 ? (
             <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-medium text-white">
               {unreadCount > 99 ? "99+" : unreadCount}

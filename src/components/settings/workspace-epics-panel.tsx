@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Plus } from "lucide-react"
+import { PlusIcon } from "@heroicons/react/20/solid"
 import { Button } from "@client/components/ui/button"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
@@ -176,7 +176,7 @@ export function WorkspaceEpicsPanel() {
               </select>
             </div>
             <Button type="button" size="sm" variant="outline" onClick={openCreateDialog}>
-              <Plus className="h-4 w-4" />
+              <PlusIcon className="h-4 w-4" />
               Create Epic
             </Button>
           </div>

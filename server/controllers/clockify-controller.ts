@@ -31,7 +31,7 @@ export async function createClockifySessionController(request: Request, response
   try {
     const body = parseCreateClockifySessionBody(request.body)
     const context = await getRequestContext(
-      body.clearSessions
+      body.clearSessions || body.replaceInRange
         ? { permission: { resource: "clockify", action: "manage" } }
         : undefined
     )

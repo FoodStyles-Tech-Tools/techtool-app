@@ -73,10 +73,8 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
       <TableCell className="py-2 text-sm text-slate-900">
         {ticket.project?.name || "No project"}
       </TableCell>
-      <TableCell className="py-2">
-        <span className={cn("inline-flex rounded-md px-2 py-1 text-sm font-normal", dueDate.className)}>
-          {dueDate.label}
-        </span>
+      <TableCell className={cn("py-2 text-sm", dueDate.isOverdue ? "text-red-600 font-medium" : "text-slate-600")}>
+        {dueDate.label}
       </TableCell>
       <TableCell className="py-2 text-sm text-slate-500">
         {formatRelativeDate(ticket.createdAt)}

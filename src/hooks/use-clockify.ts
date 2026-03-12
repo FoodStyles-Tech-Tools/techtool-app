@@ -12,6 +12,7 @@ export interface ClockifyReportSession {
   report_data: any
   reconciliation?: Record<string, { ticketDisplayId?: string; status?: string; ticketId?: string }>
   requested_by_id: string | null
+  requested_by?: { id: string; name: string | null } | null
 }
 
 export interface ClockifySettings {
@@ -47,7 +48,12 @@ export function useCreateClockifySession() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (payload: { startDate: string; endDate: string; clearSessions?: boolean }) => {
+    mutationFn: async (payload: {
+      startDate: string
+      endDate: string
+      clearSessions?: boolean
+      replaceInRange?: boolean
+    }) => {
       const response = await fetch("/api/clockify/sessions", {
         method: "POST",
         headers: {

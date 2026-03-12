@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Menu, PanelLeftOpen } from "lucide-react"
+import { Bars3Icon, Bars3CenterLeftIcon } from "@heroicons/react/20/solid"
 import { Sidebar } from "./sidebar"
 import { PermissionsBootstrap } from "@client/components/permissions-bootstrap"
 import { CommentNotificationsDropdown } from "@client/components/comment-notifications-dropdown"
@@ -127,7 +127,7 @@ export function AppShell({
                   onClick={() => setDesktopSidebarCollapsed(false)}
                 >
                   <span className="sr-only">Expand navigation</span>
-                  <PanelLeftOpen className="h-5 w-5" />
+                  <Bars3CenterLeftIcon className="h-5 w-5" />
                 </button>
               ) : null}
               <button
@@ -137,7 +137,7 @@ export function AppShell({
                 onClick={() => setMobileSidebarOpen(true)}
               >
                 <span className="sr-only">Open navigation</span>
-                <Menu className="h-5 w-5" />
+                <Bars3Icon className="h-5 w-5" />
               </button>
               <div className="block md:hidden">
                 <div className="flex items-center gap-2">

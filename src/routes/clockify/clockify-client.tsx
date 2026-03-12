@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
+import { Breadcrumb } from "@client/components/ui/breadcrumb"
 import { Button } from "@client/components/ui/button"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@client/components/ui/card"
@@ -17,9 +17,12 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@client/components/ui/dialog"
+import { Input } from "@client/components/ui/input"
+import { Label } from "@client/components/ui/label"
 import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import { TicketForm } from "@client/components/forms/ticket-form"
 import { toast } from "@client/components/ui/toast"
@@ -60,9 +63,10 @@ export default function ClockifyClient() {
   const canManageSessions = canManageClockify
   const [searchParams] = useSearchParams()
 
-  const [weekOffset, setWeekOffset] = useState(1)
   const [selectedSession, setSelectedSession] = useState<ClockifyReportSession | null>(null)
   const [selectedUser, setSelectedUser] = useState<string>("")
+  const [selectedProject, setSelectedProject] = useState<string>("")
+  const [selectedTask, setSelectedTask] = useState<string>("")
   const [reconcileMap, setReconcileMap] = useState<Record<string, ClockifyReconcileEntry>>({})
   const reconcileMapRef = useRef(reconcileMap)
   const [isSavingReconcile, setIsSavingReconcile] = useState(false)
@@ -73,19 +77,14 @@ export default function ClockifyClient() {
   const [ticketSearchResults, setTicketSearchResults] = useState<ClockifyTicketLookupItem[]>([])
   const [isTicketSearchLoading, setIsTicketSearchLoading] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState<ClockifyConfirmDialogState>(null)
-  const [reportLoadingAction, setReportLoadingAction] = useState<"fetch" | "reupload" | null>(null)
+  const [syncModalOpen, setSyncModalOpen] = useState(false)
+  const [syncRange, setSyncRange] = useState(() => getWeekRange(1))
   const [createTicketDialog, setCreateTicketDialog] = useState<{
     entryId: string
     title: string
     createdAt: string | null
   } | null>(null)
   const [isCreatingTicket, setIsCreatingTicket] = useState(false)
-
-  const { startDate, endDate } = useMemo(() => getWeekRange(weekOffset), [weekOffset])
-  const rangeLabel = useMemo(
-    () => formatRangeLabel(startDate, endDate),
-    [startDate, endDate]
-  )
 
   const { data: sessions = [], isLoading } = useClockifySessions()
   const createSession = useCreateClockifySession()
@@ -94,29 +93,23 @@ export default function ClockifyClient() {
     realtime: false,
   })
 
-  const handleFetchReport = async () => {
+  const handleSyncReport = async () => {
     if (!isAdmin) {
-      toast("Only admins can fetch Clockify reports.", "error")
+      toast("Only admins can sync Clockify reports.", "error")
       return
     }
-    setReportLoadingAction("fetch")
     try {
-      await createSession.mutateAsync({ startDate, endDate })
-      toast("Clockify report fetched.", "success")
+      await createSession.mutateAsync({
+        startDate: syncRange.startDate,
+        endDate: syncRange.endDate,
+        replaceInRange: true,
+      })
+      toast("Clockify report synced.", "success")
+      setSyncModalOpen(false)
     } catch (error) {
-      console.error("Clockify fetch failed:", error)
-      toast("Failed to fetch Clockify report.", "error")
-    } finally {
-      setReportLoadingAction(null)
+      console.error("Clockify sync failed:", error)
+      toast("Failed to sync Clockify report.", "error")
     }
-  }
-
-  const handleReuploadReport = async () => {
-    if (!isAdmin) {
-      toast("Only admins can re-upload sessions.", "error")
-      return
-    }
-    setConfirmDialog({ type: "reupload" })
   }
 
   const resolveReconcileStatus = useCallback(async (
@@ -362,20 +355,6 @@ export default function ClockifyClient() {
     }
   }
 
-  const performReupload = async () => {
-    setConfirmDialog(null)
-    setReportLoadingAction("reupload")
-    try {
-      await createSession.mutateAsync({ startDate, endDate, clearSessions: true })
-      toast("Sessions re-uploaded.", "success")
-    } catch (error) {
-      console.error("Clockify re-upload failed:", error)
-      toast("Failed to re-upload sessions.", "error")
-    } finally {
-      setReportLoadingAction(null)
-    }
-  }
-
   const clearSessionParam = () => {
     if (typeof window === "undefined") return
     const url = new URL(window.location.href)
@@ -449,23 +428,35 @@ export default function ClockifyClient() {
     return Array.from(names).sort((a, b) => a.localeCompare(b))
   }, [currentUser?.name, reportEntriesRaw])
 
-  const reportEntries = useMemo(() => {
-    if (!selectedUser || selectedUser === "all") return reportEntriesRaw
-    return reportEntriesRaw.filter((entry) => {
-      const name = entry.userName || entry.user?.name || ""
-      return name === selectedUser
+  const sessionProjectOptions = useMemo(() => {
+    const names = new Set<string>()
+    reportEntriesRaw.forEach((entry) => {
+      const name = entry.projectName || entry.project?.name
+      if (name) names.add(name)
     })
-  }, [reportEntriesRaw, selectedUser])
+    return Array.from(names).sort((a, b) => a.localeCompare(b))
+  }, [reportEntriesRaw])
 
-  const totalDurationHours = useMemo(() => {
-    const totalSeconds = reportEntries.reduce((sum: number, entry) => {
-      const duration = entry?.timeInterval?.duration
-      return typeof duration === "number" && !Number.isNaN(duration)
-        ? sum + duration
-        : sum
-    }, 0)
-    return (totalSeconds / 3600).toFixed(2)
-  }, [reportEntries])
+  const sessionTaskOptions = useMemo(() => {
+    const names = new Set<string>()
+    reportEntriesRaw.forEach((entry) => {
+      const name = entry.taskName || entry.task?.name
+      if (name) names.add(name)
+    })
+    return Array.from(names).sort((a, b) => a.localeCompare(b))
+  }, [reportEntriesRaw])
+
+  const reportEntries = useMemo(() => {
+    return reportEntriesRaw.filter((entry) => {
+      const userName = entry.userName || entry.user?.name || ""
+      const projectName = entry.projectName || entry.project?.name || ""
+      const taskName = entry.taskName || entry.task?.name || ""
+      if (selectedUser && selectedUser !== "all" && userName !== selectedUser) return false
+      if (selectedProject && projectName !== selectedProject) return false
+      if (selectedTask && taskName !== selectedTask) return false
+      return true
+    })
+  }, [reportEntriesRaw, selectedUser, selectedProject, selectedTask])
 
   useEffect(() => {
     if (!selectedSession) {
@@ -566,77 +557,38 @@ export default function ClockifyClient() {
       <PageHeader
         title="Clockify"
         description="Reconcile Clockify time entries with tickets and manage report sessions."
+        breadcrumb={
+          isSessionDetailMode && selectedSession ? (
+            <Breadcrumb
+              items={[
+                { label: "Clockify", href: "/clockify" },
+                { label: formatRangeLabel(selectedSession.start_date, selectedSession.end_date) },
+              ]}
+            />
+          ) : null
+        }
         actions={
           !isSessionDetailMode && isAdmin ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                type="button"
-                onClick={handleReuploadReport}
-                disabled={createSession.isPending}
-              >
-                Re-upload
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                onClick={handleFetchReport}
-                disabled={createSession.isPending}
-              >
-                {createSession.isPending ? "Fetching..." : "Fetch Report"}
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => {
+                setSyncRange(getWeekRange(1))
+                setSyncModalOpen(true)
+              }}
+              disabled={createSession.isPending}
+            >
+              {createSession.isPending ? "Syncing..." : "Sync"}
+            </Button>
           ) : null
         }
       />
-
-      {!isSessionDetailMode ? (
-        <div className="grid gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Weekly Range</CardTitle>
-              <CardDescription>
-                Reports always run Monday through Sunday. Default is the last full week.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-slate-500">Selected range</p>
-                  <p className="text-lg font-medium">{rangeLabel}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setWeekOffset((prev) => prev + 1)}
-                    aria-label="View older week"
-                  >
-                    Older
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setWeekOffset((prev) => Math.max(1, prev - 1))}
-                    disabled={weekOffset <= 1}
-                    aria-label="View newer week"
-                  >
-                    Newer
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
 
       {!isSessionDetailMode && canManageSessions ? (
         <ClockifySessionsCard
           isLoading={isLoading}
           sessions={sessions}
-          onDeleteSession={handleDeleteSession}
           formatRangeLabel={formatRangeLabel}
         />
       ) : null}
@@ -661,13 +613,13 @@ export default function ClockifyClient() {
           selectedUser={selectedUser}
           setSelectedUser={setSelectedUser}
           userOptions={userOptions}
+          selectedProject={selectedProject}
+          setSelectedProject={setSelectedProject}
+          sessionProjectOptions={sessionProjectOptions}
+          selectedTask={selectedTask}
+          setSelectedTask={setSelectedTask}
+          sessionTaskOptions={sessionTaskOptions}
           reportEntries={reportEntries}
-          totalDurationHours={totalDurationHours}
-          canManageSessions={canManageSessions}
-          isReconciling={isReconciling}
-          isSavingReconcile={isSavingReconcile}
-          onSmartReconcile={handleSmartReconcile}
-          onSaveReconciliation={handleSaveReconciliation}
           nativeSelectClassName={nativeSelectClassName}
           reconcileMap={reconcileMap}
           activeTicketEntryId={activeTicketEntryId}
@@ -682,7 +634,6 @@ export default function ClockifyClient() {
           }}
           canCreateTickets={canCreateTickets}
           onOpenCreateTicketDialog={openCreateTicketDialog}
-          formatRangeLabel={formatRangeLabel}
           getEntryId={getEntryId}
           getEntryTitle={getEntryTitle}
           formatDurationHours={formatDurationHours}
@@ -692,46 +643,88 @@ export default function ClockifyClient() {
       <Dialog open={!!confirmDialog} onOpenChange={(open) => !open && setConfirmDialog(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {confirmDialog?.type === "delete" ? "Delete session?" : "Re-upload sessions?"}
-            </DialogTitle>
+            <DialogTitle>Delete session?</DialogTitle>
             <DialogDescription>
-              {confirmDialog?.type === "delete"
-                ? "This will permanently remove the session and its report data."
-                : "Re-uploading will remove all previous sessions and store the latest report."}
+              This will permanently remove the session and its report data.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setConfirmDialog(null)}
-              disabled={createSession.isPending}
-            >
+            <Button variant="outline" onClick={() => setConfirmDialog(null)}>
               Cancel
             </Button>
             <Button
-              variant={confirmDialog?.type === "delete" ? "destructive" : "default"}
-              disabled={createSession.isPending}
+              variant="destructive"
               onClick={() => {
                 if (confirmDialog?.type === "delete" && confirmDialog.sessionId) {
                   void performDeleteSession(confirmDialog.sessionId)
-                } else if (confirmDialog?.type === "reupload") {
-                  void performReupload()
                 }
               }}
             >
-              {createSession.isPending ? "Processing..." : "Confirm"}
+              Confirm
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!reportLoadingAction} onOpenChange={() => {}}>
+      <Dialog open={syncModalOpen} onOpenChange={setSyncModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sync Clockify Report</DialogTitle>
+            <DialogDescription>
+              Choose a date range to fetch the report. Reports run Monday through Sunday. If a
+              report already exists for this range, it will be replaced.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="sync-range-start">Start date</Label>
+                <Input
+                  id="sync-range-start"
+                  type="date"
+                  value={syncRange.startDate}
+                  onChange={(e) =>
+                    setSyncRange((prev) => ({ ...prev, startDate: e.target.value || prev.startDate }))
+                  }
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sync-range-end">End date</Label>
+                <Input
+                  id="sync-range-end"
+                  type="date"
+                  value={syncRange.endDate}
+                  onChange={(e) =>
+                    setSyncRange((prev) => ({ ...prev, endDate: e.target.value || prev.endDate }))
+                  }
+                />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {formatRangeLabel(syncRange.startDate, syncRange.endDate)}
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSyncModalOpen(false)}
+              disabled={createSession.isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={() => void handleSyncReport()} disabled={createSession.isPending}>
+              {createSession.isPending ? "Syncing…" : "Sync"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createSession.isPending} onOpenChange={() => {}}>
         <DialogContent showCloseButton={false} className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>
-              {reportLoadingAction === "reupload" ? "Re-uploading sessions" : "Fetching report"}
-            </DialogTitle>
+            <DialogTitle>Syncing report</DialogTitle>
             <DialogDescription>
               This can take a while for full-week data. Please wait.
             </DialogDescription>

@@ -2,11 +2,14 @@
 
 import { useState, useMemo, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
-import { Plus } from "lucide-react"
+import { PlusIcon } from "@heroicons/react/20/solid"
 import { useProjects } from "@client/hooks/use-projects"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { useTicketsFilters } from "@client/hooks/use-tickets-filters"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
+import { useUsers } from "@client/hooks/use-users"
+import { useEpics } from "@client/hooks/use-epics"
+import { useSprints } from "@client/hooks/use-sprints"
 import { useTicketBoardActions } from "@client/features/tickets/hooks/use-ticket-board-actions"
 import { useOpenSubtasksDialog } from "@client/features/tickets/hooks/use-open-subtasks-dialog"
 import { isArchivedStatus } from "@shared/ticket-statuses"
@@ -49,6 +52,16 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     setProjectFilter,
     assigneeFilter,
     setAssigneeFilter,
+    requestedByFilter,
+    setRequestedByFilter,
+    sqaFilter,
+    setSqaFilter,
+    priorityFilter,
+    setPriorityFilter,
+    epicFilter,
+    setEpicFilter,
+    sprintFilter,
+    setSprintFilter,
     excludeDone,
     setExcludeDone,
     currentPage,
@@ -61,6 +74,11 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     status: statusFilter !== "all" ? statusFilter : undefined,
     projectId: projectFilter !== "all" ? projectFilter : undefined,
     assigneeId: assigneeFilter !== "all" ? assigneeFilter : undefined,
+    requestedById: requestedByFilter !== "all" ? requestedByFilter : undefined,
+    sqaAssigneeId: sqaFilter !== "all" ? sqaFilter : undefined,
+    priority: priorityFilter !== "all" ? priorityFilter : undefined,
+    epicId: epicFilter !== "all" ? epicFilter : undefined,
+    sprintId: sprintFilter !== "all" ? sprintFilter : undefined,
     excludeDone,
     excludeSubtasks: true,
     q: deferredSearchQuery.trim() || undefined,
@@ -93,6 +111,40 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         .filter((status) => !isArchivedStatus(status.key))
         .map((status) => ({ id: status.key, label: status.label })),
     [ticketStatuses]
+  )
+
+  const { data: usersData } = useUsers({ realtime: false })
+  const users = useMemo(() => usersData || [], [usersData])
+  const userOptions = useMemo(
+    () =>
+      [...users].sort((a, b) =>
+        (a.name || a.email || "").localeCompare(b.name || b.email || "", undefined, {
+          sensitivity: "base",
+        })
+      ),
+    [users]
+  )
+
+  const projectIdForEpicsSprints = projectFilter !== "all" ? projectFilter : null
+  const { epics } = useEpics(projectIdForEpicsSprints)
+  const { sprints } = useSprints(projectIdForEpicsSprints)
+  const epicOptions = useMemo(
+    () => epics.map((e) => ({ id: e.id, name: e.name })),
+    [epics]
+  )
+  const sprintOptions = useMemo(
+    () => sprints.map((s) => ({ id: s.id, name: s.name })),
+    [sprints]
+  )
+
+  const priorityOptions = useMemo(
+    () => [
+      { id: "low", label: "Low" },
+      { id: "medium", label: "Medium" },
+      { id: "high", label: "High" },
+      { id: "urgent", label: "Urgent" },
+    ],
+    []
   )
 
   const loading = !ticketsData && ticketsLoading
@@ -148,7 +200,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           actions={
             canCreateTickets ? (
               <Button type="button" onClick={() => setTicketDialogOpen(true)}>
-                <Plus className="h-4 w-4" />
+                <PlusIcon className="h-4 w-4" />
                 Create Ticket
               </Button>
             ) : null
@@ -169,6 +221,21 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           setExcludeDone={setExcludeDone}
           assigneeFilter={assigneeFilter}
           setAssigneeFilter={setAssigneeFilter}
+          reporterFilter={requestedByFilter}
+          setReporterFilter={setRequestedByFilter}
+          reporterOptions={userOptions}
+          sqaFilter={sqaFilter}
+          setSqaFilter={setSqaFilter}
+          sqaOptions={userOptions}
+          priorityFilter={priorityFilter}
+          setPriorityFilter={setPriorityFilter}
+          priorityOptions={priorityOptions}
+          epicFilter={epicFilter}
+          setEpicFilter={setEpicFilter}
+          epicOptions={epicOptions}
+          sprintFilter={sprintFilter}
+          setSprintFilter={setSprintFilter}
+          sprintOptions={sprintOptions}
           resetToolbarFilters={resetToolbarFilters}
           currentUserId={user?.id ?? null}
         />

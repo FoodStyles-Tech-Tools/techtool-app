@@ -178,7 +178,7 @@ export async function listClockifySessions(
 
 export async function createClockifySession(
   context: RequestContext,
-  input: { startDate?: string; endDate?: string; clearSessions?: boolean }
+  input: { startDate?: string; endDate?: string; clearSessions?: boolean; replaceInRange?: boolean }
 ) {
   assertAdmin(context)
 
@@ -195,6 +195,14 @@ export async function createClockifySession(
 
   if (input.clearSessions && status === "success") {
     await clockifyRepository.clearClockifySessions(context.supabase)
+  }
+
+  if (input.replaceInRange && status === "success") {
+    await clockifyRepository.deleteClockifySessionsByRange(
+      context.supabase,
+      startDate,
+      endDate
+    )
   }
 
   const session = await clockifyRepository.createClockifySession(context.supabase, {

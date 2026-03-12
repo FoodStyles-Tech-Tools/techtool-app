@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo } from "react"
 import { Link, useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
-import { ArrowLeft, Pencil } from "lucide-react"
+import { ArrowLeftIcon, PencilIcon } from "@heroicons/react/20/solid"
 import { Button } from "@client/components/ui/button"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
@@ -174,12 +174,12 @@ export default function ReportSessionDetailClient() {
               size="sm"
               onClick={() => setEditSessionModalOpen(true)}
             >
-              <Pencil className="h-4 w-4" />
+              <PencilIcon className="h-4 w-4" />
               Edit session
             </Button>
             <Button variant="outline" size="sm" asChild>
               <Link to="/report">
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeftIcon className="h-4 w-4" />
                 Back to sessions
               </Link>
             </Button>

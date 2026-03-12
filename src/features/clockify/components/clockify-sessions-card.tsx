@@ -1,15 +1,10 @@
 "use client"
 
+import { useMemo } from "react"
 import { Link } from "react-router-dom"
+import { getISOWeek, getISOWeekYear } from "date-fns"
 import { Badge } from "@client/components/ui/badge"
-import { Button } from "@client/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@client/components/ui/card"
+import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import {
   Table,
   TableBody,
@@ -20,82 +15,84 @@ import {
 } from "@client/components/ui/table"
 import type { ClockifyReportSession } from "@client/hooks/use-clockify"
 
+function formatYearWeek(startDate: string): string {
+  const date = new Date(`${startDate}T00:00:00Z`)
+  const year = getISOWeekYear(date)
+  const week = getISOWeek(date)
+  return `${year} ${String(week).padStart(2, "0")}`
+}
+
+function yearWeekSortKey(startDate: string): number {
+  const date = new Date(`${startDate}T00:00:00Z`)
+  return getISOWeekYear(date) * 100 + getISOWeek(date)
+}
+
 type ClockifySessionsCardProps = {
   isLoading: boolean
   sessions: ClockifyReportSession[]
-  onDeleteSession: (sessionId: string) => void
   formatRangeLabel: (startDate: string, endDate: string) => string
 }
 
 export function ClockifySessionsCard({
   isLoading,
   sessions,
-  onDeleteSession,
   formatRangeLabel,
 }: ClockifySessionsCardProps) {
+  const sortedSessions = useMemo(
+    () => [...sessions].sort((a, b) => yearWeekSortKey(b.start_date) - yearWeekSortKey(a.start_date)),
+    [sessions]
+  )
+
+  if (isLoading) return null
+  if (sessions.length === 0) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <p className="text-sm text-slate-500">No report sessions yet.</p>
+      </div>
+    )
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Audit Log</CardTitle>
-        <CardDescription>Every time a report is fetched, a session is saved here.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? null : sessions.length === 0 ? (
-          <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <p className="text-sm text-slate-500">No report sessions yet.</p>
-          </div>
-        ) : (
-          <div className="rounded-md border border-slate-200">
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-9 py-2">Fetched At</TableHead>
-                  <TableHead className="h-9 py-2">Range</TableHead>
-                  <TableHead className="h-9 py-2">Status</TableHead>
-                  <TableHead className="h-9 py-2 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sessions.map((session) => (
-                  <TableRow key={session.id}>
-                    <TableCell className="py-2 text-sm">
-                      {new Date(session.fetched_at).toLocaleString()}
-                    </TableCell>
-                    <TableCell className="py-2 text-sm">
-                      {formatRangeLabel(session.start_date, session.end_date)}
-                    </TableCell>
-                    <TableCell className="py-2">
-                      <Badge variant={session.status === "success" ? "default" : "destructive"}>
-                        {session.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="py-2 text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="ghost" asChild>
-                          <Link
-                            to={`/clockify/sessions/${session.id}`}
-                            aria-label="View report session"
-                          >
-                            View
-                          </Link>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onDeleteSession(session.id)}
-                          aria-label="Delete report session"
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <EntityTableShell>
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="h-9 py-2">Year Week</TableHead>
+            <TableHead className="h-9 py-2">Range</TableHead>
+            <TableHead className="h-9 py-2">Status</TableHead>
+            <TableHead className="h-9 py-2">Synced at</TableHead>
+            <TableHead className="h-9 py-2">Synced by</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedSessions.map((session) => (
+            <TableRow key={session.id}>
+              <TableCell className="py-2 text-sm font-mono">
+                <Link
+                  to={`/clockify/sessions/${session.id}`}
+                  className="font-medium text-blue-600 hover:underline"
+                >
+                  {formatYearWeek(session.start_date)}
+                </Link>
+              </TableCell>
+              <TableCell className="py-2 text-sm">
+                {formatRangeLabel(session.start_date, session.end_date)}
+              </TableCell>
+              <TableCell className="py-2">
+                <Badge variant={session.status === "success" ? "default" : "destructive"}>
+                  {session.status}
+                </Badge>
+              </TableCell>
+              <TableCell className="py-2 text-sm">
+                {new Date(session.fetched_at).toLocaleString()}
+              </TableCell>
+              <TableCell className="py-2 text-sm text-slate-600">
+                {session.requested_by?.name ?? "—"}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </EntityTableShell>
   )
 }

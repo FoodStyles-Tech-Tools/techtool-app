@@ -2,18 +2,18 @@
 
 import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
+import type { ComponentType, SVGProps } from "react"
 import {
-  PanelLeftClose,
-  Ticket,
-  FolderKanban,
-  BarChart3,
-  Package,
-  Clock,
-  Settings,
-  ChevronDown,
-  ChevronRight,
-  type LucideIcon,
-} from "lucide-react"
+  ChevronLeftIcon,
+  TicketIcon,
+  FolderIcon,
+  ChartBarIcon,
+  CubeIcon,
+  ClockIcon,
+  Cog6ToothIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+} from "@heroicons/react/20/solid"
 import { cn } from "@client/lib/utils"
 import { type PermissionFlags, usePermissions } from "@client/hooks/use-permissions"
 
@@ -22,7 +22,7 @@ const ACTIVE_ITEM_CLASS = "bg-blue-50 text-blue-700"
 type NavItem = {
   title: string
   href: string
-  icon: LucideIcon
+  icon: ComponentType<SVGProps<SVGSVGElement>>
   flag?: keyof PermissionFlags
 }
 
@@ -41,19 +41,19 @@ const primaryNavItems: NavItem[] = [
   {
     title: "Tickets",
     href: "/tickets",
-    icon: Ticket,
+    icon: TicketIcon,
     flag: "canViewTickets",
   },
   {
     title: "Projects",
     href: "/projects",
-    icon: FolderKanban,
+    icon: FolderIcon,
     flag: "canViewProjects",
   },
   {
     title: "Reports",
     href: "/report",
-    icon: BarChart3,
+    icon: ChartBarIcon,
     flag: "canViewClockify",
   },
 ]
@@ -62,13 +62,13 @@ const assetsClockifyItems: NavItem[] = [
   {
     title: "Assets",
     href: "/assets",
-    icon: Package,
+    icon: CubeIcon,
     flag: "canViewAssets",
   },
   {
     title: "Clockify",
     href: "/clockify",
-    icon: Clock,
+    icon: ClockIcon,
     flag: "canViewClockify",
   },
 ]
@@ -149,7 +149,7 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                 aria-label="Collapse sidebar"
                 title="Collapse sidebar"
               >
-                <PanelLeftClose className="h-4 w-4" />
+                <ChevronLeftIcon className="h-4 w-4" />
               </button>
             ) : null}
           </div>
@@ -210,12 +210,12 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                   isSettingsActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
                 )}
               >
-                <Settings className="h-4 w-4 shrink-0" />
+                <Cog6ToothIcon className="h-4 w-4 shrink-0" />
                 <span>Settings</span>
                 {settingsExpanded ? (
-                  <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
+                  <ChevronDownIcon className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
                 ) : (
-                  <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
+                  <ChevronRightIcon className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
                 )}
               </button>
 

@@ -1,4 +1,4 @@
-import { Inbox, AlertCircle } from "lucide-react"
+import { InboxIcon, ExclamationCircleIcon } from "@heroicons/react/20/solid"
 
 export type DataStateProps = {
   loading?: boolean
@@ -29,7 +29,7 @@ export function DataState({
     return (
       <div className="rounded-lg border border-red-200 bg-white p-8 text-center shadow-sm">
         <div className="flex flex-col items-center gap-3">
-          <AlertCircle className="h-10 w-10 text-red-300" />
+          <ExclamationCircleIcon className="h-10 w-10 text-red-300" />
           <div>
             <p className="text-sm font-semibold text-red-700">Something went wrong</p>
             <p className="mt-1 text-sm text-slate-500">{error}</p>
@@ -43,7 +43,7 @@ export function DataState({
     return (
       <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
         <div className="flex flex-col items-center gap-3">
-          <Inbox className="h-10 w-10 text-slate-300" />
+          <InboxIcon className="h-10 w-10 text-slate-300" />
           <div>
             <p className="text-sm font-semibold text-slate-900">{emptyTitle}</p>
             <p className="mt-1 text-sm text-slate-500">{emptyDescription}</p>

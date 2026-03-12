@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { ChevronRight as ChevronRightIcon } from "lucide-react"
+import { ChevronRightIcon } from "@heroicons/react/20/solid"
 import { cn } from "@client/lib/utils"
 
 export type BreadcrumbItem = {

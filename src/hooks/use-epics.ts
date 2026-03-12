@@ -18,12 +18,11 @@ export interface Epic {
 
 export function useEpics(projectId: string | null) {
   const queryClient = useQueryClient()
-  const enabled = !!projectId
 
   useRealtimeSubscription({
     table: "epics",
     filter: projectId ? `project_id=eq.${projectId}` : undefined,
-    enabled,
+    enabled: true,
     onInsert: () => {
       queryClient.invalidateQueries({ queryKey: ["epics", projectId] })
     },
@@ -37,11 +36,9 @@ export function useEpics(projectId: string | null) {
 
   const { data, isLoading, refetch } = useQuery<Epic[]>({
     queryKey: ["epics", projectId],
-    enabled,
     staleTime: 2 * 60 * 1000,
     queryFn: async () => {
-      if (!projectId) return []
-      const query = createQueryString({ project_id: projectId })
+      const query = projectId ? createQueryString({ project_id: projectId }) : ""
       const response = await requestJson<{ epics: Epic[] }>(`/api/epics${query}`)
       return response.epics || []
     },

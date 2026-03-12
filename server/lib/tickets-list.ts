@@ -20,9 +20,12 @@ export type TicketListQuery = {
   projectId?: string | null
   parentTicketId?: string | null
   assigneeId?: string | null
+  sqaAssigneeId?: string | null
   status?: string | null
+  priority?: string | null
   departmentId?: string | null
   requestedById?: string | null
+  epicId?: string | null
   sprintId?: string | null
   excludeDone: boolean
   excludeSubtasks: boolean
@@ -105,9 +108,12 @@ export function parseTicketListQuery(searchParams: URLSearchParams): TicketListQ
     projectId: firstNonEmpty(searchParams, ["projectId", "project_id"]),
     parentTicketId: firstNonEmpty(searchParams, ["parentTicketId", "parent_ticket_id"]),
     assigneeId: firstNonEmpty(searchParams, ["assigneeId", "assignee_id"]),
+    sqaAssigneeId: firstNonEmpty(searchParams, ["sqaAssigneeId", "sqa_assignee_id"]),
     status: firstNonEmpty(searchParams, ["status"]),
+    priority: firstNonEmpty(searchParams, ["priority"]),
     departmentId: firstNonEmpty(searchParams, ["departmentId", "department_id"]),
     requestedById: firstNonEmpty(searchParams, ["requestedById", "requested_by_id"]),
+    epicId: firstNonEmpty(searchParams, ["epicId", "epic_id"]),
     sprintId: firstNonEmpty(searchParams, ["sprintId", "sprint_id"]),
     excludeDone: parseBoolean(searchParams, ["excludeDone", "exclude_done"]),
     excludeSubtasks: parseBoolean(searchParams, ["excludeSubtasks", "exclude_subtasks"]),
@@ -204,8 +210,18 @@ export async function fetchTicketList(
       ticketsQuery = ticketsQuery.eq("assignee_id", query.assigneeId)
     }
   }
+  if (query.sqaAssigneeId) {
+    if (query.sqaAssigneeId === "unassigned") {
+      ticketsQuery = ticketsQuery.is("sqa_assignee_id", null)
+    } else {
+      ticketsQuery = ticketsQuery.eq("sqa_assignee_id", query.sqaAssigneeId)
+    }
+  }
   if (query.status) {
     ticketsQuery = ticketsQuery.eq("status", query.status)
+  }
+  if (query.priority) {
+    ticketsQuery = ticketsQuery.eq("priority", query.priority)
   }
   if (query.excludeSubtasks) {
     ticketsQuery = ticketsQuery.neq("type", "subtask")
@@ -219,6 +235,13 @@ export async function fetchTicketList(
   }
   if (query.requestedById) {
     ticketsQuery = ticketsQuery.eq("requested_by_id", query.requestedById)
+  }
+  if (query.epicId) {
+    if (query.epicId === "no_epic") {
+      ticketsQuery = ticketsQuery.is("epic_id", null)
+    } else {
+      ticketsQuery = ticketsQuery.eq("epic_id", query.epicId)
+    }
   }
   if (query.sprintId) {
     if (query.sprintId === "no_sprint") {

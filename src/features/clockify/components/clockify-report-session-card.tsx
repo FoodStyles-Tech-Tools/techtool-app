@@ -1,16 +1,9 @@
 "use client"
 
 import type { Dispatch, SetStateAction } from "react"
-import { Link } from "react-router-dom"
-import { Button } from "@client/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@client/components/ui/card"
+import { Badge } from "@client/components/ui/badge"
 import { Input } from "@client/components/ui/input"
+import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import {
   Table,
   TableBody,
@@ -31,13 +24,13 @@ type ClockifyReportSessionCardProps = {
   selectedUser: string
   setSelectedUser: (value: string) => void
   userOptions: string[]
+  selectedProject: string
+  setSelectedProject: (value: string) => void
+  sessionProjectOptions: string[]
+  selectedTask: string
+  setSelectedTask: (value: string) => void
+  sessionTaskOptions: string[]
   reportEntries: ClockifyReportEntry[]
-  totalDurationHours: string
-  canManageSessions: boolean
-  isReconciling: boolean
-  isSavingReconcile: boolean
-  onSmartReconcile: () => void
-  onSaveReconciliation: () => void
   nativeSelectClassName: string
   reconcileMap: Record<string, ClockifyReconcileEntry>
   activeTicketEntryId: string | null
@@ -50,7 +43,6 @@ type ClockifyReportSessionCardProps = {
   onTicketSelect: (entryId: string, displayId: string) => void
   canCreateTickets: boolean
   onOpenCreateTicketDialog: (entryId: string, entry: ClockifyReportEntry) => void
-  formatRangeLabel: (startDate: string, endDate: string) => string
   getEntryId: (entry: ClockifyReportEntry) => string
   getEntryTitle: (entry: ClockifyReportEntry) => string
   formatDurationHours: (entry: ClockifyReportEntry) => string
@@ -61,13 +53,13 @@ export function ClockifyReportSessionCard({
   selectedUser,
   setSelectedUser,
   userOptions,
+  selectedProject,
+  setSelectedProject,
+  sessionProjectOptions,
+  selectedTask,
+  setSelectedTask,
+  sessionTaskOptions,
   reportEntries,
-  totalDurationHours,
-  canManageSessions,
-  isReconciling,
-  isSavingReconcile,
-  onSmartReconcile,
-  onSaveReconciliation,
   nativeSelectClassName,
   reconcileMap,
   activeTicketEntryId,
@@ -80,211 +72,180 @@ export function ClockifyReportSessionCard({
   onTicketSelect,
   canCreateTickets,
   onOpenCreateTicketDialog,
-  formatRangeLabel,
   getEntryId,
   getEntryTitle,
   formatDurationHours,
 }: ClockifyReportSessionCardProps) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <CardTitle>Clockify Report Session</CardTitle>
-          <CardDescription>
-            {formatRangeLabel(selectedSession.start_date, selectedSession.end_date)}
-          </CardDescription>
-        </div>
-        <Button variant="outline" asChild>
-          <Link to="/clockify">Back to sessions</Link>
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-4 text-sm">
-            <div>
-              <p className="text-slate-500">Status</p>
-              <p className="font-medium capitalize">{selectedSession.status}</p>
-            </div>
-            {selectedSession.error_message ? (
-              <div>
-                <p className="text-slate-500">Error</p>
-                <p className="font-medium text-red-600">{selectedSession.error_message}</p>
-              </div>
-            ) : null}
-          </div>
+  if (!selectedSession.report_data) {
+    return (
+      <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="text-sm text-slate-500">No report data saved for this session.</p>
+      </div>
+    )
+  }
 
-          {selectedSession.report_data ? (
-            <div className="space-y-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-slate-500">Filter by user</p>
-                  <p className="text-xs text-slate-500">Defaulted to your account.</p>
-                </div>
-                <select
-                  value={selectedUser || "all"}
-                  onChange={(event) => setSelectedUser(event.target.value)}
-                  className={`${nativeSelectClassName} sm:w-56`}
-                >
-                  <option value="all">All users</option>
-                  {userOptions.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4">
-                  <p className="text-sm text-slate-500">{reportEntries.length} time entries</p>
-                  <p className="text-sm text-slate-500">Total duration: {totalDurationHours} hrs</p>
-                </div>
-                {canManageSessions ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Button variant="outline" size="sm" onClick={onSmartReconcile} disabled={isReconciling}>
-                      {isReconciling ? "Reconciling..." : "Smart reconcile"}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={onSaveReconciliation} disabled={isSavingReconcile}>
-                      {isSavingReconcile ? "Saving..." : "Save reconciliation"}
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-              {reportEntries.length > 0 ? (
-                <div className="max-h-[60vh] overflow-y-auto rounded-md border border-slate-200">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="h-9 py-2">Description</TableHead>
-                        <TableHead className="h-9 py-2">Task</TableHead>
-                        <TableHead className="h-9 py-2">Ticket ID</TableHead>
-                        <TableHead className="h-9 py-2">Match</TableHead>
-                        <TableHead className="h-9 py-2">User</TableHead>
-                        <TableHead className="h-9 py-2 text-right">Duration (hrs)</TableHead>
-                        <TableHead className="h-9 py-2">Project</TableHead>
-                        <TableHead className="h-9 py-2">Start</TableHead>
-                        <TableHead className="h-9 py-2">End</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {reportEntries.map((entry, index) => {
-                        const entryId = getEntryId(entry)
-                        const matchStatus = entryId ? (reconcileMap[entryId]?.status || "unlinked") : "unlinked"
-                        return (
-                          <TableRow key={entryId || index}>
-                            <TableCell className="py-2 text-sm">{getEntryTitle(entry)}</TableCell>
-                            <TableCell className="py-2 text-sm">
-                              {entry.taskName || entry.task?.name || "-"}
-                            </TableCell>
-                            <TableCell className="py-2 text-sm">
-                              {entryId ? (
-                                <div className="relative">
-                                  <Input
-                                    value={reconcileMap[entryId]?.ticketDisplayId || ""}
-                                    onFocus={() => {
-                                      setActiveTicketEntryId(entryId)
-                                      setTicketSearchTerm(reconcileMap[entryId]?.ticketDisplayId || "")
-                                    }}
-                                    onChange={(event) => {
-                                      onTicketChange(entryId, event.target.value)
-                                      setTicketSearchTerm(event.target.value)
-                                      setActiveTicketEntryId(entryId)
-                                    }}
-                                    onBlur={(event) => {
-                                      onTicketBlur(entryId, event.target.value)
-                                      setTimeout(() => {
-                                        setActiveTicketEntryId((current) => (current === entryId ? null : current))
-                                      }, 150)
-                                    }}
-                                    placeholder="HRB-###"
-                                    className="h-8 w-28"
-                                  />
-                                  {activeTicketEntryId === entryId ? (
-                                    <div className="absolute z-20 mt-1 max-h-48 w-72 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-sm">
-                                      {isTicketSearchLoading ? null : ticketSearchResults.length === 0 ? (
-                                        <div className="px-3 py-2 text-sm text-slate-500">No tickets found.</div>
-                                      ) : (
-                                        ticketSearchResults.map((ticket) => (
-                                          <button
-                                            key={ticket.id}
-                                            type="button"
-                                            className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
-                                            onMouseDown={(event) => event.preventDefault()}
-                                            onClick={() => onTicketSelect(entryId, ticket.displayId)}
-                                          >
-                                            <span className="font-normal">{ticket.displayId}</span>
-                                            {ticket.title ? ` - ${ticket.title}` : ""}
-                                          </button>
-                                        ))
-                                      )}
-                                    </div>
-                                  ) : null}
-                                </div>
-                              ) : (
-                                "-"
-                              )}
-                            </TableCell>
-                            <TableCell className="py-2 text-sm">
-                              {entryId ? (
-                                matchStatus === "unlinked" ? (
-                                  <button
-                                    type="button"
-                                    className="text-purple-600 underline underline-offset-2 disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
-                                    onClick={() => onOpenCreateTicketDialog(entryId, entry)}
-                                    disabled={!canCreateTickets}
-                                  >
-                                    create
-                                  </button>
-                                ) : (
-                                  <span
-                                    className={
-                                      matchStatus === "matched"
-                                        ? "text-emerald-600"
-                                        : matchStatus === "not_found"
-                                          ? "text-red-600"
-                                          : "text-slate-500"
-                                    }
-                                  >
-                                    {matchStatus}
-                                  </span>
-                                )
-                              ) : (
-                                "-"
-                              )}
-                            </TableCell>
-                            <TableCell className="py-2 text-sm">
-                              {entry.userName || entry.user?.name || "-"}
-                            </TableCell>
-                            <TableCell className="py-2 text-right text-sm">
-                              {formatDurationHours(entry)}
-                            </TableCell>
-                            <TableCell className="py-2 text-sm">
-                              {entry.projectName || entry.project?.name || "-"}
-                            </TableCell>
-                            <TableCell className="py-2 text-sm">
-                              {entry.timeInterval?.start ? new Date(entry.timeInterval.start).toLocaleString() : "-"}
-                            </TableCell>
-                            <TableCell className="py-2 text-sm">
-                              {entry.timeInterval?.end ? new Date(entry.timeInterval.end).toLocaleString() : "-"}
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="rounded-md border border-slate-200 p-4">
-                  <p className="text-sm text-slate-500">No time entries found.</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="rounded-md border border-slate-200 p-4">
-              <p className="text-sm text-slate-500">No report data saved for this session.</p>
-            </div>
-          )}
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <select
+            id="clockify-filter-user"
+            value={selectedUser || "all"}
+            onChange={(e) => setSelectedUser(e.target.value)}
+            className={nativeSelectClassName}
+          >
+            <option value="all">All</option>
+            {userOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        <select
+            id="clockify-filter-project"
+            value={selectedProject || ""}
+            onChange={(e) => setSelectedProject(e.target.value)}
+            className={nativeSelectClassName}
+          >
+            <option value="">All Project</option>
+            {sessionProjectOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        <select
+            id="clockify-filter-task"
+            value={selectedTask || ""}
+            onChange={(e) => setSelectedTask(e.target.value)}
+            className={nativeSelectClassName}
+          >
+            <option value="">All Task</option>
+            {sessionTaskOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+      </div>
+
+      {reportEntries.length === 0 ? (
+        <div className="rounded-md border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <p className="text-sm text-slate-500">No time entries match the filters.</p>
         </div>
-      </CardContent>
-    </Card>
+      ) : (
+        <EntityTableShell>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="h-9 py-2">User</TableHead>
+                  <TableHead className="h-9 py-2">Project</TableHead>
+                  <TableHead className="h-9 py-2">Task</TableHead>
+                  <TableHead className="h-9 py-2">Description</TableHead>
+                  <TableHead className="h-9 py-2 text-right">Duration</TableHead>
+                  <TableHead className="h-9 py-2">Ticket ID</TableHead>
+                  <TableHead className="h-9 py-2">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reportEntries.map((entry, index) => {
+                  const entryId = getEntryId(entry)
+                  const matchStatus = entryId ? (reconcileMap[entryId]?.status || "unlinked") : "unlinked"
+                  return (
+                    <TableRow key={entryId || index}>
+                      <TableCell className="py-2 text-sm">
+                        {entry.userName || entry.user?.name || "-"}
+                      </TableCell>
+                      <TableCell className="py-2 text-sm">
+                        {entry.projectName || entry.project?.name || "-"}
+                      </TableCell>
+                      <TableCell className="py-2 text-sm">
+                        {entry.taskName || entry.task?.name || "-"}
+                      </TableCell>
+                      <TableCell className="py-2 text-sm">{getEntryTitle(entry)}</TableCell>
+                      <TableCell className="py-2 text-right text-sm">
+                        {formatDurationHours(entry)}
+                      </TableCell>
+                      <TableCell className="py-2 text-sm">
+                        {entryId ? (
+                          <div className="relative">
+                            <Input
+                              value={reconcileMap[entryId]?.ticketDisplayId || ""}
+                              onFocus={() => {
+                                setActiveTicketEntryId(entryId)
+                                setTicketSearchTerm(reconcileMap[entryId]?.ticketDisplayId || "")
+                              }}
+                              onChange={(event) => {
+                                onTicketChange(entryId, event.target.value)
+                                setTicketSearchTerm(event.target.value)
+                                setActiveTicketEntryId(entryId)
+                              }}
+                              onBlur={(event) => {
+                                onTicketBlur(entryId, event.target.value)
+                                setTimeout(() => {
+                                  setActiveTicketEntryId((current) => (current === entryId ? null : current))
+                                }, 150)
+                              }}
+                              placeholder="HRB-###"
+                              className="h-8 w-28"
+                            />
+                            {activeTicketEntryId === entryId ? (
+                              <div className="absolute z-20 mt-1 max-h-48 w-72 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-sm">
+                                {isTicketSearchLoading ? null : ticketSearchResults.length === 0 ? (
+                                  <div className="px-3 py-2 text-sm text-slate-500">No tickets found.</div>
+                                ) : (
+                                  ticketSearchResults.map((ticket) => (
+                                    <button
+                                      key={ticket.id}
+                                      type="button"
+                                      className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                                      onMouseDown={(event) => event.preventDefault()}
+                                      onClick={() => onTicketSelect(entryId, ticket.displayId)}
+                                    >
+                                      <span className="font-normal">{ticket.displayId}</span>
+                                      {ticket.title ? ` - ${ticket.title}` : ""}
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                      <TableCell className="py-2 text-sm">
+                        {entryId ? (
+                          matchStatus === "unlinked" ? (
+                            <button
+                              type="button"
+                              className="inline-flex items-center rounded-full border border-purple-200 bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700 transition-colors hover:bg-purple-100 disabled:cursor-not-allowed disabled:opacity-50"
+                              onClick={() => onOpenCreateTicketDialog(entryId, entry)}
+                              disabled={!canCreateTickets}
+                            >
+                              Create
+                            </button>
+                          ) : matchStatus === "matched" ? (
+                            <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                              Matched
+                            </Badge>
+                          ) : matchStatus === "not_found" ? (
+                            <Badge variant="destructive">Not found</Badge>
+                          ) : (
+                            <Badge variant="secondary">{matchStatus}</Badge>
+                          )
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </EntityTableShell>
+      )}
+    </div>
   )
 }

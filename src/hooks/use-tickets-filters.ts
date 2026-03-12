@@ -27,6 +27,9 @@ export function useTicketsFilters({
   const [departmentFilter, setDepartmentFilter] = useState<string>("all")
   const [requestedByFilter, setRequestedByFilter] = useState<string>("all")
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
+  const [sqaFilter, setSqaFilter] = useState<string>("all")
+  const [priorityFilter, setPriorityFilter] = useState<string>("all")
+  const [epicFilter, setEpicFilter] = useState<string>("all")
   const [sprintFilter, setSprintFilter] = useState<string>("all")
   const [excludeDone, setExcludeDone] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
@@ -82,6 +85,18 @@ export function useTicketsFilters({
     setAssigneeFilter(value)
     setCurrentPage(1)
   }, [])
+  const setSqaFilterAndResetPage = useCallback((value: string) => {
+    setSqaFilter(value)
+    setCurrentPage(1)
+  }, [])
+  const setPriorityFilterAndResetPage = useCallback((value: string) => {
+    setPriorityFilter(value)
+    setCurrentPage(1)
+  }, [])
+  const setEpicFilterAndResetPage = useCallback((value: string) => {
+    setEpicFilter(value)
+    setCurrentPage(1)
+  }, [])
   const setSprintFilterAndResetPage = useCallback((value: string) => {
     setSprintFilter(value)
     setCurrentPage(1)
@@ -98,6 +113,9 @@ export function useTicketsFilters({
     setRequestedByFilter("all")
     setProjectFilter("all")
     setAssigneeFilter("all")
+    setSqaFilter("all")
+    setPriorityFilter("all")
+    setEpicFilter("all")
     setSprintFilter("all")
     setExcludeDone(true)
     setCurrentPage(1)
@@ -111,6 +129,9 @@ export function useTicketsFilters({
     if (departmentFilter !== "all") count += 1
     if (requestedByFilter !== "all") count += 1
     if (assigneeFilter !== "all") count += 1
+    if (sqaFilter !== "all") count += 1
+    if (priorityFilter !== "all") count += 1
+    if (epicFilter !== "all") count += 1
     if (sprintFilter !== "all") count += 1
     if (!excludeDone) count += 1
     return count
@@ -121,6 +142,9 @@ export function useTicketsFilters({
     departmentFilter,
     requestedByFilter,
     assigneeFilter,
+    sqaFilter,
+    priorityFilter,
+    epicFilter,
     sprintFilter,
     excludeDone,
   ])
@@ -144,6 +168,12 @@ export function useTicketsFilters({
     setRequestedByFilter: setRequestedByFilterAndResetPage,
     assigneeFilter,
     setAssigneeFilter: setAssigneeFilterAndResetPage,
+    sqaFilter,
+    setSqaFilter: setSqaFilterAndResetPage,
+    priorityFilter,
+    setPriorityFilter: setPriorityFilterAndResetPage,
+    epicFilter,
+    setEpicFilter: setEpicFilterAndResetPage,
     sprintFilter,
     setSprintFilter: setSprintFilterAndResetPage,
     excludeDone,
