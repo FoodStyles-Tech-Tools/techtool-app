@@ -58,6 +58,7 @@ export type TicketListQuery = {
   parentTicketId?: string | null
   assigneeId?: string | null
   sqaAssigneeId?: string | null
+  type?: string | null
   status?: string | null
   priority?: string | null
   departmentId?: string | null
@@ -158,6 +159,7 @@ export function parseTicketListQuery(searchParams: URLSearchParams): TicketListQ
     parentTicketId: firstNonEmpty(searchParams, ["parentTicketId", "parent_ticket_id"]),
     assigneeId: firstNonEmpty(searchParams, ["assigneeId", "assignee_id"]),
     sqaAssigneeId: firstNonEmpty(searchParams, ["sqaAssigneeId", "sqa_assignee_id"]),
+    type: firstNonEmpty(searchParams, ["type"]),
     status: firstNonEmpty(searchParams, ["status"]),
     priority: firstNonEmpty(searchParams, ["priority"]),
     departmentId: firstNonEmpty(searchParams, ["departmentId", "department_id"]),
@@ -272,6 +274,9 @@ export async function fetchTicketList(
       ticketsQuery = ticketsQuery.eq("sqa_assignee_id", query.sqaAssigneeId)
     }
   }
+  if (query.type) {
+    ticketsQuery = ticketsQuery.eq("type", query.type)
+  }
   if (query.status) {
     const statusNorm = String(query.status).trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z0-9_]/g, "")
     if (statusNorm === "archived") {
@@ -290,7 +295,8 @@ export async function fetchTicketList(
   if (query.priority) {
     ticketsQuery = ticketsQuery.eq("priority", query.priority)
   }
-  if (query.excludeSubtasks) {
+  // When an explicit type filter is provided, it takes precedence over excludeSubtasks
+  if (query.excludeSubtasks && !query.type) {
     ticketsQuery = ticketsQuery.neq("type", "subtask")
   }
   if (query.departmentId) {

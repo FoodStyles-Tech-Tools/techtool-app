@@ -52,6 +52,14 @@ export function UserForm({ onSuccess, initialData, roles, formId, hideSubmitButt
     },
   })
 
+  const sortedRoles = React.useMemo(
+    () =>
+      [...roles].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+      ),
+    [roles]
+  )
+
   const onSubmit = async (values: UserFormValues) => {
     try {
       const url = initialData?.id
@@ -134,7 +142,7 @@ export function UserForm({ onSuccess, initialData, roles, formId, hideSubmitButt
                   onChange={(event) => field.onChange(event.target.value)}
                   className={nativeSelectClassName}
                 >
-                  {roles.map((role) => (
+                  {sortedRoles.map((role) => (
                     <option key={role.id} value={role.name}>
                       {role.name}
                     </option>

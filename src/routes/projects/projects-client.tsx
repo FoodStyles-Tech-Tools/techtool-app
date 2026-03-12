@@ -298,7 +298,7 @@ export default function ProjectsClient({
                     <TableCell className="py-2">
                       <Link
                         to={`/projects/${project.id}`}
-                        className="font-normal text-foreground hover:underline"
+                        className="font-normal text-primary underline"
                       >
                         {project.name}
                       </Link>

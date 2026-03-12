@@ -62,6 +62,7 @@ export function TicketDetailPlanningSection({
             value={ticket.priority}
             onValueChange={(value) => void onPriorityChange(value)}
             disabled={!canEditTickets || isAssignmentLocked || updatingFields["priority"]}
+            isLoading={!!updatingFields["priority"]}
             triggerClassName="h-8 w-full"
           />
         </div>

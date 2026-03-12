@@ -50,7 +50,6 @@ export function findSubtaskParents(supabase: SupabaseClientLike, parentTicketIds
   return supabase
     .from("tickets")
     .select("parent_ticket_id")
-    .eq("type", "subtask")
     .in("parent_ticket_id", parentTicketIds)
 }
 
@@ -98,6 +97,25 @@ export function createCommentWithNotifications(
     p_mention_user_ids: string[]
   }
 ) {
+  // #region agent log
+  fetch("http://127.0.0.1:7725/ingest/8c8a3837-8401-40e6-b9e0-718cc03b439b", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8d0d91" },
+    body: JSON.stringify({
+      sessionId: "8d0d91",
+      runId: "initial",
+      hypothesisId: "H4",
+      location: "server/repositories/ticket-support-repository.ts:createCommentWithNotifications",
+      message: "Invoking Supabase RPC create_ticket_comment_with_notifications",
+      data: {
+        rpcName: "create_ticket_comment_with_notifications",
+        hasParentId: Boolean(payload.p_parent_id),
+        mentionCount: payload.p_mention_user_ids.length,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
   return supabase.rpc("create_ticket_comment_with_notifications", payload)
 }
 

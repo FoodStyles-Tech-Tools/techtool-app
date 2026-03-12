@@ -1,11 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { MagnifyingGlassIcon } from "@heroicons/react/20/solid"
 import { Input } from "@client/components/ui/input"
 import { Select } from "@client/components/ui/select"
 import { FilterBar } from "@client/components/ui/filter-bar"
 import { FilterField } from "@client/components/ui/filter-field"
+import { Button } from "@client/components/ui/button"
 import { StatusPill } from "@client/components/tickets/status-pill"
 import { StatusFilterDropdown } from "@client/components/tickets/status-filter-dropdown"
 import { PriorityPill } from "@client/components/tickets/priority-pill"
@@ -53,6 +54,8 @@ export interface TicketsToolbarProps {
   priorityFilter: string
   setPriorityFilter: (value: string) => void
   priorityOptions: StatusOption[]
+  typeFilter: string
+  setTypeFilter: (value: string) => void
   epicFilter: string
   setEpicFilter: (value: string) => void
   epicOptions: EpicSprintOption[]
@@ -87,6 +90,8 @@ export function TicketsToolbar({
   priorityFilter,
   setPriorityFilter,
   priorityOptions,
+  typeFilter,
+  setTypeFilter,
   epicFilter,
   setEpicFilter,
   epicOptions,
@@ -106,6 +111,7 @@ export function TicketsToolbar({
   const statusFilterDiffersFromDefault =
     excludedSet.size !== defaultExcludedSet.size ||
     [...excludedSet].some((s) => !defaultExcludedSet.has(s))
+
   const hasActiveFilters =
     hasActiveFiltersProp ??
     (searchQuery.trim() !== "" ||
@@ -115,6 +121,7 @@ export function TicketsToolbar({
       reporterFilter !== "all" ||
       sqaFilter !== "all" ||
       priorityFilter !== "all" ||
+      typeFilter !== "all" ||
       epicFilter !== "all" ||
       sprintFilter !== "all")
 
@@ -142,7 +149,7 @@ export function TicketsToolbar({
               id="tickets-filter-project"
               value={projectFilter}
               onChange={(event) => setProjectFilter(event.target.value)}
-              className="min-w-[120px]"
+              className="min-w-[140px]"
             >
               <option value="all">All</option>
               {projectOptions.map((project) => (
@@ -168,7 +175,7 @@ export function TicketsToolbar({
               id="tickets-filter-assignee"
               value={assigneeFilter}
               onChange={(event) => setAssigneeFilter(event.target.value)}
-              className="min-w-[120px]"
+              className="min-w-[140px]"
             >
               <option value="all">All</option>
               {currentUserId ? <option value={currentUserId}>Assigned to me</option> : null}
@@ -176,12 +183,11 @@ export function TicketsToolbar({
             </Select>
           </FilterField>
 
-          <FilterField label="Reporter" id="tickets-filter-reporter">
+          <FilterField label="Reporter" id="tickets-filter-reporter" className="min-w-[180px]">
             <Select
               id="tickets-filter-reporter"
               value={reporterFilter}
               onChange={(event) => setReporterFilter(event.target.value)}
-              className="min-w-[140px]"
             >
               <option value="all">All</option>
               {reporterOptions.map((u) => (
@@ -192,12 +198,11 @@ export function TicketsToolbar({
             </Select>
           </FilterField>
 
-          <FilterField label="SQA" id="tickets-filter-sqa">
+          <FilterField label="SQA" id="tickets-filter-sqa" className="min-w-[160px]">
             <Select
               id="tickets-filter-sqa"
               value={sqaFilter}
               onChange={(event) => setSqaFilter(event.target.value)}
-              className="min-w-[120px]"
             >
               <option value="all">All</option>
               <option value="unassigned">Unassigned</option>
@@ -209,8 +214,8 @@ export function TicketsToolbar({
             </Select>
           </FilterField>
 
-          <FilterField label="Priority" id="tickets-filter-priority">
-            <div className="relative flex min-h-9 min-w-[120px] items-center rounded-md border border-input bg-form-bg px-3">
+          <FilterField label="Priority" id="tickets-filter-priority" className="min-w-[160px]">
+            <div className="relative flex min-h-9 items-center rounded-md border border-input bg-form-bg px-3">
               {priorityFilter !== "all" ? (
                 <PriorityPill priority={priorityFilter} className="pointer-events-none shrink-0" />
               ) : (
@@ -232,12 +237,25 @@ export function TicketsToolbar({
             </div>
           </FilterField>
 
-          <FilterField label="Epic" id="tickets-filter-epic">
+          <FilterField label="Type" id="tickets-filter-type" className="min-w-[160px]">
+            <Select
+              id="tickets-filter-type"
+              value={typeFilter}
+              onChange={(event) => setTypeFilter(event.target.value)}
+            >
+              <option value="all">All</option>
+              <option value="bug">Bug</option>
+              <option value="request">Request</option>
+              <option value="task">Task</option>
+              <option value="subtask">Subtask</option>
+            </Select>
+          </FilterField>
+
+          <FilterField label="Epic" id="tickets-filter-epic" className="min-w-[160px]">
             <Select
               id="tickets-filter-epic"
               value={epicFilter}
               onChange={(event) => setEpicFilter(event.target.value)}
-              className="min-w-[120px]"
             >
               <option value="all">All</option>
               <option value="no_epic">No epic</option>
@@ -249,12 +267,11 @@ export function TicketsToolbar({
             </Select>
           </FilterField>
 
-          <FilterField label="Sprint" id="tickets-filter-sprint">
+          <FilterField label="Sprint" id="tickets-filter-sprint" className="min-w-[160px]">
             <Select
               id="tickets-filter-sprint"
               value={sprintFilter}
               onChange={(event) => setSprintFilter(event.target.value)}
-              className="min-w-[120px]"
             >
               <option value="all">All</option>
               <option value="no_sprint">No sprint</option>
@@ -265,7 +282,6 @@ export function TicketsToolbar({
               ))}
             </Select>
           </FilterField>
-
         </>
       }
     />

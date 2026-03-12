@@ -68,9 +68,25 @@ export function CreateSubtaskDialog({
   const users = useMemo(() => usersData || [], [usersData])
   const assigneeUsers = useMemo(
     () =>
-      users.filter((u) =>
-        u.role ? ASSIGNEE_ALLOWED_ROLES.has(u.role.toLowerCase()) : false
-      ),
+      users
+        .filter((u) =>
+          u.role ? ASSIGNEE_ALLOWED_ROLES.has(u.role.toLowerCase()) : false
+        )
+        .slice()
+        .sort((a, b) => {
+          const aLabel = (a.name || a.email || "").toLowerCase()
+          const bLabel = (b.name || b.email || "").toLowerCase()
+          return aLabel.localeCompare(bLabel)
+        }),
+    [users]
+  )
+  const sortedReporterUsers = useMemo(
+    () =>
+      [...users].sort((a, b) => {
+        const aLabel = (a.name || a.email || "").toLowerCase()
+        const bLabel = (b.name || b.email || "").toLowerCase()
+        return aLabel.localeCompare(bLabel)
+      }),
     [users]
   )
 
@@ -263,7 +279,7 @@ export function CreateSubtaskDialog({
                       className={inputClassNameLg}
                     >
                       <option value="">Select reporter</option>
-                      {users.map((user) => (
+                      {sortedReporterUsers.map((user) => (
                         <option key={user.id} value={user.id}>
                           {user.name || user.email}
                         </option>

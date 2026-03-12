@@ -2,7 +2,7 @@
 
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRealtimeSubscription } from "@client/hooks/use-realtime"
-import { fetchTicketDetail } from "@client/features/tickets/lib/client"
+import { fetchTicketDetail, normalizeTicket } from "@client/features/tickets/lib/client"
 import { ticketQueryKeys } from "@client/features/tickets/lib/query-keys"
 import type { Ticket, TicketDetailRelations } from "@shared/types"
 import type { TicketComment } from "@client/hooks/use-ticket-comments"
@@ -21,8 +21,24 @@ export function useTicketDetail(ticketId: string, options?: { enabled?: boolean 
     table: "tickets",
     filter: `id=eq.${ticketId}`,
     enabled,
-    onUpdate: () => {
-      queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(ticketId) })
+    onUpdate: (payload) => {
+      const partial = (payload.new as Partial<Ticket> | null) ?? null
+      if (partial) {
+        queryClient.setQueryData<TicketDetailResponse>(ticketQueryKeys.detail(ticketId), (current) => {
+          if (!current?.ticket) return current
+          return {
+            ...current,
+            ticket: normalizeTicket({
+              ...current.ticket,
+              ...partial,
+            } as Ticket),
+          }
+        })
+      }
+      queryClient.invalidateQueries({
+        queryKey: ticketQueryKeys.detail(ticketId),
+        refetchType: "none",
+      })
     },
   })
 

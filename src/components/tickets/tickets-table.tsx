@@ -7,9 +7,11 @@ import { formatRelativeDate, getDueDateDisplay } from "@client/lib/format-dates"
 import { normalizeStatusKey, isDoneStatus, formatStatusLabel } from "@shared/ticket-statuses"
 import type { TicketStatus } from "@shared/ticket-statuses"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
+import { useTicketSubtaskCounts } from "@client/hooks/use-ticket-subtask-counts"
 import { Button } from "@client/components/ui/button"
 import { StatusPill } from "@client/components/tickets/status-pill"
 import { PriorityPill } from "@client/components/tickets/priority-pill"
+import { TicketTypePill } from "@client/components/ticket-type-select"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import {
   Table,
@@ -33,12 +35,19 @@ export interface TicketsTableProps {
 
 interface TicketRowProps {
   ticket: Ticket
+  subtaskDisplayCount: string | number
   onSelectTicket: (ticketId: string) => void
   getStatusLabel: (statusKey: string) => string
   statusMap: Map<string, TicketStatus>
 }
 
-const TicketRow = memo(function TicketRow({ ticket, onSelectTicket, getStatusLabel, statusMap }: TicketRowProps) {
+const TicketRow = memo(function TicketRow({
+  ticket,
+  subtaskDisplayCount,
+  onSelectTicket,
+  getStatusLabel,
+  statusMap,
+}: TicketRowProps) {
   const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
   const requesterLabel = ticket.requestedBy?.name || ticket.requestedBy?.email || "-"
   const sqaLabel = ticket.sqaAssignee?.name || ticket.sqaAssignee?.email || "-"
@@ -57,10 +66,13 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket, getStatusLab
         <button
           type="button"
           onClick={() => onSelectTicket(ticket.id)}
-          className="text-left text-sm font-normal text-foreground hover:underline"
+          className="text-left text-sm font-normal text-primary underline"
         >
           {ticket.title}
         </button>
+      </TableCell>
+      <TableCell className="whitespace-nowrap py-2 text-sm text-foreground text-center">
+        {subtaskDisplayCount}
       </TableCell>
       <TableCell className="whitespace-nowrap py-2 text-sm text-foreground">
         {statusInfo?.color ? (
@@ -68,6 +80,9 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket, getStatusLab
         ) : (
           getStatusLabel(ticket.status)
         )}
+      </TableCell>
+      <TableCell className="whitespace-nowrap py-2 text-sm text-foreground">
+        <TicketTypePill type={ticket.type} />
       </TableCell>
       <TableCell className="whitespace-nowrap py-2 text-sm text-foreground">
         <PriorityPill priority={ticket.priority} />
@@ -105,6 +120,8 @@ export function TicketsTable({
   onSelectTicket,
 }: TicketsTableProps) {
   const { statusMap } = useTicketStatuses()
+  const parentTicketIds = tickets.map((ticket) => ticket.id)
+  const { data: subtaskCounts = {} } = useTicketSubtaskCounts(parentTicketIds)
   const getStatusLabel = useCallback(
     (statusKey: string) =>
       statusMap.get(normalizeStatusKey(statusKey))?.label ?? formatStatusLabel(statusKey),
@@ -149,8 +166,10 @@ export function TicketsTable({
           <TableRow className="hover:bg-transparent">
             <TableHead className="h-9 py-2">ID</TableHead>
             <TableHead className="h-9 w-[400px] min-w-[300px] py-2">Title</TableHead>
+            <TableHead className="h-9 py-2 text-center">Subtasks</TableHead>
             <TableHead className="h-9 py-2">Status</TableHead>
-            <TableHead className="h-9 py-2">Priority</TableHead>
+          <TableHead className="h-9 py-2">Type</TableHead>
+          <TableHead className="h-9 py-2">Priority</TableHead>
             <TableHead className="h-9 py-2">Assignee</TableHead>
             <TableHead className="h-9 py-2">Requester</TableHead>
             <TableHead className="h-9 py-2">SQA</TableHead>
@@ -160,15 +179,25 @@ export function TicketsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {tickets.map((ticket) => (
-            <TicketRow
-              key={ticket.id}
-              ticket={ticket}
-              onSelectTicket={onSelectTicket}
-              getStatusLabel={getStatusLabel}
-              statusMap={statusMap}
-            />
-          ))}
+          {tickets.map((ticket) => {
+            const hasLiveCount = Object.prototype.hasOwnProperty.call(subtaskCounts, ticket.id)
+            const rawCount = hasLiveCount ? subtaskCounts[ticket.id] ?? 0 : (ticket.subtasksCount ?? 0)
+            const displayCount = rawCount > 0 ? rawCount : "-"
+
+            return (
+              <TicketRow
+                key={ticket.id}
+                subtaskDisplayCount={displayCount}
+                ticket={{
+                  ...ticket,
+                  subtasksCount: rawCount,
+                }}
+                onSelectTicket={onSelectTicket}
+                getStatusLabel={getStatusLabel}
+                statusMap={statusMap}
+              />
+            )
+          })}
         </TableBody>
       </Table>
     </EntityTableShell>

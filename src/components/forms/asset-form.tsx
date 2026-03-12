@@ -238,7 +238,13 @@ export function AssetForm({
                     className={nativeSelectClassName}
                   >
                     <option value="">Select an owner</option>
-                    {users.map((user) => (
+                    {[...users]
+                      .sort((a, b) => {
+                        const aLabel = (a.name || a.email || "").toLowerCase()
+                        const bLabel = (b.name || b.email || "").toLowerCase()
+                        return aLabel.localeCompare(bLabel)
+                      })
+                      .map((user) => (
                       <option key={user.id} value={user.id}>
                         {user.name || user.email}
                       </option>

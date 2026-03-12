@@ -150,7 +150,7 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                             href={url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex max-w-[220px] items-center gap-1 truncate text-sm text-foreground hover:underline"
+                            className="inline-flex max-w-[220px] items-center gap-1 truncate text-sm text-primary underline"
                           >
                             <span className="truncate">{formatLinkLabel(url)}</span>
                           </a>
@@ -171,7 +171,7 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                         href={asset.production_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex max-w-[220px] items-center gap-1 truncate text-sm text-foreground hover:underline"
+                        className="inline-flex max-w-[220px] items-center gap-1 truncate text-sm text-primary underline"
                       >
                         <span className="truncate">{formatLinkLabel(asset.production_url)}</span>
                       </a>

@@ -10,7 +10,7 @@ import { Subtasks } from "@client/components/subtasks"
 import { TicketActivity } from "@client/components/ticket-activity"
 import { getSanitizedHtmlProps } from "@client/lib/sanitize-html"
 import { isRichTextEmpty, toDisplayHtml } from "@shared/rich-text"
-import type { Ticket } from "@shared/types"
+import type { Ticket, TicketDetailRelations } from "@shared/types"
 import type { TicketComment } from "@client/hooks/use-ticket-comments"
 
 const RichTextEditor = lazyComponent(
@@ -39,6 +39,7 @@ type TicketDetailMainColumnProps = {
   onCancelEditLink: () => void
   onUpdateLink: (index: number) => void | Promise<void>
   onRemoveLink: (index: number) => void | Promise<void>
+  relations?: TicketDetailRelations
 }
 
 const formatLinkLabel = (url: string) => {
@@ -72,6 +73,7 @@ export function TicketDetailMainColumn({
   onCancelEditLink,
   onUpdateLink,
   onRemoveLink,
+  relations,
 }: TicketDetailMainColumnProps) {
   return (
     <div className="min-w-0 space-y-4">
@@ -298,6 +300,15 @@ export function TicketDetailMainColumn({
               parentRequestedById={ticket.requestedBy?.id ?? null}
               allowSqaStatuses={ticket.project?.require_sqa === true}
               allowCreate={canEditTickets && ticket.type !== "subtask"}
+              initialSubtasks={relations?.subtasks?.map((subtask) => ({
+                id: subtask.id,
+                displayId: subtask.displayId,
+                title: subtask.title,
+                status: subtask.status,
+                type: subtask.type,
+                priority: subtask.priority,
+                assigneeName: subtask.assignee?.name || subtask.assignee?.email || null,
+              }))}
             />
           </div>
         </Card>

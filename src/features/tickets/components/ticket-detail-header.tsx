@@ -4,14 +4,13 @@ import type { KeyboardEvent as ReactKeyboardEvent } from "react"
 import { Input } from "@client/components/ui/input"
 import { cn } from "@client/lib/utils"
 import { Breadcrumb } from "@client/components/ui/breadcrumb"
+import { Button } from "@client/components/ui/button"
+import { ClipboardDocumentIcon } from "@heroicons/react/24/outline"
 import type { Ticket } from "@shared/types"
-import type { BreadcrumbItem } from "@client/components/ui/breadcrumb"
 
 type TicketDetailHeaderProps = {
   ticketId: string
   ticket: Ticket | null | undefined
-  parentNavigationSlug: string | null
-  parentLabel?: string | null
   canEditTickets: boolean
   isAssignmentLocked: boolean
   isEditingTitle: boolean
@@ -29,8 +28,6 @@ type TicketDetailHeaderProps = {
 export function TicketDetailHeader({
   ticketId,
   ticket,
-  parentNavigationSlug,
-  parentLabel,
   canEditTickets,
   isEditingTitle,
   titleValue,
@@ -44,19 +41,24 @@ export function TicketDetailHeader({
   onRequestDelete,
 }: TicketDetailHeaderProps) {
   const displayId = ticket?.displayId || ticketId.slice(0, 8)
-  const breadcrumbItems: BreadcrumbItem[] = [
-    { label: "Tickets", href: "/tickets" },
-    ...(parentNavigationSlug && parentLabel
-      ? [{ label: parentLabel, href: `/tickets/${parentNavigationSlug}` }]
-      : []),
-    { label: displayId },
-  ]
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <Breadcrumb items={breadcrumbItems} />
+          <Breadcrumb items={[{ label: "Tickets", href: "/tickets" }, { label: displayId }]} />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-xs text-muted-foreground">{String(displayId).toUpperCase()}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onCopyTicketLabel}
+            aria-label="Copy ticket label"
+          >
+            <ClipboardDocumentIcon className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 

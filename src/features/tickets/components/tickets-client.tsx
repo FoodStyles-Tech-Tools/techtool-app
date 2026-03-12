@@ -58,6 +58,8 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     setSqaFilter,
     priorityFilter,
     setPriorityFilter,
+    typeFilter,
+    setTypeFilter,
     epicFilter,
     setEpicFilter,
     sprintFilter,
@@ -95,6 +97,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     requestedById: requestedByFilter !== "all" ? requestedByFilter : undefined,
     sqaAssigneeId: sqaFilter !== "all" ? sqaFilter : undefined,
     priority: priorityFilter !== "all" ? priorityFilter : undefined,
+    type: typeFilter !== "all" ? typeFilter : undefined,
     epicId: epicFilter !== "all" ? epicFilter : undefined,
     sprintId: sprintFilter !== "all" ? sprintFilter : undefined,
     includeStatuses: statusOptions.length > 0 ? includeStatuses : undefined,
@@ -243,6 +246,8 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           priorityFilter={priorityFilter}
           setPriorityFilter={setPriorityFilter}
           priorityOptions={priorityOptions}
+          typeFilter={typeFilter}
+          setTypeFilter={setTypeFilter}
           epicFilter={epicFilter}
           setEpicFilter={setEpicFilter}
           epicOptions={epicOptions}

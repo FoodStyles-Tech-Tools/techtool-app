@@ -8,6 +8,8 @@ export type RawRelatedTicket = {
   title: string
   status: string
   type: string | null
+  priority?: string
+  assignee?: RelatedTicket["assignee"]
 }
 
 export type RawMentionedTicketRelation = {
@@ -29,6 +31,8 @@ export type RawTicket = {
   displayId?: string | null
   parent_ticket_id?: string | null
   parentTicketId?: string | null
+  subtasks_count?: number
+  subtasksCount?: number
   title: string
   description: string | null
   status: string
@@ -66,6 +70,8 @@ export function normalizeRelatedTicket(ticket: RawRelatedTicket): RelatedTicket 
     title: ticket.title,
     status: ticket.status,
     type: ticket.type,
+    priority: ticket.priority,
+    assignee: ticket.assignee ?? null,
   }
 }
 
@@ -78,15 +84,22 @@ export function normalizeMentionedTicketRelation(relation: RawMentionedTicketRel
 
 /** Normalize a snake_case API ticket response to the camelCase domain Ticket type. */
 export function normalizeTicket(ticket: RawTicket): Ticket {
+  const parentTicketId = ticket.parentTicketId ?? ticket.parent_ticket_id ?? null
+  const baseType = ticket.type
+  const resolvedType =
+    parentTicketId && baseType === "task"
+      ? "subtask"
+      : baseType || "task"
+
   return {
     displayId: ticket.displayId ?? ticket.display_id ?? null,
-    parentTicketId: ticket.parentTicketId ?? ticket.parent_ticket_id ?? null,
+    parentTicketId,
     id: ticket.id,
     title: ticket.title,
     description: ticket.description,
     status: ticket.status,
     priority: ticket.priority,
-    type: ticket.type,
+    type: resolvedType,
     dueDate: ticket.dueDate ?? ticket.due_date ?? null,
     sqaAssignedAt: ticket.sqaAssignedAt ?? ticket.sqa_assigned_at ?? null,
     requestedBy: (ticket.requestedBy ?? ticket.requested_by)!,
@@ -102,6 +115,7 @@ export function normalizeTicket(ticket: RawTicket): Ticket {
     sprint: ticket.sprint,
     project: ticket.project,
     assignee: ticket.assignee,
+    subtasksCount: ticket.subtasksCount ?? ticket.subtasks_count,
   }
 }
 

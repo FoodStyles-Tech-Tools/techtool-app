@@ -3,10 +3,7 @@
 import { Card } from "@client/components/ui/card"
 import { TicketStatusSelect } from "@client/components/ticket-status-select"
 import { TicketDetailFieldsSection } from "@client/features/tickets/components/ticket-detail-fields-section"
-import type {
-  ParentTicketOption,
-  TicketProjectOption,
-} from "@client/features/tickets/components/ticket-detail-sidebar-types"
+import type { TicketProjectOption } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 import type { Epic } from "@client/hooks/use-epics"
 import type { Sprint } from "@client/hooks/use-sprints"
 import type { Department, Ticket, User } from "@shared/types"
@@ -27,10 +24,6 @@ type TicketDetailSidebarProps = {
   epics: Epic[]
   sprints: Sprint[]
   projectOptions: TicketProjectOption[]
-  parentTicketOptions: ParentTicketOption[]
-  selectedParentTicketId: string | null
-  selectedParentTicketOption: ParentTicketOption | null
-  parentNavigationSlug: string | null
   parseTimestamp: (timestamp: string | null | undefined) => Date | null
   onAssigneeChange: (value: string | null) => void | Promise<void>
   onRequestedByChange: (value: string) => void | Promise<void>
@@ -62,10 +55,6 @@ export function TicketDetailSidebar({
   epics,
   sprints,
   projectOptions,
-  parentTicketOptions,
-  selectedParentTicketId,
-  selectedParentTicketOption,
-  parentNavigationSlug,
   parseTimestamp,
   onAssigneeChange,
   onRequestedByChange,
@@ -93,6 +82,7 @@ export function TicketDetailSidebar({
               disabled={!canEditTickets || isAssignmentLocked || !!updatingFields.status}
               allowSqaStatuses={ticket.project?.require_sqa === true}
               triggerClassName="h-8"
+              isLoading={!!updatingFields.status}
             />
           )}
         </div>
@@ -114,10 +104,6 @@ export function TicketDetailSidebar({
             epics={epics}
             sprints={sprints}
             projectOptions={projectOptions}
-            parentTicketOptions={parentTicketOptions}
-            selectedParentTicketId={selectedParentTicketId}
-            selectedParentTicketOption={selectedParentTicketOption}
-            parentNavigationSlug={parentNavigationSlug}
             parseTimestamp={parseTimestamp}
             onAssigneeChange={onAssigneeChange}
             onRequestedByChange={onRequestedByChange}

@@ -1,48 +1,26 @@
-import { buildStatusChangeBody } from "@shared/ticket-statuses"
-import type { Ticket } from "@shared/types"
-
 export const DONE_STATUS_KEYS = new Set(["completed", "cancelled", "rejected"])
 
-function toCamelCaseStatusPayload(payload: Record<string, unknown>) {
-  const nextPayload: Record<string, unknown> = {}
-
-  if ("status" in payload) nextPayload.status = payload.status
-  if ("reason" in payload) nextPayload.reason = payload.reason
-  if ("started_at" in payload) nextPayload.startedAt = payload.started_at
-  if ("completed_at" in payload) nextPayload.completedAt = payload.completed_at
-
-  return nextPayload
-}
-
+/**
+ * Build the assignee/sqa-assignee patch payload.
+ * Timestamps (assignedAt / sqaAssignedAt) are intentionally omitted here;
+ * the server derives them from the previous value and the incoming assignee.
+ */
 export function buildAssignmentPayload(
   field: "assigneeId" | "sqaAssigneeId",
-  currentTicket: Ticket | null | undefined,
   value: string | null | undefined
 ) {
   const nextValue = value || null
-  const now = new Date().toISOString()
-
   if (field === "assigneeId") {
-    const previousValue = currentTicket?.assignee?.id || null
-    return {
-      assigneeId: nextValue,
-      assignedAt: !nextValue ? null : !previousValue || previousValue !== nextValue ? now : undefined,
-    }
+    return { assigneeId: nextValue }
   }
-
-  const previousValue = currentTicket?.sqaAssignee?.id || null
-  return {
-    sqaAssigneeId: nextValue,
-    sqaAssignedAt: !nextValue ? null : !previousValue || previousValue !== nextValue ? now : undefined,
-  }
+  return { sqaAssigneeId: nextValue }
 }
 
-export function buildStatusPayload(currentTicket: Ticket | null | undefined, nextStatus: string) {
-  const previousStatus = currentTicket?.status ?? "open"
-  const startedAt = currentTicket?.startedAt ?? null
-
-  return toCamelCaseStatusPayload({
-    status: nextStatus,
-    ...buildStatusChangeBody(previousStatus, nextStatus, { startedAt }),
-  })
+/**
+ * Build the status patch payload.
+ * Timestamp fields (startedAt / completedAt / reason) are intentionally omitted;
+ * the server derives them from the previous status and the incoming status.
+ */
+export function buildStatusPayload(nextStatus: string) {
+  return { status: nextStatus }
 }

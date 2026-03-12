@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useForm, useFieldArray, FieldArrayPath } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -67,6 +67,23 @@ export function ProjectForm({
   const createProject = useCreateProject()
   const updateProject = useUpdateProject()
   const isEditing = Boolean(initialData?.id)
+
+  const sortedUsers = useMemo(
+    () =>
+      [...(users || [])].sort((a, b) => {
+        const aLabel = (a.name || a.email || "").toLowerCase()
+        const bLabel = (b.name || b.email || "").toLowerCase()
+        return aLabel.localeCompare(bLabel)
+      }),
+    [users]
+  )
+  const sortedDepartments = useMemo(
+    () =>
+      [...departments].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+      ),
+    [departments]
+  )
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
@@ -233,7 +250,7 @@ export function ProjectForm({
                   className={nativeSelectClassName}
                 >
                   <option value="">Select requester</option>
-                  {(users || []).map((user) => (
+                  {sortedUsers.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.name || user.email}
                     </option>
@@ -258,7 +275,7 @@ export function ProjectForm({
                     className={nativeSelectClassName}
                   >
                     <option value="">Select owner</option>
-                    {(users || []).map((user) => (
+                    {sortedUsers.map((user) => (
                       <option key={user.id} value={user.id}>
                         {user.name || user.email}
                       </option>
@@ -302,7 +319,7 @@ export function ProjectForm({
                   className={nativeSelectClassName}
                 >
                   <option value={NO_DEPARTMENT_VALUE}>No Department</option>
-                  {departments.map((department) => (
+                  {sortedDepartments.map((department) => (
                     <option key={department.id} value={department.id}>
                       {department.name}
                     </option>

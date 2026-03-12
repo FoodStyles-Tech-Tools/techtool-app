@@ -165,7 +165,7 @@ const RepliesBlock = memo(function RepliesBlock({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+          className="text-xs text-primary underline"
         >
           See {count} {count === 1 ? "reply" : "replies"}
         </button>
@@ -173,7 +173,7 @@ const RepliesBlock = memo(function RepliesBlock({
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className="mb-2 text-xs text-muted-foreground hover:text-foreground hover:underline"
+          className="mb-2 text-xs text-primary underline"
         >
           Hide replies
         </button>

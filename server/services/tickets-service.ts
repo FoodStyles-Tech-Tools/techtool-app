@@ -408,6 +408,39 @@ export async function updateTicketStatusWithReason(
   }
 
   const previousStatus = currentTicket.status || null
+  const now = new Date().toISOString()
+
+  // Derive startedAt server-side when the client does not supply it.
+  // For cancelled / rejected: ensure started_at is recorded if the ticket never started.
+  const clientSetStartedAt = input.startedAt !== undefined
+  let finalStartedAt: string | null = clientSetStartedAt ? parseOptionalTimestamp(input.startedAt) : null
+  let setStartedAt = clientSetStartedAt
+  if (!clientSetStartedAt && (input.status === "cancelled" || input.status === "rejected")) {
+    if (!currentTicket.started_at) {
+      finalStartedAt = now
+      setStartedAt = true
+    }
+  }
+
+  // Derive completedAt server-side when the client does not supply it.
+  // For cancelled / rejected: always mark as completed now.
+  // For returned_to_dev:       clear completed_at if the ticket was previously in a done state.
+  const clientSetCompletedAt = input.completedAt !== undefined
+  let finalCompletedAt: string | null = clientSetCompletedAt ? parseOptionalTimestamp(input.completedAt) : null
+  let setCompletedAt = clientSetCompletedAt
+  if (!clientSetCompletedAt) {
+    if (input.status === "cancelled" || input.status === "rejected") {
+      finalCompletedAt = now
+      setCompletedAt = true
+    } else if (
+      input.status === "returned_to_dev" &&
+      (previousStatus === "completed" || previousStatus === "cancelled" || previousStatus === "rejected")
+    ) {
+      finalCompletedAt = null
+      setCompletedAt = true
+    }
+  }
+
   const { error: rpcError } = await ticketsRepository.runUpdateTicketStatusWithReasonCommentRpc(
     context.supabase,
     {
@@ -417,10 +450,10 @@ export async function updateTicketStatusWithReason(
       p_reason: input.reason ?? null,
       p_set_reason: input.reason !== undefined,
       p_reason_comment_body: input.reasonCommentBody,
-      p_started_at: parseOptionalTimestamp(input.startedAt),
-      p_set_started_at: input.startedAt !== undefined,
-      p_completed_at: parseOptionalTimestamp(input.completedAt),
-      p_set_completed_at: input.completedAt !== undefined,
+      p_started_at: finalStartedAt,
+      p_set_started_at: setStartedAt,
+      p_completed_at: finalCompletedAt,
+      p_set_completed_at: setCompletedAt,
       p_epic_id: input.epicId ?? null,
       p_set_epic_id: input.epicId !== undefined,
     }

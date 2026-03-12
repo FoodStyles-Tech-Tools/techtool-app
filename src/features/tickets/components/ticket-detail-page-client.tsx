@@ -1,10 +1,13 @@
 "use client"
 
 import { useNavigate } from "react-router-dom"
+import { ClipboardDocumentIcon, ShareIcon } from "@heroicons/react/24/outline"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { Breadcrumb } from "@client/components/ui/breadcrumb"
+import { Button } from "@client/components/ui/button"
 import { useTicketDetailSurface } from "@client/features/tickets/hooks/use-ticket-detail-surface"
+import { useTicketDetailSharing } from "@client/features/tickets/hooks/use-ticket-detail-sharing"
 import { TicketDetailLayout } from "@client/features/tickets/components/ticket-detail-layout"
 
 type TicketDetailPageClientProps = {
@@ -14,17 +17,14 @@ type TicketDetailPageClientProps = {
 export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps) {
   const navigate = useNavigate()
   const surface = useTicketDetailSurface(ticketId, { enabled: true })
-  const { ticket, parentNavigationSlug, selectedParentTicketOption } = surface
+  const { ticket } = surface
   const displayId = ticket?.displayId || ticketId.slice(0, 8)
-  const parentLabel = selectedParentTicketOption
-    ? (selectedParentTicketOption.displayId || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()
-    : null
+  const { handleCopyTicketLabel, handleCopyShareUrl } = useTicketDetailSharing({
+    ticket,
+  })
 
   const breadcrumbItems = [
     { label: "Tickets", href: "/tickets" },
-    ...(parentNavigationSlug && parentLabel
-      ? [{ label: parentLabel, href: `/tickets/${parentNavigationSlug}` as string }]
-      : []),
     { label: displayId },
   ]
 
@@ -41,7 +41,29 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2" />
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs text-muted-foreground">
+                {String(displayId).toUpperCase()}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyTicketLabel}
+                aria-label="Copy ticket label"
+              >
+                <ClipboardDocumentIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleCopyShareUrl}
+                aria-label="Copy share URL"
+              >
+                <ShareIcon className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         }
       >

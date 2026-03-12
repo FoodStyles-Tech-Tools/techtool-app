@@ -8,7 +8,6 @@ import {
   closeTicketSubtasksToStatus,
   resolveTicketDoneStatusGuard,
 } from "@client/features/tickets/api/client"
-import { buildStatusPayload } from "@client/features/tickets/lib/update-payloads"
 import type {
   TicketStatusGuardResult,
   TicketSubtaskDecision,
@@ -73,7 +72,6 @@ export function useTicketDetailStatusActions({
   ) => {
     if (!ticket || !ticketId) return
 
-    const updates: any = buildStatusPayload(ticket, newStatus)
     setUpdatingFields((prev) => ({ ...prev, status: true }))
 
     try {
@@ -81,15 +79,9 @@ export function useTicketDetailStatusActions({
       if (!subtaskDecision.proceed) return
 
       if (newStatus === "returned_to_dev" && returnedToDevReasonRichText) {
-        const payload: {
-          id: string
-          status: "returned_to_dev"
-          reason: unknown
-          reasonCommentBody: string
-          startedAt?: string | null
-          completedAt?: string | null
-          epicId?: string | null
-        } = {
+        // returned_to_dev always requires a rich-text reason that becomes an audit comment.
+        // Timestamps are derived server-side.
+        await updateTicketWithReasonComment.mutateAsync({
           id: ticketId,
           status: "returned_to_dev",
           reason: {
@@ -99,23 +91,13 @@ export function useTicketDetailStatusActions({
             },
           },
           reasonCommentBody: `<p><strong>Returned to Dev Reason</strong></p>${returnedToDevReasonRichText}`,
-        }
-
-        if ("startedAt" in updates) {
-          payload.startedAt = (updates as { startedAt?: string | null }).startedAt ?? null
-        }
-        if ("completedAt" in updates) {
-          payload.completedAt = (updates as { completedAt?: string | null }).completedAt ?? null
-        }
-        if ("epicId" in updates) {
-          payload.epicId = (updates as { epicId?: string | null }).epicId ?? null
-        }
-
-        await updateTicketWithReasonComment.mutateAsync(payload)
+        })
       } else {
+        // All other status transitions: send only the new status.
+        // The server derives startedAt / completedAt / reason resets from the transition.
         await updateTicket.mutateAsync({
           id: ticketId,
-          ...updates,
+          status: newStatus,
         })
       }
 
@@ -210,35 +192,33 @@ export function useTicketDetailStatusActions({
     const reasonTimestampKey = newStatus === "rejected" ? "rejectedAt" : "cancelledAt"
     const reasonHeading = newStatus === "rejected" ? "Reject Reason" : "Cancelled Reason"
     const commentBody = `<p><strong>${reasonHeading}</strong></p>${normalizedReason}`
-    const updates: any = {
-      ...buildStatusPayload(ticket, newStatus),
-      reason: {
-        [reasonKey]: {
-          reason: cancelReason.trim(),
-          [reasonTimestampKey]: new Date().toISOString(),
-        },
-      },
-    }
 
     try {
       const subtaskDecision = await resolveSubtaskStatusGuard(newStatus)
       if (!subtaskDecision.proceed) return
 
+      // Send only the business fields; startedAt / completedAt are derived server-side.
       await updateTicketWithReasonComment.mutateAsync({
         id: ticketId,
         status: newStatus as "cancelled" | "rejected",
-        reason: updates.reason,
+        reason: {
+          [reasonKey]: {
+            reason: cancelReason.trim(),
+            [reasonTimestampKey]: new Date().toISOString(),
+          },
+        },
         reasonCommentBody: commentBody,
-        ...(updates.startedAt !== undefined ? { startedAt: updates.startedAt ?? null } : {}),
-        ...(updates.completedAt !== undefined ? { completedAt: updates.completedAt ?? null } : {}),
       })
+
       toast("Status updated")
+
       if (subtaskDecision.closeSubtasks) {
         await closeTicketSubtasksToStatus(subtaskDecision.subtasks, newStatus)
         toast(
           `Closed ${subtaskDecision.subtasks.length} open subtask${subtaskDecision.subtasks.length === 1 ? "" : "s"}.`
         )
       }
+
       setCancelReason("")
     } catch (error: any) {
       toast(error.message || "Failed to update ticket", "error")

@@ -27,6 +27,10 @@ export function SprintSelect({
     ? sprints.find(s => s.id === value) 
     : null
 
+  const sortedSprints = [...sprints].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  )
+
   return (
     <select
       value={value || NO_SPRINT_VALUE}
@@ -37,7 +41,7 @@ export function SprintSelect({
       className={cn(selectStyleInputSm, className, triggerClassName)}
     >
       <option value={NO_SPRINT_VALUE}>No Sprint</option>
-      {sprints.map((sprint) => (
+      {sortedSprints.map((sprint) => (
         <option key={sprint.id} value={sprint.id}>
           {sprint.name}
         </option>

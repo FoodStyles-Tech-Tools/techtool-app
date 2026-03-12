@@ -78,7 +78,7 @@ export function DeletedTicketsPanel() {
                             slug: String(row.displayId).toLowerCase(),
                           })
                         }
-                        className="text-foreground hover:underline"
+                        className="text-primary underline"
                       >
                         {row.displayId}
                       </button>

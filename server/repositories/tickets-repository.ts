@@ -87,7 +87,7 @@ export function findUserRoleById(supabase: SupabaseClientLike, userId: string) {
 export function findTicketForStatusReason(supabase: SupabaseClientLike, ticketId: string) {
   return supabase
     .from("tickets")
-    .select("id, status, sqa_assignee_id")
+    .select("id, status, sqa_assignee_id, started_at")
     .eq("id", ticketId)
     .maybeSingle()
 }

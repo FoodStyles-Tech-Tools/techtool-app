@@ -22,6 +22,8 @@ interface TicketStatusSelectProps {
   triggerClassName?: string
   excludeDone?: boolean
   allowSqaStatuses?: boolean
+  /** When true, hide the native select and show a small loading indicator instead. */
+  isLoading?: boolean
 }
 
 export function TicketStatusSelect({ 
@@ -32,6 +34,7 @@ export function TicketStatusSelect({
   triggerClassName,
   excludeDone = false,
   allowSqaStatuses = true,
+  isLoading = false,
 }: TicketStatusSelectProps) {
   const { statuses, statusMap } = useTicketStatuses({ realtime: false })
   const selectableStatuses = useMemo(
@@ -49,26 +52,38 @@ export function TicketStatusSelect({
 
   return (
     <div className={cn("relative flex min-h-8 w-[120px] min-w-[120px] items-center", className)}>
-      {value && currentStatus?.color ? (
-        <StatusPill label={currentStatus.label} color={currentStatus.color} className="pointer-events-none shrink-0" />
-      ) : value ? (
-        <span className="pointer-events-none shrink-0 text-xs font-medium text-foreground">{currentLabel}</span>
+      {isLoading ? (
+        <div className="flex w-full items-center justify-center">
+          <span className="h-3.5 w-3.5 animate-spin rounded-full border-[2px] border-muted-foreground/30 border-t-muted-foreground" />
+        </div>
       ) : (
-        <span className="pointer-events-none text-xs text-muted-foreground">{currentLabel}</span>
+        <>
+          {value && currentStatus?.color ? (
+            <StatusPill
+              label={currentStatus.label}
+              color={currentStatus.color}
+              className="pointer-events-none shrink-0"
+            />
+          ) : value ? (
+            <span className="pointer-events-none shrink-0 text-xs font-medium text-foreground">{currentLabel}</span>
+          ) : (
+            <span className="pointer-events-none text-xs text-muted-foreground">{currentLabel}</span>
+          )}
+          <select
+            value={value}
+            onChange={(event) => onValueChange(event.target.value)}
+            disabled={disabled}
+            className={cn(selectStyleInputSmPx2, "absolute inset-0 cursor-pointer opacity-0", triggerClassName)}
+            aria-label="Status"
+          >
+            {selectableStatuses.map((status) => (
+              <option key={status.key} value={status.key}>
+                {status.label}
+              </option>
+            ))}
+          </select>
+        </>
       )}
-      <select
-        value={value}
-        onChange={(event) => onValueChange(event.target.value)}
-        disabled={disabled}
-        className={cn(selectStyleInputSmPx2, "absolute inset-0 cursor-pointer opacity-0", triggerClassName)}
-        aria-label="Status"
-      >
-        {selectableStatuses.map((status) => (
-          <option key={status.key} value={status.key}>
-            {status.label}
-          </option>
-        ))}
-      </select>
     </div>
   )
 }

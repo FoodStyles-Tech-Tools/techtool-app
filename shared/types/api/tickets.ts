@@ -45,6 +45,8 @@ export type TicketListItem = {
   id: string
   display_id: string | null
   parent_ticket_id?: string | null
+  /** Optional count of direct subtasks for this ticket, when available on list view. */
+  subtasks_count?: number
   title: string
   status: string
   priority: string

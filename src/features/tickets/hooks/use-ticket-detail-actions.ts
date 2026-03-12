@@ -194,7 +194,7 @@ export function useTicketDetailActions({
     if (!ticket) return
 
     await updateTicketWithToast(
-      buildAssignmentPayload("assigneeId", ticket, newAssigneeId),
+      buildAssignmentPayload("assigneeId", newAssigneeId),
       "Assignee updated",
       "assigneeId"
     )
@@ -219,7 +219,7 @@ export function useTicketDetailActions({
     if (!ticket) return
 
     await updateTicketWithToast(
-      buildAssignmentPayload("sqaAssigneeId", ticket, newSqaAssigneeId),
+      buildAssignmentPayload("sqaAssigneeId", newSqaAssigneeId),
       "SQA assignee updated",
       "sqaAssigneeId"
     )

@@ -70,7 +70,7 @@ export function ClockifySessionsCard({
               <TableCell className="py-2 text-sm font-mono">
                 <Link
                   to={`/clockify/sessions/${session.id}`}
-                  className="font-medium text-primary hover:underline"
+                  className="font-medium text-primary underline"
                 >
                   {formatYearWeek(session.start_date)}
                 </Link>

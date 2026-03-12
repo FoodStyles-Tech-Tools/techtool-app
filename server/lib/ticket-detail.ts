@@ -14,7 +14,15 @@ type CommentRow = {
   mentions: MentionRow[] | null
 }
 type CommentWithReplies = CommentRow & { replies?: CommentWithReplies[] }
-type SubtaskRow = { id: string; display_id: string | null; title: string; status: string; type: string | null }
+type SubtaskRow = {
+  id: string
+  display_id: string | null
+  title: string
+  status: string
+  type: string | null
+  priority: string
+  assignee: UserRow | UserRow[] | null
+}
 type TicketMentionRow = { id: string; display_id: string | null; title: string; status: string; type: string | null }
 
 const TICKET_LINK_REGEX = /(?:https?:\/\/techtool-app\.vercel\.app)?\/tickets\/([a-z]{2,}-\d+)\b/gi
@@ -162,7 +170,17 @@ export async function fetchTicketDetailPayload(supabase: ServerSupabaseClient, t
     (async () => {
       const { data: subtasks, error } = await supabase
         .from("tickets")
-        .select("id, display_id, title, status, type")
+        .select(
+          `
+          id,
+          display_id,
+          title,
+          status,
+          type,
+          priority,
+          assignee:users!tickets_assignee_id_fkey(id, name, email, avatar_url)
+        `
+        )
         .eq("parent_ticket_id", ticketId)
         .order("created_at", { ascending: true })
 
@@ -269,6 +287,8 @@ export async function fetchTicketDetailPayload(supabase: ServerSupabaseClient, t
         title: item.title,
         status: item.status,
         type: item.type ?? null,
+        priority: item.priority,
+        assignee: normalizeUser(item.assignee),
       })),
       mentioned_in_comments: mentionedInComments,
     },

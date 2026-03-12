@@ -31,6 +31,7 @@ export function useTicketsFilters({
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [sqaFilter, setSqaFilter] = useState<string>("all")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
+  const [typeFilter, setTypeFilter] = useState<string>("all")
   const [epicFilter, setEpicFilter] = useState<string>("all")
   const [sprintFilter, setSprintFilter] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
@@ -79,6 +80,7 @@ export function useTicketsFilters({
     setAssigneeFilter(defaultAssignee)
     setSqaFilter("all")
     setPriorityFilter("all")
+    setTypeFilter("all")
     setEpicFilter("all")
     setSprintFilter("all")
     setCurrentPage(1)
@@ -116,6 +118,10 @@ export function useTicketsFilters({
     setPriorityFilter(value)
     setCurrentPage(1)
   }, [])
+  const setTypeFilterAndResetPage = useCallback((value: string) => {
+    setTypeFilter(value)
+    setCurrentPage(1)
+  }, [])
   const setEpicFilterAndResetPage = useCallback((value: string) => {
     setEpicFilter(value)
     setCurrentPage(1)
@@ -145,6 +151,7 @@ export function useTicketsFilters({
     if (assigneeFilter !== defaultAssignee) count += 1
     if (sqaFilter !== "all") count += 1
     if (priorityFilter !== "all") count += 1
+    if (typeFilter !== "all") count += 1
     if (epicFilter !== "all") count += 1
     if (sprintFilter !== "all") count += 1
     return count
@@ -161,6 +168,7 @@ export function useTicketsFilters({
     defaultAssignee,
     sqaFilter,
     priorityFilter,
+    typeFilter,
     epicFilter,
     sprintFilter,
   ])
@@ -190,6 +198,8 @@ export function useTicketsFilters({
     setSqaFilter: setSqaFilterAndResetPage,
     priorityFilter,
     setPriorityFilter: setPriorityFilterAndResetPage,
+    typeFilter,
+    setTypeFilter: setTypeFilterAndResetPage,
     epicFilter,
     setEpicFilter: setEpicFilterAndResetPage,
     sprintFilter,

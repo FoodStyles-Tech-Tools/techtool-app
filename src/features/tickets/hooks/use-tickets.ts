@@ -21,6 +21,7 @@ type UseTicketsOptions = {
   parentTicketId?: string
   assigneeId?: string
   sqaAssigneeId?: string
+  type?: string
   status?: string
   /** Exclude tickets with these status keys (e.g. ["cancelled", "completed"]). */
   excludeStatuses?: string[]
@@ -63,6 +64,7 @@ export function useTickets(options?: UseTicketsOptions) {
     parentTicketId,
     assigneeId,
     sqaAssigneeId,
+    type: options?.type,
     status: options?.status,
     excludeStatuses: excludeStatuses?.length ? excludeStatuses.join(",") : undefined,
     includeStatuses: includeStatuses?.length ? includeStatuses.join(",") : undefined,
@@ -186,6 +188,7 @@ export function useTickets(options?: UseTicketsOptions) {
         parentTicketId,
         assigneeId,
         sqaAssigneeId,
+        type: options?.type,
         status: options?.status,
         excludeStatuses: options?.excludeStatuses,
         includeStatuses: options?.includeStatuses,

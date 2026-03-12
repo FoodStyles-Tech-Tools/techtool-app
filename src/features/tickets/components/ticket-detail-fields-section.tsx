@@ -5,7 +5,7 @@ import { TicketDetailPlanningSection } from "@client/features/tickets/components
 import type { Epic } from "@client/hooks/use-epics"
 import type { Sprint } from "@client/hooks/use-sprints"
 import type { Department, Ticket, User } from "@shared/types"
-import type { ParentTicketOption, TicketProjectOption } from "@client/features/tickets/components/ticket-detail-sidebar-types"
+import type { TicketProjectOption } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 
 type TicketDetailFieldsSectionProps = {
   ticket: Ticket
@@ -21,10 +21,6 @@ type TicketDetailFieldsSectionProps = {
   epics: Epic[]
   sprints: Sprint[]
   projectOptions: TicketProjectOption[]
-  parentTicketOptions: ParentTicketOption[]
-  selectedParentTicketId: string | null
-  selectedParentTicketOption: ParentTicketOption | null
-  parentNavigationSlug: string | null
   parseTimestamp: (timestamp: string | null | undefined) => Date | null
   onAssigneeChange: (value: string | null) => void | Promise<void>
   onRequestedByChange: (value: string) => void | Promise<void>
@@ -52,15 +48,10 @@ export function TicketDetailFieldsSection(props: TicketDetailFieldsSectionProps)
         users={props.users}
         assigneeEligibleUsers={props.assigneeEligibleUsers}
         sqaEligibleUsers={props.sqaEligibleUsers}
-        parentTicketOptions={props.parentTicketOptions}
-        selectedParentTicketId={props.selectedParentTicketId}
-        selectedParentTicketOption={props.selectedParentTicketOption}
-        parentNavigationSlug={props.parentNavigationSlug}
         onAssigneeChange={props.onAssigneeChange}
         onRequestedByChange={props.onRequestedByChange}
         onSqaAssigneeChange={props.onSqaAssigneeChange}
         onTypeChange={props.onTypeChange}
-        onParentTicketChange={props.onParentTicketChange}
       />
       <TicketDetailPlanningSection
         ticket={props.ticket}

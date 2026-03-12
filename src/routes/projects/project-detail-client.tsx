@@ -28,6 +28,7 @@ import { Select } from "@client/components/ui/select"
 import { FilterField } from "@client/components/ui/filter-field"
 import { FilterBar } from "@client/components/ui/filter-bar"
 import { PriorityPill } from "@client/components/tickets/priority-pill"
+import { TicketTypeIcon } from "@client/components/ticket-type-select"
 import { StatusPill } from "@client/components/tickets/status-pill"
 import {
   Table,
@@ -62,6 +63,13 @@ const PRIORITY_OPTIONS = [
   { id: "urgent", label: "Urgent" },
 ] as const
 
+const TYPE_OPTIONS = [
+  { id: "bug", label: "Bug" },
+  { id: "request", label: "Request" },
+  { id: "task", label: "Task" },
+  { id: "subtask", label: "Subtask" },
+] as const
+
 export default function ProjectDetailClient({
   projectId,
   initialProject,
@@ -93,6 +101,7 @@ export default function ProjectDetailClient({
   const [reporterFilter, setReporterFilter] = useState<string>("all")
   const [sqaFilter, setSqaFilter] = useState<string>("all")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
+  const [typeFilter, setTypeFilter] = useState<string>("all")
   const [excludedStatuses, setExcludedStatuses] = useState<string[]>(() => [...DEFAULT_EXCLUDED_STATUSES])
 
   const deferredSearchQuery = useDeferredValue(searchQuery)
@@ -141,6 +150,7 @@ export default function ProjectDetailClient({
     if (reporterFilter !== "all") return true
     if (sqaFilter !== "all") return true
     if (priorityFilter !== "all") return true
+    if (typeFilter !== "all") return true
     if (epicFilter !== "all") return true
     if (sprintFilter !== "all") return true
     return false
@@ -150,6 +160,7 @@ export default function ProjectDetailClient({
     epicFilter,
     excludedStatuses,
     priorityFilter,
+    typeFilter,
     reporterFilter,
     searchQuery,
     sprintFilter,
@@ -164,6 +175,7 @@ export default function ProjectDetailClient({
     setReporterFilter("all")
     setSqaFilter("all")
     setPriorityFilter("all")
+    setTypeFilter("all")
     setExcludedStatuses([...DEFAULT_EXCLUDED_STATUSES])
   }, [])
 
@@ -175,6 +187,7 @@ export default function ProjectDetailClient({
     requestedById: reporterFilter !== "all" ? reporterFilter : undefined,
     sqaAssigneeId: sqaFilter !== "all" ? sqaFilter : undefined,
     priority: priorityFilter !== "all" ? priorityFilter : undefined,
+    type: typeFilter !== "all" ? typeFilter : undefined,
     includeStatuses: statusOptions.length > 0 ? includeStatuses : undefined,
     q: deferredSearchQuery.trim() || undefined,
     excludeSubtasks: true,
@@ -216,6 +229,18 @@ export default function ProjectDetailClient({
       return (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" })
     })
   }, [tickets, ticketStatuses])
+
+function hexWithAlpha(hex: string, alphaHex = "1a"): string {
+  const normalized = hex.startsWith("#") ? hex.slice(1) : hex
+  return `#${normalized}${alphaHex}`
+}
+
+function getTypeColor(type: string | null | undefined): string {
+  if (type === "bug") return "#ef4444" // red-500
+  if (type === "request") return "#3b82f6" // blue-500
+  // default to task color
+  return "#f97316" // orange-500
+}
 
   return (
     <PageLayout>
@@ -398,6 +423,21 @@ export default function ProjectDetailClient({
                           </Select>
                         </div>
                       </FilterField>
+                      <FilterField label="Type" id="project-type-filter">
+                        <Select
+                          id="project-type-filter"
+                          value={typeFilter}
+                          onChange={(e) => setTypeFilter(e.target.value)}
+                          className="min-w-[140px]"
+                        >
+                          <option value="all">All</option>
+                          {TYPE_OPTIONS.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </Select>
+                      </FilterField>
                       <FilterField label="Epic" id="project-epic-filter">
                         <Select
                           id="project-epic-filter"
@@ -446,6 +486,8 @@ export default function ProjectDetailClient({
                         <TableHead className="h-9 py-2 text-muted-foreground">ID</TableHead>
                         <TableHead className="h-9 py-2 text-muted-foreground">Title</TableHead>
                         <TableHead className="h-9 py-2 text-muted-foreground">Status</TableHead>
+                        <TableHead className="h-9 py-2 text-muted-foreground">Type</TableHead>
+                        <TableHead className="h-9 py-2 text-muted-foreground">Priority</TableHead>
                         <TableHead className="h-9 py-2 text-muted-foreground">Reporter</TableHead>
                         <TableHead className="h-9 py-2 text-muted-foreground">Assignee</TableHead>
                         <TableHead className="h-9 py-2 text-muted-foreground">SQA</TableHead>
@@ -471,7 +513,7 @@ export default function ProjectDetailClient({
                                     slug: (ticket.displayId || ticket.id).toLowerCase(),
                                   })
                                 }
-                                className="text-sm font-normal text-foreground hover:underline"
+                                className="text-sm font-normal text-primary underline"
                               >
                                 {ticket.title}
                               </button>
@@ -482,6 +524,28 @@ export default function ProjectDetailClient({
                               ) : (
                                 <span className="text-sm text-foreground">{ticket.status}</span>
                               )}
+                            </TableCell>
+                            <TableCell className="py-2 text-sm text-foreground">
+                              {(() => {
+                                const rawType = ticket.type
+                                const type = !rawType || rawType === "subtask" ? "task" : rawType
+                                const typeColor = getTypeColor(type)
+                                return (
+                                  <span
+                                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium capitalize"
+                                    style={{
+                                      backgroundColor: hexWithAlpha(typeColor, "1a"),
+                                      borderColor: hexWithAlpha(typeColor, "40"),
+                                    }}
+                                  >
+                                    <TicketTypeIcon type={type} color={typeColor} />
+                                    <span className="text-foreground">{type}</span>
+                                  </span>
+                                )
+                              })()}
+                            </TableCell>
+                            <TableCell className="py-2 text-sm text-foreground">
+                              <PriorityPill priority={ticket.priority} />
                             </TableCell>
                             <TableCell className="py-2 text-sm text-foreground">{reporterLabel}</TableCell>
                             <TableCell className="py-2 text-sm text-foreground">{assigneeLabel}</TableCell>

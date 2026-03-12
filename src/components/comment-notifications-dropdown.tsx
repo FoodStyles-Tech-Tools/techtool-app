@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Link } from "react-router-dom"
 import { formatDistanceToNow } from "date-fns"
 import {
   BellIcon,
@@ -24,7 +23,8 @@ function NotificationItem({
   onNavigate: (notification: CommentNotification) => void
 }) {
   const isUnread = !notification.read_at
-  const displayId = notification.ticket?.displayId || notification.ticket_id?.slice(0, 8)
+  const displayId = notification.ticket?.displayId
+  const ticketTitle = notification.ticket?.title?.trim() || "a ticket"
   const authorName = notification.comment?.author?.name || notification.comment?.author?.email || "Someone"
   const typeLabel = notification.type === "mention" ? "mentioned you" : "replied"
   const bodyText = richTextToPlainText(notification.comment?.body)
@@ -42,8 +42,8 @@ function NotificationItem({
       onClick={handleClick}
       onKeyDown={(event) => event.key === "Enter" && handleClick()}
       className={cn(
-        "flex cursor-pointer gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        isUnread && "border-l-2 border-foreground bg-muted"
+        "flex cursor-pointer gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-accent/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        isUnread && "bg-muted/70"
       )}
     >
       <div className="mt-0.5 shrink-0">
@@ -56,13 +56,10 @@ function NotificationItem({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-medium leading-tight">
-            <span className="font-semibold">{authorName}</span> {typeLabel} on{" "}
-            <span className="font-mono text-foreground">{displayId}</span>
+            <span className="font-semibold">{authorName}</span> {typeLabel}
           </p>
           {isUnread ? (
-            <span className="rounded-full bg-foreground px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-background">
-              Unread
-            </span>
+            <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-label="Unread notification" />
           ) : (
             <span
               className="text-xs text-muted-foreground"
@@ -72,10 +69,20 @@ function NotificationItem({
                   : ""
               }
             >
-              Viewed
+              Read
             </span>
           )}
         </div>
+
+        <div className="mt-1 flex min-w-0 items-center gap-2">
+          {displayId ? (
+            <span className="rounded-md border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
+              {displayId}
+            </span>
+          ) : null}
+          <p className="truncate text-xs font-medium text-foreground/90">{ticketTitle}</p>
+        </div>
+
         {bodySnippet ? <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{bodySnippet}</p> : null}
         <p className="mt-1 text-xs text-muted-foreground">
           {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
@@ -140,17 +147,30 @@ export function CommentNotificationsDropdown() {
         ) : null}
       </Button>
       {open ? (
-      <div className="absolute right-0 z-30 mt-2 w-[360px] rounded-lg border border-border bg-card p-0 shadow-lg">
+      <div className="absolute right-0 z-30 mt-2 w-[380px] rounded-lg border border-border bg-card p-0 shadow-lg">
         <div className="flex items-center justify-between border-b border-border px-4 py-2">
-          <span className="text-sm font-semibold">Notifications</span>
-          {unreadCount > 0 ? (
-            <Button variant="ghost" size="sm" className="h-7" onClick={() => markAllRead.mutateAsync()}>
-              Mark all read
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">Notifications</span>
+            {unreadCount > 0 ? (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                {unreadCount} unread
+              </span>
+            ) : null}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7"
+            disabled={unreadCount === 0 || markAllRead.isPending}
+            onClick={() => markAllRead.mutateAsync()}
+          >
+            Mark all read
+          </Button>
         </div>
         <div className="max-h-[320px] overflow-y-auto px-4">
-          {isLoading ? null : notifications.length === 0 ? (
+          {isLoading ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">Loading notifications...</div>
+          ) : notifications.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
               No notifications yet. You will see replies and @mentions here.
             </div>
@@ -167,13 +187,6 @@ export function CommentNotificationsDropdown() {
             </div>
           )}
         </div>
-        {notifications.length > 0 ? (
-          <div className="border-t border-border px-4 py-2">
-            <Link to="/tickets" className="text-xs text-foreground hover:underline">
-              View all tickets
-            </Link>
-          </div>
-        ) : null}
       </div>
       ) : null}
     </div>

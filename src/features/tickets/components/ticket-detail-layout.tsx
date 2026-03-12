@@ -21,6 +21,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
     ticketId,
     ticket,
     detailComments,
+    relations,
     loading,
     isArchivedTicket,
     canEditTickets,
@@ -35,13 +36,9 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
     epics,
     sprints,
     projectOptions,
-    parentTicketOptions,
-    selectedParentTicketId,
-    selectedParentTicketOption,
     parentNavigationSlug,
     openSubtasksDialog,
     resolveOpenSubtasksDialog,
-    handleGoToParentTicket,
     NO_DEPARTMENT_VALUE,
     NO_PROJECT_VALUE,
     NO_PARENT_TICKET_VALUE,
@@ -97,6 +94,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                     disabled={!canEditTickets || isAssignmentLocked || !!actions.updatingFields.status}
                     allowSqaStatuses={ticket.project?.require_sqa === true}
                     triggerClassName="h-8"
+                    isLoading={!!actions.updatingFields.status}
                   />
                 )}
               </div>
@@ -110,6 +108,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                 ticket={ticket}
                 canEditTickets={canEditTickets}
                 detailComments={detailComments}
+                relations={relations}
                 isEditingDescription={actions.isEditingDescription}
                 descriptionValue={actions.descriptionValue}
                 onDescriptionValueChange={actions.setDescriptionValue}
@@ -162,10 +161,6 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                 epics={epics}
                 sprints={sprints}
                 projectOptions={projectOptions}
-                parentTicketOptions={parentTicketOptions}
-                selectedParentTicketId={selectedParentTicketId}
-                selectedParentTicketOption={selectedParentTicketOption}
-                parentNavigationSlug={parentNavigationSlug}
                 parseTimestamp={actions.parseTimestamp}
                 onAssigneeChange={actions.handleAssigneeChange}
                 onRequestedByChange={actions.handleRequestedByChange}
@@ -200,12 +195,6 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
           <TicketDetailHeader
             ticketId={ticketId}
             ticket={ticket}
-            parentNavigationSlug={parentNavigationSlug}
-            parentLabel={
-              selectedParentTicketOption
-                ? (selectedParentTicketOption.displayId || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()
-                : null
-            }
             canEditTickets={canEditTickets}
             isAssignmentLocked={isAssignmentLocked}
             isEditingTitle={actions.isEditingTitle}

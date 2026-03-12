@@ -27,6 +27,11 @@ export function applyTicketEntitySuccess(
   queryClient: QueryClient,
   data: { ticket: Ticket }
 ): void {
+  // Cancel in-flight reads so an older response can't overwrite this fresh mutation payload.
+  if ("cancelQueries" in queryClient && typeof queryClient.cancelQueries === "function") {
+    void queryClient.cancelQueries({ queryKey: ticketQueryKeys.detail(data.ticket.id) })
+    void queryClient.cancelQueries({ queryKey: ticketQueryKeys.lists() })
+  }
   queryClient.setQueryData(ticketQueryKeys.entity(data.ticket.id), data)
   queryClient.setQueryData<TicketDetailResponse>(ticketQueryKeys.detail(data.ticket.id), (current) =>
     current ? { ...current, ticket: data.ticket } : current
@@ -48,7 +53,12 @@ export function applyTicketEntitySuccess(
       data: nextItems,
     }
   })
-  queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detailRoot() })
+  // Mark all detail queries stale but do NOT trigger an immediate background refetch.
+  // The setQueryData calls above already put fresh data into the cache; an immediate
+  // refetch can race with (and overwrite) that correct data if the server-side cache
+  // hasn't fully propagated yet.  Stale queries will be re-fetched on the next window
+  // focus, component mount, or when the Supabase realtime subscription fires.
+  queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detailRoot(), refetchType: "none" })
   if (data.ticket.project?.id) {
     queryClient.invalidateQueries({ queryKey: ["project", data.ticket.project.id] })
   }
@@ -62,6 +72,12 @@ export function applyTicketStatusWithReasonSuccess(
   data: { ticket: Ticket }
 ): void {
   applyTicketEntitySuccess(queryClient, data)
-  queryClient.invalidateQueries({ queryKey: ticketQueryKeys.detail(data.ticket.id) })
-  queryClient.invalidateQueries({ queryKey: ticketQueryKeys.lists() })
+  queryClient.invalidateQueries({
+    queryKey: ticketQueryKeys.detail(data.ticket.id),
+    refetchType: "none",
+  })
+  queryClient.invalidateQueries({
+    queryKey: ticketQueryKeys.lists(),
+    refetchType: "none",
+  })
 }

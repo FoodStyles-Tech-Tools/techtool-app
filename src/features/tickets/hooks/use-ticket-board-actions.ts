@@ -9,13 +9,12 @@ import {
   closeTicketSubtasksToStatus,
   resolveTicketDoneStatusGuard,
 } from "@client/features/tickets/api/client"
-import { buildAssignmentPayload, buildStatusPayload, DONE_STATUS_KEYS } from "@client/features/tickets/lib/update-payloads"
+import { buildAssignmentPayload, DONE_STATUS_KEYS } from "@client/features/tickets/lib/update-payloads"
 import type { TicketStatusGuardResult, TicketSubtaskDecision, TicketSubtaskRow } from "@client/features/tickets/types"
 
 type PendingStatusChange = {
   ticketId: string
   newStatus: string
-  body: Record<string, unknown>
 }
 
 type MutationClient = {
@@ -76,34 +75,26 @@ export function useTicketBoardActions({
       if (!ticket || ticket.status === columnId) return false
 
       if (columnId === "cancelled" || columnId === "rejected") {
-        setPendingStatusChange({
-          ticketId,
-          newStatus: columnId,
-          body: buildStatusPayload(ticket, columnId),
-        })
+        setPendingStatusChange({ ticketId, newStatus: columnId })
         setCancelReason("")
         setShowCancelReasonDialog(true)
         return false
       }
 
       if (columnId === "returned_to_dev" && ticket.status !== "returned_to_dev") {
-        setPendingReturnedStatusChange({
-          ticketId,
-          newStatus: columnId,
-          body: buildStatusPayload(ticket, columnId),
-        })
+        setPendingReturnedStatusChange({ ticketId, newStatus: columnId })
         setReturnedReason("")
         setShowReturnedReasonDialog(true)
         return false
       }
 
-      const body = buildStatusPayload(ticket, columnId)
-
       try {
         const doneGuard = await resolveDoneStatusGuard(ticketId, columnId)
         if (!doneGuard.proceed) return false
 
-        await updateTicket.mutateAsync({ id: ticketId, ...body })
+        // Send only the new status; the server derives timestamps from the transition.
+        await updateTicket.mutateAsync({ id: ticketId, status: columnId })
+
         if (doneGuard.closeSubtasks) {
           await closeTicketSubtasksToStatus(doneGuard.subtasks, columnId)
           toast(`Ticket status updated. Closed ${doneGuard.subtasks.length} open subtask${doneGuard.subtasks.length === 1 ? "" : "s"}.`)
@@ -138,6 +129,7 @@ export function useTicketBoardActions({
 
       let doneGuard: TicketStatusGuardResult | null = null
       const body: any = {}
+
       if (field === "requestedById") {
         if (!value) {
           toast("Requested by cannot be empty", "error")
@@ -145,31 +137,29 @@ export function useTicketBoardActions({
         }
         body[field] = value
       } else if (field === "assigneeId") {
-        Object.assign(body, buildAssignmentPayload("assigneeId", currentTicket, value))
+        Object.assign(body, buildAssignmentPayload("assigneeId", value))
       } else if (field === "sqaAssigneeId") {
-        Object.assign(body, buildAssignmentPayload("sqaAssigneeId", currentTicket, value))
+        Object.assign(body, buildAssignmentPayload("sqaAssigneeId", value))
       } else if (field === "status") {
         const previousStatus = currentTicket?.status ?? "open"
         const newStatus = value as string
 
         if ((newStatus === "cancelled" || newStatus === "rejected") && previousStatus !== newStatus) {
-          setPendingStatusChange({ ticketId, newStatus, body: buildStatusPayload(currentTicket, newStatus) })
+          setPendingStatusChange({ ticketId, newStatus })
           setCancelReason("")
           setShowCancelReasonDialog(true)
           return
         }
         if (newStatus === "returned_to_dev" && previousStatus !== "returned_to_dev") {
-          setPendingReturnedStatusChange({
-            ticketId,
-            newStatus,
-            body: buildStatusPayload(currentTicket, newStatus),
-          })
+          setPendingReturnedStatusChange({ ticketId, newStatus })
           setReturnedReason("")
           setShowReturnedReasonDialog(true)
           return
         }
 
-        Object.assign(body, buildStatusPayload(currentTicket, newStatus))
+        // Send only the new status; the server derives timestamps from the transition.
+        body.status = newStatus
+
         if (DONE_STATUS_KEYS.has(newStatus) && previousStatus !== newStatus) {
           doneGuard = await resolveDoneStatusGuard(ticketId, newStatus)
           if (!doneGuard.proceed) return
@@ -184,10 +174,7 @@ export function useTicketBoardActions({
       setUpdatingFields((previous) => ({ ...previous, [cellKey]: field }))
 
       try {
-        await updateTicket.mutateAsync({
-          id: ticketId,
-          ...body,
-        })
+        await updateTicket.mutateAsync({ id: ticketId, ...body })
         toast(`${FIELD_LABELS[field] || "Ticket"} updated`)
         if (field === "status" && doneGuard?.closeSubtasks) {
           await closeTicketSubtasksToStatus(doneGuard.subtasks, String(value))
@@ -220,7 +207,7 @@ export function useTicketBoardActions({
 
     if (!pendingStatusChange) return
 
-    const { ticketId, body, newStatus } = pendingStatusChange
+    const { ticketId, newStatus } = pendingStatusChange
     const doneGuard = await resolveDoneStatusGuard(ticketId, newStatus)
     if (!doneGuard.proceed) return
 
@@ -233,10 +220,6 @@ export function useTicketBoardActions({
     const reasonKey = newStatus === "rejected" ? "rejected" : "cancelled"
     const reasonTimestampKey = newStatus === "rejected" ? "rejectedAt" : "cancelledAt"
     const reasonHeading = newStatus === "rejected" ? "Reject Reason" : "Cancelled Reason"
-    const finalBody = {
-      ...body,
-      reason: { [reasonKey]: { reason: cancelReason.trim(), [reasonTimestampKey]: new Date().toISOString() } },
-    }
     const commentBody = `<p><strong>${reasonHeading}</strong></p>${normalizedReason}`
 
     setShowCancelReasonDialog(false)
@@ -246,32 +229,19 @@ export function useTicketBoardActions({
     setUpdatingFields((previous) => ({ ...previous, [cellKey]: "status" }))
 
     try {
-      const payload: {
-        id: string
-        status: "cancelled" | "rejected"
-        reason: unknown
-        reasonCommentBody: string
-        startedAt?: string | null
-        completedAt?: string | null
-        epicId?: string | null
-      } = {
+      // Send only the business fields; startedAt / completedAt are derived server-side.
+      await updateTicketWithReasonComment.mutateAsync({
         id: ticketId,
         status: newStatus as "cancelled" | "rejected",
-        reason: finalBody.reason,
+        reason: {
+          [reasonKey]: {
+            reason: cancelReason.trim(),
+            [reasonTimestampKey]: new Date().toISOString(),
+          },
+        },
         reasonCommentBody: commentBody,
-      }
+      })
 
-      if ("startedAt" in finalBody) {
-        payload.startedAt = (finalBody as { startedAt?: string | null }).startedAt ?? null
-      }
-      if ("completedAt" in finalBody) {
-        payload.completedAt = (finalBody as { completedAt?: string | null }).completedAt ?? null
-      }
-      if ("epicId" in finalBody) {
-        payload.epicId = (finalBody as { epicId?: string | null }).epicId ?? null
-      }
-
-      await updateTicketWithReasonComment.mutateAsync(payload)
       if (doneGuard.closeSubtasks) {
         await closeTicketSubtasksToStatus(doneGuard.subtasks, newStatus)
         toast(`Status updated. Closed ${doneGuard.subtasks.length} open subtask${doneGuard.subtasks.length === 1 ? "" : "s"}.`)
@@ -310,7 +280,7 @@ export function useTicketBoardActions({
       return
     }
 
-    const { ticketId, body } = pendingReturnedStatusChange
+    const { ticketId } = pendingReturnedStatusChange
     const plainReason = richTextToPlainText(normalizedReason).trim()
     const commentBody = `<p><strong>Returned to Dev Reason</strong></p>${normalizedReason}`
 
@@ -321,15 +291,8 @@ export function useTicketBoardActions({
     setUpdatingFields((previous) => ({ ...previous, [cellKey]: "status" }))
 
     try {
-      const payload: {
-        id: string
-        status: "returned_to_dev"
-        reason: unknown
-        reasonCommentBody: string
-        startedAt?: string | null
-        completedAt?: string | null
-        epicId?: string | null
-      } = {
+      // Send only the business fields; startedAt / completedAt are derived server-side.
+      await updateTicketWithReasonComment.mutateAsync({
         id: ticketId,
         status: "returned_to_dev",
         reason: {
@@ -339,19 +302,7 @@ export function useTicketBoardActions({
           },
         },
         reasonCommentBody: commentBody,
-      }
-
-      if ("startedAt" in body) {
-        payload.startedAt = (body as { startedAt?: string | null }).startedAt ?? null
-      }
-      if ("completedAt" in body) {
-        payload.completedAt = (body as { completedAt?: string | null }).completedAt ?? null
-      }
-      if ("epicId" in body) {
-        payload.epicId = (body as { epicId?: string | null }).epicId ?? null
-      }
-
-      await updateTicketWithReasonComment.mutateAsync(payload)
+      })
       toast("Status updated")
     } catch (error: any) {
       toast(error.message || "Failed to update ticket", "error")

@@ -132,7 +132,7 @@ export default function ReportSessionsListClient() {
                   <TableCell>
                     <Link
                       to={`/report/sessions/${session.id}`}
-                      className="font-medium text-primary hover:underline"
+                      className="font-medium text-primary underline"
                     >
                       {sessionDisplayName(session)}
                     </Link>

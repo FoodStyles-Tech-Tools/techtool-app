@@ -193,6 +193,27 @@ export async function createTicketComment(
   const uniqueMentions = Array.from(
     new Set((input.mention_user_ids || []).filter((mentionUserId) => mentionUserId !== context.userId))
   )
+  // #region agent log
+  fetch("http://127.0.0.1:7725/ingest/8c8a3837-8401-40e6-b9e0-718cc03b439b", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8d0d91" },
+    body: JSON.stringify({
+      sessionId: "8d0d91",
+      runId: "initial",
+      hypothesisId: "H1",
+      location: "server/services/ticket-support-service.ts:createTicketComment:beforeRpc",
+      message: "Preparing comment RPC payload",
+      data: {
+        ticketId,
+        parentId: input.parent_id || null,
+        mentionCount: uniqueMentions.length,
+        hasMentions: uniqueMentions.length > 0,
+        bodyLength: input.body.trim().length,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
 
   const { data: rpcRows, error: rpcError } = await ticketSupportRepository.createCommentWithNotifications(
     context.supabase,
@@ -204,9 +225,54 @@ export async function createTicketComment(
       p_mention_user_ids: uniqueMentions,
     }
   )
+  // #region agent log
+  fetch("http://127.0.0.1:7725/ingest/8c8a3837-8401-40e6-b9e0-718cc03b439b", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8d0d91" },
+    body: JSON.stringify({
+      sessionId: "8d0d91",
+      runId: "initial",
+      hypothesisId: "H2",
+      location: "server/services/ticket-support-service.ts:createTicketComment:afterRpc",
+      message: "Comment RPC completed",
+      data: {
+        hasError: Boolean(rpcError),
+        errorCode: rpcError?.code || null,
+        errorMessage: rpcError?.message || null,
+        errorDetails: rpcError?.details || null,
+        errorHint: rpcError?.hint || null,
+        rowCount: Array.isArray(rpcRows) ? rpcRows.length : null,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
 
   if (rpcError || !Array.isArray(rpcRows) || rpcRows.length === 0) {
     const detail = rpcError?.details || ""
+    // #region agent log
+    fetch("http://127.0.0.1:7725/ingest/8c8a3837-8401-40e6-b9e0-718cc03b439b", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8d0d91" },
+      body: JSON.stringify({
+        sessionId: "8d0d91",
+        runId: "initial",
+        hypothesisId: "H3",
+        location: "server/services/ticket-support-service.ts:createTicketComment:errorBranch",
+        message: "Comment RPC entered error handling branch",
+        data: {
+          detail,
+          interpretedAsKnownDomainError: [
+            "ticket_not_found",
+            "parent_comment_not_found",
+            "parent_comment_ticket_mismatch",
+          ].includes(detail),
+          rpcErrorCode: rpcError?.code || null,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #endregion
     if (detail === "ticket_not_found") {
       throw new HttpError(404, "Ticket not found")
     }

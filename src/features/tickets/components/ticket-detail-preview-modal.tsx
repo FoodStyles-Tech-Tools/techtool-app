@@ -50,6 +50,7 @@ export function TicketDetailPreviewModal({
   const { handleCopyTicketLabel, handleCopyShareUrl } = useTicketDetailSharing({
     ticket: surface.ticket,
   })
+  const displayId = surface.ticket?.displayId || ticketId.slice(0, 8)
 
   const handleExpand = () => {
     onExpand()
@@ -65,6 +66,9 @@ export function TicketDetailPreviewModal({
         <DialogHeader className="flex shrink-0 flex-row items-center justify-between gap-2 border-b border-border px-4 py-2">
           <DialogTitle className="sr-only">Ticket preview</DialogTitle>
           <div className="flex items-center gap-2">
+            <span className="font-mono text-xs text-muted-foreground">
+              {String(displayId).toUpperCase()}
+            </span>
             <Button
               type="button"
               variant="ghost"

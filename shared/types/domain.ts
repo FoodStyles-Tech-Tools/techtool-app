@@ -140,6 +140,9 @@ export interface RelatedTicket {
   title: string
   status: string
   type: string | null
+  /** Optional extra fields when available (e.g. subtasks from detail payload) */
+  priority?: string
+  assignee?: TicketUser | null
 }
 
 /** Mention relation grouped by target ticket */
@@ -178,6 +181,8 @@ export interface Ticket {
   id: string
   displayId: string | null
   parentTicketId: string | null
+  /** Optional count of direct subtasks when available from list APIs. */
+  subtasksCount?: number
   title: string
   description: string | null
   status: string

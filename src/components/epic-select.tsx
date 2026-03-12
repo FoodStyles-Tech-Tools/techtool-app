@@ -27,6 +27,10 @@ export function EpicSelect({
     ? epics.find(e => e.id === value) 
     : null
 
+  const sortedEpics = [...epics].sort((a, b) =>
+    a.name.localeCompare(b.name)
+  )
+
   return (
     <select
       value={value || NO_EPIC_VALUE}
@@ -37,7 +41,7 @@ export function EpicSelect({
       className={cn(selectStyleInputSm, className, triggerClassName)}
     >
       <option value={NO_EPIC_VALUE}>No Epic</option>
-      {epics.map((epic) => (
+      {sortedEpics.map((epic) => (
         <option key={epic.id} value={epic.id}>
           {epic.name}
         </option>

@@ -157,7 +157,24 @@ export function TicketForm({
     )
   }, [projectOptions, selectedProjectId])
   const assigneeUsers = useMemo(
-    () => users.filter((u) => (u.role ? ASSIGNEE_ALLOWED_ROLES.has(u.role.toLowerCase()) : false)),
+    () =>
+      users
+        .filter((u) => (u.role ? ASSIGNEE_ALLOWED_ROLES.has(u.role.toLowerCase()) : false))
+        .slice()
+        .sort((a, b) => {
+          const aLabel = (a.name || a.email || "").toLowerCase()
+          const bLabel = (b.name || b.email || "").toLowerCase()
+          return aLabel.localeCompare(bLabel)
+        }),
+    [users]
+  )
+  const sortedReporterUsers = useMemo(
+    () =>
+      [...users].sort((a, b) => {
+        const aLabel = (a.name || a.email || "").toLowerCase()
+        const bLabel = (b.name || b.email || "").toLowerCase()
+        return aLabel.localeCompare(bLabel)
+      }),
     [users]
   )
   const { epics } = useEpics()
@@ -397,7 +414,7 @@ export function TicketForm({
                   className={nativeSelectClassName}
                 >
                   <option value="">Select reporter</option>
-                  {users.map((reporter) => (
+                  {sortedReporterUsers.map((reporter) => (
                     <option key={reporter.id} value={reporter.id}>
                       {reporter.name || reporter.email}
                     </option>
@@ -442,7 +459,11 @@ export function TicketForm({
                     className={nativeSelectClassName}
                   >
                     <option value="">Select a department (optional)</option>
-                    {departments.map((department) => (
+                    {[...departments]
+                      .sort((a, b) =>
+                        (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+                      )
+                      .map((department) => (
                       <option key={department.id} value={department.id}>
                         {department.name}
                       </option>

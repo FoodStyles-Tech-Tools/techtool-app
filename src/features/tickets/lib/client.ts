@@ -16,6 +16,7 @@ export type TicketListParams = {
   parentTicketId?: string
   assigneeId?: string
   sqaAssigneeId?: string
+  type?: string
   status?: string
   /** Exclude tickets with these status keys (e.g. ["cancelled", "completed"]). */
   excludeStatuses?: string[]
@@ -91,6 +92,7 @@ export function buildTicketListQueryString(params: TicketListParams) {
     parentTicketId: params.parentTicketId,
     assigneeId: params.assigneeId,
     sqaAssigneeId: params.sqaAssigneeId,
+    type: params.type,
     status: params.status,
     excludeStatuses:
       params.excludeStatuses?.length ? params.excludeStatuses.join(",") : undefined,
