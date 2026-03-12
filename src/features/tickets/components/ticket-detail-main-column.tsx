@@ -1,5 +1,6 @@
 "use client"
 
+import { cn } from "@client/lib/utils"
 import { lazyComponent } from "@client/lib/lazy-component"
 import { Badge } from "@client/components/ui/badge"
 import { Button } from "@client/components/ui/button"
@@ -121,10 +122,10 @@ export function TicketDetailMainColumn({
             </div>
           ) : (
             <div
-              className={[
+              className={cn(
                 "rounded-md px-2 py-2 transition-colors",
-                canEditTickets ? "cursor-pointer hover:bg-slate-50" : "",
-              ].join(" ")}
+                canEditTickets && "cursor-pointer hover:bg-slate-50"
+              )}
               onClick={() => {
                 if (canEditTickets) {
                   onStartDescriptionEdit()

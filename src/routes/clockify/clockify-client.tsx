@@ -32,7 +32,6 @@ import {
 } from "@client/hooks/use-clockify"
 import { ClockifySessionsCard } from "@client/features/clockify/components/clockify-sessions-card"
 import { ClockifyReportSessionCard } from "@client/features/clockify/components/clockify-report-session-card"
-import { InlineLoader } from "@client/components/ui/loading-pill"
 import {
   extractTicketIdFromEntry,
   formatDurationHours,
@@ -737,9 +736,7 @@ export default function ClockifyClient() {
               This can take a while for full-week data. Please wait.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex items-center justify-center py-4">
-            <InlineLoader label="Working..." />
-          </div>
+          <div className="py-4" />
         </DialogContent>
       </Dialog>
 

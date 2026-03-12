@@ -1,32 +1,11 @@
-import { useParams } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
-import { requestJson } from "@client/lib/api"
+import { useLoaderData } from "react-router-dom"
 import { FullScreenMessage } from "@client/layouts/full-screen-message"
-import { LoadingPill } from "@client/components/ui/loading-pill"
 import { TicketDetailPageClient } from "./ticket-detail-page-client"
 
 export function TicketDetailRoute() {
-  const { displayId } = useParams()
-  const ticketLookup = useQuery({
-    queryKey: ["ticket-display-id", displayId],
-    enabled: !!displayId,
-    queryFn: async () => {
-      const response = await requestJson<{ ticket: { id: string } }>(
-        `/api/tickets/by-display-id/${encodeURIComponent(displayId || "")}`
-      )
-      return response.ticket
-    },
-  })
+  const { ticketId } = useLoaderData() as { ticketId: string | null }
 
-  if (ticketLookup.isLoading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <LoadingPill label="Loading ticket..." />
-      </div>
-    )
-  }
-
-  if (!ticketLookup.data?.id) {
+  if (!ticketId) {
     return (
       <FullScreenMessage
         title="Ticket not found"
@@ -35,5 +14,5 @@ export function TicketDetailRoute() {
     )
   }
 
-  return <TicketDetailPageClient ticketId={ticketLookup.data.id} />
+  return <TicketDetailPageClient ticketId={ticketId} />
 }

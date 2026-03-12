@@ -13,7 +13,6 @@ import { PageHeader } from "@client/components/ui/page-header"
 import { toast } from "@client/components/ui/toast"
 import { Input } from "@client/components/ui/input"
 import { Label } from "@client/components/ui/label"
-import { InlineLoader } from "@client/components/ui/loading-pill"
 import {
   Dialog,
   DialogContent,
@@ -252,9 +251,7 @@ export default function GuildLeadReportClient() {
         <CardContent className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium">Session</span>
-            {sessionsLoading ? (
-              <InlineLoader label="Loading sessions..." />
-            ) : (
+            {sessionsLoading ? null : (
               <>
                 <select
                   value={selectedSessionId ?? ""}
@@ -351,9 +348,7 @@ export default function GuildLeadReportClient() {
           </div>
 
           {dataLoading ? (
-            <div className="flex items-center justify-center rounded-md border border-slate-200 bg-white py-12">
-              <InlineLoader label="Loading report..." />
-            </div>
+            <div className="rounded-md border border-slate-200 bg-white py-12" />
           ) : reportData ? (
             <div className="space-y-6">
               <ChartWithInsight

@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from "react-router-dom"
+import { createBrowserRouter, Navigate, Outlet } from "react-router-dom"
+import { requestJson } from "@client/lib/api"
 import { lazyComponent } from "@client/lib/lazy-component"
 import {
   RouteLoadingFallback,
@@ -7,6 +8,7 @@ import {
   SettingsRedirectPage,
   NotFoundPage,
 } from "@client/layouts"
+import { AppProviders } from "@client/components/layout/app-providers"
 import { SignInContent } from "@client/routes/signin/signin-content"
 import { ProjectsPage } from "@client/routes/projects/projects-page"
 import { ProjectDetailRoute } from "@client/routes/projects/project-detail-route"
@@ -15,6 +17,42 @@ import { UsersPage } from "@client/routes/admin/users/users-page"
 import { RolesPage } from "@client/routes/admin/roles/roles-page"
 import { TicketsPage } from "@client/features/tickets/components/tickets-page"
 import { TicketDetailRoute } from "@client/features/tickets/components/ticket-detail-route"
+import { normalizeProject } from "@shared/types/project-mappers"
+import type { ProjectDto } from "@shared/types/api/projects"
+
+async function ticketDetailLoader({
+  params,
+}: {
+  params: { displayId?: string }
+}) {
+  const displayId = params.displayId
+  if (!displayId) return { ticketId: null as string | null }
+  try {
+    const data = await requestJson<{ ticket: { id: string } }>(
+      `/api/tickets/by-display-id/${encodeURIComponent(displayId)}`
+    )
+    return { ticketId: data.ticket?.id ?? null }
+  } catch {
+    return { ticketId: null as string | null }
+  }
+}
+
+async function projectDetailLoader({
+  params,
+}: {
+  params: { projectId?: string }
+}) {
+  const projectId = params.projectId
+  if (!projectId) return { project: null }
+  try {
+    const response = await requestJson<{ project: ProjectDto }>(
+      `/api/projects/${projectId}`
+    )
+    return { project: normalizeProject(response.project) }
+  } catch {
+    return { project: null }
+  }
+}
 
 const ClockifyClient = lazyComponent(
   () => import("@client/routes/clockify/clockify-client"),
@@ -58,36 +96,52 @@ const DeletedTicketsPanel = lazyComponent(
   { loading: RouteLoadingFallback }
 )
 
-export function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/tickets" replace />} />
-      <Route path="/signin" element={<SignInContent />} />
-      <Route path="/auth/callback" element={<AuthCallbackPage />} />
-      <Route element={<ProtectedLayout />}>
-        <Route path="/dashboard" element={<Navigate to="/tickets" replace />} />
-        <Route path="/tickets" element={<TicketsPage />} />
-        <Route path="/tickets/:displayId" element={<TicketDetailRoute />} />
-        <Route path="/projects" element={<ProjectsPage />} />
-        <Route path="/projects/:projectId" element={<ProjectDetailRoute />} />
-        <Route path="/assets" element={<AssetsPage />} />
-        <Route path="/users" element={<UsersPage />} />
-        <Route path="/roles" element={<RolesPage />} />
-        <Route path="/status" element={<WorkspaceStatusPanel />} />
-        <Route path="/epics" element={<WorkspaceEpicsPanel />} />
-        <Route path="/sprints" element={<WorkspaceSprintsPanel />} />
-        <Route path="/deleted-tickets" element={<DeletedTicketsPanel />} />
-        <Route path="/clockify" element={<ClockifyClient />} />
-        <Route path="/clockify/sessions/:sessionId" element={<ClockifyClient />} />
-        <Route path="/report" element={<GuildLeadReportClient />} />
-        <Route path="/report/guild-lead-report" element={<GuildLeadReportClient />} />
-        <Route path="/settings" element={<SettingsRedirectPage />} />
-        <Route path="/workspace" element={<Navigate to="/status" replace />} />
-        <Route path="/workspace/status" element={<Navigate to="/status" replace />} />
-        <Route path="/workspace/epic" element={<Navigate to="/epics" replace />} />
-        <Route path="/workspace/sprint" element={<Navigate to="/sprints" replace />} />
-      </Route>
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  )
-}
+export const router = createBrowserRouter([
+  {
+    element: (
+      <AppProviders>
+        <Outlet />
+      </AppProviders>
+    ),
+    children: [
+      { index: true, element: <Navigate to="/tickets" replace /> },
+      { path: "signin", element: <SignInContent /> },
+      { path: "auth/callback", element: <AuthCallbackPage /> },
+      {
+        element: <ProtectedLayout />,
+        children: [
+          { path: "dashboard", element: <Navigate to="/tickets" replace /> },
+          { path: "tickets", element: <TicketsPage /> },
+          {
+            path: "tickets/:displayId",
+            loader: ticketDetailLoader,
+            element: <TicketDetailRoute />,
+          },
+          { path: "projects", element: <ProjectsPage /> },
+          {
+            path: "projects/:projectId",
+            loader: projectDetailLoader,
+            element: <ProjectDetailRoute />,
+          },
+          { path: "assets", element: <AssetsPage /> },
+          { path: "users", element: <UsersPage /> },
+          { path: "roles", element: <RolesPage /> },
+          { path: "status", element: <WorkspaceStatusPanel /> },
+          { path: "epics", element: <WorkspaceEpicsPanel /> },
+          { path: "sprints", element: <WorkspaceSprintsPanel /> },
+          { path: "deleted-tickets", element: <DeletedTicketsPanel /> },
+          { path: "clockify", element: <ClockifyClient /> },
+          { path: "clockify/sessions/:sessionId", element: <ClockifyClient /> },
+          { path: "report", element: <GuildLeadReportClient /> },
+          { path: "report/guild-lead-report", element: <GuildLeadReportClient /> },
+          { path: "settings", element: <SettingsRedirectPage /> },
+          { path: "workspace", element: <Navigate to="/status" replace /> },
+          { path: "workspace/status", element: <Navigate to="/status" replace /> },
+          { path: "workspace/epic", element: <Navigate to="/epics" replace /> },
+          { path: "workspace/sprint", element: <Navigate to="/sprints" replace /> },
+        ],
+      },
+      { path: "*", element: <NotFoundPage /> },
+    ],
+  },
+])

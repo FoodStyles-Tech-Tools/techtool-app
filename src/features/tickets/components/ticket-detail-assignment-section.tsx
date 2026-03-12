@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import { cn } from "@client/lib/utils"
 import { Button } from "@client/components/ui/button"
 import { Input } from "@client/components/ui/input"
 import { TicketTypeSelect } from "@client/components/ticket-type-select"
@@ -250,10 +251,10 @@ export function TicketDetailAssignmentSection({
                           <button
                             key={candidate.id}
                             type="button"
-                            className={[
+                            className={cn(
                               "flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs hover:bg-slate-50",
-                              isSelected ? "bg-slate-100" : "",
-                            ].join(" ")}
+                              isSelected && "bg-slate-100"
+                            )}
                             onClick={() => {
                               void onParentTicketChange(candidate.id)
                               setIsParentPickerOpen(false)

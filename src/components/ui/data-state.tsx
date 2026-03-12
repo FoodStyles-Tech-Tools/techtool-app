@@ -1,5 +1,4 @@
 import { Inbox, AlertCircle } from "lucide-react"
-import { BlockingLoader } from "@client/components/ui/blocking-loader"
 
 export type DataStateProps = {
   loading?: boolean
@@ -18,12 +17,12 @@ export function DataState({
   isEmpty,
   emptyTitle = "No data found",
   emptyDescription = "There is nothing to show yet.",
-  loadingTitle,
-  loadingDescription,
+  loadingTitle: _loadingTitle,
+  loadingDescription: _loadingDescription,
   children,
 }: DataStateProps) {
   if (loading) {
-    return <BlockingLoader title={loadingTitle} description={loadingDescription} />
+    return null
   }
 
   if (error) {

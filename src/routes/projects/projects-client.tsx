@@ -215,10 +215,10 @@ export default function ProjectsClient({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="h-9 py-2 text-xs">Project Name</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Project Owner</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Collaborators</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Status</TableHead>
+                <TableHead className="h-9 py-2">Project Name</TableHead>
+                <TableHead className="h-9 py-2">Project Owner</TableHead>
+                <TableHead className="h-9 py-2">Collaborators</TableHead>
+                <TableHead className="h-9 py-2">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -235,7 +235,7 @@ export default function ProjectsClient({
                     <TableCell className="py-2">
                       <Link
                         to={`/projects/${project.id}`}
-                        className="font-medium text-slate-900 hover:underline"
+                        className="font-normal text-slate-900 hover:underline"
                       >
                         {project.name}
                       </Link>

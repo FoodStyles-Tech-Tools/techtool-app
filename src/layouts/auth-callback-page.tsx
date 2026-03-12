@@ -1,7 +1,6 @@
 import { useEffect } from "react"
 import { getClientBackendUrl } from "@client/lib/config/client-env"
 import { useLocation } from "react-router-dom"
-import { LoadingPill } from "@client/components/ui/loading-pill"
 
 export function AuthCallbackPage() {
   const location = useLocation()
@@ -18,9 +17,5 @@ export function AuthCallbackPage() {
     window.location.replace(backendCallbackUrl.toString())
   }, [location.search])
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <LoadingPill label="Completing sign-in..." />
-    </div>
-  )
+  return <div className="min-h-screen bg-slate-50" />
 }

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/** Contrast audit for theme tokens. Expects CSS variables (e.g. --background, --foreground) in .dark or @layer base; when absent, token checks are skipped. See docs/UI-CONVENTIONS.md for current light-theme classes. */
 
 const fs = require("fs")
 const path = require("path")

@@ -27,7 +27,6 @@ import { usePermissions } from "@client/hooks/use-permissions"
 import { useProjects } from "@client/hooks/use-projects"
 import { useDeleteSprint } from "@client/hooks/use-sprints"
 import { SprintForm } from "@client/components/forms/sprint-form"
-import { InlineLoader } from "@client/components/ui/loading-pill"
 import { inputClassName } from "@client/lib/form-styles"
 
 type WorkspaceProject = {
@@ -200,9 +199,7 @@ export function WorkspaceSprintsPanel() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8">
-                  <InlineLoader label="Loading sprints..." />
-                </TableCell>
+                <TableCell colSpan={6} className="py-8" />
               </TableRow>
             ) : sprints.length === 0 ? (
               <TableRow>

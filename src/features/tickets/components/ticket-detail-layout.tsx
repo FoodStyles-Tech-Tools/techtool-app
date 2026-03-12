@@ -1,6 +1,7 @@
 "use client"
 
 import { DataState } from "@client/components/ui/data-state"
+import { cn } from "@client/lib/utils"
 import { Input } from "@client/components/ui/input"
 import { TicketStatusSelect } from "@client/components/ticket-status-select"
 import { TicketDetailHeader } from "@client/features/tickets/components/ticket-detail-header"
@@ -71,10 +72,10 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                   />
                 ) : (
                   <h1
-                    className={[
+                    className={cn(
                       "text-sm font-semibold leading-tight text-slate-900",
-                      canEditTickets ? "cursor-pointer rounded-md px-1 py-1 hover:bg-slate-50" : "",
-                    ].join(" ")}
+                      canEditTickets && "cursor-pointer rounded-md px-1 py-1 hover:bg-slate-50"
+                    )}
                     onClick={() => {
                       if (canEditTickets) {
                         actions.setIsEditingTitle(true)

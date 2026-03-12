@@ -81,7 +81,10 @@ export function useProjects(options?: UseProjectsOptions) {
   })
 }
 
-export function useProject(projectId: string, options?: { enabled?: boolean; realtime?: boolean }) {
+export function useProject(
+  projectId: string,
+  options?: { enabled?: boolean; realtime?: boolean; initialData?: { project: Project } }
+) {
   const queryClient = useQueryClient()
   const enabled = !!projectId && options?.enabled !== false
   const realtime = options?.realtime !== false
@@ -108,6 +111,7 @@ export function useProject(projectId: string, options?: { enabled?: boolean; rea
     queryKey: ["project", projectId],
     enabled,
     staleTime: 60 * 1000,
+    initialData: options?.initialData,
     queryFn: async () => {
       const response = await requestJson<{ project: ProjectDto }>(`/api/projects/${projectId}`)
       return { project: normalizeProject(response.project) }

@@ -2,6 +2,7 @@
 
 import { memo } from "react"
 import type { Ticket } from "@shared/types"
+import { cn } from "@client/lib/utils"
 import { formatRelativeDate, getDueDateDisplay } from "@client/lib/format-dates"
 import { normalizeStatusKey, isDoneStatus } from "@shared/ticket-statuses"
 import { Button } from "@client/components/ui/button"
@@ -42,14 +43,14 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
 
   return (
     <TableRow>
-      <TableCell className="py-2 text-xs font-mono text-slate-500">
+      <TableCell className="py-2 text-sm text-slate-500">
         {ticket.displayId || ticket.id.slice(0, 8)}
       </TableCell>
       <TableCell className="w-[400px] min-w-[300px] py-2">
         <button
           type="button"
           onClick={() => onSelectTicket(ticket.id)}
-          className="truncate text-sm text-left text-slate-900 hover:underline"
+          className="truncate text-sm text-left font-normal text-slate-900 hover:underline"
         >
           {ticket.title}
         </button>
@@ -73,11 +74,11 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
         {ticket.project?.name || "No project"}
       </TableCell>
       <TableCell className="py-2">
-        <span className={["inline-flex rounded-md px-2 py-1 text-xs font-medium", dueDate.className].join(" ")}>
+        <span className={cn("inline-flex rounded-md px-2 py-1 text-sm font-normal", dueDate.className)}>
           {dueDate.label}
         </span>
       </TableCell>
-      <TableCell className="py-2 text-xs text-slate-500">
+      <TableCell className="py-2 text-sm text-slate-500">
         {formatRelativeDate(ticket.createdAt)}
       </TableCell>
     </TableRow>

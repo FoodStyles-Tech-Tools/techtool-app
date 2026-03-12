@@ -1,16 +1,11 @@
 import { Navigate } from "react-router-dom"
 import { usePermissions } from "@client/hooks/use-permissions"
-import { LoadingPill } from "@client/components/ui/loading-pill"
 
 export function SettingsRedirectPage() {
   const { flags, loading } = usePermissions()
 
   if (loading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <LoadingPill label="Loading settings..." />
-      </div>
-    )
+    return null
   }
 
   if (flags.canViewUsers) return <Navigate to="/users" replace />

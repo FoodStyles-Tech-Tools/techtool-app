@@ -25,7 +25,6 @@ import type {
   ClockifyReconcileEntry,
   ClockifyTicketLookupItem,
 } from "@client/features/clockify/types"
-import { InlineLoader } from "@client/components/ui/loading-pill"
 
 type ClockifyReportSessionCardProps = {
   selectedSession: ClockifyReportSession
@@ -155,15 +154,15 @@ export function ClockifyReportSessionCard({
                   <Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
-                        <TableHead className="h-9 py-2 text-xs">Description</TableHead>
-                        <TableHead className="h-9 py-2 text-xs">Task</TableHead>
-                        <TableHead className="h-9 py-2 text-xs">Ticket ID</TableHead>
-                        <TableHead className="h-9 py-2 text-xs">Match</TableHead>
-                        <TableHead className="h-9 py-2 text-xs">User</TableHead>
-                        <TableHead className="h-9 py-2 text-xs text-right">Duration (hrs)</TableHead>
-                        <TableHead className="h-9 py-2 text-xs">Project</TableHead>
-                        <TableHead className="h-9 py-2 text-xs">Start</TableHead>
-                        <TableHead className="h-9 py-2 text-xs">End</TableHead>
+                        <TableHead className="h-9 py-2">Description</TableHead>
+                        <TableHead className="h-9 py-2">Task</TableHead>
+                        <TableHead className="h-9 py-2">Ticket ID</TableHead>
+                        <TableHead className="h-9 py-2">Match</TableHead>
+                        <TableHead className="h-9 py-2">User</TableHead>
+                        <TableHead className="h-9 py-2 text-right">Duration (hrs)</TableHead>
+                        <TableHead className="h-9 py-2">Project</TableHead>
+                        <TableHead className="h-9 py-2">Start</TableHead>
+                        <TableHead className="h-9 py-2">End</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -201,20 +200,18 @@ export function ClockifyReportSessionCard({
                                   />
                                   {activeTicketEntryId === entryId ? (
                                     <div className="absolute z-20 mt-1 max-h-48 w-72 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-sm">
-                                      {isTicketSearchLoading ? (
-                                        <div className="px-3 py-2"><InlineLoader label="Loading tickets..." className="justify-start text-xs" /></div>
-                                      ) : ticketSearchResults.length === 0 ? (
-                                        <div className="px-3 py-2 text-xs text-slate-500">No tickets found.</div>
+                                      {isTicketSearchLoading ? null : ticketSearchResults.length === 0 ? (
+                                        <div className="px-3 py-2 text-sm text-slate-500">No tickets found.</div>
                                       ) : (
                                         ticketSearchResults.map((ticket) => (
                                           <button
                                             key={ticket.id}
                                             type="button"
-                                            className="block w-full px-3 py-2 text-left text-xs hover:bg-slate-50"
+                                            className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
                                             onMouseDown={(event) => event.preventDefault()}
                                             onClick={() => onTicketSelect(entryId, ticket.displayId)}
                                           >
-                                            <span className="font-medium">{ticket.displayId}</span>
+                                            <span className="font-normal">{ticket.displayId}</span>
                                             {ticket.title ? ` - ${ticket.title}` : ""}
                                           </button>
                                         ))
@@ -226,7 +223,7 @@ export function ClockifyReportSessionCard({
                                 "-"
                               )}
                             </TableCell>
-                            <TableCell className="py-2 text-xs">
+                            <TableCell className="py-2 text-sm">
                               {entryId ? (
                                 matchStatus === "unlinked" ? (
                                   <button

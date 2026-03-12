@@ -19,7 +19,6 @@ import {
   TableRow,
 } from "@client/components/ui/table"
 import type { ClockifyReportSession } from "@client/hooks/use-clockify"
-import { InlineLoader } from "@client/components/ui/loading-pill"
 
 type ClockifySessionsCardProps = {
   isLoading: boolean
@@ -41,9 +40,7 @@ export function ClockifySessionsCard({
         <CardDescription>Every time a report is fetched, a session is saved here.</CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
-          <InlineLoader label="Loading sessions..." />
-        ) : sessions.length === 0 ? (
+        {isLoading ? null : sessions.length === 0 ? (
           <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
             <p className="text-sm text-slate-500">No report sessions yet.</p>
           </div>
@@ -52,10 +49,10 @@ export function ClockifySessionsCard({
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-9 py-2 text-xs">Fetched At</TableHead>
-                  <TableHead className="h-9 py-2 text-xs">Range</TableHead>
-                  <TableHead className="h-9 py-2 text-xs">Status</TableHead>
-                  <TableHead className="h-9 py-2 text-xs text-right">Actions</TableHead>
+                  <TableHead className="h-9 py-2">Fetched At</TableHead>
+                  <TableHead className="h-9 py-2">Range</TableHead>
+                  <TableHead className="h-9 py-2">Status</TableHead>
+                  <TableHead className="h-9 py-2 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

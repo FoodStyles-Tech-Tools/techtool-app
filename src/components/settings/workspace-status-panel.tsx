@@ -28,7 +28,6 @@ import {
 import { usePermissions } from "@client/hooks/use-permissions"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import { normalizeStatusKey, type TicketStatus } from "@shared/ticket-statuses"
-import { InlineLoader } from "@client/components/ui/loading-pill"
 import { toast } from "@client/components/ui/toast"
 
 type StatusDraft = {
@@ -188,9 +187,7 @@ export function WorkspaceStatusPanel() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8">
-                  <InlineLoader label="Loading statuses..." />
-                </TableCell>
+                <TableCell colSpan={6} className="py-8" />
               </TableRow>
             ) : sortedStatuses.length === 0 ? (
               <TableRow>
@@ -201,12 +198,15 @@ export function WorkspaceStatusPanel() {
             ) : (
               sortedStatuses.map((status) => (
                 <TableRow key={status.key}>
-                  <TableCell className="font-medium">{status.label}</TableCell>
-                  <TableCell className="font-mono text-xs">{status.key}</TableCell>
+                  <TableCell className="font-normal">{status.label}</TableCell>
+                  <TableCell className="text-sm">{status.key}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <span className="inline-block h-3.5 w-3.5 rounded-full border" style={{ backgroundColor: status.color }} />
-                      <span className="font-mono text-xs">{status.color}</span>
+                      <span
+                        className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300/70"
+                        style={{ backgroundColor: status.color }}
+                      />
+                      <span className="text-sm">{status.color}</span>
                     </div>
                   </TableCell>
                   <TableCell>{status.sort_order}</TableCell>

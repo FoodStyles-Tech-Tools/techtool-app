@@ -1,7 +1,6 @@
 "use client"
 
 import type { ComponentProps } from "react"
-import { Skeleton } from "@client/components/ui/skeleton"
 import { TicketsTable } from "@client/components/tickets/tickets-table"
 import type { Ticket } from "@shared/types"
 
@@ -19,21 +18,7 @@ export function TicketsResults({
   tableProps,
 }: TicketsResultsProps) {
   if (loading) {
-    return (
-      <div className="rounded-md border border-slate-200">
-        <div className="space-y-2 p-4">
-          {Array.from({ length: 5 }).map((_, index) => (
-            <div key={index} className="flex items-center space-x-4">
-              <Skeleton className="h-12 w-12" />
-              <div className="space-y-2 flex-1">
-                <Skeleton className="h-4 w-[250px]" />
-                <Skeleton className="h-4 w-[200px]" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
+    return <div className="rounded-md border border-slate-200" />
   }
 
   if (filteredTickets.length === 0) {

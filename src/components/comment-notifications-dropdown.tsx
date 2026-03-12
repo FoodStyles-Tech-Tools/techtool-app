@@ -7,7 +7,6 @@ import { Button } from "@client/components/ui/button"
 import { useCommentNotifications, type CommentNotification } from "@client/hooks/use-comment-notifications"
 import { cn } from "@client/lib/utils"
 import { richTextToPlainText } from "@shared/rich-text"
-import { InlineLoader } from "@client/components/ui/loading-pill"
 
 function NotificationItem({
   notification,
@@ -119,9 +118,7 @@ export function CommentNotificationsDropdown() {
           ) : null}
         </div>
         <div className="max-h-[320px] overflow-y-auto px-4">
-          {isLoading ? (
-            <div className="py-6"><InlineLoader label="Loading..." /></div>
-          ) : notifications.length === 0 ? (
+          {isLoading ? null : notifications.length === 0 ? (
             <div className="py-6 text-center text-sm text-slate-500">
               No notifications yet. You will see replies and @mentions here.
             </div>

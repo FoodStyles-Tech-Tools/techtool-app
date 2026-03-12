@@ -113,13 +113,13 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="h-9 py-2 text-xs">Asset</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Owner</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Collaborators</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Source URLs</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Production URL</TableHead>
-                <TableHead className="h-9 py-2 text-xs">Created</TableHead>
-                <TableHead className="h-9 py-2 text-xs text-right">Actions</TableHead>
+                <TableHead className="h-9 py-2">Asset</TableHead>
+                <TableHead className="h-9 py-2">Owner</TableHead>
+                <TableHead className="h-9 py-2">Collaborators</TableHead>
+                <TableHead className="h-9 py-2">Source URLs</TableHead>
+                <TableHead className="h-9 py-2">Production URL</TableHead>
+                <TableHead className="h-9 py-2">Created</TableHead>
+                <TableHead className="h-9 py-2 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -139,7 +139,7 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                           .join(", ")}
                       </span>
                     ) : (
-                      <span className="text-xs text-slate-500">No collaborators</span>
+                      <span className="text-sm text-slate-500">No collaborators</span>
                     )}
                   </TableCell>
                   <TableCell className="py-2">
@@ -151,19 +151,19 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                             href={url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex max-w-[220px] items-center gap-1 truncate text-xs text-slate-900 hover:underline"
+                            className="inline-flex max-w-[220px] items-center gap-1 truncate text-sm text-slate-900 hover:underline"
                           >
                             <span className="truncate">{formatLinkLabel(url)}</span>
                           </a>
                         ))}
                         {asset.links.length > 2 && (
-                          <span className="text-xs text-slate-500">
+                          <span className="text-sm text-slate-500">
                             +{asset.links.length - 2} more
                           </span>
                         )}
                       </div>
                     ) : (
-                      <span className="text-xs text-slate-500">-</span>
+                      <span className="text-sm text-slate-500">-</span>
                     )}
                   </TableCell>
                   <TableCell className="py-2">
@@ -172,15 +172,15 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                         href={asset.production_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex max-w-[220px] items-center gap-1 truncate text-xs text-slate-900 hover:underline"
+                        className="inline-flex max-w-[220px] items-center gap-1 truncate text-sm text-slate-900 hover:underline"
                       >
                         <span className="truncate">{formatLinkLabel(asset.production_url)}</span>
                       </a>
                     ) : (
-                      <span className="text-xs text-slate-500">-</span>
+                      <span className="text-sm text-slate-500">-</span>
                     )}
                   </TableCell>
-                  <TableCell className="py-2 text-xs text-slate-500">
+                  <TableCell className="py-2 text-sm text-slate-500">
                     {new Date(asset.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="py-2 text-right">

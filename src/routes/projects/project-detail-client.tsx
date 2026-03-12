@@ -16,6 +16,7 @@ import { Button } from "@client/components/ui/button"
 import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import { ProjectForm } from "@client/components/forms/project-form"
 import { toast } from "@client/components/ui/toast"
+import type { Project } from "@shared/types"
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
@@ -25,9 +26,19 @@ function formatDate(value: string) {
   })
 }
 
-export default function ProjectDetailClient({ projectId }: { projectId: string }) {
+type ProjectDetailClientProps = {
+  projectId: string
+  initialProject?: { project: Project }
+}
+
+export default function ProjectDetailClient({
+  projectId,
+  initialProject,
+}: ProjectDetailClientProps) {
   const { flags } = usePermissions()
-  const { data, isLoading } = useProject(projectId)
+  const { data, isLoading } = useProject(projectId, {
+    initialData: initialProject,
+  })
   const { departments } = useDepartments()
   const { data: usersData } = useUsers()
   const [isEditOpen, setEditOpen] = useState(false)
