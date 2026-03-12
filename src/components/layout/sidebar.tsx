@@ -52,7 +52,7 @@ const primaryNavItems: NavItem[] = [
   },
   {
     title: "Reports",
-    href: "/report/guild-lead-report",
+    href: "/report",
     icon: BarChart3,
     flag: "canViewClockify",
   },

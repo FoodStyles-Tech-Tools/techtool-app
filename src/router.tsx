@@ -59,8 +59,13 @@ const ClockifyClient = lazyComponent(
   { loading: RouteLoadingFallback }
 )
 
-const GuildLeadReportClient = lazyComponent(
-  () => import("@client/routes/report/guild-lead-report-client"),
+const ReportSessionsListClient = lazyComponent(
+  () => import("@client/routes/report/report-sessions-list-client"),
+  { loading: RouteLoadingFallback }
+)
+
+const ReportSessionDetailClient = lazyComponent(
+  () => import("@client/routes/report/report-session-detail-client"),
   { loading: RouteLoadingFallback }
 )
 
@@ -132,8 +137,9 @@ export const router = createBrowserRouter([
           { path: "deleted-tickets", element: <DeletedTicketsPanel /> },
           { path: "clockify", element: <ClockifyClient /> },
           { path: "clockify/sessions/:sessionId", element: <ClockifyClient /> },
-          { path: "report", element: <GuildLeadReportClient /> },
-          { path: "report/guild-lead-report", element: <GuildLeadReportClient /> },
+          { path: "report", element: <ReportSessionsListClient /> },
+          { path: "report/guild-lead-report", element: <ReportSessionsListClient /> },
+          { path: "report/sessions/:sessionId", element: <ReportSessionDetailClient /> },
           { path: "settings", element: <SettingsRedirectPage /> },
           { path: "workspace", element: <Navigate to="/status" replace /> },
           { path: "workspace/status", element: <Navigate to="/status" replace /> },
