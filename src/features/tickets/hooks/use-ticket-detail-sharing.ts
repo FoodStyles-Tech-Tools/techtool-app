@@ -3,7 +3,7 @@
 import { toast } from "@client/components/ui/toast"
 import type { Ticket } from "@shared/types"
 
-const TICKET_SHARE_BASE_URL = "https://techtool-app.vercel.app/tickets"
+const TICKET_SHARE_BASE_URL = "http://localhost:5173/tickets"
 
 type UseTicketDetailSharingParams = {
   ticket: Ticket | null | undefined
@@ -13,7 +13,8 @@ export function useTicketDetailSharing({ ticket }: UseTicketDetailSharingParams)
   const handleCopyTicketLabel = () => {
     if (!ticket) return
     const projectName = ticket.project?.name || "No Project"
-    const label = `[${projectName}] ${ticket.displayId || ticket.id.slice(0, 8)}_${ticket.title}`
+    const ticketIdLabel = ticket.displayId || ticket.id.slice(0, 8)
+    const label = `[${projectName}] ${ticketIdLabel}_${ticket.title}`
     if (!navigator?.clipboard?.writeText) {
       toast("Clipboard not available", "error")
       return

@@ -67,14 +67,14 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                     onChange={(event) => actions.setTitleValue(event.target.value)}
                     onBlur={() => void actions.handleTitleSave()}
                     onKeyDown={actions.handleTitleKeyDown}
-                    className="h-8 text-sm font-semibold"
+                    className="h-8 text-base font-semibold"
                     disabled={!canEditTickets}
                     autoFocus
                   />
                 ) : (
                   <h1
                     className={cn(
-                      "text-sm font-semibold leading-tight text-foreground",
+                      "text-base font-semibold leading-tight text-foreground",
                       canEditTickets && "cursor-pointer rounded-md px-1 py-1 hover:bg-accent"
                     )}
                     onClick={() => {

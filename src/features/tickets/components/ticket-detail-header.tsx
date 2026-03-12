@@ -55,7 +55,7 @@ export function TicketDetailHeader({
   return (
     <div className="rounded-lg border border-border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2 min-w-0">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
           <Breadcrumb items={breadcrumbItems} />
         </div>
       </div>

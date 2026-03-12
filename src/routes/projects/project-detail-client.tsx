@@ -26,6 +26,7 @@ import { ProjectForm } from "@client/components/forms/project-form"
 import { Input } from "@client/components/ui/input"
 import { Select } from "@client/components/ui/select"
 import { FilterField } from "@client/components/ui/filter-field"
+import { FilterBar } from "@client/components/ui/filter-bar"
 import { PriorityPill } from "@client/components/tickets/priority-pill"
 import { StatusPill } from "@client/components/tickets/status-pill"
 import {
@@ -124,6 +125,47 @@ export default function ProjectDetailClient({
         .map((o) => o.id),
     [statusOptions, excludedSet]
   )
+
+  const defaultExcludedSet = useMemo(() => new Set(DEFAULT_EXCLUDED_STATUSES), [])
+
+  const hasActiveFilters = useMemo(() => {
+    if (searchQuery.trim() !== "") return true
+    const excludedSetForActive = new Set(excludedStatuses)
+    if (
+      excludedSetForActive.size !== defaultExcludedSet.size ||
+      [...excludedSetForActive].some((s) => !defaultExcludedSet.has(s))
+    ) {
+      return true
+    }
+    if (assigneeFilter !== "all") return true
+    if (reporterFilter !== "all") return true
+    if (sqaFilter !== "all") return true
+    if (priorityFilter !== "all") return true
+    if (epicFilter !== "all") return true
+    if (sprintFilter !== "all") return true
+    return false
+  }, [
+    assigneeFilter,
+    defaultExcludedSet,
+    epicFilter,
+    excludedStatuses,
+    priorityFilter,
+    reporterFilter,
+    searchQuery,
+    sprintFilter,
+    sqaFilter,
+  ])
+
+  const handleResetTicketFilters = useCallback(() => {
+    setSearchQuery("")
+    setSprintFilter("all")
+    setEpicFilter("all")
+    setAssigneeFilter("all")
+    setReporterFilter("all")
+    setSqaFilter("all")
+    setPriorityFilter("all")
+    setExcludedStatuses([...DEFAULT_EXCLUDED_STATUSES])
+  }, [])
 
   const { data: tickets = [], isLoading: ticketsLoading } = useTickets({
     projectId: project?.id,
@@ -258,127 +300,139 @@ export default function ProjectDetailClient({
 
             <section>
               <h2 className="text-sm font-semibold text-foreground">Tickets</h2>
-              <div className="mt-3 flex flex-wrap gap-6">
-                <FilterField label="Search" id="project-tickets-search">
-                  <div className="relative w-80 min-w-[200px]">
-                    <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      id="project-tickets-search"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="By ID, title, or description"
-                      className="h-9 pl-8"
-                    />
-                  </div>
-                </FilterField>
-                <FilterField label="Status" id="project-status-filter">
-                  <StatusFilterDropdown
-                    id="project-status-filter"
-                    statusOptions={statusOptions}
-                    excludedStatuses={excludedStatuses}
-                    toggleStatusExcluded={toggleStatusExcluded}
-                    statusMap={statusMap}
-                  />
-                </FilterField>
-                <FilterField label="Assignee" id="project-assignee-filter">
-                  <Select
-                    id="project-assignee-filter"
-                    value={assigneeFilter}
-                    onChange={(e) => setAssigneeFilter(e.target.value)}
-                    className="min-w-[140px]"
-                  >
-                    <option value="all">All</option>
-                    {currentUser?.id ? (
-                      <option value={currentUser.id}>Assigned to me</option>
-                    ) : null}
-                    <option value="unassigned">Unassigned</option>
-                  </Select>
-                </FilterField>
-                <FilterField label="Reporter" id="project-reporter-filter">
-                  <Select
-                    id="project-reporter-filter"
-                    value={reporterFilter}
-                    onChange={(e) => setReporterFilter(e.target.value)}
-                    className="min-w-[140px]"
-                  >
-                    <option value="all">All</option>
-                    {userOptions.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name || u.email}
-                      </option>
-                    ))}
-                  </Select>
-                </FilterField>
-                <FilterField label="SQA" id="project-sqa-filter">
-                  <Select
-                    id="project-sqa-filter"
-                    value={sqaFilter}
-                    onChange={(e) => setSqaFilter(e.target.value)}
-                    className="min-w-[140px]"
-                  >
-                    <option value="all">All</option>
-                    <option value="unassigned">Unassigned</option>
-                    {userOptions.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name || u.email}
-                      </option>
-                    ))}
-                  </Select>
-                </FilterField>
-                <FilterField label="Priority" id="project-priority-filter">
-                  <div className={cn("relative flex min-h-9 min-w-[120px] items-center rounded-md border border-input bg-form-bg px-3")}>
-                    {priorityFilter !== "all" ? (
-                      <PriorityPill priority={priorityFilter} className="pointer-events-none shrink-0" />
-                    ) : (
-                      <span className="pointer-events-none text-sm text-muted-foreground">All</span>
-                    )}
-                    <Select
-                      id="project-priority-filter"
-                      value={priorityFilter}
-                      onChange={(e) => setPriorityFilter(e.target.value)}
-                      className="absolute inset-0 cursor-pointer opacity-0"
-                    >
-                      <option value="all">All</option>
-                      {PRIORITY_OPTIONS.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                </FilterField>
-                <FilterField label="Epic" id="project-epic-filter">
-                  <Select
-                    id="project-epic-filter"
-                    value={epicFilter}
-                    onChange={(e) => setEpicFilter(e.target.value)}
-                    className="min-w-[160px]"
-                  >
-                    <option value="all">All</option>
-                    <option value="no_epic">No epic</option>
-                    {epicOptionsAsc.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FilterField>
-                <FilterField label="Sprint" id="project-sprint-filter">
-                  <Select
-                    id="project-sprint-filter"
-                    value={sprintFilter}
-                    onChange={(e) => setSprintFilter(e.target.value)}
-                    className="min-w-[160px]"
-                  >
-                    <option value="all">All</option>
-                    <option value="no_sprint">No sprint</option>
-                    {sprintOptionsAsc.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </Select>
-                </FilterField>
+              <div className="mt-3">
+                <FilterBar
+                  hasActiveFilters={hasActiveFilters}
+                  onResetFilters={handleResetTicketFilters}
+                  filters={
+                    <>
+                      <FilterField label="Search" id="project-tickets-search">
+                        <div className="relative w-80 min-w-[200px]">
+                          <MagnifyingGlassIcon className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            id="project-tickets-search"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="By ID, title, or description"
+                            className="h-9 pl-8"
+                          />
+                        </div>
+                      </FilterField>
+                      <FilterField label="Status" id="project-status-filter">
+                        <StatusFilterDropdown
+                          id="project-status-filter"
+                          statusOptions={statusOptions}
+                          excludedStatuses={excludedStatuses}
+                          toggleStatusExcluded={toggleStatusExcluded}
+                          statusMap={statusMap}
+                        />
+                      </FilterField>
+                      <FilterField label="Assignee" id="project-assignee-filter">
+                        <Select
+                          id="project-assignee-filter"
+                          value={assigneeFilter}
+                          onChange={(e) => setAssigneeFilter(e.target.value)}
+                          className="min-w-[140px]"
+                        >
+                          <option value="all">All</option>
+                          {currentUser?.id ? (
+                            <option value={currentUser.id}>Assigned to me</option>
+                          ) : null}
+                          <option value="unassigned">Unassigned</option>
+                        </Select>
+                      </FilterField>
+                      <FilterField label="Reporter" id="project-reporter-filter">
+                        <Select
+                          id="project-reporter-filter"
+                          value={reporterFilter}
+                          onChange={(e) => setReporterFilter(e.target.value)}
+                          className="min-w-[140px]"
+                        >
+                          <option value="all">All</option>
+                          {userOptions.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name || u.email}
+                            </option>
+                          ))}
+                        </Select>
+                      </FilterField>
+                      <FilterField label="SQA" id="project-sqa-filter">
+                        <Select
+                          id="project-sqa-filter"
+                          value={sqaFilter}
+                          onChange={(e) => setSqaFilter(e.target.value)}
+                          className="min-w-[140px]"
+                        >
+                          <option value="all">All</option>
+                          <option value="unassigned">Unassigned</option>
+                          {userOptions.map((u) => (
+                            <option key={u.id} value={u.id}>
+                              {u.name || u.email}
+                            </option>
+                          ))}
+                        </Select>
+                      </FilterField>
+                      <FilterField label="Priority" id="project-priority-filter">
+                        <div
+                          className={cn(
+                            "relative flex min-h-9 min-w-[120px] items-center rounded-md border border-input bg-form-bg px-3"
+                          )}
+                        >
+                          {priorityFilter !== "all" ? (
+                            <PriorityPill priority={priorityFilter} className="pointer-events-none shrink-0" />
+                          ) : (
+                            <span className="pointer-events-none text-sm text-muted-foreground">All</span>
+                          )}
+                          <Select
+                            id="project-priority-filter"
+                            value={priorityFilter}
+                            onChange={(e) => setPriorityFilter(e.target.value)}
+                            className="absolute inset-0 cursor-pointer opacity-0"
+                          >
+                            <option value="all">All</option>
+                            {PRIORITY_OPTIONS.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.label}
+                              </option>
+                            ))}
+                          </Select>
+                        </div>
+                      </FilterField>
+                      <FilterField label="Epic" id="project-epic-filter">
+                        <Select
+                          id="project-epic-filter"
+                          value={epicFilter}
+                          onChange={(e) => setEpicFilter(e.target.value)}
+                          className="min-w-[160px]"
+                        >
+                          <option value="all">All</option>
+                          <option value="no_epic">No epic</option>
+                          {epicOptionsAsc.map((e) => (
+                            <option key={e.id} value={e.id}>
+                              {e.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </FilterField>
+                      <FilterField label="Sprint" id="project-sprint-filter">
+                        <Select
+                          id="project-sprint-filter"
+                          value={sprintFilter}
+                          onChange={(e) => setSprintFilter(e.target.value)}
+                          className="min-w-[160px]"
+                        >
+                          <option value="all">All</option>
+                          <option value="no_sprint">No sprint</option>
+                          {sprintOptionsAsc.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </FilterField>
+                    </>
+                  }
+                />
               </div>
               {ticketsLoading ? (
                 <p className="mt-4 text-sm text-muted-foreground">Loading tickets…</p>

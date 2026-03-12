@@ -1,6 +1,11 @@
 "use client"
 
-import { ArrowTopRightOnSquareIcon, XMarkIcon } from "@heroicons/react/24/outline"
+import {
+  ArrowTopRightOnSquareIcon,
+  ClipboardDocumentIcon,
+  ShareIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline"
 import {
   Dialog,
   DialogContent,
@@ -9,6 +14,7 @@ import {
 } from "@client/components/ui/dialog"
 import { Button } from "@client/components/ui/button"
 import { useTicketDetailSurface } from "@client/features/tickets/hooks/use-ticket-detail-surface"
+import { useTicketDetailSharing } from "@client/features/tickets/hooks/use-ticket-detail-sharing"
 import { TicketDetailLayout } from "@client/features/tickets/components/ticket-detail-layout"
 
 type TicketDetailPreviewModalProps = {
@@ -19,19 +25,17 @@ type TicketDetailPreviewModalProps = {
 }
 
 function TicketDetailPreviewModalBody({
-  ticketId,
+  surface,
   onClose,
 }: {
-  ticketId: string
+  surface: ReturnType<typeof useTicketDetailSurface>
   onClose: () => void
 }) {
-  const surface = useTicketDetailSurface(ticketId, { enabled: true })
-
   return (
     <TicketDetailLayout
       surface={surface}
       onBackToTickets={onClose}
-      showHeader={true}
+      showHeader={false}
     />
   )
 }
@@ -42,6 +46,11 @@ export function TicketDetailPreviewModal({
   ticketId,
   onExpand,
 }: TicketDetailPreviewModalProps) {
+  const surface = useTicketDetailSurface(ticketId, { enabled: true })
+  const { handleCopyTicketLabel, handleCopyShareUrl } = useTicketDetailSharing({
+    ticket: surface.ticket,
+  })
+
   const handleExpand = () => {
     onExpand()
     onOpenChange(false)
@@ -58,6 +67,26 @@ export function TicketDetailPreviewModal({
           <div className="flex items-center gap-2">
             <Button
               type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleCopyTicketLabel}
+              aria-label="Copy ticket label"
+            >
+              <ClipboardDocumentIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleCopyShareUrl}
+              aria-label="Copy share URL"
+            >
+              <ShareIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
               variant="outline"
               size="sm"
               onClick={handleExpand}
@@ -69,20 +98,18 @@ export function TicketDetailPreviewModal({
             <Button
               type="button"
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => onOpenChange(false)}
               aria-label="Close"
-              className="gap-1.5"
             >
               <XMarkIcon className="h-4 w-4" />
-              Close
             </Button>
           </div>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {open && ticketId ? (
             <TicketDetailPreviewModalBody
-              ticketId={ticketId}
+              surface={surface}
               onClose={() => onOpenChange(false)}
             />
           ) : open ? (
