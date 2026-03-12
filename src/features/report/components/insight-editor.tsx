@@ -33,10 +33,10 @@ export function ChartWithInsight({
   return (
     <section className="space-y-3">
       {children}
-      <div className="rounded-md border border-slate-200 bg-white p-3 sm:p-4">
+      <div className="rounded-md border border-border bg-card p-3 sm:p-4">
         <div className="mb-3">
           <h4 className="text-sm font-medium">Insights - {title}</h4>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Summarize trends, anomalies, and actions based on the chart.
           </p>
         </div>
@@ -88,7 +88,7 @@ export function InsightEditor({
         showToolbarOnFocus
       />
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">{dirty ? "Unsaved changes" : "No pending changes"}</p>
+        <p className="text-xs text-muted-foreground">{dirty ? "Unsaved changes" : "No pending changes"}</p>
         <Button size="sm" onClick={handleSave} disabled={!dirty || saving} className="min-w-[112px]">
           {saving ? "Saving..." : "Save insight"}
         </Button>

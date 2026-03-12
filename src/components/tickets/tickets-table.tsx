@@ -43,40 +43,40 @@ const TicketRow = memo(function TicketRow({ ticket, onSelectTicket }: TicketRowP
 
   return (
     <TableRow>
-      <TableCell className="py-2 text-sm text-slate-500">
+      <TableCell className="py-2 text-sm text-muted-foreground">
         {ticket.displayId || ticket.id.slice(0, 8)}
       </TableCell>
       <TableCell className="w-[400px] min-w-[300px] py-2">
         <button
           type="button"
           onClick={() => onSelectTicket(ticket.id)}
-          className="truncate text-sm text-left font-normal text-slate-900 hover:underline"
+          className="truncate text-sm text-left font-normal text-foreground hover:underline"
         >
           {ticket.title}
         </button>
       </TableCell>
-      <TableCell className="py-2 text-sm text-slate-900">
+      <TableCell className="py-2 text-sm text-foreground">
         {ticket.status}
       </TableCell>
-      <TableCell className="py-2 text-sm capitalize text-slate-900">
+      <TableCell className="py-2 text-sm capitalize text-foreground">
         {ticket.priority}
       </TableCell>
-      <TableCell className="py-2 text-sm text-slate-900">
+      <TableCell className="py-2 text-sm text-foreground">
         {assigneeLabel}
       </TableCell>
-      <TableCell className="py-2 text-sm text-slate-900">
+      <TableCell className="py-2 text-sm text-foreground">
         {requesterLabel}
       </TableCell>
-      <TableCell className="py-2 text-sm text-slate-900">
+      <TableCell className="py-2 text-sm text-foreground">
         {sqaLabel}
       </TableCell>
-      <TableCell className="py-2 text-sm text-slate-900">
+      <TableCell className="py-2 text-sm text-foreground">
         {ticket.project?.name || "No project"}
       </TableCell>
-      <TableCell className={cn("py-2 text-sm", dueDate.isOverdue ? "text-red-600 font-medium" : "text-slate-600")}>
+      <TableCell className={cn("py-2 text-sm", dueDate.isOverdue ? "text-red-600 font-medium" : "text-muted-foreground")}>
         {dueDate.label}
       </TableCell>
-      <TableCell className="py-2 text-sm text-slate-500">
+      <TableCell className="py-2 text-sm text-muted-foreground">
         {formatRelativeDate(ticket.createdAt)}
       </TableCell>
     </TableRow>
@@ -97,7 +97,7 @@ export function TicketsTable({
     <EntityTableShell
       footer={
         <div className="flex items-center justify-between">
-          <div className="text-sm text-slate-500">
+          <div className="text-sm text-muted-foreground">
             Showing {startIndex + 1} to {Math.min(endIndex, totalCount)} of {totalCount} tickets
           </div>
           <div className="flex items-center gap-2">
@@ -110,7 +110,7 @@ export function TicketsTable({
             >
               Previous
             </Button>
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-muted-foreground">
               Page {currentPage} of {totalPages || 1}
             </span>
             <Button

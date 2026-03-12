@@ -602,7 +602,7 @@ export default function ClockifyClient() {
             </Button>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-500">Session not found.</p>
+            <p className="text-sm text-muted-foreground">Session not found.</p>
           </CardContent>
         </Card>
       ) : null}

@@ -4,7 +4,7 @@ import { format } from "date-fns"
 import type { Ticket, TicketDetailRelations } from "@shared/types"
 
 const fieldLabelClassName =
-  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"
+  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"
 
 type TicketDetailRelationsSectionProps = {
   ticket: Ticket
@@ -25,12 +25,12 @@ export function TicketDetailRelationsSection({
           {relations.parent ? (
             <a
               href={`/tickets/${String(relations.parent.displayId || relations.parent.id).toLowerCase()}`}
-              className="flex items-center justify-between rounded-md border border-slate-200 px-2.5 py-1.5 text-sm hover:bg-slate-50"
+              className="flex items-center justify-between rounded-md border border-border px-2.5 py-1.5 text-sm hover:bg-accent"
             >
               <span className="truncate">
                 Parent: {(relations.parent.displayId || relations.parent.id.slice(0, 8)).toUpperCase()} • {relations.parent.title}
               </span>
-              <span className="ml-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">Open</span>
+              <span className="ml-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Open</span>
             </a>
           ) : null}
           {mentionedInComments.map((mention) => {
@@ -39,17 +39,17 @@ export function TicketDetailRelationsSection({
               <a
                 key={mention.ticket.id}
                 href={`/tickets/${String(mention.ticket.displayId || mention.ticket.id).toLowerCase()}`}
-                className="flex items-center justify-between rounded-md border border-slate-200 px-2.5 py-1.5 text-sm hover:bg-slate-50"
+                className="flex items-center justify-between rounded-md border border-border px-2.5 py-1.5 text-sm hover:bg-accent"
               >
                 <span className="truncate">
                   Mentioned in {mentionCount} comment{mentionCount === 1 ? "" : "s"} on {(mention.ticket.displayId || mention.ticket.id.slice(0, 8)).toUpperCase()} • {mention.ticket.title}
                 </span>
-                <span className="ml-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">Open</span>
+                <span className="ml-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Open</span>
               </a>
             )
           })}
           {!relations.parent && mentionedInComments.length === 0 ? (
-            <p className="text-xs text-slate-500">No relations yet.</p>
+            <p className="text-xs text-muted-foreground">No relations yet.</p>
           ) : null}
         </div>
       </div>
@@ -71,14 +71,14 @@ export function TicketDetailRelationsSection({
                       "rejectedAt" in reasonData ? reasonData.rejectedAt : reasonData.cancelledAt
                     return (
                       <>
-                        <p className="mb-1 text-sm font-medium text-slate-900">
+                        <p className="mb-1 text-sm font-medium text-foreground">
                           {ticket.status === "rejected" ? "Reject reason" : "Cancelled reason"}
                         </p>
-                        <p className="whitespace-pre-wrap break-words text-sm text-slate-900">
+                        <p className="whitespace-pre-wrap break-words text-sm text-foreground">
                           {reasonData.reason}
                         </p>
                         {reasonAt ? (
-                          <p className="mt-2 text-xs text-slate-500">
+                          <p className="mt-2 text-xs text-muted-foreground">
                             {ticket.status === "rejected" ? "Rejected on " : "Cancelled on "}
                             {format(new Date(reasonAt), "MMM d, yyyy 'at' h:mm a")}
                           </p>

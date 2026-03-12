@@ -14,7 +14,7 @@ const NO_DEPARTMENT_VALUE = "no_department"
 const NO_PROJECT_VALUE = "no_project"
 const nativeSelectClassName = selectStyleInputSm
 const fieldLabelClassName =
-  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"
+  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"
 
 type TicketDetailPlanningSectionProps = {
   ticket: Ticket

@@ -5,7 +5,7 @@ import type { Ticket } from "@shared/types"
 import type { TimestampValidation } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 
 const fieldLabelClassName =
-  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"
+  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"
 
 type TicketDetailTimestampsSectionProps = {
   ticket: Ticket
@@ -50,7 +50,7 @@ export function TicketDetailTimestampsSection({
 
         <div className="flex items-start gap-3">
           <div className="flex w-[6.5rem] flex-shrink-0 items-center gap-1.5">
-            <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Assigned</label>
+            <label className="pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Assigned</label>
             {!ticket.assignedAt && timestampValidation.assigned_at ? (
               <span title={getTimestampWarningMessage("assigned_at") || ""} className="cursor-help pt-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-red-700">Warning</span>
@@ -76,7 +76,7 @@ export function TicketDetailTimestampsSection({
 
         <div className="flex items-start gap-3">
           <div className="flex w-[6.5rem] flex-shrink-0 items-center gap-1.5">
-            <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Started</label>
+            <label className="pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Started</label>
             {!ticket.startedAt && timestampValidation.started_at ? (
               <span title={getTimestampWarningMessage("started_at") || ""} className="cursor-help pt-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-red-700">Warning</span>
@@ -116,7 +116,7 @@ export function TicketDetailTimestampsSection({
 
         <div className="flex items-start gap-3">
           <div className="flex w-[6.5rem] flex-shrink-0 items-center gap-1.5">
-            <label className="pt-2 text-xs font-medium uppercase tracking-wide text-slate-500">Completed</label>
+            <label className="pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Completed</label>
             {!ticket.completedAt && timestampValidation.completed_at ? (
               <span title={getTimestampWarningMessage("completed_at") || ""} className="cursor-help pt-2">
                 <span className="text-xs font-semibold uppercase tracking-wide text-red-700">Warning</span>

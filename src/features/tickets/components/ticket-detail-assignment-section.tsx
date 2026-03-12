@@ -13,7 +13,7 @@ const UNASSIGNED_VALUE = "unassigned"
 const NO_PARENT_TICKET_VALUE = "no_parent_ticket"
 const nativeSelectClassName = selectStyleInputSm
 const fieldLabelClassName =
-  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-slate-500"
+  "w-[6.5rem] flex-shrink-0 pt-2 text-xs font-medium uppercase tracking-wide text-muted-foreground"
 
 type TicketDetailAssignmentSectionProps = {
   ticket: Ticket
@@ -124,7 +124,7 @@ export function TicketDetailAssignmentSection({
             {!ticket.assignee && currentUser ? (
               <button
                 type="button"
-                className="whitespace-nowrap text-xs text-slate-700 hover:underline disabled:opacity-50"
+                className="whitespace-nowrap text-xs text-foreground hover:underline disabled:opacity-50"
                 onClick={() => void onAssigneeChange(currentUser.id)}
                 disabled={updatingFields["assigneeId"] || !canEditTickets}
               >
@@ -214,7 +214,7 @@ export function TicketDetailAssignmentSection({
                   })
                 }}
               >
-                <span className="truncate text-xs text-slate-900">
+                <span className="truncate text-xs text-foreground">
                   {selectedParentTicketOption
                     ? `${(selectedParentTicketOption.displayId || selectedParentTicketOption.id.slice(0, 8)).toUpperCase()} • ${selectedParentTicketOption.title}`
                     : "No parent ticket"}
@@ -222,7 +222,7 @@ export function TicketDetailAssignmentSection({
               </Button>
 
               {isParentPickerOpen ? (
-                <div className="absolute left-0 top-full z-40 mt-2 w-80 rounded-md border border-slate-200 bg-white p-3 shadow-md">
+                <div className="absolute left-0 top-full z-40 mt-2 w-80 rounded-md border border-border bg-card p-3 shadow-md">
                   <Input
                     placeholder="Search parent ticket..."
                     value={parentSearch}
@@ -233,7 +233,7 @@ export function TicketDetailAssignmentSection({
                   <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
                     <button
                       type="button"
-                      className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-50"
+                      className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
                       onClick={() => {
                         void onParentTicketChange(NO_PARENT_TICKET_VALUE)
                         setIsParentPickerOpen(false)
@@ -243,7 +243,7 @@ export function TicketDetailAssignmentSection({
                       <span className="text-xs">No parent ticket</span>
                     </button>
                     {parentFilteredOptions.length === 0 ? (
-                      <p className="px-2 py-3 text-center text-xs text-slate-500">No tickets found</p>
+                      <p className="px-2 py-3 text-center text-xs text-muted-foreground">No tickets found</p>
                     ) : (
                       parentFilteredOptions.map((candidate) => {
                         const isSelected = candidate.id === selectedParentTicketId
@@ -252,8 +252,8 @@ export function TicketDetailAssignmentSection({
                             key={candidate.id}
                             type="button"
                             className={cn(
-                              "flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs hover:bg-slate-50",
-                              isSelected && "bg-slate-100"
+                              "flex w-full items-start rounded-md px-2 py-1.5 text-left text-xs hover:bg-accent",
+                              isSelected && "bg-muted"
                             )}
                             onClick={() => {
                               void onParentTicketChange(candidate.id)
@@ -275,7 +275,7 @@ export function TicketDetailAssignmentSection({
             {parentNavigationSlug ? (
               <a
                 href={`/tickets/${parentNavigationSlug}`}
-                className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 hover:underline"
+                className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground hover:underline"
               >
                 Open parent ticket
               </a>

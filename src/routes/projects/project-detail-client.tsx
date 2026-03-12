@@ -105,45 +105,45 @@ export default function ProjectDetailClient({
               <Card className="p-5 shadow-none">
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <div>
-                    <p className="text-xs font-medium uppercase text-slate-500">Status</p>
-                    <p className="mt-1 text-sm capitalize text-slate-900">{project.status}</p>
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Status</p>
+                    <p className="mt-1 text-sm capitalize text-foreground">{project.status}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium uppercase text-slate-500">Lead</p>
-                    <p className="mt-1 text-sm text-slate-900">{ownerLabel}</p>
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Lead</p>
+                    <p className="mt-1 text-sm text-foreground">{ownerLabel}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium uppercase text-slate-500">Open Tickets</p>
-                    <p className="mt-1 text-sm text-slate-900">{ticketStats.open}</p>
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Open Tickets</p>
+                    <p className="mt-1 text-sm text-foreground">{ticketStats.open}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-medium uppercase text-slate-500">Department</p>
-                    <p className="mt-1 text-sm text-slate-900">{project.department?.name || "No department"}</p>
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Department</p>
+                    <p className="mt-1 text-sm text-foreground">{project.department?.name || "No department"}</p>
                   </div>
                 </div>
               </Card>
 
               <Card className="p-5 shadow-none">
-                <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
-                <p className="mt-3 text-sm leading-6 text-slate-600">
+                <h2 className="text-sm font-semibold text-foreground">Overview</h2>
+                <p className="mt-3 text-sm leading-6 text-muted-foreground">
                   {project.description || "No project description provided."}
                 </p>
               </Card>
 
               <Card className="p-5 shadow-none">
-                <h2 className="text-sm font-semibold text-slate-900">People</h2>
+                <h2 className="text-sm font-semibold text-foreground">People</h2>
                 <dl className="mt-3 space-y-4 text-sm">
                   <div>
-                    <dt className="text-xs font-medium uppercase text-slate-500">Owner</dt>
-                    <dd className="mt-1 text-slate-900">{ownerLabel}</dd>
+                    <dt className="text-xs font-medium uppercase text-muted-foreground">Owner</dt>
+                    <dd className="mt-1 text-foreground">{ownerLabel}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase text-slate-500">Requesters</dt>
-                    <dd className="mt-1 text-slate-900">{requestersLabel}</dd>
+                    <dt className="text-xs font-medium uppercase text-muted-foreground">Requesters</dt>
+                    <dd className="mt-1 text-foreground">{requestersLabel}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase text-slate-500">Collaborators</dt>
-                    <dd className="mt-1 text-slate-900">{collaboratorsLabel}</dd>
+                    <dt className="text-xs font-medium uppercase text-muted-foreground">Collaborators</dt>
+                    <dd className="mt-1 text-foreground">{collaboratorsLabel}</dd>
                   </div>
                 </dl>
               </Card>
@@ -153,8 +153,8 @@ export default function ProjectDetailClient({
               <Card className="p-5 shadow-none">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-sm font-semibold text-slate-900">Ticket Queue</h2>
-                    <p className="text-sm text-slate-500">Use the project queue for day-to-day ticket work.</p>
+                    <h2 className="text-sm font-semibold text-foreground">Ticket Queue</h2>
+                    <p className="text-sm text-muted-foreground">Use the project queue for day-to-day ticket work.</p>
                   </div>
                   <Button asChild variant="outline">
                     <Link href={`/tickets?projectId=${projectId}`}>Open Queue</Link>
@@ -162,44 +162,44 @@ export default function ProjectDetailClient({
                 </div>
                 <dl className="mt-4 grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
                   <div>
-                    <dt className="text-xs font-medium uppercase text-slate-500">Open</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{ticketStats.open}</dd>
+                    <dt className="text-xs font-medium uppercase text-muted-foreground">Open</dt>
+                    <dd className="mt-1 text-sm text-foreground">{ticketStats.open}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase text-slate-500">Done</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{ticketStats.done}</dd>
+                    <dt className="text-xs font-medium uppercase text-muted-foreground">Done</dt>
+                    <dd className="mt-1 text-sm text-foreground">{ticketStats.done}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase text-slate-500">Total</dt>
-                    <dd className="mt-1 text-sm text-slate-900">{ticketStats.total}</dd>
+                    <dt className="text-xs font-medium uppercase text-muted-foreground">Total</dt>
+                    <dd className="mt-1 text-sm text-foreground">{ticketStats.total}</dd>
                   </div>
                 </dl>
               </Card>
 
               <Card className="p-5 shadow-none">
-                <h2 className="text-sm font-semibold text-slate-900">Details</h2>
+                <h2 className="text-sm font-semibold text-foreground">Details</h2>
                 <dl className="mt-3 space-y-3 text-sm">
                   <div>
-                    <dt className="text-xs font-medium uppercase text-slate-500">Status</dt>
-                    <dd className="mt-1 capitalize text-slate-900">{project.status}</dd>
+                    <dt className="text-xs font-medium uppercase text-muted-foreground">Status</dt>
+                    <dd className="mt-1 capitalize text-foreground">{project.status}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase text-slate-500">Require SQA</dt>
-                    <dd className="mt-1 text-slate-900">{project.require_sqa ? "Yes" : "No"}</dd>
+                    <dt className="text-xs font-medium uppercase text-muted-foreground">Require SQA</dt>
+                    <dd className="mt-1 text-foreground">{project.require_sqa ? "Yes" : "No"}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase text-slate-500">Department</dt>
-                    <dd className="mt-1 text-slate-900">{project.department?.name || "No department"}</dd>
+                    <dt className="text-xs font-medium uppercase text-muted-foreground">Department</dt>
+                    <dd className="mt-1 text-foreground">{project.department?.name || "No department"}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium uppercase text-slate-500">Created</dt>
-                    <dd className="mt-1 text-slate-900">{formatDate(project.created_at)}</dd>
+                    <dt className="text-xs font-medium uppercase text-muted-foreground">Created</dt>
+                    <dd className="mt-1 text-foreground">{formatDate(project.created_at)}</dd>
                   </div>
                 </dl>
               </Card>
 
               <Card className="p-5 shadow-none">
-                <h2 className="text-sm font-semibold text-slate-900">Links</h2>
+                <h2 className="text-sm font-semibold text-foreground">Links</h2>
                 <div className="mt-3 space-y-2">
                   {project.links?.length ? (
                     project.links.map((url) => (
@@ -208,14 +208,14 @@ export default function ProjectDetailClient({
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-slate-900 hover:underline"
+                        className="flex items-center gap-2 text-sm text-foreground hover:underline"
                       >
                         <span className="truncate">{url}</span>
-                        <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">Open</span>
+                        <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Open</span>
                       </a>
                     ))
                   ) : (
-                    <p className="text-sm text-slate-500">No links added.</p>
+                    <p className="text-sm text-muted-foreground">No links added.</p>
                   )}
                 </div>
               </Card>

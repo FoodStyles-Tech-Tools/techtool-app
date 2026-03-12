@@ -3,7 +3,7 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
 
-import { cn } from "@client/lib/utils"
+import { cn, composeRefs } from "@client/lib/utils"
 
 type DialogContextValue = {
   open: boolean
@@ -29,21 +29,6 @@ type DialogProps = {
   open?: boolean
   defaultOpen?: boolean
   onOpenChange?: (open: boolean) => void
-}
-
-function composeRefs<T>(
-  ...refs: Array<React.Ref<T> | undefined>
-): React.RefCallback<T> {
-  return (node) => {
-    for (const ref of refs) {
-      if (!ref) continue
-      if (typeof ref === "function") {
-        ref(node)
-      } else {
-        ;(ref as React.MutableRefObject<T | null>).current = node
-      }
-    }
-  }
 }
 
 const Dialog = ({ children, open, defaultOpen = false, onOpenChange }: DialogProps) => {
@@ -137,11 +122,21 @@ const DialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("fixed inset-0 z-0 bg-slate-900/40 transition-opacity duration-150", className)}
+    className={cn("fixed inset-0 z-0 bg-foreground/40 transition-opacity duration-150", className)}
     {...props}
   />
 ))
 DialogOverlay.displayName = "DialogOverlay"
+
+const FOCUSABLE_SELECTOR =
+  'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  const nodes = container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+  return Array.from(nodes).filter(
+    (el) => !el.hasAttribute("disabled") && el.offsetParent != null
+  )
+}
 
 type DialogContentProps = React.HTMLAttributes<HTMLDivElement> & {
   showCloseButton?: boolean
@@ -150,9 +145,13 @@ type DialogContentProps = React.HTMLAttributes<HTMLDivElement> & {
 const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
   ({ className, children, showCloseButton = true, ...props }, ref) => {
     const { open, setOpen, titleId, descriptionId } = useDialogContext()
+    const contentRef = React.useRef<HTMLDivElement>(null)
+    const previousActiveRef = React.useRef<HTMLElement | null>(null)
 
     React.useEffect(() => {
       if (!open) return
+
+      previousActiveRef.current = document.activeElement as HTMLElement | null
 
       const previousOverflow = document.body.style.overflow
       document.body.style.overflow = "hidden"
@@ -163,13 +162,50 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
         }
       }
 
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key !== "Tab" || !contentRef.current) return
+        const focusable = getFocusableElements(contentRef.current)
+        if (focusable.length === 0) return
+
+        const first = focusable[0]
+        const last = focusable[focusable.length - 1]
+
+        if (event.shiftKey) {
+          if (document.activeElement === first) {
+            event.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            event.preventDefault()
+            first.focus()
+          }
+        }
+      }
+
       document.addEventListener("keydown", handleEscape)
+      document.addEventListener("keydown", handleKeyDown)
 
       return () => {
         document.body.style.overflow = previousOverflow
         document.removeEventListener("keydown", handleEscape)
+        document.removeEventListener("keydown", handleKeyDown)
+        const prev = previousActiveRef.current
+        if (prev && typeof prev.focus === "function") {
+          prev.focus()
+        }
       }
     }, [open, setOpen])
+
+    React.useEffect(() => {
+      if (!open || !contentRef.current) return
+      const focusable = getFocusableElements(contentRef.current)
+      const toFocus = focusable[0] ?? contentRef.current
+      if (toFocus === contentRef.current) {
+        contentRef.current.setAttribute("tabindex", "-1")
+      }
+      ;(toFocus as HTMLElement).focus()
+    }, [open])
 
     if (!open) {
       return null
@@ -187,14 +223,15 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
         >
           <DialogOverlay />
           <div
-            ref={ref}
+            ref={composeRefs(ref, contentRef)}
             role="dialog"
             data-state={open ? "open" : "closed"}
             aria-modal="true"
             aria-labelledby={titleId}
             aria-describedby={descriptionId}
+            tabIndex={-1}
             className={cn(
-              "relative z-10 w-full max-w-lg rounded-lg border border-slate-200 bg-white p-5 shadow-xl outline-none",
+              "relative z-10 w-full max-w-lg rounded-lg border border-border bg-card p-5 shadow-xl outline-none",
               className
             )}
             {...props}
@@ -203,7 +240,8 @@ const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(
             {showCloseButton ? (
               <button
                 type="button"
-                className="absolute right-4 top-4 rounded-md px-2 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:pointer-events-none"
+                aria-label="Close"
+                className="absolute right-4 top-4 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none"
                 onClick={() => setOpen(false)}
               >
                 Close
@@ -292,7 +330,7 @@ const DialogTitle = React.forwardRef<
     <h2
       ref={ref}
       id={titleId}
-      className={cn("text-lg font-semibold text-slate-900", className)}
+      className={cn("text-lg font-semibold text-card-foreground", className)}
       {...props}
     />
   )
@@ -309,7 +347,7 @@ const DialogDescription = React.forwardRef<
     <p
       ref={ref}
       id={descriptionId}
-      className={cn("text-sm text-slate-500", className)}
+      className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
   )

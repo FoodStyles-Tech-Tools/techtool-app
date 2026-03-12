@@ -18,13 +18,13 @@ export function TicketsResults({
   tableProps,
 }: TicketsResultsProps) {
   if (loading) {
-    return <div className="rounded-md border border-slate-200" />
+    return <div className="rounded-md border border-border" />
   }
 
   if (filteredTickets.length === 0) {
     return (
-        <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <p className="text-sm text-slate-500">
+        <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+        <p className="text-sm text-muted-foreground">
           {hasSearchQuery ? "No tickets found" : "No tickets yet."}
         </p>
       </div>

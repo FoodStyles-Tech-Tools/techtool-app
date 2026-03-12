@@ -98,14 +98,14 @@ function getPriorityColor(priority: string, fallbackIndex: number): string {
 function VolumeLegend({ types }: { types: string[] }) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 pt-2 text-xs sm:text-sm">
-      <span className="inline-flex items-center gap-1.5 text-slate-500">
+      <span className="inline-flex items-center gap-1.5 text-muted-foreground">
         <span className="h-2.5 w-6 rounded-full bg-emerald-600" />
         Total
       </span>
       {types.map((type, index) => {
         const color = getVolumeTypeColor(type, index)
         return (
-          <span key={type} className="inline-flex items-center gap-1.5 text-slate-500">
+          <span key={type} className="inline-flex items-center gap-1.5 text-muted-foreground">
             <span className="h-2.5 w-2.5 rounded-[3px]" style={{ backgroundColor: color }} />
             {formatSeriesLabel(type)}
           </span>
@@ -134,8 +134,8 @@ function ChartCard({
   children: React.ReactNode
 }) {
   return (
-    <Card className="overflow-hidden border-slate-200 shadow-sm">
-      <CardHeader className="space-y-1 border-b border-slate-200 bg-slate-50 px-4 py-4 sm:px-5">
+    <Card className="overflow-hidden border-border shadow-sm">
+      <CardHeader className="space-y-1 border-b border-border bg-muted px-4 py-4 sm:px-5">
         <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
         <CardDescription className="text-xs leading-relaxed sm:text-sm">{description}</CardDescription>
       </CardHeader>
@@ -151,7 +151,7 @@ export function ReportVolumeChart({ data }: { data: VolumeByWeek[] }) {
         title="Volume Ticket"
         description="Total tickets and breakdown by type per ISO week (created_at)."
       >
-        <p className="text-sm text-slate-500">No tickets in this range.</p>
+        <p className="text-sm text-muted-foreground">No tickets in this range.</p>
       </ChartCard>
     )
   }
@@ -247,7 +247,7 @@ export function ReportRequesterChart({ data }: { data: RequesterCount[] }) {
         title="Requester Analysis"
         description="Ticket count per requester (created_at in range)."
       >
-        <p className="text-sm text-slate-500">No data in this range.</p>
+        <p className="text-sm text-muted-foreground">No data in this range.</p>
       </ChartCard>
     )
   }
@@ -337,15 +337,15 @@ export function ReportStatusCards({ data }: { data: StatusCounts }) {
           const visibleWidth = item.value > 0 ? Math.max(percentage, 8) : 0
 
           return (
-            <div key={item.key} className="rounded-lg border border-slate-200 bg-white p-4">
+            <div key={item.key} className="rounded-lg border border-border bg-card p-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{item.label}</p>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{item.label}</p>
                 <span className={`rounded px-2 py-0.5 text-xs font-medium ${item.badgeClass}`}>
                   {percentage}%
                 </span>
               </div>
               <p className="mt-2 text-3xl font-semibold tabular-nums">{item.value}</p>
-              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                 <div className={`h-full rounded-full ${item.fillClass}`} style={{ width: `${visibleWidth}%` }} />
               </div>
             </div>
@@ -374,7 +374,7 @@ export function ReportResponseTimeChart({ data }: { data: AvgResponseTimeByWeekI
         title="Average Response Time"
         description="assigned_at - created_at by week and priority (excluding unassigned)."
       >
-        <p className="text-sm text-slate-500">No tickets with assigned_at in range.</p>
+        <p className="text-sm text-muted-foreground">No tickets with assigned_at in range.</p>
       </ChartCard>
     )
   }
@@ -452,7 +452,7 @@ export function ReportLeadTimeChart({ data }: { data: AvgLeadTimeByWeekItem[] })
         title="Average Lead Time"
         description="completed_at - created_at by week and priority."
       >
-        <p className="text-sm text-slate-500">No completed tickets in range.</p>
+        <p className="text-sm text-muted-foreground">No completed tickets in range.</p>
       </ChartCard>
     )
   }

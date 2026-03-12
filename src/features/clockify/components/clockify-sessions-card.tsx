@@ -46,8 +46,8 @@ export function ClockifySessionsCard({
   if (isLoading) return null
   if (sessions.length === 0) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <p className="text-sm text-slate-500">No report sessions yet.</p>
+      <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">
+        <p className="text-sm text-muted-foreground">No report sessions yet.</p>
       </div>
     )
   }
@@ -70,7 +70,7 @@ export function ClockifySessionsCard({
               <TableCell className="py-2 text-sm font-mono">
                 <Link
                   to={`/clockify/sessions/${session.id}`}
-                  className="font-medium text-blue-600 hover:underline"
+                  className="font-medium text-primary hover:underline"
                 >
                   {formatYearWeek(session.start_date)}
                 </Link>
@@ -86,7 +86,7 @@ export function ClockifySessionsCard({
               <TableCell className="py-2 text-sm">
                 {new Date(session.fetched_at).toLocaleString()}
               </TableCell>
-              <TableCell className="py-2 text-sm text-slate-600">
+              <TableCell className="py-2 text-sm text-muted-foreground">
                 {session.requested_by?.name ?? "—"}
               </TableCell>
             </TableRow>

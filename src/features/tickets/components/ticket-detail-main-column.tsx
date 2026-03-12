@@ -76,7 +76,7 @@ export function TicketDetailMainColumn({
   return (
     <div className="min-w-0 space-y-4">
       <Card className="p-5 shadow-none">
-        <h2 className="text-sm font-semibold text-slate-900">Overview</h2>
+        <h2 className="text-sm font-semibold text-foreground">Overview</h2>
         <div className="mt-3">
           {isEditingDescription ? (
             <div className="space-y-2">
@@ -84,7 +84,7 @@ export function TicketDetailMainColumn({
                 value={descriptionValue}
                 onChange={onDescriptionValueChange}
                 placeholder="Describe this ticket"
-                className="border-slate-200"
+                className="border-border"
                 activateOnClick
                 initialActivated
                 onContentKeyDown={(event: KeyboardEvent) => {
@@ -124,7 +124,7 @@ export function TicketDetailMainColumn({
             <div
               className={cn(
                 "rounded-md px-2 py-2 transition-colors",
-                canEditTickets && "cursor-pointer hover:bg-slate-50"
+                canEditTickets && "cursor-pointer hover:bg-accent"
               )}
               onClick={() => {
                 if (canEditTickets) {
@@ -133,14 +133,14 @@ export function TicketDetailMainColumn({
               }}
             >
               {isRichTextEmpty(ticket.description) ? (
-                <p className="text-sm leading-relaxed text-slate-500">
-                  <span className="italic text-slate-400">
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  <span className="italic text-muted-foreground">
                     No description provided. Click to add one.
                   </span>
                 </p>
               ) : (
                 <div
-                  className="rich-text-content text-sm leading-6 text-slate-600"
+                  className="rich-text-content text-sm leading-6 text-muted-foreground"
                   dangerouslySetInnerHTML={
                     getSanitizedHtmlProps(toDisplayHtml(ticket.description)) ?? { __html: "" }
                   }
@@ -150,9 +150,9 @@ export function TicketDetailMainColumn({
           )}
         </div>
 
-        <div className="mt-4 border-t border-slate-200 pt-4">
+        <div className="mt-4 border-t border-border pt-4">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-xs font-medium uppercase text-slate-500">Links</p>
+            <p className="text-xs font-medium uppercase text-muted-foreground">Links</p>
             <div className="flex items-center gap-2">
               {ticket.links?.length ? (
                 <Badge variant="outline" className="text-xs">
@@ -206,7 +206,7 @@ export function TicketDetailMainColumn({
               {ticket.links.map((url, index) => (
                 <div
                   key={`${url}-${index}`}
-                  className="flex items-center justify-between gap-3 rounded-md border border-slate-200 px-3 py-2 text-sm transition-colors hover:bg-slate-50"
+                  className="flex items-center justify-between gap-3 rounded-md border border-border px-3 py-2 text-sm transition-colors hover:bg-accent"
                 >
                   {editingLinkIndex === index ? (
                     <div className="flex flex-1 items-center gap-2">
@@ -247,9 +247,9 @@ export function TicketDetailMainColumn({
                       >
                         <div className="min-w-0 flex-1">
                           <p className="truncate">{url}</p>
-                          <p className="truncate text-xs text-slate-500">{formatLinkLabel(url)}</p>
+                          <p className="truncate text-xs text-muted-foreground">{formatLinkLabel(url)}</p>
                         </div>
-                        <span className="ml-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-slate-500">Open</span>
+                        <span className="ml-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Open</span>
                       </a>
                       {canEditTickets ? (
                         <div className="flex items-center gap-1">
@@ -279,14 +279,14 @@ export function TicketDetailMainColumn({
               ))}
             </div>
           ) : !isAddingLink ? (
-            <p className="mt-2 text-sm text-slate-500">No links attached.</p>
+            <p className="mt-2 text-sm text-muted-foreground">No links attached.</p>
           ) : null}
         </div>
       </Card>
 
       {ticket.type !== "subtask" ? (
         <Card className="p-5 shadow-none">
-          <h2 className="text-sm font-semibold text-slate-900">Subtasks</h2>
+          <h2 className="text-sm font-semibold text-foreground">Subtasks</h2>
           <div className="mt-3">
             <Subtasks
               ticketId={ticketId}

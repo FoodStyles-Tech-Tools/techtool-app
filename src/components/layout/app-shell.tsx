@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Bars3Icon, Bars3CenterLeftIcon } from "@heroicons/react/20/solid"
+import { Bars3Icon, Bars3CenterLeftIcon, SunIcon, MoonIcon } from "@heroicons/react/20/solid"
 import { Sidebar } from "./sidebar"
 import { PermissionsBootstrap } from "@client/components/permissions-bootstrap"
 import { CommentNotificationsDropdown } from "@client/components/comment-notifications-dropdown"
 import { NavUser } from "@client/components/layout/nav-user"
+import { useTheme } from "@client/components/layout/theme-provider"
 import { signOut, useSession } from "@client/lib/auth-client"
 import { useSignOutOverlay } from "@client/components/signout-overlay"
 
@@ -59,6 +60,7 @@ export function AppShell({
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false)
   const navigate = useNavigate()
   const { data: session } = useSession()
+  const { theme, setTheme } = useTheme()
   const { show: showOverlay, hide: hideOverlay } = useSignOutOverlay()
 
   useEffect(() => {
@@ -90,18 +92,18 @@ export function AppShell({
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-100 text-slate-900">
+    <div className="flex min-h-screen bg-muted text-foreground">
       {permissionsBootstrap ? <PermissionsBootstrap payload={permissionsBootstrap} /> : null}
 
       {/* Mobile sidebar + overlay */}
       {mobileSidebarOpen ? (
         <div className="fixed inset-0 z-40 flex md:hidden">
           <div
-            className="fixed inset-0 bg-slate-900/40"
+            className="fixed inset-0 bg-foreground/40"
             onClick={() => setMobileSidebarOpen(false)}
           />
           <Sidebar
-            className="relative z-50 h-full w-64 shrink-0 bg-white shadow-xl"
+            className="relative z-50 h-full w-64 shrink-0 bg-card shadow-xl"
             onNavigate={() => setMobileSidebarOpen(false)}
           />
         </div>
@@ -116,13 +118,13 @@ export function AppShell({
       )}
 
       <div className="min-w-0 flex-1">
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
+        <header className="sticky top-0 z-30 border-b border-border bg-card">
           <div className="flex h-14 items-center justify-between gap-3 px-4 sm:px-6">
             <div className="flex items-center gap-2">
               {desktopSidebarCollapsed ? (
                 <button
                   type="button"
-                  className="hidden items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:inline-flex"
+                  className="hidden items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring md:inline-flex"
                   aria-label="Expand navigation"
                   onClick={() => setDesktopSidebarCollapsed(false)}
                 >
@@ -132,7 +134,7 @@ export function AppShell({
               ) : null}
               <button
                 type="button"
-                className="inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 md:hidden"
+                className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring md:hidden"
                 aria-label="Open navigation"
                 onClick={() => setMobileSidebarOpen(true)}
               >
@@ -146,11 +148,23 @@ export function AppShell({
                     alt="Techtool logo"
                     className="h-5 w-5 rounded-sm object-contain"
                   />
-                  <p className="text-sm font-semibold text-slate-900">Techtool</p>
+                  <p className="text-sm font-semibold text-foreground">Techtool</p>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? (
+                  <SunIcon className="h-5 w-5" />
+                ) : (
+                  <MoonIcon className="h-5 w-5" />
+                )}
+              </button>
               <CommentNotificationsDropdown />
               <NavUser
                 avatarOnly

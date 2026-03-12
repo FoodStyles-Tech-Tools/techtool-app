@@ -240,8 +240,8 @@ export default function GuildLeadReportClient() {
         description="Ticket analytics by date range: volume, requesters, status, response time, and lead time."
       />
 
-      <Card className="border-slate-200 shadow-none">
-        <CardHeader className="border-b border-slate-200 bg-slate-50">
+      <Card className="border-border shadow-none">
+        <CardHeader className="border-b border-border bg-muted">
           <CardTitle>Report Session</CardTitle>
           <CardDescription>
             Create a report session to analyze tickets by date range. Each session has its own date
@@ -274,14 +274,14 @@ export default function GuildLeadReportClient() {
           </div>
 
           {!hasSession && !sessionsLoading ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               No report sessions yet. Create one to get a default range of the latest 5 completed
               weeks (ISO week), or customize the range before creating.
             </p>
           ) : null}
 
           {showSessionView ? (
-            <div className="rounded-md border border-slate-200 bg-white p-3 sm:p-4">
+            <div className="rounded-md border border-border bg-card p-3 sm:p-4">
               <div className="space-y-3">
                 <div className="space-y-1 sm:max-w-md">
                   <Label htmlFor="session-name">Session name</Label>
@@ -328,7 +328,7 @@ export default function GuildLeadReportClient() {
                   </Button>
                 </div>
               </div>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Update name/date range and save to refresh all charts in this session.
               </p>
             </div>
@@ -338,17 +338,8 @@ export default function GuildLeadReportClient() {
 
       {showSessionView ? (
         <>
-          <div className="rounded-md border border-slate-200 bg-white px-4 py-3 sm:px-5">
-            <h2 className="text-base font-semibold">Charts</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Date range: {format(new Date(session.date_range_start), "yyyy-MM-dd")} -{" "}
-              {format(new Date(session.date_range_end), "yyyy-MM-dd")} (session range, ISO week
-              grouped)
-            </p>
-          </div>
-
           {dataLoading ? (
-            <div className="rounded-md border border-slate-200 bg-white py-12" />
+            <div className="rounded-md border border-border bg-card py-12" />
           ) : reportData ? (
             <div className="space-y-6">
               <ChartWithInsight

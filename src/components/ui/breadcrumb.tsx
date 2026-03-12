@@ -19,18 +19,18 @@ export function Breadcrumb({ items, className, separator = "chevron" }: Breadcru
   const sep = separator === "slash" ? "/" : null
 
   return (
-    <nav aria-label="Breadcrumb" className={cn("flex items-center gap-1.5 text-sm text-slate-500", className)}>
+    <nav aria-label="Breadcrumb" className={cn("flex items-center gap-1.5 text-sm text-muted-foreground", className)}>
       {items.map((item, i) => {
         const isLast = i === items.length - 1
         const content = item.href && !isLast ? (
           <Link
             to={item.href}
-            className="hover:text-slate-900 transition-colors"
+            className="hover:text-foreground transition-colors"
           >
             {item.label}
           </Link>
         ) : (
-          <span className={isLast ? "font-medium text-slate-900" : undefined}>
+          <span className={isLast ? "font-medium text-foreground" : undefined}>
             {item.label}
           </span>
         )
@@ -40,7 +40,7 @@ export function Breadcrumb({ items, className, separator = "chevron" }: Breadcru
               sep ? (
                 <span className="px-1" aria-hidden>{sep}</span>
               ) : (
-                <span className="text-slate-300" aria-hidden>
+                <span className="text-muted-foreground" aria-hidden>
                   <ChevronRightIcon className="h-4 w-4" />
                 </span>
               )

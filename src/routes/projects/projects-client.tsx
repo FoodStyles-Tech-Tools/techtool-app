@@ -182,7 +182,7 @@ export default function ProjectsClient({
         <EntityTableShell
           footer={
             <div className="flex items-center justify-between">
-              <div className="text-sm text-slate-500">
+              <div className="text-sm text-muted-foreground">
                 Showing {filteredProjects.length === 0 ? 0 : startIndex + 1} to{" "}
                 {Math.min(endIndex, filteredProjects.length)} of {filteredProjects.length} projects
               </div>
@@ -196,7 +196,7 @@ export default function ProjectsClient({
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-muted-foreground">
                   Page {currentPage} of {totalPages}
                 </span>
                 <Button
@@ -235,14 +235,14 @@ export default function ProjectsClient({
                     <TableCell className="py-2">
                       <Link
                         to={`/projects/${project.id}`}
-                        className="font-normal text-slate-900 hover:underline"
+                        className="font-normal text-foreground hover:underline"
                       >
                         {project.name}
                       </Link>
                     </TableCell>
-                    <TableCell className="py-2 text-sm text-slate-700">{ownerLabel}</TableCell>
-                    <TableCell className="py-2 text-sm text-slate-700">{collaboratorLabel}</TableCell>
-                    <TableCell className="py-2 text-sm capitalize text-slate-700">{project.status}</TableCell>
+                    <TableCell className="py-2 text-sm text-foreground">{ownerLabel}</TableCell>
+                    <TableCell className="py-2 text-sm text-foreground">{collaboratorLabel}</TableCell>
+                    <TableCell className="py-2 text-sm capitalize text-foreground">{project.status}</TableCell>
                   </TableRow>
                 )
               })}

@@ -39,7 +39,7 @@ export function TicketDetailDialog({ ticketId, open, onOpenChange }: TicketDetai
           />
         </div>
 
-        <DialogFooter className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:justify-between">
+        <DialogFooter className="shrink-0 border-t border-border bg-card px-4 py-3 sm:justify-between">
           <TicketDetailFooter
             ticket={surface.ticket}
             canEditTickets={surface.canEditTickets}

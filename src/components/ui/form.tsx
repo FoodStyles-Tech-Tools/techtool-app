@@ -10,7 +10,7 @@ import {
   type FieldValues,
 } from "react-hook-form"
 
-import { cn } from "@client/lib/utils"
+import { cn, composeRefs } from "@client/lib/utils"
 import { Label } from "@client/components/ui/label"
 
 const Form = FormProvider
@@ -112,21 +112,6 @@ type FormControlProps = {
   children: React.ReactElement<FormControlChildProps>
 }
 
-function composeRefs<T>(
-  ...refs: Array<React.Ref<T> | undefined>
-): React.RefCallback<T> {
-  return (node) => {
-    for (const ref of refs) {
-      if (!ref) continue
-      if (typeof ref === "function") {
-        ref(node)
-      } else {
-        ;(ref as React.MutableRefObject<T | null>).current = node
-      }
-    }
-  }
-}
-
 const FormControl = React.forwardRef<HTMLElement, FormControlProps>(
   ({ children }, ref) => {
     const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
@@ -153,7 +138,7 @@ const FormDescription = React.forwardRef<
     <p
       ref={ref}
       id={formDescriptionId}
-      className={cn("text-sm leading-6 text-slate-500", className)}
+      className={cn("text-sm leading-6 text-muted-foreground", className)}
       {...props}
     />
   )

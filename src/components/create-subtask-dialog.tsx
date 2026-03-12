@@ -157,7 +157,7 @@ export function CreateSubtaskDialog({
         <DialogHeader>
           <DialogTitle>Create Subtask</DialogTitle>
           {parentLabel ? (
-            <p className="text-sm font-normal text-slate-500" id="create-subtask-parent">
+            <p className="text-sm font-normal text-muted-foreground" id="create-subtask-parent">
               {parentLabel}
             </p>
           ) : null}

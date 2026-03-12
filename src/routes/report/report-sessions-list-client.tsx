@@ -106,10 +106,10 @@ export default function ReportSessionsListClient() {
 
       <EntityTableShell>
         {sessionsLoading ? (
-          <div className="px-4 py-8 text-center text-sm text-slate-500">Loading sessions…</div>
+          <div className="px-4 py-8 text-center text-sm text-muted-foreground">Loading sessions…</div>
         ) : sessions.length === 0 ? (
           <div className="px-4 py-8 text-center">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               No report sessions yet. Create one to get a default range of the latest 5 completed
               weeks (ISO week), or customize the range before creating.
             </p>
@@ -133,15 +133,15 @@ export default function ReportSessionsListClient() {
                   <TableCell>
                     <Link
                       to={`/report/sessions/${session.id}`}
-                      className="font-medium text-blue-600 hover:underline"
+                      className="font-medium text-primary hover:underline"
                     >
                       {sessionDisplayName(session)}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-slate-600">
+                  <TableCell className="text-muted-foreground">
                     {sessionDateRange(session)}
                   </TableCell>
-                  <TableCell className="text-slate-500">
+                  <TableCell className="text-muted-foreground">
                     {format(new Date(session.created_at), "yyyy-MM-dd")}
                   </TableCell>
                 </TableRow>

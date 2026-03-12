@@ -133,13 +133,13 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                   </TableCell>
                   <TableCell className="py-2">
                     {asset.collaborators?.length ? (
-                      <span className="text-sm text-slate-700">
+                      <span className="text-sm text-foreground">
                         {asset.collaborators
                           .map((collaborator) => collaborator.name || collaborator.email)
                           .join(", ")}
                       </span>
                     ) : (
-                      <span className="text-sm text-slate-500">No collaborators</span>
+                      <span className="text-sm text-muted-foreground">No collaborators</span>
                     )}
                   </TableCell>
                   <TableCell className="py-2">
@@ -151,19 +151,19 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                             href={url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex max-w-[220px] items-center gap-1 truncate text-sm text-slate-900 hover:underline"
+                            className="inline-flex max-w-[220px] items-center gap-1 truncate text-sm text-foreground hover:underline"
                           >
                             <span className="truncate">{formatLinkLabel(url)}</span>
                           </a>
                         ))}
                         {asset.links.length > 2 && (
-                          <span className="text-sm text-slate-500">
+                          <span className="text-sm text-muted-foreground">
                             +{asset.links.length - 2} more
                           </span>
                         )}
                       </div>
                     ) : (
-                      <span className="text-sm text-slate-500">-</span>
+                      <span className="text-sm text-muted-foreground">-</span>
                     )}
                   </TableCell>
                   <TableCell className="py-2">
@@ -172,15 +172,15 @@ export default function AssetsClient({ initialAssets, users }: AssetsClientProps
                         href={asset.production_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex max-w-[220px] items-center gap-1 truncate text-sm text-slate-900 hover:underline"
+                        className="inline-flex max-w-[220px] items-center gap-1 truncate text-sm text-foreground hover:underline"
                       >
                         <span className="truncate">{formatLinkLabel(asset.production_url)}</span>
                       </a>
                     ) : (
-                      <span className="text-sm text-slate-500">-</span>
+                      <span className="text-sm text-muted-foreground">-</span>
                     )}
                   </TableCell>
-                  <TableCell className="py-2 text-sm text-slate-500">
+                  <TableCell className="py-2 text-sm text-muted-foreground">
                     {new Date(asset.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="py-2 text-right">

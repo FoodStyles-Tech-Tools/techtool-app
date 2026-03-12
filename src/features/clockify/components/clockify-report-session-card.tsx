@@ -78,15 +78,15 @@ export function ClockifyReportSessionCard({
 }: ClockifyReportSessionCardProps) {
   if (!selectedSession.report_data) {
     return (
-      <div className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-        <p className="text-sm text-slate-500">No report data saved for this session.</p>
+      <div className="rounded-md border border-border bg-card p-4 shadow-sm">
+        <p className="text-sm text-muted-foreground">No report data saved for this session.</p>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
         <select
             id="clockify-filter-user"
             value={selectedUser || "all"}
@@ -129,8 +129,8 @@ export function ClockifyReportSessionCard({
       </div>
 
       {reportEntries.length === 0 ? (
-        <div className="rounded-md border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <p className="text-sm text-slate-500">No time entries match the filters.</p>
+        <div className="rounded-md border border-border bg-card p-8 text-center shadow-sm">
+          <p className="text-sm text-muted-foreground">No time entries match the filters.</p>
         </div>
       ) : (
         <EntityTableShell>
@@ -190,15 +190,15 @@ export function ClockifyReportSessionCard({
                               className="h-8 w-28"
                             />
                             {activeTicketEntryId === entryId ? (
-                              <div className="absolute z-20 mt-1 max-h-48 w-72 overflow-y-auto rounded-md border border-slate-200 bg-white shadow-sm">
+                              <div className="absolute z-20 mt-1 max-h-48 w-72 overflow-y-auto rounded-md border border-border bg-card shadow-sm">
                                 {isTicketSearchLoading ? null : ticketSearchResults.length === 0 ? (
-                                  <div className="px-3 py-2 text-sm text-slate-500">No tickets found.</div>
+                                  <div className="px-3 py-2 text-sm text-muted-foreground">No tickets found.</div>
                                 ) : (
                                   ticketSearchResults.map((ticket) => (
                                     <button
                                       key={ticket.id}
                                       type="button"
-                                      className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                                      className="block w-full px-3 py-2 text-left text-sm hover:bg-accent"
                                       onMouseDown={(event) => event.preventDefault()}
                                       onClick={() => onTicketSelect(entryId, ticket.displayId)}
                                     >

@@ -115,7 +115,7 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
       {/* Backdrop */}
       <div
         className={cn(
-          "fixed inset-0 z-[100] bg-slate-900/70 transition-opacity",
+          "fixed inset-0 z-[100] bg-foreground/70 transition-opacity",
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
         onClick={() => onOpenChange(false)}
@@ -128,10 +128,10 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         )}
       >
-        <div className="mx-4 rounded-lg border border-slate-200 bg-white shadow-lg">
+        <div className="mx-4 rounded-lg border border-border bg-card shadow-lg">
           {/* Search Input */}
-          <div className="flex items-center gap-2 border-b border-slate-200 px-4 py-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Find</span>
+          <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Find</span>
             <Input
               ref={inputRef}
               type="text"
@@ -142,7 +142,7 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
             />
             <button
               onClick={() => onOpenChange(false)}
-              className="rounded-sm px-2 py-1 text-xs font-medium text-slate-500 opacity-70 transition-opacity hover:bg-slate-100 hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+              className="rounded-sm px-2 py-1 text-xs font-medium text-muted-foreground opacity-70 transition-opacity hover:bg-accent hover:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               Close
             </button>
@@ -151,7 +151,7 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
           {/* Results */}
           <div className="max-h-[400px] overflow-y-auto p-2">
             {isLoading ? null : filteredUsers.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-slate-500">
+              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                 {searchQuery ? "No users found" : "Start typing to search users"}
               </div>
             ) : (
@@ -163,8 +163,8 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
                     className={cn(
                       "flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors",
                       index === selectedIndex
-                        ? "bg-slate-100"
-                        : "hover:bg-slate-50"
+                        ? "bg-muted"
+                        : "hover:bg-accent"
                     )}
                   >
                     <Avatar className="h-8 w-8">
@@ -185,7 +185,7 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
                           {user.role || "member"}
                         </Badge>
                       </div>
-                      <p className="truncate text-xs text-slate-500">
+                      <p className="truncate text-xs text-muted-foreground">
                         {user.email}
                       </p>
                     </div>

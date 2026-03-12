@@ -8,9 +8,9 @@ type EntityTableShellProps = {
 
 export function EntityTableShell({ children, footer, className }: EntityTableShellProps) {
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm", className)}>
+    <div className={cn("overflow-hidden rounded-lg border border-border bg-card shadow-sm", className)}>
       {children}
-      {footer ? <div className="border-t border-slate-200 px-4 py-3">{footer}</div> : null}
+      {footer ? <div className="border-t border-border px-4 py-3">{footer}</div> : null}
     </div>
   )
 }

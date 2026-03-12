@@ -17,16 +17,20 @@ Short reference for consistent spacing, radius, and patterns across the app.
 - **Inline form groups, compact panels:** `px-3 py-2` or `p-4` depending on context
 - **Page main content:** `px-4 py-4 sm:px-6` (app-shell main)
 
+## Theme tokens
+
+- Prefer theme tokens for colors so light/dark mode works: `bg-background`, `text-foreground`, `bg-muted`, `text-muted-foreground`, `bg-card`, `text-card-foreground`, `border-border`, `border-input`, `ring-ring`, `bg-primary`, `text-primary-foreground`, `bg-accent`, `text-accent-foreground`. Defined in `src/app/globals.css` (`:root` and `.dark`).
+
 ## Borders
 
-- **Surfaces (cards, dropdowns, modals):** `border border-slate-200`
-- **Form controls:** `border border-slate-300` (see `src/lib/form-styles.ts`)
+- **Surfaces (cards, dropdowns, modals):** `border border-border`
+- **Form controls:** `border border-input` (see `src/lib/form-styles.ts`)
 - **Errors / destructive:** `border-red-200` or `border-red-500/60`
 
 ## Focus and interaction
 
-- **Focus ring (all interactive elements):** `focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2`
-- **Hover (neutral):** `hover:bg-slate-100` for list items, buttons; `hover:bg-slate-50` for subtle rows
+- **Focus ring (all interactive elements):** use `focusRing` from `src/lib/form-styles.ts` or `focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background`
+- **Hover (neutral):** `hover:bg-accent` for list items, buttons; `hover:bg-muted/50` for subtle rows
 
 ## Form controls
 

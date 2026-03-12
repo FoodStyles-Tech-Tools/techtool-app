@@ -53,7 +53,7 @@ export function TicketDetailHeader({
   ]
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4">
+    <div className="rounded-lg border border-border bg-card p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 min-w-0">
           <Breadcrumb items={breadcrumbItems} />
@@ -74,8 +74,8 @@ export function TicketDetailHeader({
         ) : (
           <h1
             className={cn(
-              "text-2xl font-semibold leading-tight text-slate-900",
-              canEditTickets && "cursor-pointer rounded-md px-1 py-1 hover:bg-slate-50"
+              "text-2xl font-semibold leading-tight text-foreground",
+              canEditTickets && "cursor-pointer rounded-md px-1 py-1 hover:bg-accent"
             )}
             onClick={() => {
               if (canEditTickets) {

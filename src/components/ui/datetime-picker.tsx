@@ -146,13 +146,13 @@ export function DateTimePicker({
         variant="outline"
         className={cn(
           "h-7 w-[180px] justify-start text-left text-xs font-normal",
-          !value && !renderTriggerContent && "text-slate-500",
+          !value && !renderTriggerContent && "text-muted-foreground",
           className
         )}
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
-        {!hideIcon ? <span className="mr-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Date</span> : null}
+        {!hideIcon ? <span className="mr-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Date</span> : null}
         {renderTriggerContent
           ? renderTriggerContent(value)
           : value
@@ -161,7 +161,7 @@ export function DateTimePicker({
       </Button>
 
       {open ? (
-        <div className="absolute left-0 top-full z-50 mt-2 rounded-md border border-slate-200 bg-white p-3 shadow-md">
+        <div className="absolute left-0 top-full z-50 mt-2 rounded-md border border-border bg-card p-3 shadow-md">
           <div className="space-y-3">
             <div className="space-y-2">
               <label className="text-xs font-medium">Date</label>

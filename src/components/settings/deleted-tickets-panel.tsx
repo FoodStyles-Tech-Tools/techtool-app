@@ -58,31 +58,31 @@ export function DeletedTicketsPanel() {
           <div className="max-h-[420px] overflow-y-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-3 py-2 text-left font-medium text-slate-700">Ticket Id</th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-700">Title</th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-700">Deleted At</th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-700">Deleted By</th>
-                  <th className="px-3 py-2 text-left font-medium text-slate-700">Reason</th>
+                <tr className="border-b border-border bg-muted">
+                  <th className="px-3 py-2 text-left font-medium text-foreground">Ticket Id</th>
+                  <th className="px-3 py-2 text-left font-medium text-foreground">Title</th>
+                  <th className="px-3 py-2 text-left font-medium text-foreground">Deleted At</th>
+                  <th className="px-3 py-2 text-left font-medium text-foreground">Deleted By</th>
+                  <th className="px-3 py-2 text-left font-medium text-foreground">Reason</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.id} className="border-b border-slate-200">
+                  <tr key={row.id} className="border-b border-border">
                     <td className="px-3 py-2">
                       <Link
                         to={`/tickets/${String(row.displayId).toLowerCase()}`}
-                        className="text-slate-900 hover:underline"
+                        className="text-foreground hover:underline"
                       >
                         {row.displayId}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 text-slate-900">{row.title}</td>
-                    <td className="px-3 py-2 text-slate-600">
+                    <td className="px-3 py-2 text-foreground">{row.title}</td>
+                    <td className="px-3 py-2 text-muted-foreground">
                       {row.deletedAt ? format(new Date(row.deletedAt), "MMM d, yyyy h:mm a") : "—"}
                     </td>
-                    <td className="px-3 py-2 text-slate-600">{row.deletedBy ?? "—"}</td>
-                    <td className="px-3 py-2 text-slate-600">{row.reason || "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{row.deletedBy ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{row.reason || "—"}</td>
                   </tr>
                 ))}
               </tbody>

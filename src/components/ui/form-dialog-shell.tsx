@@ -40,7 +40,7 @@ export function FormDialogShell({
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
         </DialogHeader>
-        <div className="min-h-0 flex-1 overflow-y-auto border-y border-slate-200 px-6 py-6">
+        <div className="min-h-0 flex-1 overflow-y-auto border-y border-border px-6 py-6">
           {children}
         </div>
         <DialogFooter className="px-6 py-4">

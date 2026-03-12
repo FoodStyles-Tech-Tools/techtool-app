@@ -17,7 +17,7 @@ import {
 import { cn } from "@client/lib/utils"
 import { type PermissionFlags, usePermissions } from "@client/hooks/use-permissions"
 
-const ACTIVE_ITEM_CLASS = "bg-blue-50 text-blue-700"
+const ACTIVE_ITEM_CLASS = "bg-primary/10 text-primary"
 
 type NavItem = {
   title: string
@@ -125,12 +125,12 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
   return (
     <aside
       className={cn(
-        "border-r border-slate-200 bg-white",
+        "border-r border-border bg-card",
         className
       )}
     >
       <div className="flex h-full flex-col px-3 py-4">
-        <div className="border-b border-slate-200 pb-4">
+        <div className="border-b border-border pb-4">
           <div className="flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-2">
               <img
@@ -138,14 +138,14 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                 alt="Techtool logo"
                 className="h-6 w-6 rounded-sm object-contain"
               />
-              <p className="text-sm font-semibold text-slate-900">Techtool</p>
+              <p className="text-sm font-semibold text-foreground">Techtool</p>
             </div>
 
             {onToggleCollapsed ? (
               <button
                 type="button"
                 onClick={onToggleCollapsed}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 aria-label="Collapse sidebar"
                 title="Collapse sidebar"
               >
@@ -166,8 +166,8 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                   to={item.href}
                   onClick={onNavigate}
                   className={cn(
-                    "flex h-9 items-center gap-2 rounded-md px-2 text-sm text-slate-700 transition-colors duration-150",
-                    isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
+                    "flex h-9 items-center gap-2 rounded-md px-2 text-sm text-foreground transition-colors duration-150",
+                    isActive ? ACTIVE_ITEM_CLASS : "hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
@@ -188,8 +188,8 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                       to={item.href}
                       onClick={onNavigate}
                       className={cn(
-                        "flex h-9 items-center gap-2 rounded-md px-2 text-sm text-slate-700 transition-colors duration-150",
-                        isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
+                        "flex h-9 items-center gap-2 rounded-md px-2 text-sm text-foreground transition-colors duration-150",
+                        isActive ? ACTIVE_ITEM_CLASS : "hover:bg-accent hover:text-accent-foreground"
                       )}
                     >
                       <Icon className="h-4 w-4 shrink-0" />
@@ -206,21 +206,21 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                 type="button"
                 onClick={() => setSettingsExpanded((e) => !e)}
                 className={cn(
-                  "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-slate-700 transition-colors duration-150",
-                  isSettingsActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
+                  "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-foreground transition-colors duration-150",
+                  isSettingsActive ? ACTIVE_ITEM_CLASS : "hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 <Cog6ToothIcon className="h-4 w-4 shrink-0" />
                 <span>Settings</span>
                 {settingsExpanded ? (
-                  <ChevronDownIcon className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
+                  <ChevronDownIcon className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
                 ) : (
-                  <ChevronRightIcon className="ml-auto h-4 w-4 shrink-0 text-slate-500" />
+                  <ChevronRightIcon className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
                 )}
               </button>
 
               {settingsExpanded && (
-                <div className="mt-1 space-y-0.5 border-l-2 border-slate-200 pl-3">
+                <div className="mt-1 space-y-0.5 border-l-2 border-border pl-3">
                   {visibleSettingsChildren.map((child) => {
                     const isActive = isPathActive(pathname, child.href)
                     return (
@@ -229,8 +229,8 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                         to={child.href}
                         onClick={onNavigate}
                         className={cn(
-                          "flex h-8 items-center rounded-md px-2 text-sm text-slate-700 transition-colors duration-150",
-                          isActive ? ACTIVE_ITEM_CLASS : "hover:bg-slate-100 hover:text-slate-900"
+                          "flex h-8 items-center rounded-md px-2 text-sm text-foreground transition-colors duration-150",
+                          isActive ? ACTIVE_ITEM_CLASS : "hover:bg-accent hover:text-accent-foreground"
                         )}
                       >
                         {child.title}

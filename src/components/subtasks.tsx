@@ -122,10 +122,10 @@ export function Subtasks({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           {(displayId || "").toUpperCase()} {projectName ? `• ${projectName}` : ""}
         </p>
-        <p className="text-xs text-slate-500">{donePercent}% Done</p>
+        <p className="text-xs text-muted-foreground">{donePercent}% Done</p>
       </div>
 
       <DataState
@@ -136,15 +136,15 @@ export function Subtasks({
         emptyTitle="No subtask tickets yet"
         emptyDescription="Create subtasks here to break this work into smaller pieces."
       >
-        <div className="overflow-hidden rounded-md border border-slate-200 bg-white">
-          <div className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
+        <div className="overflow-hidden rounded-md border border-border bg-card">
+          <div className="grid grid-cols-[1.7fr_0.8fr_1fr_1fr] bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">
             <div>Work</div>
             <div>Priority</div>
             <div>Assignee</div>
             <div>Status</div>
           </div>
 
-          <div className="divide-y divide-slate-200">
+          <div className="divide-y divide-border">
             {subtasks.map((subtask) => (
               <div
                 key={subtask.id}
@@ -222,7 +222,7 @@ export function Subtasks({
         </>
       ) : null}
       {canEditTickets && !allowCreate ? (
-        <p className="text-xs text-slate-500">Subtask tickets cannot contain subtasks.</p>
+        <p className="text-xs text-muted-foreground">Subtask tickets cannot contain subtasks.</p>
       ) : null}
     </div>
   )

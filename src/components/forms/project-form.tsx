@@ -175,11 +175,11 @@ export function ProjectForm({
           name="require_sqa"
           render={({ field }) => (
             <FormItem>
-              <FieldGroup className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+              <FieldGroup className="rounded-md border border-border bg-muted px-3 py-2">
                 <Field orientation="horizontal" className="justify-between gap-3">
                   <div className="space-y-0.5">
                     <FieldLabel htmlFor="project-require-sqa">Require SQA</FieldLabel>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       Set this as true if project requires SQA review before deployment.
                     </p>
                   </div>
@@ -189,7 +189,7 @@ export function ProjectForm({
                       type="checkbox"
                       checked={field.value}
                       onChange={(event) => field.onChange(event.target.checked)}
-                      className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                      className="h-4 w-4 rounded border-input text-foreground"
                     />
                   </FormControl>
                 </Field>
@@ -286,7 +286,7 @@ export function ProjectForm({
               </div>
               <div className="space-y-3">
                 {linkFields.length === 0 && (
-                  <p className="text-sm text-slate-500">No links added yet.</p>
+                  <p className="text-sm text-muted-foreground">No links added yet.</p>
                 )}
                 {linkFields.map((linkField, index) => (
                   <FormField

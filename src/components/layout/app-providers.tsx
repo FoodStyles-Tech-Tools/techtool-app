@@ -3,6 +3,7 @@
 import { lazyComponent } from "@client/lib/lazy-component"
 import { ReactQueryProvider } from "@client/lib/react-query"
 import { AuthProvider } from "@client/lib/auth-client"
+import { ThemeProvider } from "@client/components/layout/theme-provider"
 import { SignOutOverlayProvider } from "@client/components/signout-overlay"
 import { RichTextActionsListener } from "@client/components/layout/rich-text-actions-listener"
 import { Toaster } from "@client/components/ui/toast"
@@ -13,16 +14,18 @@ const KeyboardShortcuts = lazyComponent(
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
-    <AuthProvider>
-      <ReactQueryProvider>
-        <SignOutOverlayProvider>
-          {children}
+    <ThemeProvider>
+      <AuthProvider>
+        <ReactQueryProvider>
+          <SignOutOverlayProvider>
+            {children}
           <RichTextActionsListener />
           <Toaster />
-          <KeyboardShortcuts />
-        </SignOutOverlayProvider>
-      </ReactQueryProvider>
-    </AuthProvider>
+            <KeyboardShortcuts />
+          </SignOutOverlayProvider>
+        </ReactQueryProvider>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 

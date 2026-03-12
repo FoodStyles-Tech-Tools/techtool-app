@@ -7,6 +7,17 @@
     <title>Techtool</title>
   </head>
   <body>
+    <script>
+      (function () {
+        try {
+          var theme = localStorage.getItem("techtool.theme");
+          if (theme === "dark") document.documentElement.classList.add("dark");
+          else if (theme === "light") document.documentElement.classList.remove("dark");
+          else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
+            document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

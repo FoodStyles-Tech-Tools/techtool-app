@@ -40,30 +40,30 @@ function NotificationItem({
       onClick={handleClick}
       onKeyDown={(event) => event.key === "Enter" && handleClick()}
       className={cn(
-        "flex cursor-pointer gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-        isUnread && "border-l-2 border-slate-900 bg-slate-50"
+        "flex cursor-pointer gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        isUnread && "border-l-2 border-foreground bg-muted"
       )}
     >
       <div className="mt-0.5 shrink-0">
         {notification.type === "mention" ? (
-          <AtSymbolIcon className="h-4 w-4 text-blue-500" />
+          <AtSymbolIcon className="h-4 w-4 text-primary" />
         ) : (
-          <ChatBubbleBottomCenterTextIcon className="h-4 w-4 text-slate-500" />
+          <ChatBubbleBottomCenterTextIcon className="h-4 w-4 text-muted-foreground" />
         )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="text-sm font-medium leading-tight">
             <span className="font-semibold">{authorName}</span> {typeLabel} on{" "}
-            <span className="font-mono text-slate-900">{displayId}</span>
+            <span className="font-mono text-foreground">{displayId}</span>
           </p>
           {isUnread ? (
-            <span className="rounded-full bg-slate-900 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-white">
+            <span className="rounded-full bg-foreground px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-background">
               Unread
             </span>
           ) : (
             <span
-              className="text-xs text-slate-500"
+              className="text-xs text-muted-foreground"
               title={
                 notification.read_at
                   ? `Viewed ${formatDistanceToNow(new Date(notification.read_at), { addSuffix: true })}`
@@ -74,8 +74,8 @@ function NotificationItem({
             </span>
           )}
         </div>
-        {bodySnippet ? <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{bodySnippet}</p> : null}
-        <p className="mt-1 text-xs text-slate-500">
+        {bodySnippet ? <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{bodySnippet}</p> : null}
+        <p className="mt-1 text-xs text-muted-foreground">
           {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
           {notification.read_at ? (
             <span className="ml-1">
@@ -112,8 +112,8 @@ export function CommentNotificationsDropdown() {
           ) : null}
         </Button>
       </summary>
-      <div className="absolute right-0 z-30 mt-2 ml-2 w-[360px] rounded-lg border border-slate-200 bg-white p-0 shadow-md">
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
+      <div className="absolute right-0 z-30 mt-2 ml-2 w-[360px] rounded-lg border border-border bg-card p-0 shadow-md">
+        <div className="flex items-center justify-between border-b border-border px-4 py-2">
           <span className="text-sm font-semibold">Notifications</span>
           {unreadCount > 0 ? (
             <Button variant="ghost" size="sm" className="h-7" onClick={() => markAllRead.mutateAsync()}>
@@ -123,7 +123,7 @@ export function CommentNotificationsDropdown() {
         </div>
         <div className="max-h-[320px] overflow-y-auto px-4">
           {isLoading ? null : notifications.length === 0 ? (
-            <div className="py-6 text-center text-sm text-slate-500">
+            <div className="py-6 text-center text-sm text-muted-foreground">
               No notifications yet. You will see replies and @mentions here.
             </div>
           ) : (
@@ -140,8 +140,8 @@ export function CommentNotificationsDropdown() {
           )}
         </div>
         {notifications.length > 0 ? (
-          <div className="border-t border-slate-200 px-4 py-2">
-            <Link to="/tickets" className="text-xs text-slate-900 hover:underline">
+          <div className="border-t border-border px-4 py-2">
+            <Link to="/tickets" className="text-xs text-foreground hover:underline">
               View all tickets
             </Link>
           </div>

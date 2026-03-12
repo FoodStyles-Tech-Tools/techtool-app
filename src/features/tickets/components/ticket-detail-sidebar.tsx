@@ -96,7 +96,7 @@ export function TicketDetailSidebar({
       {!hideStatusRow ? (
         <div className="flex justify-start">
           {isArchivedTicket ? (
-            <span className="flex h-8 items-center text-sm font-medium text-slate-600">Archived</span>
+            <span className="flex h-8 items-center text-sm font-medium text-muted-foreground">Archived</span>
           ) : (
             <TicketStatusSelect
               value={ticket.status}
@@ -109,7 +109,7 @@ export function TicketDetailSidebar({
         </div>
       ) : null}
       <Card className="p-5 shadow-none">
-        <h2 className="text-sm font-semibold text-slate-900">Details</h2>
+        <h2 className="text-sm font-semibold text-foreground">Details</h2>
         <div className="mt-3 space-y-4">
           <TicketDetailFieldsSection
             ticket={ticket}

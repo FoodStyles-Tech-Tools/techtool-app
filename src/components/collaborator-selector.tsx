@@ -59,10 +59,10 @@ export function CollaboratorSelector({
   }
 
   return (
-    <details className={cn("w-full rounded-md border border-slate-200 bg-white", disabled && "opacity-70", buttonClassName)}>
+    <details className={cn("w-full rounded-md border border-border bg-card", disabled && "opacity-70", buttonClassName)}>
       <summary className="flex h-8 cursor-pointer list-none items-center justify-between gap-2 px-2 text-left">
         {selectedUsers.length === 0 ? (
-          <span className="truncate text-xs text-slate-500">{placeholder}</span>
+          <span className="truncate text-xs text-muted-foreground">{placeholder}</span>
         ) : (
           <div className="flex items-center gap-1 overflow-hidden">
             <div className="flex -space-x-2">
@@ -76,13 +76,13 @@ export function CollaboratorSelector({
               ))}
             </div>
             {selectedUsers.length > 3 && (
-              <span className="text-xs text-slate-500">+{selectedUsers.length - 3}</span>
+              <span className="text-xs text-muted-foreground">+{selectedUsers.length - 3}</span>
             )}
           </div>
         )}
-        <span className="text-xs text-slate-500">Select</span>
+        <span className="text-xs text-muted-foreground">Select</span>
       </summary>
-      <div className="border-t border-slate-200 p-3">
+      <div className="border-t border-border p-3">
         <Input
           placeholder="Search collaborators"
           value={search}
@@ -92,21 +92,21 @@ export function CollaboratorSelector({
         />
         <div className="mt-2 max-h-64 space-y-1 overflow-y-auto">
           {filteredUsers.length === 0 && (
-            <p className="py-4 text-center text-xs text-slate-500">No users found</p>
+            <p className="py-4 text-center text-xs text-muted-foreground">No users found</p>
           )}
           {filteredUsers.map((user) => {
             const checked = selectedIds.includes(user.id)
             return (
               <label
                 key={user.id}
-                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-slate-50"
+                className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent"
               >
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggleUser(user.id)}
                   disabled={disabled}
-                  className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                  className="h-4 w-4 rounded border-input text-foreground"
                   aria-label={`Toggle ${user.name || user.email}`}
                 />
                 <Avatar className="h-6 w-6">
@@ -117,7 +117,7 @@ export function CollaboratorSelector({
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm">{user.name || user.email}</p>
-                  <p className="truncate text-xs text-slate-500">{user.email}</p>
+                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
                 </div>
               </label>
             )
@@ -126,7 +126,7 @@ export function CollaboratorSelector({
         {selectedIds.length > 0 && (
           <button
             type="button"
-            className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900"
+            className="mt-2 w-full rounded-md border border-border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             onClick={() => onChange([])}
             disabled={disabled}
           >

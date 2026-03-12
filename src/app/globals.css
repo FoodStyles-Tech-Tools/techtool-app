@@ -1,5 +1,59 @@
 @import "tailwindcss";
 
+/* Theme tokens: light (default) */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --ring-offset: 0 0% 100%;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 222 47% 11%;
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 98%;
+    --border: 217 18% 40%;
+    --input: 217 18% 40%;
+    --ring: 217 91% 60%;
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 98%;
+    --ring-offset: 222 47% 11%;
+  }
+}
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-ring-offset: hsl(var(--ring-offset));
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -16,7 +70,9 @@
   }
 
   body {
-    @apply m-0 min-h-screen bg-white text-slate-900 leading-6;
+    @apply m-0 min-h-screen leading-6;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 
   p,
@@ -45,11 +101,12 @@
 
   input::placeholder,
   textarea::placeholder {
-    @apply text-slate-400;
+    color: hsl(var(--muted-foreground));
   }
 
   th {
-    @apply text-slate-500 font-medium;
+    color: hsl(var(--muted-foreground));
+    font-weight: 500;
   }
 
   th,
@@ -148,20 +205,20 @@
 
 .tiptap blockquote,
 .rich-text-content blockquote {
-  @apply border-l-2 border-slate-200 text-slate-500;
+  @apply border-l-2 border-border text-muted-foreground;
   margin: 0 0 0.75rem;
   padding-left: 0.75rem;
 }
 
 .tiptap code,
 .rich-text-content code {
-  @apply rounded bg-slate-100;
+  @apply rounded bg-muted;
   padding: 0.1rem 0.25rem;
 }
 
 .tiptap pre,
 .rich-text-content pre {
-  @apply rounded-lg border border-slate-200 bg-slate-100;
+  @apply rounded-lg border border-border bg-muted;
   position: relative;
   margin: 0 0 0.75rem;
   padding: 0.75rem;
@@ -189,7 +246,7 @@
 .tiptap td,
 .rich-text-content th,
 .rich-text-content td {
-  @apply border border-slate-200;
+  @apply border border-border;
   padding: 0.5rem;
   text-align: left;
   vertical-align: top;
@@ -197,12 +254,12 @@
 
 .tiptap th,
 .rich-text-content th {
-  @apply bg-slate-50 font-semibold;
+  @apply bg-muted font-semibold;
 }
 
 .tiptap a,
 .rich-text-content a {
-  @apply text-blue-600 underline;
+  @apply text-primary underline;
 }
 
 .tiptap ul[data-type="taskList"],
@@ -250,7 +307,7 @@
 
 .tiptap ul[data-type="taskList"] li > label input[type="checkbox"],
 .rich-text-content ul[data-type="taskList"] li > label input[type="checkbox"] {
-  @apply accent-blue-600;
+  @apply accent-primary;
   width: 0.875rem;
   height: 0.875rem;
   cursor: pointer;
@@ -270,7 +327,7 @@
 
 .tiptap ul[data-type="taskList"] li[data-checked="true"] > div p,
 .rich-text-content ul[data-type="taskList"] li[data-checked="true"] > div p {
-  @apply text-slate-400 line-through;
+  @apply text-muted-foreground line-through;
 }
 
 .tiptap img,
@@ -308,7 +365,7 @@
 }
 
 .mention-pill {
-  @apply inline-flex items-center rounded border border-blue-600/60 bg-blue-600/10 px-1.5 py-0.5 font-semibold leading-5 text-blue-700 whitespace-nowrap;
+  @apply inline-flex items-center rounded border border-primary/60 bg-primary/10 px-1.5 py-0.5 font-semibold leading-5 text-primary whitespace-nowrap;
 }
 
 .mention-ticket {
@@ -322,7 +379,7 @@
 }
 
 .mention-ticket-status {
-  @apply inline-flex items-center rounded border border-slate-200 bg-white px-1 py-0 text-slate-900 uppercase;
+  @apply inline-flex items-center rounded border border-border bg-card px-1 py-0 text-foreground uppercase;
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -330,7 +387,7 @@
 }
 
 .code-copy-button {
-  @apply absolute right-2 top-2 cursor-pointer rounded border border-slate-200 bg-white/90 px-2 py-1 text-slate-500;
+  @apply absolute right-2 top-2 cursor-pointer rounded border border-border bg-card/90 px-2 py-1 text-muted-foreground;
   font-size: 0.6875rem;
   font-weight: 600;
   line-height: 1;
@@ -338,11 +395,11 @@
 }
 
 .code-copy-button:hover {
-  @apply border-blue-600/45 bg-blue-600/10 text-blue-600;
+  @apply border-primary/45 bg-primary/10 text-primary;
 }
 
 .asset-description {
-  @apply text-xs text-slate-500;
+  @apply text-xs text-muted-foreground;
   line-height: 1.4;
 }
 
@@ -378,7 +435,7 @@
 }
 
 .asset-description a {
-  @apply text-blue-600 underline;
+  @apply text-primary underline;
 }
 
 .asset-description--clamped {

@@ -61,7 +61,7 @@ export function TicketStatusSelect({
         ))}
       </select>
       {!value ? (
-        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
           {currentLabel}
         </span>
       ) : null}

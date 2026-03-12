@@ -164,7 +164,7 @@ export function AssetForm({
               </div>
               <div className="space-y-3">
                 {linkFields.length === 0 && (
-                  <p className="text-sm text-slate-500">No links added yet.</p>
+                  <p className="text-sm text-muted-foreground">No links added yet.</p>
                 )}
                 {linkFields.map((linkField, index) => (
                   <FormField

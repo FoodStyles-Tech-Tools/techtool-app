@@ -127,7 +127,7 @@ const CommentBody = memo(function CommentBody({
 
   return (
     <div
-      className="rich-text-content text-sm text-slate-900"
+      className="rich-text-content text-sm text-foreground"
       dangerouslySetInnerHTML={getSanitizedHtmlProps(html) ?? { __html: "" }}
     />
   )
@@ -165,7 +165,7 @@ const RepliesBlock = memo(function RepliesBlock({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="text-xs text-slate-500 hover:text-slate-900 hover:underline"
+          className="text-xs text-muted-foreground hover:text-foreground hover:underline"
         >
           See {count} {count === 1 ? "reply" : "replies"}
         </button>
@@ -174,7 +174,7 @@ const RepliesBlock = memo(function RepliesBlock({
           <button
             type="button"
             onClick={() => setExpanded(false)}
-            className="mb-2 text-xs text-slate-500 hover:text-slate-900 hover:underline"
+            className="mb-2 text-xs text-muted-foreground hover:text-foreground hover:underline"
           >
             Hide replies
           </button>
@@ -245,7 +245,7 @@ const CommentRow = memo(function CommentRow({
         <div className="flex items-center gap-2 flex-wrap justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-medium text-sm">{displayName}</span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
               {comment.updated_at && comment.updated_at !== comment.created_at && (
                 <span className="ml-1">(edited)</span>
@@ -257,7 +257,7 @@ const CommentRow = memo(function CommentRow({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 gap-1 px-2 text-xs text-slate-500 hover:text-slate-900"
+                className="h-6 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => onStartEdit(comment)}
               >
                 <PencilIcon className="h-3 w-3" />
@@ -275,7 +275,7 @@ const CommentRow = memo(function CommentRow({
             </div>
           )}
         </div>
-        <div className="mt-0.5 text-sm text-slate-900">
+        <div className="mt-0.5 text-sm text-foreground">
           <CommentBody
             body={comment.body}
             mentions={comment.mentions}
@@ -318,7 +318,7 @@ const CommentRow = memo(function CommentRow({
       <div
         className={cn(
           "rounded-lg transition-colors -mx-1.5 px-1.5 py-1 -my-0.5",
-          isHovered && "bg-slate-50 ring-1 ring-slate-200"
+          isHovered && "bg-muted ring-1 ring-border"
         )}
         onMouseEnter={() => onHoverChange(comment.id)}
         onMouseLeave={() => onHoverChange(null)}
@@ -719,12 +719,12 @@ function CommentComposer({
   const mentionInlinePanel =
     pickerMode === "user" ? (
       <div
-        className="w-full max-w-[420px] overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl"
+        className="w-full max-w-[420px] overflow-hidden rounded-md border border-border bg-card shadow-xl"
         onMouseDown={(event) => event.preventDefault()}
       >
         <div className="max-h-56 overflow-y-auto py-1">
           {filteredUsers.length === 0 ? (
-            <p className="px-3 py-2 text-xs text-slate-500">No users found</p>
+            <p className="px-3 py-2 text-xs text-muted-foreground">No users found</p>
           ) : (
             filteredUsers.map((user) => {
               const label = user.name || user.email
@@ -738,7 +738,7 @@ function CommentComposer({
                 <button
                   key={user.id}
                   type="button"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-accent"
                   onMouseDown={(event) => event.preventDefault()}
                   onClick={() => {
                     insertMentionFromPicker({ label })
@@ -754,7 +754,7 @@ function CommentComposer({
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">{label}</div>
                     {user.name ? (
-                      <div className="truncate text-xs text-slate-500">{user.email}</div>
+                      <div className="truncate text-xs text-muted-foreground">{user.email}</div>
                     ) : null}
                   </div>
                 </button>
@@ -771,7 +771,7 @@ function CommentComposer({
         value={body}
         onChange={setBody}
         placeholder={placeholder}
-        className="border-slate-200"
+        className="border-border"
         compact
         activateOnClick
         inlinePanel={mentionInlinePanel}
@@ -1030,7 +1030,7 @@ export function TicketComments({
   }
 
   const rootComposer = canEdit ? (
-    <div className={cn(composerFirst ? "pb-2" : "border-t border-slate-200 pt-2")}>
+    <div className={cn(composerFirst ? "pb-2" : "border-t border-border pt-2")}>
       <CommentComposer
         placeholder="Add a comment..."
         users={users}
@@ -1063,7 +1063,7 @@ export function TicketComments({
           <CardTitle className="text-base flex items-center gap-2">
             Comments
             {comments.length > 0 && (
-              <span className="text-sm font-normal text-slate-500">
+              <span className="text-sm font-normal text-muted-foreground">
                 ({comments.length} root)
               </span>
             )}
@@ -1072,12 +1072,12 @@ export function TicketComments({
       )}
       <CardContent className={cn("px-4 pb-4 space-y-3", showHeader ? "pt-0" : "pt-1")}>
         {isLoading ? (
-          <p className="text-sm text-slate-500">Loading comments...</p>
+          <p className="text-sm text-muted-foreground">Loading comments...</p>
         ) : (
           <>
             {composerFirst && rootComposer}
             {comments.length === 0 ? (
-              <p className="text-sm text-slate-500">No comments yet. Be the first to comment.</p>
+              <p className="text-sm text-muted-foreground">No comments yet. Be the first to comment.</p>
             ) : (
               <div className="space-y-3">
                 {comments.map((comment) => (
@@ -1088,7 +1088,7 @@ export function TicketComments({
                           value={editBody}
                           onChange={setEditBody}
                           placeholder="Edit comment"
-                          className="border-slate-200"
+                          className="border-border"
                           compact
                         />
                         <div className="flex gap-2">

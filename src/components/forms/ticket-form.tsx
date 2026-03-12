@@ -350,7 +350,7 @@ export function TicketForm({
               <FormLabel>Description</FormLabel>
               <FormControl>
                 <RichTextEditor
-                  className="border-slate-200"
+                  className="border-border"
                   placeholder="Ticket description"
                   value={field.value || ""}
                   onChange={field.onChange}
@@ -520,7 +520,7 @@ export function TicketForm({
               </div>
               <div className="space-y-3">
                 {linkFields.length === 0 && (
-                  <p className="text-sm text-slate-500">No links added yet.</p>
+                  <p className="text-sm text-muted-foreground">No links added yet.</p>
                 )}
                 {linkFields.map((linkField, index) => (
                   <FormField
@@ -556,7 +556,7 @@ export function TicketForm({
           </Button>
         )}
         {isReadOnly && (
-          <p className="text-center text-xs text-slate-500">
+          <p className="text-center text-xs text-muted-foreground">
             You do not have permission to {isEditing ? "update" : "create"} tickets.
           </p>
         )}

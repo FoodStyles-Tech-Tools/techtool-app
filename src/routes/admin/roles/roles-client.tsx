@@ -295,7 +295,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
                   <div className="space-y-3">
-                    <div className="rounded-md border border-slate-200">
+                    <div className="rounded-md border border-border">
                       <Table>
                         <TableHeader>
                           <TableRow>
@@ -340,7 +340,7 @@ export default function RolesClient({ initialRoles }: RolesClientProps) {
                                         checked={checked}
                                         onChange={() => togglePermission(role.id, resource, action)}
                                         disabled={isDisabled}
-                                        className="h-4 w-4 rounded border-slate-300 text-slate-900"
+                                        className="h-4 w-4 rounded border-input text-foreground"
                                       />
                                     </div>
                                   </TableCell>

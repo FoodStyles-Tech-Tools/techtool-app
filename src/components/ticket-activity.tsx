@@ -162,7 +162,7 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
   const text = formatHistoryValueText(fieldName, value)
 
   if (text === "None") {
-    return <span className="text-sm text-slate-500">None</span>
+    return <span className="text-sm text-muted-foreground">None</span>
   }
 
   const isStatus = fieldName === "status"
@@ -174,8 +174,8 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
         className={cn(
           "inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs font-medium leading-4",
           isNewValue
-            ? "border-slate-300 bg-slate-100 text-slate-900"
-            : "border-slate-200 bg-white text-slate-900",
+            ? "border-input bg-muted text-foreground"
+            : "border-border bg-card text-foreground",
           isStatus ? "tracking-wide uppercase" : ""
         )}
       >
@@ -184,7 +184,7 @@ function renderHistoryValue(fieldName: string | null, value: unknown, isNewValue
     )
   }
 
-  return <span className="text-sm text-slate-900">{text}</span>
+  return <span className="text-sm text-foreground">{text}</span>
 }
 
 export function TicketActivity({ ticketId, displayId, initialComments, readOnly = false }: TicketActivityProps) {
@@ -203,9 +203,9 @@ export function TicketActivity({ ticketId, displayId, initialComments, readOnly 
 
   return (
     <section id={panelId} className="space-y-3">
-      <h2 className="text-sm font-semibold text-slate-900">Activity</h2>
+      <h2 className="text-sm font-semibold text-foreground">Activity</h2>
 
-      <div className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 p-0.5">
+      <div className="inline-flex items-center rounded-md border border-border bg-muted p-0.5">
         <Button
           variant={activeTab === "comments" ? "selected" : "ghost"}
           size="sm"
@@ -259,18 +259,18 @@ export function TicketActivity({ ticketId, displayId, initialComments, readOnly 
                       </Avatar>
 
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm leading-5 text-slate-900">
+                        <p className="text-sm leading-5 text-foreground">
                           <span className="font-semibold">{actorName}</span> {formatHistoryAction(item)}
                         </p>
 
-                        <p className="mt-0.5 text-xs text-slate-500">
+                        <p className="mt-0.5 text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                         </p>
 
                         {showValueTransition && (
                           <div className="mt-1.5 flex flex-wrap items-center gap-2">
                             {renderHistoryValue(item.field_name, item.old_value, false)}
-                            <span className="text-xs font-medium uppercase tracking-wide text-slate-500">to</span>
+                            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">to</span>
                             {renderHistoryValue(item.field_name, item.new_value, true)}
                           </div>
                         )}

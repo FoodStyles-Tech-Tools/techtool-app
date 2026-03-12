@@ -121,15 +121,15 @@ export function Toaster() {
         <div
           key={toast.id}
           className={cn(
-            "flex items-center gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-lg",
-            toast.type === "success" && "border-slate-200",
+            "flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-lg",
+            toast.type === "success" && "border-border",
             toast.type === "error" && "border-red-200"
           )}
         >
           <span
             className={cn(
               "text-xs font-semibold uppercase tracking-wide",
-              toast.type === "success" && "text-slate-900",
+              toast.type === "success" && "text-foreground",
               toast.type === "error" && "text-red-700"
             )}
           >
@@ -138,7 +138,7 @@ export function Toaster() {
           <p
             className={cn(
               "text-sm font-medium leading-5",
-              toast.type === "success" && "text-slate-900",
+              toast.type === "success" && "text-foreground",
               toast.type === "error" && "text-red-700"
             )}
           >
@@ -146,7 +146,7 @@ export function Toaster() {
           </p>
           <button
             onClick={() => removeToast(toast.id)}
-            className="ml-auto rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            className="ml-auto rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             Close
           </button>

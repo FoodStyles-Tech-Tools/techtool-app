@@ -74,8 +74,8 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                 ) : (
                   <h1
                     className={cn(
-                      "text-sm font-semibold leading-tight text-slate-900",
-                      canEditTickets && "cursor-pointer rounded-md px-1 py-1 hover:bg-slate-50"
+                      "text-sm font-semibold leading-tight text-foreground",
+                      canEditTickets && "cursor-pointer rounded-md px-1 py-1 hover:bg-accent"
                     )}
                     onClick={() => {
                       if (canEditTickets) {
@@ -89,7 +89,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
               </div>
               <div className="flex justify-start">
                 {isArchivedTicket ? (
-                  <span className="flex h-8 items-center text-sm font-medium text-slate-600">Archived</span>
+                  <span className="flex h-8 items-center text-sm font-medium text-muted-foreground">Archived</span>
                 ) : (
                   <TicketStatusSelect
                     value={ticket.status}

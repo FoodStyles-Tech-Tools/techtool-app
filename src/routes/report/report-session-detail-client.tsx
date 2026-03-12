@@ -155,7 +155,7 @@ export default function ReportSessionDetailClient() {
   if (!sessionId || sessionLoading || sessionError || !session) {
     return (
       <PageLayout>
-        <div className="py-12 text-center text-sm text-slate-500">Loading…</div>
+        <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div>
       </PageLayout>
     )
   }
@@ -187,17 +187,8 @@ export default function ReportSessionDetailClient() {
         }
       />
 
-      <div className="rounded-md border border-slate-200 bg-white px-4 py-3 sm:px-5">
-        <h2 className="text-base font-semibold">Charts</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Date range: {format(new Date(session.date_range_start), "yyyy-MM-dd")} –{" "}
-          {format(new Date(session.date_range_end), "yyyy-MM-dd")} (session range, ISO week
-          grouped)
-        </p>
-      </div>
-
       {dataLoading ? (
-        <div className="rounded-md border border-slate-200 bg-white py-12" />
+        <div className="rounded-md border border-border bg-card py-12" />
       ) : reportData ? (
         <div className="space-y-6">
           <ChartWithInsight
@@ -285,7 +276,7 @@ export default function ReportSessionDetailClient() {
                 />
               </div>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Update name/date range and save to refresh all charts in this session.
             </p>
           </div>

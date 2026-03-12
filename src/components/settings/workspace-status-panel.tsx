@@ -154,7 +154,7 @@ export function WorkspaceStatusPanel() {
     return (
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Status</h3>
-        <p className="text-sm text-slate-500">You do not have permission to manage statuses.</p>
+        <p className="text-sm text-muted-foreground">You do not have permission to manage statuses.</p>
       </div>
     )
   }
@@ -191,7 +191,7 @@ export function WorkspaceStatusPanel() {
               </TableRow>
             ) : sortedStatuses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-slate-500">
+                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
                   No statuses found.
                 </TableCell>
               </TableRow>
@@ -203,7 +203,7 @@ export function WorkspaceStatusPanel() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <span
-                        className="inline-block h-3.5 w-3.5 rounded-full border border-slate-300/70"
+                        className="inline-block h-3.5 w-3.5 rounded-full border border-input/70"
                         style={{ backgroundColor: status.color }}
                       />
                       <span className="text-sm">{status.color}</span>

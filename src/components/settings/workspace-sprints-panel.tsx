@@ -58,7 +58,7 @@ export function WorkspaceSprintsPanel() {
     return (
       <div className="space-y-2">
         <h3 className="text-sm font-medium">Sprint</h3>
-        <p className="text-sm text-slate-500">You do not have permission to manage sprints.</p>
+        <p className="text-sm text-muted-foreground">You do not have permission to manage sprints.</p>
       </div>
     )
   }
@@ -101,7 +101,7 @@ export function WorkspaceSprintsPanel() {
               </TableRow>
             ) : sortedSprints.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-sm text-slate-500">
+                <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
                   No sprints found.
                 </TableCell>
               </TableRow>
@@ -109,7 +109,7 @@ export function WorkspaceSprintsPanel() {
               sortedSprints.map((sprint) => (
                 <TableRow key={sprint.id}>
                   <TableCell className="font-medium">{sprint.name}</TableCell>
-                  <TableCell className="text-sm text-slate-500">
+                  <TableCell className="text-sm text-muted-foreground">
                     {sprint.start_date || "-"} to {sprint.end_date || "-"}
                   </TableCell>
                   <TableCell>
