@@ -11,6 +11,7 @@ import {
   useDroppable,
   type DragEndEvent,
   type DragStartEvent,
+  type DragOverEvent,
 } from "@dnd-kit/core"
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import type { Ticket } from "@shared/types"
@@ -25,11 +26,19 @@ function hexWithAlpha(hex: string, alphaHex = "1a"): string {
   return `#${normalized}${alphaHex}`
 }
 
+export type DropPosition = "before" | "after"
+
+export interface DropIndicator {
+  overId: string
+  position: DropPosition
+}
+
 interface KanbanColumnProps {
   status: TicketStatus
   tickets: Ticket[]
   subtaskCounts: Record<string, number>
   onSelectTicket: (ticketId: string) => void
+  dropIndicator: DropIndicator | null
 }
 
 function KanbanColumnInner({
@@ -37,6 +46,7 @@ function KanbanColumnInner({
   tickets,
   subtaskCounts,
   onSelectTicket,
+  dropIndicator,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: status.key })
 
@@ -73,23 +83,33 @@ function KanbanColumnInner({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex flex-col gap-2 overflow-y-auto p-2",
+          "flex flex-col overflow-y-auto p-2",
           "min-h-[120px] max-h-[calc(100vh-260px)]",
           isOver && "bg-primary/5 ring-2 ring-inset ring-primary/20 rounded-b-xl"
         )}
       >
         <SortableContext items={tickets.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-          {tickets.map((ticket) => (
-            <TicketKanbanCard
-              key={ticket.id}
-              ticket={ticket}
-              subtasksCount={subtaskCounts[ticket.id] ?? ticket.subtasksCount ?? 0}
-              onSelectTicket={onSelectTicket}
-            />
-          ))}
+          {tickets.map((ticket) => {
+            const indicatorPosition =
+              dropIndicator?.overId === ticket.id ? dropIndicator.position : null
+            return (
+              <TicketKanbanCard
+                key={ticket.id}
+                ticket={ticket}
+                subtasksCount={subtaskCounts[ticket.id] ?? ticket.subtasksCount ?? 0}
+                onSelectTicket={onSelectTicket}
+                dropIndicatorPosition={indicatorPosition}
+              />
+            )
+          })}
         </SortableContext>
 
-        {tickets.length === 0 && (
+        {/* Drop indicator at bottom of column when hovering the column itself (empty column or below all cards) */}
+        {dropIndicator?.overId === status.key && (
+          <DropLine />
+        )}
+
+        {tickets.length === 0 && !dropIndicator && (
           <div className="flex flex-1 items-center justify-center py-8">
             <p className="text-xs text-muted-foreground/60">No tickets</p>
           </div>
@@ -100,6 +120,13 @@ function KanbanColumnInner({
 }
 
 const KanbanColumn = memo(KanbanColumnInner)
+
+/** The actual drop indicator line rendered between/around cards */
+function DropLine() {
+  return (
+    <div className="relative h-0.5 mx-1 my-0.5 rounded-full bg-primary shadow-[0_0_6px_1px_hsl(var(--primary)/0.5)]" />
+  )
+}
 
 export interface TicketsBoardProps {
   tickets: Ticket[]
@@ -113,7 +140,6 @@ export interface TicketsBoardProps {
   onCreateTicket?: () => void
 }
 
-
 export function TicketsBoard({
   tickets,
   statuses,
@@ -126,6 +152,7 @@ export function TicketsBoard({
   onCreateTicket,
 }: TicketsBoardProps) {
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null)
+  const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -175,16 +202,54 @@ export function TicketsBoard({
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     setActiveTicketId(String(event.active.id))
+    setDropIndicator(null)
   }, [])
+
+  const handleDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const { over, active } = event
+      if (!over) {
+        setDropIndicator(null)
+        return
+      }
+
+      const overId = String(over.id)
+      const activeId = String(active.id)
+
+      // Dragging over the column droppable itself (empty column or below all cards)
+      if (visibleStatuses.some((s) => s.key === overId)) {
+        setDropIndicator({ overId, position: "after" })
+        return
+      }
+
+      // Dragging over a ticket card — use the rect to determine top/bottom half
+      if (overId !== activeId) {
+        const rect = over.rect
+        const midY = rect.top + rect.height / 2
+        const pointerY = (event.activatorEvent as MouseEvent | TouchEvent | null)
+          ? (() => {
+              const ev = event.activatorEvent as MouseEvent | TouchEvent
+              return "clientY" in ev
+                ? ev.clientY + (event.delta?.y ?? 0)
+                : (ev as TouchEvent).touches[0]?.clientY + (event.delta?.y ?? 0)
+            })()
+          : midY
+
+        const position: DropPosition = pointerY < midY ? "before" : "after"
+        setDropIndicator({ overId, position })
+      }
+    },
+    [visibleStatuses]
+  )
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
       setActiveTicketId(null)
+      setDropIndicator(null)
       const { active, over } = event
       if (!over) return
 
       const ticketId = String(active.id)
-      // `over.id` may be a column (status key) or another ticket's id
       let targetStatusKey = String(over.id)
 
       // If dropping on another ticket, find which column that ticket belongs to
@@ -204,6 +269,11 @@ export function TicketsBoard({
     },
     [tickets, visibleStatuses, ticketsByStatus, onKanbanDrop]
   )
+
+  const handleDragCancel = useCallback(() => {
+    setActiveTicketId(null)
+    setDropIndicator(null)
+  }, [])
 
   if (loading) {
     return (
@@ -258,7 +328,9 @@ export function TicketsBoard({
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
       accessibility={{
         announcements: {
           onDragStart: ({ active }) => `Picked up ticket ${active.id}.`,
@@ -282,6 +354,7 @@ export function TicketsBoard({
             tickets={ticketsByStatus.get(status.key) ?? []}
             subtaskCounts={subtaskCounts}
             onSelectTicket={onSelectTicket}
+            dropIndicator={dropIndicator}
           />
         ))}
       </div>
