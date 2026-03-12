@@ -18,6 +18,7 @@ import { cn } from "@client/lib/utils"
 import { PageHeader } from "@client/components/ui/page-header"
 import { Breadcrumb } from "@client/components/ui/breadcrumb"
 import { PageLayout } from "@client/components/ui/page-layout"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { DataState } from "@client/components/ui/data-state"
 import { Button } from "@client/components/ui/button"
@@ -475,7 +476,9 @@ function getTypeColor(type: string | null | undefined): string {
                 />
               </div>
               {ticketsLoading ? (
-                <p className="mt-4 text-sm text-muted-foreground">Loading tickets…</p>
+                <div className="mt-4 rounded-lg border border-border bg-card py-8">
+                  <LoadingIndicator variant="block" label="Loading tickets…" />
+                </div>
               ) : sortedTicketsForTable.length === 0 ? (
                 <p className="mt-4 text-sm text-muted-foreground">No tickets match the filters.</p>
               ) : (

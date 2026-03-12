@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useDeferredValue, useMemo } f
 import { useQuery } from "@tanstack/react-query"
 import { Input } from "@client/components/ui/input"
 import { Badge } from "@client/components/ui/badge"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { cn } from "@client/lib/utils"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import { formatStatusLabel, normalizeStatusKey } from "@shared/ticket-statuses"
@@ -193,7 +194,11 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
 
           {/* Results */}
           <div className="max-h-[400px] overflow-y-auto p-2">
-            {isLoading ? null : filteredTickets.length === 0 ? (
+            {isLoading ? (
+              <div className="py-8">
+                <LoadingIndicator variant="block" label="Searching tickets…" />
+              </div>
+            ) : filteredTickets.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                 {searchQuery ? "No tickets found" : "Start typing to search tickets"}
               </div>

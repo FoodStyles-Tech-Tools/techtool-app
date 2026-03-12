@@ -6,6 +6,7 @@ import { Button } from "@client/components/ui/button"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import {
   Dialog,
   DialogContent,
@@ -96,7 +97,9 @@ export function WorkspaceSprintsPanel() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-8" />
+                <TableCell colSpan={4} className="py-8">
+                  <LoadingIndicator variant="block" label="Loading sprints…" />
+                </TableCell>
               </TableRow>
             ) : sortedSprints.length === 0 ? (
               <TableRow>

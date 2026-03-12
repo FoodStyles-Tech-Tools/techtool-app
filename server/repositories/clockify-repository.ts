@@ -36,8 +36,10 @@ export async function listClockifySessions(
 ) {
   let query = supabase
     .from("clockify_report_sessions")
+    // Exclude report_data and reconciliation — they can be very large and are not
+    // needed on the list view; they are fetched on demand via getClockifySessionFull.
     .select(
-      "*, requested_by:users!clockify_report_sessions_requested_by_id_fkey(id, name)"
+      "id, start_date, end_date, fetched_at, status, error_message, requested_by_id, requested_by:users!clockify_report_sessions_requested_by_id_fkey(id, name)"
     )
     .order("fetched_at", { ascending: false })
 
@@ -136,6 +138,21 @@ export async function getClockifySessionById(supabase: SupabaseClient, sessionId
         reconciliation?: Record<string, ClockifyReconciliationEntry>
       }
     | null
+}
+
+export async function getClockifySessionFull(supabase: SupabaseClient, sessionId: string) {
+  const { data, error } = await supabase
+    .from("clockify_report_sessions")
+    .select("*, requested_by:users!clockify_report_sessions_requested_by_id_fkey(id, name)")
+    .eq("id", sessionId)
+    .maybeSingle()
+
+  if (error) {
+    console.error("Error fetching Clockify session:", error)
+    throw new HttpError(500, "Failed to fetch session")
+  }
+
+  return data as ClockifySessionRecord | null
 }
 
 export async function updateClockifySessionReconciliation(

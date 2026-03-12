@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom"
 import { AppShell } from "@client/components/layout/app-shell"
+import { RouteLoadingFallback } from "@client/layouts/full-screen-message"
 import { useSession } from "@client/lib/auth-client"
 
 export function ProtectedLayout() {
@@ -7,7 +8,7 @@ export function ProtectedLayout() {
   const { data: session, isPending } = useSession()
 
   if (isPending) {
-    return null
+    return <RouteLoadingFallback />
   }
 
   if (!session) {

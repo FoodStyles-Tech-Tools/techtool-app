@@ -6,6 +6,7 @@ import { useAuditLogAll, type AuditLogItem } from "@client/hooks/use-audit-log"
 import { PageHeader } from "@client/components/ui/page-header"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { DataState } from "@client/components/ui/data-state"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import {
   Table,
@@ -133,12 +134,8 @@ export function AuditLogPage() {
   if (permissionsLoading) {
     return (
       <PageLayout>
-        <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card p-8">
-          <div
-            className="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-primary"
-            aria-hidden
-          />
-          <p className="text-sm text-muted-foreground">Loading…</p>
+        <div className="rounded-lg border border-border bg-card p-8">
+          <LoadingIndicator variant="block" label="Loading permissions…" />
         </div>
       </PageLayout>
     )

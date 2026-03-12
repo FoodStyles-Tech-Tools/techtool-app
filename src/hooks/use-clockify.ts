@@ -9,7 +9,8 @@ export interface ClockifyReportSession {
   fetched_at: string
   status: string
   error_message: string | null
-  report_data: any
+  // Absent from list responses — only present when fetched via useClockifySession
+  report_data?: any
   reconciliation?: Record<string, { ticketDisplayId?: string; status?: string; ticketId?: string }>
   requested_by_id: string | null
   requested_by?: { id: string; name: string | null } | null
@@ -41,6 +42,24 @@ export function useClockifySessions(params?: ClockifySessionQuery) {
       const data = await response.json()
       return data.sessions || []
     },
+    // Keep data fresh for 30 s so navigating back to the list is instant
+    staleTime: 30_000,
+  })
+}
+
+export function useClockifySession(sessionId: string | null | undefined) {
+  return useQuery<ClockifyReportSession | null>({
+    queryKey: ["clockify-session", sessionId],
+    queryFn: async () => {
+      const response = await fetch(`/api/clockify/sessions/${sessionId}`)
+      if (!response.ok) {
+        throw new Error("Failed to load Clockify session")
+      }
+      const data = await response.json()
+      return data.session || null
+    },
+    enabled: !!sessionId,
+    staleTime: 30_000,
   })
 }
 

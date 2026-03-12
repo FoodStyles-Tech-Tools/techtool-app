@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { PageLoader } from "@client/layouts/full-screen-message"
 import { useUsers } from "@client/hooks/use-users"
 import { requestJson } from "@client/lib/api"
 import UsersClient from "./users-client"
@@ -14,7 +15,7 @@ export function UsersPage() {
   })
 
   if (usersLoading || rolesQuery.isLoading) {
-    return null
+    return <PageLoader />
   }
 
   return <UsersClient initialUsers={users} roles={rolesQuery.data || []} />

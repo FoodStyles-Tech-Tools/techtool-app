@@ -12,6 +12,19 @@ import {
   parseUpdateClockifySettingsBody,
 } from "@server/validation/clockify"
 
+export async function getClockifySessionController(request: Request, response: Response) {
+  try {
+    const context = await getRequestContext({
+      permission: { resource: "clockify", action: "view" },
+    })
+    const { sessionId } = request.params
+    const payload = await clockifyService.getClockifySessionDetail(context, sessionId)
+    response.json(payload)
+  } catch (error) {
+    handleControllerError(response, error, "Error in GET /api/clockify/sessions/:sessionId")
+  }
+}
+
 export async function listClockifySessionsController(request: Request, response: Response) {
   try {
     const context = await getRequestContext({

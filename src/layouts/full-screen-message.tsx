@@ -20,10 +20,20 @@ export function FullScreenMessage({
   )
 }
 
+/** Full-screen page loader — used as a Suspense fallback for lazy routes */
 export function RouteLoadingFallback() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-muted">
-      <LoadingIndicator variant="block" />
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background">
+      <LoadingIndicator variant="page" />
+    </div>
+  )
+}
+
+/** Content-area loader — used inside pages while initial data is fetching */
+export function PageLoader({ label }: { label?: string }) {
+  return (
+    <div className="flex min-h-[50vh] flex-col items-center justify-center">
+      <LoadingIndicator variant="page" label={label ?? "Loading…"} />
     </div>
   )
 }

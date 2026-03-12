@@ -30,9 +30,11 @@ import { usePermissions } from "@client/hooks/use-permissions"
 import { useProjects } from "@client/hooks/use-projects"
 import {
   ClockifyReportSession,
+  useClockifySession,
   useClockifySessions,
   useCreateClockifySession,
 } from "@client/hooks/use-clockify"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { ClockifySessionsCard } from "@client/features/clockify/components/clockify-sessions-card"
 import { ClockifyReportSessionCard } from "@client/features/clockify/components/clockify-report-session-card"
 import {
@@ -55,7 +57,7 @@ import type {
 
 export default function ClockifyClient() {
   const queryClient = useQueryClient()
-  const { flags, user: currentUser } = usePermissions()
+  const { flags, user: currentUser, loading: permissionsLoading } = usePermissions()
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>()
   const isAdmin = currentUser?.role?.toLowerCase() === "admin"
   const canManageClockify = flags?.canManageClockify ?? false
@@ -86,7 +88,14 @@ export default function ClockifyClient() {
   } | null>(null)
   const [isCreatingTicket, setIsCreatingTicket] = useState(false)
 
+  const sessionIdParam = searchParams.get("sessionId")
+  const effectiveSessionId = routeSessionId || sessionIdParam || null
+
   const { data: sessions = [], isLoading } = useClockifySessions()
+  const {
+    data: sessionDetail = null,
+    isLoading: isDetailLoading,
+  } = useClockifySession(effectiveSessionId)
   const createSession = useCreateClockifySession()
   const { data: projectOptions = [] } = useProjects({
     enabled: !!createTicketDialog,
@@ -537,20 +546,17 @@ export default function ClockifyClient() {
     }
   }, [activeTicketEntryId, ticketSearchTerm])
 
-  const sessionIdParam = searchParams.get("sessionId")
-
   useEffect(() => {
-    const effectiveSessionId = routeSessionId || sessionIdParam
     if (!effectiveSessionId) {
       setSelectedSession(null)
       return
     }
+    if (sessionDetail) {
+      setSelectedSession(sessionDetail)
+    }
+  }, [effectiveSessionId, sessionDetail])
 
-    const match = sessions.find((session) => session.id === effectiveSessionId) || null
-    setSelectedSession(match)
-  }, [routeSessionId, sessionIdParam, sessions])
-
-  const isSessionDetailMode = Boolean(routeSessionId || sessionIdParam)
+  const isSessionDetailMode = Boolean(effectiveSessionId)
 
   return (
     <PageLayout>
@@ -584,15 +590,15 @@ export default function ClockifyClient() {
         }
       />
 
-      {!isSessionDetailMode && canManageSessions ? (
+      {!isSessionDetailMode && (canManageSessions || permissionsLoading) ? (
         <ClockifySessionsCard
-          isLoading={isLoading}
+          isLoading={isLoading || permissionsLoading}
           sessions={sessions}
           formatRangeLabel={formatRangeLabel}
         />
       ) : null}
 
-      {isSessionDetailMode && !isLoading && !selectedSession ? (
+      {isSessionDetailMode && !isDetailLoading && !selectedSession ? (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Clockify Report Session</CardTitle>
@@ -604,6 +610,12 @@ export default function ClockifyClient() {
             <p className="text-sm text-muted-foreground">Session not found.</p>
           </CardContent>
         </Card>
+      ) : null}
+
+      {isSessionDetailMode && isDetailLoading ? (
+        <div className="rounded-lg border border-border bg-card p-8">
+          <LoadingIndicator variant="block" label="Loading session…" />
+        </div>
       ) : null}
 
       {selectedSession && canManageSessions ? (

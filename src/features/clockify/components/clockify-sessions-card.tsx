@@ -5,6 +5,7 @@ import { Link } from "react-router-dom"
 import { getISOWeek, getISOWeekYear } from "date-fns"
 import { Badge } from "@client/components/ui/badge"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import {
   Table,
   TableBody,
@@ -43,7 +44,13 @@ export function ClockifySessionsCard({
     [sessions]
   )
 
-  if (isLoading) return null
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-8">
+        <LoadingIndicator variant="block" label="Loading sessions…" />
+      </div>
+    )
+  }
   if (sessions.length === 0) {
     return (
       <div className="rounded-lg border border-border bg-card p-8 text-center shadow-sm">

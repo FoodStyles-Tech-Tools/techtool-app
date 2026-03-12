@@ -12,13 +12,26 @@ import { useTicketPreview } from "@client/features/tickets/context/ticket-previe
 
 export function DeletedTicketsPanel() {
   const { openPreview } = useTicketPreview()
-  const { data: tickets = [], isLoading } = useTickets({
+  const {
+    data: tickets = [],
+    isLoading,
+    isError,
+    error,
+  } = useTickets({
     status: "archived",
+    excludeSubtasks: false,
     realtime: false,
     limit: 100,
     page: 1,
     enabled: true,
   })
+
+  const errorMessage =
+    isError && error
+      ? error instanceof Error
+        ? error.message
+        : "Failed to load deleted tickets"
+      : null
 
   const rows = useMemo(
     () =>
@@ -48,7 +61,8 @@ export function DeletedTicketsPanel() {
       />
       <DataState
         loading={isLoading}
-        isEmpty={!isLoading && rows.length === 0}
+        error={errorMessage}
+        isEmpty={!isLoading && !errorMessage && rows.length === 0}
         emptyTitle="No deleted tickets yet"
         emptyDescription="Archived tickets will appear here."
         loadingTitle="Loading deleted tickets"

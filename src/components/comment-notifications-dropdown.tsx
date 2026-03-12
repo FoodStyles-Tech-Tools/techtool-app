@@ -8,6 +8,7 @@ import {
   ChatBubbleBottomCenterTextIcon,
 } from "@heroicons/react/20/solid"
 import { Button } from "@client/components/ui/button"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { useCommentNotifications, type CommentNotification } from "@client/hooks/use-comment-notifications"
 import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 import { cn } from "@client/lib/utils"
@@ -169,7 +170,9 @@ export function CommentNotificationsDropdown() {
         </div>
         <div className="max-h-[320px] overflow-y-auto px-4">
           {isLoading ? (
-            <div className="py-6 text-center text-sm text-muted-foreground">Loading notifications...</div>
+            <div className="py-6">
+              <LoadingIndicator variant="block" label="Loading notifications…" />
+            </div>
           ) : notifications.length === 0 ? (
             <div className="py-6 text-center text-sm text-muted-foreground">
               No notifications yet. You will see replies and @mentions here.

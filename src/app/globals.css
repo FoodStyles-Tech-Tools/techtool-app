@@ -161,7 +161,7 @@
   }
 }
 
-/* Navigation progress bar: sliding segment, GPU-friendly */
+/* ===== Navigation Progress Bar ===== */
 @keyframes nav-progress-slide {
   0% {
     transform: translateX(-100%);
@@ -175,25 +175,92 @@
   animation: nav-progress-slide 1.2s ease-in-out infinite;
 }
 
-/* Gentle spinner pulse so it feels less static */
-@keyframes loading-spinner-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.75;
-  }
-}
+/* ===== Unified Loading System ===== */
 
+/* Smooth eased rotation — slightly decelerated for a "live" feel */
 @keyframes loading-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
+/* Gentle fade on the spinner body — keeps it feeling alive */
+@keyframes loading-spinner-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Sonar ring — expands outward and fades for page-level loaders */
+@keyframes loading-ring-expand {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.65);
+    opacity: 0;
+  }
+}
+
+/* Mount animation — subtle scale-up + fade-in when loader appears */
+@keyframes loading-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Core spinner: eased cubic for a satisfying "snap" */
 .loading-spinner {
-  animation: loading-spin 0.8s linear infinite, loading-spinner-pulse 1.5s ease-in-out infinite;
+  animation:
+    loading-spin 0.85s cubic-bezier(0.45, 0, 0.55, 1) infinite,
+    loading-spinner-pulse 2s ease-in-out infinite;
+}
+
+/* Sonar ring behind page-level spinner */
+.loading-ring {
+  animation: loading-ring-expand 2s ease-out infinite;
+}
+
+/* Second sonar ring, offset for a continuous wave */
+.loading-ring-delayed {
+  animation: loading-ring-expand 2s ease-out 0.65s infinite;
+}
+
+/* Smooth appear on mount */
+.loading-fade-in {
+  animation: loading-fade-in 0.2s ease-out both;
+}
+
+/* Reduced-motion: swap spin/expand for a simple pulse */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation: loading-spinner-pulse 1.5s ease-in-out infinite;
+  }
+
+  .loading-ring,
+  .loading-ring-delayed {
+    animation: none;
+    opacity: 0;
+  }
+
+  .nav-progress-bar-shimmer {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  .loading-fade-in {
+    animation: none;
+  }
 }
 
 .tiptap {

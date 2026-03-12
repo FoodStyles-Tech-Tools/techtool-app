@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useDeferredValue, useMemo } from "react"
 import { Input } from "@client/components/ui/input"
 import { Badge } from "@client/components/ui/badge"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { useUsers } from "@client/hooks/use-users"
 import { cn } from "@client/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@client/components/ui/avatar"
@@ -150,7 +151,11 @@ export function UserSearchOverlay({ open, onOpenChange, onSelectUser }: UserSear
 
           {/* Results */}
           <div className="max-h-[400px] overflow-y-auto p-2">
-            {isLoading ? null : filteredUsers.length === 0 ? (
+            {isLoading ? (
+              <div className="py-8">
+                <LoadingIndicator variant="block" label="Loading users…" />
+              </div>
+            ) : filteredUsers.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                 {searchQuery ? "No users found" : "Start typing to search users"}
               </div>

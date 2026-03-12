@@ -3,6 +3,7 @@
 import { useMemo } from "react"
 import { selectStyleInputSmPx2 } from "@client/lib/form-styles"
 import { cn } from "@client/lib/utils"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import {
   filterStatusesBySqaRequirement,
@@ -56,7 +57,7 @@ export function TicketStatusSelect({
     <div className={cn("relative flex min-h-8 w-[120px] min-w-[120px] items-center", className)}>
       {isLoading ? (
         <div className="flex w-full items-center justify-center">
-          <span className="h-3.5 w-3.5 animate-spin rounded-full border-[2px] border-muted-foreground/30 border-t-muted-foreground" />
+          <LoadingIndicator size="xs" label="Updating status…" />
         </div>
       ) : (
         <>

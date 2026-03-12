@@ -18,14 +18,14 @@ export function DataState({
   isEmpty,
   emptyTitle = "No data found",
   emptyDescription = "There is nothing to show yet.",
-  loadingTitle: _loadingTitle,
+  loadingTitle,
   loadingDescription: _loadingDescription,
   children,
 }: DataStateProps) {
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border bg-card p-8">
-        <LoadingIndicator variant="block" />
+      <div className="rounded-lg border border-border bg-card p-8">
+        <LoadingIndicator variant="block" label={loadingTitle ?? "Loading…"} />
       </div>
     )
   }

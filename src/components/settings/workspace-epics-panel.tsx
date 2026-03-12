@@ -6,6 +6,7 @@ import { Button } from "@client/components/ui/button"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import {
   Dialog,
   DialogContent,
@@ -98,8 +99,8 @@ export function WorkspaceEpicsPanel() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                  Loading epics...
+                <TableCell colSpan={4} className="py-8">
+                  <LoadingIndicator variant="block" label="Loading epics…" />
                 </TableCell>
               </TableRow>
             ) : sortedEpics.length === 0 ? (

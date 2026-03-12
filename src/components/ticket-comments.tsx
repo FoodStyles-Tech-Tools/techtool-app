@@ -13,6 +13,7 @@ import {
 import { Button } from "@client/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@client/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@client/components/ui/avatar"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { ConfirmDialog } from "@client/components/ui/confirm-dialog"
 import { useTicketComments, type TicketComment } from "@client/hooks/use-ticket-comments"
 import { useCommentNotifications } from "@client/hooks/use-comment-notifications"
@@ -1080,7 +1081,9 @@ export function TicketComments({
       )}
       <CardContent className={cn("px-4 pb-4 space-y-3", showHeader ? "pt-0" : "pt-1")}>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading comments...</p>
+          <div className="py-4">
+            <LoadingIndicator variant="block" label="Loading comments…" />
+          </div>
         ) : (
           <>
             {composerFirst && rootComposer}

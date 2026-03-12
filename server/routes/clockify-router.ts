@@ -3,6 +3,7 @@ import { withRequestContext } from "@server/http/with-request-context"
 import {
   createClockifySessionController,
   deleteClockifySessionController,
+  getClockifySessionController,
   getClockifySettingsController,
   listClockifySessionsController,
   reconcileClockifyTicketsController,
@@ -13,6 +14,7 @@ import {
 
 export const explicitClockifyRouteSignatures = new Set([
   "GET /api/clockify/sessions",
+  "GET /api/clockify/sessions/:sessionId",
   "POST /api/clockify/sessions",
   "PATCH /api/clockify/sessions",
   "DELETE /api/clockify/sessions",
@@ -26,6 +28,7 @@ export function createClockifyRouter() {
   const router = Router()
 
   router.get("/api/clockify/sessions", withRequestContext(listClockifySessionsController))
+  router.get("/api/clockify/sessions/:sessionId", withRequestContext(getClockifySessionController))
   router.post("/api/clockify/sessions", withRequestContext(createClockifySessionController))
   router.patch("/api/clockify/sessions", withRequestContext(updateClockifySessionController))
   router.delete("/api/clockify/sessions", withRequestContext(deleteClockifySessionController))

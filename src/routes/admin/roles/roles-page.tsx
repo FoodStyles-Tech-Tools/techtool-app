@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
+import { PageLoader } from "@client/layouts/full-screen-message"
 import { requestJson } from "@client/lib/api"
 import RolesClient from "./roles-client"
 
@@ -21,7 +22,7 @@ export function RolesPage() {
   })
 
   if (rolesQuery.isLoading) {
-    return null
+    return <PageLoader />
   }
 
   return <RolesClient initialRoles={rolesQuery.data || []} />

@@ -167,6 +167,14 @@ async function fetchClockifyReport(
   return { reportData, status, errorMessage }
 }
 
+export async function getClockifySessionDetail(context: RequestContext, sessionId: string) {
+  const session = await clockifyRepository.getClockifySessionFull(context.supabase, sessionId)
+  if (!session) {
+    throw new HttpError(404, "Session not found")
+  }
+  return { session }
+}
+
 export async function listClockifySessions(
   context: RequestContext,
   options: { start?: string; end?: string; limit?: number }

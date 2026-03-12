@@ -8,6 +8,7 @@ import { ArrowLeftIcon, PencilIcon } from "@heroicons/react/20/solid"
 import { Button } from "@client/components/ui/button"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { Input } from "@client/components/ui/input"
 import { Label } from "@client/components/ui/label"
 import {
@@ -155,7 +156,9 @@ export default function ReportSessionDetailClient() {
   if (!sessionId || sessionLoading || sessionError || !session) {
     return (
       <PageLayout>
-        <div className="py-12 text-center text-sm text-muted-foreground">Loading…</div>
+        <div className="py-12">
+          <LoadingIndicator variant="block" label="Loading session…" />
+        </div>
       </PageLayout>
     )
   }
@@ -187,7 +190,9 @@ export default function ReportSessionDetailClient() {
       />
 
       {dataLoading ? (
-        <div className="rounded-md border border-border bg-card py-12" />
+        <div className="rounded-md border border-border bg-card py-10">
+          <LoadingIndicator variant="block" label="Loading report data…" />
+        </div>
       ) : reportData ? (
         <div className="space-y-6">
           <ChartWithInsight

@@ -12,6 +12,7 @@ import { Button } from "@client/components/ui/button"
 import { Input } from "@client/components/ui/input"
 import { Label } from "@client/components/ui/label"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import {
   Table,
   TableBody,
@@ -105,7 +106,9 @@ export default function ReportSessionsListClient() {
 
       <EntityTableShell>
         {sessionsLoading ? (
-          <div className="px-4 py-8 text-center text-sm text-muted-foreground">Loading sessions…</div>
+          <div className="py-10">
+            <LoadingIndicator variant="block" label="Loading sessions…" />
+          </div>
         ) : sessions.length === 0 ? (
           <div className="px-4 py-8 text-center">
             <p className="text-sm text-muted-foreground">

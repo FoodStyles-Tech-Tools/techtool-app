@@ -133,7 +133,6 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
   const visibleSettingsChildren = settingsParents.flatMap((parent) =>
     parent.children.filter(isVisible).map((child) => ({ ...child }))
   )
-  const isSettingsActive = visibleSettingsChildren.some((c) => isPathActive(pathname, c.href))
   const reportsVisible = isVisible(reportsNavItem)
 
   return (
@@ -288,8 +287,7 @@ export function Sidebar({ className, onNavigate, onToggleCollapsed }: SidebarPro
                 type="button"
                 onClick={() => setSettingsExpanded((e) => !e)}
                 className={cn(
-                  "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-foreground transition-colors duration-150",
-                  isSettingsActive ? ACTIVE_ITEM_CLASS : "hover:bg-accent hover:text-accent-foreground"
+                  "flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-sm text-foreground transition-colors duration-150 hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 <Cog6ToothIcon className="h-4 w-4 shrink-0" />

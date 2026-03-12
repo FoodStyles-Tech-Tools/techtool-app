@@ -3,6 +3,7 @@
 import { selectStyleInputSm } from "@client/lib/form-styles"
 import { cn } from "@client/lib/utils"
 import { PriorityPill } from "@client/components/tickets/priority-pill"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 
 interface TicketPrioritySelectProps {
   value: string
@@ -35,7 +36,7 @@ export function TicketPrioritySelect({
     <div className={cn("relative flex min-h-8 w-[120px] min-w-[120px] items-center", className)}>
       {isLoading ? (
         <div className="flex w-full items-center justify-center">
-          <span className="h-3.5 w-3.5 animate-spin rounded-full border-[2px] border-muted-foreground/30 border-t-muted-foreground" />
+          <LoadingIndicator size="xs" label="Updating priority…" />
         </div>
       ) : (
         <>
