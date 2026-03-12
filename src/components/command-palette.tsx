@@ -10,13 +10,15 @@ import {
   BuildingOffice2Icon,
   TicketIcon,
   FolderIcon,
+  CalendarDaysIcon,
+  ArrowTopRightOnSquareIcon,
 } from "@heroicons/react/20/solid"
 
 export type CommandPaletteAction = {
   id: string
   label: string
   keywords?: string
-  icon?: "ticket" | "project" | "epic" | "department" | "find-ticket" | "find-project"
+  icon?: "ticket" | "project" | "epic" | "department" | "sprint" | "find-ticket" | "find-project" | "open"
 }
 
 const iconMap = {
@@ -24,8 +26,10 @@ const iconMap = {
   project: FolderIcon,
   epic: Squares2X2Icon,
   department: BuildingOffice2Icon,
+  sprint: CalendarDaysIcon,
   "find-ticket": MagnifyingGlassIcon,
   "find-project": MagnifyingGlassIcon,
+  open: ArrowTopRightOnSquareIcon,
 }
 
 interface CommandPaletteProps {

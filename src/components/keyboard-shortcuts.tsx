@@ -41,6 +41,9 @@ const EpicForm = lazyComponent(
 const DepartmentForm = lazyComponent(
   () => import("@client/components/forms/department-form").then((mod) => mod.DepartmentForm),
 )
+const SprintForm = lazyComponent(
+  () => import("@client/components/forms/sprint-form").then((mod) => mod.SprintForm),
+)
 
 export function KeyboardShortcuts() {
   const { data: session, isPending } = useSession()
@@ -54,10 +57,19 @@ export function KeyboardShortcuts() {
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const [isEpicDialogOpen, setIsEpicDialogOpen] = useState(false)
   const [isDepartmentDialogOpen, setIsDepartmentDialogOpen] = useState(false)
+  const [isSprintDialogOpen, setIsSprintDialogOpen] = useState(false)
   const { flags } = usePermissions()
   const canCreateTickets = flags?.canCreateTickets ?? false
   const canCreateProjects = flags?.canCreateProjects ?? false
   const canEditProjects = flags?.canEditProjects ?? false
+  const canViewTickets = flags?.canViewTickets ?? false
+  const canViewProjects = flags?.canViewProjects ?? false
+  const canViewClockify = flags?.canViewClockify ?? false
+  const canViewAssets = flags?.canViewAssets ?? false
+  const canViewUsers = flags?.canViewUsers ?? false
+  const canViewRoles = flags?.canViewRoles ?? false
+  const canViewAuditLog = flags?.canViewAuditLog ?? false
+  const canManageStatus = flags?.canManageStatus ?? false
   const shouldLoadProjectDialogData = canCreateProjects && isProjectDialogOpen
   const { data: usersData } = useUsers({
     enabled: shouldLoadProjectDialogData,
@@ -71,6 +83,7 @@ export function KeyboardShortcuts() {
 
   const commandPaletteActions = useMemo((): CommandPaletteAction[] => {
     const list: CommandPaletteAction[] = []
+    // Create actions
     if (canCreateTickets) {
       list.push({ id: "create-ticket", label: "Create ticket", keywords: "new ticket", icon: "ticket" })
     }
@@ -80,11 +93,58 @@ export function KeyboardShortcuts() {
     if (canEditProjects) {
       list.push({ id: "create-epic", label: "Create epic", keywords: "new epic", icon: "epic" })
       list.push({ id: "create-department", label: "Create department", keywords: "new department", icon: "department" })
+      list.push({ id: "create-sprint", label: "Create sprint", keywords: "new sprint", icon: "sprint" })
     }
+    // Find actions
     list.push({ id: "find-ticket", label: "Find ticket", keywords: "search ticket", icon: "find-ticket" })
     list.push({ id: "find-project", label: "Find project", keywords: "search project go projects", icon: "find-project" })
+    // Open module actions (permission-gated)
+    if (canViewTickets) {
+      list.push({ id: "open-tickets", label: "Open Tickets", keywords: "tickets go", icon: "open" })
+    }
+    if (canViewProjects) {
+      list.push({ id: "open-projects", label: "Open Projects", keywords: "projects go", icon: "open" })
+    }
+    if (canViewClockify) {
+      list.push({ id: "open-reports", label: "Open Reports", keywords: "reports go", icon: "open" })
+      list.push({ id: "open-clockify", label: "Open Clockify", keywords: "clockify time go", icon: "open" })
+    }
+    if (canViewAssets) {
+      list.push({ id: "open-assets", label: "Open Assets", keywords: "assets go", icon: "open" })
+    }
+    if (canViewUsers) {
+      list.push({ id: "open-users", label: "Open Users", keywords: "users people go", icon: "open" })
+    }
+    if (canViewRoles) {
+      list.push({ id: "open-roles", label: "Open Roles", keywords: "roles permissions go", icon: "open" })
+    }
+    if (canViewAuditLog) {
+      list.push({ id: "open-audit-log", label: "Open Audit Log", keywords: "audit log history go", icon: "open" })
+    }
+    if (canManageStatus) {
+      list.push({ id: "open-status", label: "Open Status", keywords: "status workspace go", icon: "open" })
+    }
+    if (canEditProjects) {
+      list.push({ id: "open-epics", label: "Open Epics", keywords: "epics workspace go", icon: "open" })
+      list.push({ id: "open-sprints", label: "Open Sprints", keywords: "sprints workspace go", icon: "open" })
+    }
+    if (canViewTickets) {
+      list.push({ id: "open-deleted-tickets", label: "Open Deleted Tickets", keywords: "deleted tickets trash go", icon: "open" })
+    }
     return list
-  }, [canCreateTickets, canCreateProjects, canEditProjects])
+  }, [
+    canCreateTickets,
+    canCreateProjects,
+    canEditProjects,
+    canViewTickets,
+    canViewProjects,
+    canViewClockify,
+    canViewAssets,
+    canViewUsers,
+    canViewRoles,
+    canViewAuditLog,
+    canManageStatus,
+  ])
 
   const handleCommandPaletteSelect = (actionId: string) => {
     switch (actionId) {
@@ -102,12 +162,51 @@ export function KeyboardShortcuts() {
       case "create-department":
         setIsDepartmentDialogOpen(true)
         break
+      case "create-sprint":
+        setIsSprintDialogOpen(true)
+        break
       case "find-ticket":
         if (selectedTicketId) setSelectedTicketId(null)
         setIsSearchOverlayOpen(true)
         break
       case "find-project":
         navigate("/projects")
+        break
+      case "open-tickets":
+        navigate("/tickets")
+        break
+      case "open-projects":
+        navigate("/projects")
+        break
+      case "open-reports":
+        navigate("/report")
+        break
+      case "open-assets":
+        navigate("/assets")
+        break
+      case "open-clockify":
+        navigate("/clockify")
+        break
+      case "open-users":
+        navigate("/users")
+        break
+      case "open-roles":
+        navigate("/roles")
+        break
+      case "open-audit-log":
+        navigate("/audit-log")
+        break
+      case "open-status":
+        navigate("/status")
+        break
+      case "open-epics":
+        navigate("/epics")
+        break
+      case "open-sprints":
+        navigate("/sprints")
+        break
+      case "open-deleted-tickets":
+        navigate("/deleted-tickets")
         break
       default:
         break
@@ -171,7 +270,8 @@ export function KeyboardShortcuts() {
         !isProjectDialogOpen &&
         !isCommandPaletteOpen &&
         !isEpicDialogOpen &&
-        !isDepartmentDialogOpen
+        !isDepartmentDialogOpen &&
+        !isSprintDialogOpen
       ) {
         return
       }
@@ -225,6 +325,11 @@ export function KeyboardShortcuts() {
           setIsDepartmentDialogOpen(false)
           return
         }
+        if (isSprintDialogOpen) {
+          e.preventDefault()
+          setIsSprintDialogOpen(false)
+          return
+        }
       }
     }
 
@@ -248,6 +353,7 @@ export function KeyboardShortcuts() {
     isProjectDialogOpen,
     isEpicDialogOpen,
     isDepartmentDialogOpen,
+    isSprintDialogOpen,
     canCreateProjects,
     isUsersPage,
   ])
@@ -401,6 +507,25 @@ export function KeyboardShortcuts() {
                   onSuccess={() => {
                     setIsDepartmentDialogOpen(false)
                     toast("Department created successfully")
+                  }}
+                />
+              ) : null}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+      {canEditProjects && (
+        <Dialog open={isSprintDialogOpen} onOpenChange={setIsSprintDialogOpen}>
+          <DialogContent showCloseButton className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Create Sprint</DialogTitle>
+            </DialogHeader>
+            <div className="px-6 pb-6">
+              {isSprintDialogOpen ? (
+                <SprintForm
+                  onSuccess={() => {
+                    setIsSprintDialogOpen(false)
+                    toast("Sprint created successfully")
                   }}
                 />
               ) : null}
