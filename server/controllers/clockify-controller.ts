@@ -18,7 +18,7 @@ export async function getClockifySessionController(request: Request, response: R
       permission: { resource: "clockify", action: "view" },
     })
     const { sessionId } = request.params
-    const payload = await clockifyService.getClockifySessionDetail(context, sessionId)
+    const payload = await clockifyService.getClockifySessionDetail(context, String(sessionId))
     response.json(payload)
   } catch (error) {
     handleControllerError(response, error, "Error in GET /api/clockify/sessions/:sessionId")

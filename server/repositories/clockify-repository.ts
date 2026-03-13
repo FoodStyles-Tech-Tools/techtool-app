@@ -10,7 +10,7 @@ export type ClockifySessionRecord = {
   fetched_at: string
   status: string
   error_message: string | null
-  report_data: unknown
+  report_data?: unknown
   reconciliation?: Record<string, ClockifyReconciliationEntry>
   requested_by_id: string | null
   requested_by?: { id: string; name: string | null } | null
@@ -62,7 +62,12 @@ export async function listClockifySessions(
     throw new HttpError(500, "Failed to fetch sessions")
   }
 
-  return (data || []) as ClockifySessionRecord[]
+  const sessions = (data || []).map((row: any) => ({
+    ...row,
+    requested_by: Array.isArray(row.requested_by) ? row.requested_by[0] ?? null : row.requested_by ?? null,
+  })) as ClockifySessionRecord[]
+
+  return sessions
 }
 
 export async function clearClockifySessions(supabase: SupabaseClient) {

@@ -420,6 +420,7 @@ export async function updateTicketStatusWithReason(
   }
 
   const now = new Date().toISOString()
+  const previousStatus = (currentTicket.status as string | null) || null
 
   // Derive startedAt server-side when the client does not supply it.
   // For cancelled / rejected: ensure started_at is recorded if the ticket never started.
@@ -490,8 +491,6 @@ export async function updateTicketStatusWithReason(
   }
 
   const normalizedTicket = normalizePersistedTicket(updatedTicket as Record<string, unknown>)
-  const previousStatus = (currentTicket.status as string | null) || null
-
   void notifyTicketForQa(context.supabase, normalizedTicket as any, previousStatus)
   void notifyTicketReturnedToDev(context.supabase, normalizedTicket as any, previousStatus)
   await invalidateTicketCaches()

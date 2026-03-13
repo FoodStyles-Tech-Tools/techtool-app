@@ -30,31 +30,25 @@ export async function getAuditLogController(request: Request, response: Response
 
     if (query.module != null) {
       const resource = permissionResourceForModule(query.module)
-      const { supabase, userId } = await getRequestContext({
+      const context = await getRequestContext({
         permission: { resource, action: "view" },
       })
-      const payload = await auditLogService.getAuditLog(
-        { supabase, userId },
-        {
-          module: query.module,
-          resource_id: query.resource_id,
-          limit: query.limit,
-        }
-      )
+      const payload = await auditLogService.getAuditLog(context, {
+        module: query.module,
+        resource_id: query.resource_id,
+        limit: query.limit,
+      })
       response.json(payload)
       return
     }
 
-    const { supabase, userId } = await getRequestContext({
+    const context = await getRequestContext({
       permission: { resource: "audit_log", action: "view" },
     })
-    const payload = await auditLogService.getAuditLog(
-      { supabase, userId },
-      {
-        resource_id: query.resource_id,
-        limit: query.limit,
-      }
-    )
+    const payload = await auditLogService.getAuditLog(context, {
+      resource_id: query.resource_id,
+      limit: query.limit,
+    })
     response.json(payload)
   } catch (error) {
     handleControllerError(response, error, "Error in GET /api/audit-log")
