@@ -148,7 +148,7 @@ export default function ProjectDetailClient({
   const { departments } = useDepartments()
   const { data: usersData } = useUsers()
   const [isEditOpen, setEditOpen] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>("table")
+  const [viewMode, setViewMode] = useState<ViewMode>("kanban")
   const [currentPage, setCurrentPage] = useState(1)
   const [showProjectDetails, setShowProjectDetails] = useState(false)
 
