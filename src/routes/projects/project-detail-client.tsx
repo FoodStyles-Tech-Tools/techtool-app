@@ -409,6 +409,27 @@ export default function ProjectDetailClient({
     }
   }, [bulkDeployRoundId, selectedTicketIds, updateTicket])
 
+  const handleBulkRemoveDeployRound = useCallback(async () => {
+    if (selectedTicketIds.length === 0) return
+    try {
+      await Promise.all(
+        selectedTicketIds.map((ticketId) =>
+          updateTicket.mutateAsync({ id: ticketId, deployRoundId: null })
+        )
+      )
+      toast(
+        `Removed deploy round from ${selectedTicketIds.length} ticket${
+          selectedTicketIds.length === 1 ? "" : "s"
+        }`
+      )
+      setSelectedTicketIds([])
+    } catch (error: any) {
+      // eslint-disable-next-line no-console
+      console.error("Error removing deploy round in bulk:", error)
+      toast(error?.message || "Failed to update tickets", "error")
+    }
+  }, [selectedTicketIds, updateTicket])
+
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode)
     setCurrentPage(1)
@@ -790,6 +811,14 @@ function getTypeColor(type: string | null | undefined): string {
                           disabled={!deployRounds.length}
                         >
                           Add to Deploy Round
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          onClick={() => void handleBulkRemoveDeployRound()}
+                        >
+                          Remove From Deploy Round
                         </Button>
                         <Button
                           variant="ghost"
