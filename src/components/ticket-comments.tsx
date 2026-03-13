@@ -823,7 +823,7 @@ export function TicketComments({
 }: TicketCommentsProps) {
   const { data: session } = useSession()
   const { flags } = usePermissions()
-  const canEdit = readOnly ? false : (flags?.canEditTickets ?? false)
+  const canEdit = readOnly ? false : (flags?.canViewTickets ?? false)
   const { data: usersData } = useUsers()
   const users = usersData || []
   const { data: mentionTicketsData } = useTickets({

@@ -68,7 +68,7 @@ export async function listTicketCommentsController(request: Request, response: R
 export async function createTicketCommentController(request: Request, response: Response) {
   try {
     const { supabase, userId } = await getRequestContext({
-      permission: { resource: "tickets", action: "edit" },
+      permission: { resource: "tickets", action: "view" },
     })
     const { id } = parseTicketIdParams(request.params)
     const payload = await ticketSupportService.createTicketComment(
@@ -85,7 +85,7 @@ export async function createTicketCommentController(request: Request, response: 
 export async function updateTicketCommentController(request: Request, response: Response) {
   try {
     const { supabase, userId } = await getRequestContext({
-      permission: { resource: "tickets", action: "edit" },
+      permission: { resource: "tickets", action: "view" },
     })
     const { id, commentId } = parseCommentIdParams(request.params)
     const payload = await ticketSupportService.updateTicketComment(
@@ -103,7 +103,7 @@ export async function updateTicketCommentController(request: Request, response: 
 export async function deleteTicketCommentController(request: Request, response: Response) {
   try {
     const { supabase, userId } = await getRequestContext({
-      permission: { resource: "tickets", action: "edit" },
+      permission: { resource: "tickets", action: "view" },
     })
     const { id, commentId } = parseCommentIdParams(request.params)
     const payload = await ticketSupportService.deleteTicketComment(

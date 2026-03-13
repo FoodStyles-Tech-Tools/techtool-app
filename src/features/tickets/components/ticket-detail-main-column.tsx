@@ -11,6 +11,7 @@ import { TicketActivity } from "@client/components/ticket-activity"
 import { getSanitizedHtmlProps } from "@client/lib/sanitize-html"
 import { isRichTextEmpty, toDisplayHtml } from "@shared/rich-text"
 import type { Ticket, TicketDetailRelations } from "@shared/types"
+import { isArchivedStatus } from "@shared/ticket-statuses"
 import type { TicketComment } from "@client/hooks/use-ticket-comments"
 
 const RichTextEditor = lazyComponent(
@@ -319,7 +320,7 @@ export function TicketDetailMainColumn({
           ticketId={ticketId}
           displayId={ticket.displayId}
           initialComments={detailComments}
-          readOnly={!canEditTickets}
+          readOnly={isArchivedStatus(ticket.status)}
         />
       </Card>
     </div>

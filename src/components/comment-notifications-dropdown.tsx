@@ -30,6 +30,7 @@ function NotificationItem({
   const typeLabel = notification.type === "mention" ? "mentioned you" : "replied"
   const bodyText = richTextToPlainText(notification.comment?.body)
   const bodySnippet = bodyText ? bodyText.slice(0, 80) + (bodyText.length > 80 ? "..." : "") : ""
+  const mainText = displayId ? `${authorName} ${typeLabel} in ${displayId}` : `${authorName} ${typeLabel}`
 
   const handleClick = () => {
     if (isUnread) onMarkRead(notification.id)
@@ -43,8 +44,8 @@ function NotificationItem({
       onClick={handleClick}
       onKeyDown={(event) => event.key === "Enter" && handleClick()}
       className={cn(
-        "flex cursor-pointer gap-3 rounded-md px-2 py-2.5 text-left transition-colors hover:bg-accent/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        isUnread && "bg-muted/70"
+        "flex cursor-pointer gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-accent/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        isUnread && "bg-muted/70 font-semibold"
       )}
     >
       <div className="mt-0.5 shrink-0">
@@ -55,44 +56,15 @@ function NotificationItem({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="text-sm font-medium leading-tight">
-            <span className="font-semibold">{authorName}</span> {typeLabel}
-          </p>
-          {isUnread ? (
-            <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-label="Unread notification" />
-          ) : (
-            <span
-              className="text-xs text-muted-foreground"
-              title={
-                notification.read_at
-                  ? `Viewed ${formatDistanceToNow(new Date(notification.read_at), { addSuffix: true })}`
-                  : ""
-              }
-            >
-              Read
-            </span>
-          )}
-        </div>
-
-        <div className="mt-1 flex min-w-0 items-center gap-2">
-          {displayId ? (
-            <span className="rounded-md border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-muted-foreground">
-              {displayId}
-            </span>
-          ) : null}
-          <p className="truncate text-xs font-medium text-foreground/90">{ticketTitle}</p>
-        </div>
-
-        {bodySnippet ? <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{bodySnippet}</p> : null}
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="truncate text-sm text-foreground">{mainText}</p>
+        {bodySnippet ? (
+          <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{bodySnippet}</p>
+        ) : null}
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
           {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
-          {notification.read_at ? (
-            <span className="ml-1">
-              {" "}
-              - Viewed {formatDistanceToNow(new Date(notification.read_at), { addSuffix: true })}
-            </span>
-          ) : null}
+          {notification.read_at
+            ? ` · Viewed ${formatDistanceToNow(new Date(notification.read_at), { addSuffix: true })}`
+            : ""}
         </p>
       </div>
     </div>
@@ -148,7 +120,7 @@ export function CommentNotificationsDropdown() {
         ) : null}
       </Button>
       {open ? (
-      <div className="absolute right-0 z-30 mt-2 w-[380px] rounded-lg border border-border bg-card p-0 shadow-lg">
+      <div className="absolute right-0 z-30 mt-2 w-[380px] rounded-xl border border-border/80 bg-card/95 p-0 shadow-xl backdrop-blur-sm">
         <div className="flex items-center justify-between border-b border-border px-4 py-2">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold">Notifications</span>
