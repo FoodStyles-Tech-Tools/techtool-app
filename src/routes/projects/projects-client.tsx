@@ -16,6 +16,7 @@ import { DataState } from "@client/components/ui/data-state"
 import { Button } from "@client/components/ui/button"
 import { Input } from "@client/components/ui/input"
 import { Select } from "@client/components/ui/select"
+import { Checkbox } from "@client/components/ui/checkbox"
 import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import {
   Table,
@@ -70,6 +71,7 @@ export default function ProjectsClient({
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<"active" | "all">("active")
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
+  const [requireSqaFilter, setRequireSqaFilter] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isProjectFormOpen, setProjectFormOpen] = useState(false)
   const deferredSearchQuery = useDeferredValue(searchQuery)
@@ -91,12 +93,6 @@ export default function ProjectsClient({
       toast("Failed to update pin")
     }
   }
-
-  useEffect(() => {
-    if (currentUserId) {
-      setAssigneeFilter((prev) => (prev === "all" ? currentUserId : prev))
-    }
-  }, [currentUserId])
 
   const users = useMemo(
     () =>
@@ -128,10 +124,12 @@ export default function ProjectsClient({
           if (!isOwner && !isRequester && !isCollaborator) return false
         }
 
+        if (requireSqaFilter && !project.require_sqa) return false
+
         return true
       })
       .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
-  }, [currentUser?.id, deferredSearchQuery, initialProjects, assigneeFilter, statusFilter])
+  }, [currentUser?.id, deferredSearchQuery, initialProjects, assigneeFilter, statusFilter, requireSqaFilter])
 
   const totalPages = Math.max(1, Math.ceil(filteredProjects.length / ROWS_PER_PAGE))
   const startIndex = (currentPage - 1) * ROWS_PER_PAGE
@@ -146,12 +144,14 @@ export default function ProjectsClient({
         hasActiveFilters={
           searchQuery.trim() !== "" ||
           statusFilter !== "active" ||
-          (currentUserId ? assigneeFilter !== currentUserId : assigneeFilter !== "all")
+          assigneeFilter !== "all" ||
+          requireSqaFilter
         }
         onResetFilters={() => {
           setSearchQuery("")
           setStatusFilter("active")
-          setAssigneeFilter(currentUserId ?? "all")
+          setAssigneeFilter("all")
+          setRequireSqaFilter(false)
           setCurrentPage(1)
         }}
         filters={
@@ -206,6 +206,17 @@ export default function ProjectsClient({
                   ))}
               </Select>
             </FilterField>
+            <FilterField label="" id="projects-require-sqa">
+              <Checkbox
+                id="projects-require-sqa"
+                label="Require SQA"
+                checked={requireSqaFilter}
+                onChange={(event) => {
+                  setRequireSqaFilter(event.target.checked)
+                  setCurrentPage(1)
+                }}
+              />
+            </FilterField>
           </>
         }
       />
@@ -255,6 +266,7 @@ export default function ProjectsClient({
                 <TableHead className="h-9 py-2">Project Name</TableHead>
                 <TableHead className="h-9 py-2">Project Owner</TableHead>
                 <TableHead className="h-9 py-2">Collaborators</TableHead>
+                <TableHead className="h-9 py-2">Require SQA</TableHead>
                 <TableHead className="h-9 py-2">Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -295,6 +307,16 @@ export default function ProjectsClient({
                     </TableCell>
                     <TableCell className="py-2 text-sm text-foreground">{ownerLabel}</TableCell>
                     <TableCell className="py-2 text-sm text-foreground">{collaboratorLabel}</TableCell>
+                  <TableCell className="py-2">
+                    <input
+                      type="checkbox"
+                      checked={project.require_sqa}
+                      readOnly
+                      disabled
+                      className="h-4 w-4 cursor-not-allowed rounded border-input opacity-70"
+                      aria-label="Require SQA"
+                    />
+                  </TableCell>
                     <TableCell className="py-2 text-sm capitalize text-foreground">{project.status}</TableCell>
                   </TableRow>
                 )

@@ -85,31 +85,40 @@ export function CreateMenu({
         onClick={() => setOpen((prev) => !prev)}
       >
         + Create
+        <kbd className="ml-1.5 hidden rounded border border-white/30 bg-white/10 px-1 py-0.5 text-[10px] font-medium leading-none sm:inline">
+          C
+        </kbd>
       </Button>
       {open ? (
-        <div className="absolute right-0 z-30 mt-2 w-40 rounded-md border border-border bg-popover py-1 text-sm shadow-lg">
+        <div className="absolute right-0 z-30 mt-2 w-44 rounded-md border border-border bg-popover py-1 text-sm shadow-lg">
           {canCreateTicket ? (
             <button
               type="button"
-              className="flex w-full items-center px-3 py-1.5 text-left hover:bg-accent"
+              className="flex w-full items-center justify-between px-3 py-1.5 text-left hover:bg-accent"
               onClick={() => {
                 onCreateTicket()
                 setOpen(false)
               }}
             >
-              Ticket
+              <span>Ticket</span>
+              <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
+                T
+              </kbd>
             </button>
           ) : null}
           {canCreateProject ? (
             <button
               type="button"
-              className="flex w-full items-center px-3 py-1.5 text-left hover:bg-accent"
+              className="flex w-full items-center justify-between px-3 py-1.5 text-left hover:bg-accent"
               onClick={() => {
                 onCreateProject()
                 setOpen(false)
               }}
             >
-              Project
+              <span>Project</span>
+              <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px] font-medium leading-none text-muted-foreground">
+                P
+              </kbd>
             </button>
           ) : null}
         </div>

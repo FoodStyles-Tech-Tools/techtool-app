@@ -1,7 +1,8 @@
 "use client"
 
 import { useCallback, useDeferredValue, useMemo, useState } from "react"
-import { MagnifyingGlassIcon, PlusIcon } from "@heroicons/react/20/solid"
+import { useQueryClient } from "@tanstack/react-query"
+import { ArrowPathIcon, MagnifyingGlassIcon, PlusIcon } from "@heroicons/react/20/solid"
 import { TableCellsIcon, ViewColumnsIcon } from "@heroicons/react/24/outline"
 import { useProject } from "@client/hooks/use-projects"
 import { useDepartments } from "@client/hooks/use-departments"
@@ -15,6 +16,7 @@ import {
   useUpdateTicket,
   useUpdateTicketWithReasonComment,
 } from "@client/features/tickets/hooks/use-tickets"
+import { ticketQueryKeys } from "@client/features/tickets/lib/query-keys"
 import { useTicketBoardActions } from "@client/features/tickets/hooks/use-ticket-board-actions"
 import { useOpenSubtasksDialog } from "@client/features/tickets/hooks/use-open-subtasks-dialog"
 import {
@@ -140,6 +142,7 @@ export default function ProjectDetailClient({
   projectId,
   initialProject,
 }: ProjectDetailClientProps) {
+  const queryClient = useQueryClient()
   const { openPreview } = useTicketPreview()
   const { flags, user: currentUser } = usePermissions()
   const { data, isLoading } = useProject(projectId, {
@@ -177,6 +180,7 @@ export default function ProjectDetailClient({
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
   const [isBulkDeployRoundOpen, setBulkDeployRoundOpen] = useState(false)
   const [bulkDeployRoundId, setBulkDeployRoundId] = useState<string>("")
+  const [isBulkDeployRoundUpdating, setIsBulkDeployRoundUpdating] = useState(false)
 
   const deferredSearchQuery = useDeferredValue(searchQuery)
 
@@ -267,7 +271,7 @@ export default function ProjectDetailClient({
     setCurrentPage(1)
   }, [])
 
-  const { data: tickets = [], pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
+  const { data: tickets = [], pagination: ticketsPagination, isLoading: ticketsLoading, isFetching: ticketsFetching, refetch: refetchTickets } = useTickets({
     projectId: project?.id,
     epicId: epicFilter !== "all" ? epicFilter : undefined,
     sprintId: sprintFilter !== "all" ? sprintFilter : undefined,
@@ -378,12 +382,20 @@ export default function ProjectDetailClient({
 
   const handleBulkAssignDeployRound = useCallback(async () => {
     if (!bulkDeployRoundId || selectedTicketIds.length === 0) return
+    setIsBulkDeployRoundUpdating(true)
     try {
       await Promise.all(
         selectedTicketIds.map((ticketId) =>
           updateTicket.mutateAsync({ id: ticketId, deployRoundId: bulkDeployRoundId })
         )
       )
+
+      // Directly refetch the active ticket list so it reflects the server state immediately.
+      await refetchTickets()
+      if (projectId) {
+        await queryClient.refetchQueries({ queryKey: ["deploy-rounds", "project", projectId], type: "active" })
+      }
+
       toast(
         `Added ${selectedTicketIds.length} ticket${
           selectedTicketIds.length === 1 ? "" : "s"
@@ -396,17 +408,27 @@ export default function ProjectDetailClient({
       // eslint-disable-next-line no-console
       console.error("Error assigning deploy round in bulk:", error)
       toast(error?.message || "Failed to update tickets", "error")
+    } finally {
+      setIsBulkDeployRoundUpdating(false)
     }
-  }, [bulkDeployRoundId, selectedTicketIds, updateTicket])
+  }, [bulkDeployRoundId, projectId, queryClient, refetchTickets, selectedTicketIds, updateTicket])
 
   const handleBulkRemoveDeployRound = useCallback(async () => {
     if (selectedTicketIds.length === 0) return
+    setIsBulkDeployRoundUpdating(true)
     try {
       await Promise.all(
         selectedTicketIds.map((ticketId) =>
           updateTicket.mutateAsync({ id: ticketId, deployRoundId: null })
         )
       )
+
+      // Directly refetch the active ticket list so removed tickets immediately disappear.
+      await refetchTickets()
+      if (projectId) {
+        await queryClient.refetchQueries({ queryKey: ["deploy-rounds", "project", projectId], type: "active" })
+      }
+
       toast(
         `Removed deploy round from ${selectedTicketIds.length} ticket${
           selectedTicketIds.length === 1 ? "" : "s"
@@ -417,8 +439,10 @@ export default function ProjectDetailClient({
       // eslint-disable-next-line no-console
       console.error("Error removing deploy round in bulk:", error)
       toast(error?.message || "Failed to update tickets", "error")
+    } finally {
+      setIsBulkDeployRoundUpdating(false)
     }
-  }, [selectedTicketIds, updateTicket])
+  }, [projectId, queryClient, refetchTickets, selectedTicketIds, updateTicket])
 
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode)
@@ -608,7 +632,20 @@ function getTypeColor(type: string | null | undefined): string {
             </section>
 
             <section>
-              <h2 className="text-sm font-semibold text-foreground">Tickets</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-foreground">Tickets</h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void refetchTickets()}
+                  disabled={ticketsFetching || ticketsLoading}
+                  title="Refresh tickets"
+                  className="h-7 w-7 p-0"
+                >
+                  <ArrowPathIcon className={cn("h-4 w-4", (ticketsFetching && !ticketsLoading) && "animate-spin")} />
+                </Button>
+              </div>
               <div className="mt-3">
                 <FilterBar
                   hasActiveFilters={hasActiveFilters}
@@ -793,9 +830,9 @@ function getTypeColor(type: string | null | undefined): string {
                 </div>
               )}
 
-              {ticketsLoading ? (
+              {ticketsLoading || isBulkDeployRoundUpdating ? (
                 <div className="mt-4 rounded-lg border border-border bg-card py-8">
-                  <LoadingIndicator variant="block" label="Loading tickets…" />
+                  <LoadingIndicator variant="block" label={isBulkDeployRoundUpdating ? "Updating tickets…" : "Loading tickets…"} />
                 </div>
               ) : isKanban ? (
                 <div className="mt-4">
@@ -826,17 +863,32 @@ function getTypeColor(type: string | null | undefined): string {
                           size="sm"
                           type="button"
                           onClick={() => setBulkDeployRoundOpen(true)}
-                          disabled={!deployRounds.length}
+                          disabled={!deployRounds.length || isBulkDeployRoundUpdating}
                         >
-                          Add to Deploy Round
+                          {isBulkDeployRoundUpdating ? (
+                            <span className="inline-flex items-center gap-2">
+                              <LoadingIndicator size="xs" label="Updating deploy round…" />
+                              <span>Adding…</span>
+                            </span>
+                          ) : (
+                            "Add to Deploy Round"
+                          )}
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           type="button"
                           onClick={() => void handleBulkRemoveDeployRound()}
+                          disabled={isBulkDeployRoundUpdating}
                         >
-                          Remove From Deploy Round
+                          {isBulkDeployRoundUpdating ? (
+                            <span className="inline-flex items-center gap-2">
+                              <LoadingIndicator size="xs" label="Updating deploy round…" />
+                              <span>Removing…</span>
+                            </span>
+                          ) : (
+                            "Remove From Deploy Round"
+                          )}
                         </Button>
                         <Button
                           variant="ghost"
@@ -1037,9 +1089,16 @@ function getTypeColor(type: string | null | undefined): string {
             <Button
               type="button"
               onClick={() => void handleBulkAssignDeployRound()}
-              disabled={!bulkDeployRoundId || !selectedTicketIds.length}
+              disabled={!bulkDeployRoundId || !selectedTicketIds.length || isBulkDeployRoundUpdating}
             >
-              Add to Deploy Round
+              {isBulkDeployRoundUpdating ? (
+                <span className="inline-flex items-center gap-2">
+                  <LoadingIndicator size="xs" label="Updating deploy round…" />
+                  <span>Adding…</span>
+                </span>
+              ) : (
+                "Add to Deploy Round"
+              )}
             </Button>
           </div>
         </DialogContent>

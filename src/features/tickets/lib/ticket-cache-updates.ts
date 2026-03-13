@@ -27,10 +27,12 @@ export function applyTicketEntitySuccess(
   queryClient: QueryClient,
   data: { ticket: Ticket }
 ): void {
-  // Cancel in-flight reads so an older response can't overwrite this fresh mutation payload.
+  // Cancel in-flight detail reads so an older response can't overwrite this fresh mutation payload.
+  // We intentionally do NOT cancel list queries here – doing so would abort refetches that are
+  // triggered immediately after bulk operations (e.g. bulk deploy-round add/remove) which need
+  // to pull a fresh filtered list from the server.
   if ("cancelQueries" in queryClient && typeof queryClient.cancelQueries === "function") {
     void queryClient.cancelQueries({ queryKey: ticketQueryKeys.detail(data.ticket.id) })
-    void queryClient.cancelQueries({ queryKey: ticketQueryKeys.lists() })
   }
   queryClient.setQueryData(ticketQueryKeys.entity(data.ticket.id), data)
   queryClient.setQueryData<TicketDetailResponse>(ticketQueryKeys.detail(data.ticket.id), (current) =>
