@@ -250,7 +250,6 @@ export function TicketsToolbar({
               <option value="all">All</option>
               <option value="bug">Bug</option>
               <option value="request">Request</option>
-              <option value="task">Task</option>
               <option value="subtask">Subtask</option>
             </Select>
           </FilterField>

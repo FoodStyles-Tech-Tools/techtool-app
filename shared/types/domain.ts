@@ -221,7 +221,7 @@ export interface TicketSummary {
 export interface QuickAddTicketData {
   title: string
   description: string
-  type: "bug" | "request" | "task" | "subtask"
+  type: "bug" | "request" | "subtask"
   priority: "low" | "medium" | "high" | "urgent"
   status: string
   departmentId?: string

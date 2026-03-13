@@ -232,8 +232,8 @@ export function TicketSearchOverlay({ open, onOpenChange, onSelectTicket }: Tick
                         })()}
                         <PriorityPill priority={ticket.priority} />
                         <Badge variant="outline" className="text-xs flex items-center gap-1">
-                          <TicketTypeIcon type={ticket.type || "task"} />
-                          {ticket.type || "task"}
+                          <TicketTypeIcon type={ticket.type || "bug"} />
+                          {ticket.type || "bug"}
                         </Badge>
                       </div>
                       <h4 className="text-sm font-medium truncate">{ticket.title}</h4>

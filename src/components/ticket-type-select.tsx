@@ -3,7 +3,6 @@
 import {
   BugAntIcon,
   DocumentTextIcon,
-  ClipboardDocumentCheckIcon,
   Square2StackIcon,
 } from "@heroicons/react/20/solid"
 import { selectStyleInputSm } from "@client/lib/form-styles"
@@ -13,7 +12,6 @@ import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 const TICKET_TYPE_ICONS = {
   bug: BugAntIcon,
   request: DocumentTextIcon,
-  task: ClipboardDocumentCheckIcon,
   subtask: Square2StackIcon,
 } as const
 
@@ -28,7 +26,7 @@ export function TicketTypeIcon({
   className?: string
   color?: string
 }) {
-  const Icon = TICKET_TYPE_ICONS[type as TicketType] ?? TICKET_TYPE_ICONS.task
+  const Icon = TICKET_TYPE_ICONS[type as TicketType] ?? TICKET_TYPE_ICONS.bug
   return <Icon className={cn("h-3.5 w-3.5 shrink-0", className)} style={color ? { color } : undefined} />
 }
 
@@ -51,7 +49,7 @@ export function TicketTypePill({
   type: string | null | undefined
   className?: string
 }) {
-  const normalizedType = type || "task"
+  const normalizedType = type || "bug"
   const color = getTypeColor(normalizedType)
   const bgColor = hexWithAlpha(color, "1a")
   const borderColor = hexWithAlpha(color, "40")
@@ -93,12 +91,11 @@ export function TicketTypeSelect({
   triggerClassName,
   isLoading = false,
 }: TicketTypeSelectProps) {
-  const resolvedValue = value || "task"
+  const resolvedValue = value || "bug"
 
   const options: { value: TicketType; label: string }[] = [
     { value: "bug", label: "Bug" },
     { value: "request", label: "Request" },
-    { value: "task", label: "Task" },
   ].sort((a, b) => a.label.localeCompare(b.label))
 
   const shouldHideNativeSelect = hideNativeSelect || disabled

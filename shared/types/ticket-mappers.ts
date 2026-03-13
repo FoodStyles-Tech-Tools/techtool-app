@@ -88,10 +88,7 @@ export function normalizeMentionedTicketRelation(relation: RawMentionedTicketRel
 export function normalizeTicket(ticket: RawTicket): Ticket {
   const parentTicketId = ticket.parentTicketId ?? ticket.parent_ticket_id ?? null
   const baseType = ticket.type
-  const resolvedType =
-    parentTicketId && baseType === "task"
-      ? "subtask"
-      : baseType || "task"
+  const resolvedType = baseType || "bug"
 
   return {
     displayId: ticket.displayId ?? ticket.display_id ?? null,

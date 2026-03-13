@@ -148,7 +148,7 @@ export async function createTicket(context: TicketRequestContext, input: CreateT
     ...(input.createdAt ? { created_at: input.createdAt } : {}),
     requested_by_id: input.requestedById || context.userId,
     priority: (input.priority || "medium").trim(),
-    type: (input.type || "task").trim(),
+    type: (input.type || "bug").trim(),
     status,
     activity_actor_id: context.userId,
     department_id: input.departmentId || null,

@@ -35,10 +35,9 @@ const TOOLTIP_STYLE = {
   backgroundColor: "#ffffff",
   boxShadow: "0 16px 30px -20px rgba(15, 23, 42, 0.2)",
 }
-const VOLUME_TYPE_ORDER = ["bug", "task", "request"] as const
+const VOLUME_TYPE_ORDER = ["bug", "request"] as const
 const VOLUME_TYPE_COLOR: Record<string, string> = {
   bug: "#ef4444",
-  task: "#f59e0b",
   request: "#3b82f6",
 }
 const PRIORITY_ORDER = ["urgent", "high", "medium", "low"] as const

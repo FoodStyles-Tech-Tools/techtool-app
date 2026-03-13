@@ -19,7 +19,7 @@ function makeTicket(overrides: Partial<Ticket> = {}): Ticket {
     description: null,
     status: "open",
     priority: "medium",
-    type: "task",
+    type: "bug",
     due_date: null,
     dueDate: null,
     sqa_assigned_at: null,

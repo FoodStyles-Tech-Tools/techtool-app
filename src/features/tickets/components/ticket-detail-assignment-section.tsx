@@ -168,7 +168,7 @@ export function TicketDetailAssignmentSection({
             </div>
           ) : (
             <TicketTypeSelect
-              value={ticket.type || "task"}
+              value={ticket.type || "bug"}
               onValueChange={(value) => void onTypeChange(value)}
               disabled={
                 isTicketUnassigned || !canEditTickets || isAssignmentLocked || updatingFields["type"]

@@ -134,7 +134,6 @@ const PRIORITY_OPTIONS = [
 const TYPE_OPTIONS = [
   { id: "bug", label: "Bug" },
   { id: "request", label: "Request" },
-  { id: "task", label: "Task" },
   { id: "subtask", label: "Subtask" },
 ] as const
 
@@ -972,7 +971,7 @@ function getTypeColor(type: string | null | undefined): string {
                               <TableCell className="py-2 text-sm text-foreground">
                                 {(() => {
                                   const rawType = ticket.type
-                                  const type = !rawType || rawType === "subtask" ? "task" : rawType
+                                  const type = rawType || "bug"
                                   const typeColor = getTypeColor(type)
                                   return (
                                     <span
