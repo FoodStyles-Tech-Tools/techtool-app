@@ -1,5 +1,7 @@
 "use client"
 
+import packageJson from "../../../package.json"
+
 const warnedLegacyKeys = new Set<string>()
 const clientEnv = import.meta.env as Record<string, string | boolean | undefined>
 
@@ -62,5 +64,7 @@ export function getClientSupabaseAnonKey() {
 }
 
 export function getClientAppVersion() {
-  return readClientEnv("VITE_APP_VERSION", ["VITE_PUBLIC_APP_VERSION"])?.slice(0, 7)
+  const rawVersion =
+    (packageJson as { version?: string }).version?.trim() || "0.0.0"
+  return rawVersion.slice(0, 7)
 }

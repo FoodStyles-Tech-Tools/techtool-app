@@ -61,7 +61,3 @@ export function getServerSupabaseAnonKey() {
 
   return key
 }
-
-export function getServerAppVersion() {
-  return readServerEnv("APP_VERSION", ["VITE_APP_VERSION", "VITE_PUBLIC_APP_VERSION"])?.slice(0, 7)
-}
