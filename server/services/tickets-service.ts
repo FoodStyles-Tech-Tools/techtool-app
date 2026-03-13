@@ -4,6 +4,11 @@ import { buildStatusChangeBody } from "@shared/ticket-statuses"
 import { invalidateTicketCaches } from "@server/lib/ticket-cache"
 import { HttpError } from "@server/http/http-error"
 import * as ticketsRepository from "@server/repositories/tickets-repository"
+import {
+  notifyBatchTicketStatus,
+  notifyTicketForQa,
+  notifyTicketReturnedToDev,
+} from "@server/lib/discord-ticket-status"
 import type {
   BatchUpdateTicketStatusInput,
   CreateTicketInput,
@@ -359,6 +364,17 @@ export async function updateTicket(
     throw new HttpError(404, "Ticket not found")
   }
 
+  if (Object.prototype.hasOwnProperty.call(updates, "status")) {
+    const previousStatus = (currentTicket.status as string | null) || null
+    const nextStatus = (updates.status as string | null) || null
+
+    if (nextStatus && previousStatus !== nextStatus) {
+      const normalizedTicket = normalizePersistedTicket(ticket as Record<string, unknown>)
+      void notifyTicketForQa(context.supabase, normalizedTicket as any, previousStatus)
+      void notifyTicketReturnedToDev(context.supabase, normalizedTicket as any, previousStatus)
+    }
+  }
+
   await invalidateTicketCaches()
 
   return {
@@ -471,6 +487,10 @@ export async function updateTicketStatusWithReason(
   }
 
   const normalizedTicket = normalizePersistedTicket(updatedTicket as Record<string, unknown>)
+  const previousStatus = (currentTicket.status as string | null) || null
+
+  void notifyTicketForQa(context.supabase, normalizedTicket as any, previousStatus)
+  void notifyTicketReturnedToDev(context.supabase, normalizedTicket as any, previousStatus)
   await invalidateTicketCaches()
 
   return {
@@ -515,6 +535,16 @@ export async function batchUpdateTicketStatus(
   }
 
   await invalidateTicketCaches()
+
+  if (input.status === "for_qa" || input.status === "returned_to_dev") {
+    const status = input.status
+    const updatedTicketsForStatus = currentTickets.map((ticket) => ({
+      ...ticket,
+      status,
+    })) as any[]
+
+    void notifyBatchTicketStatus(status, updatedTicketsForStatus as any)
+  }
 
   return {
     updatedCount: currentTickets.length,

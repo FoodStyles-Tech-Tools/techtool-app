@@ -150,6 +150,7 @@ export default function ProjectDetailClient({
   const [isEditOpen, setEditOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("table")
   const [currentPage, setCurrentPage] = useState(1)
+  const [showProjectDetails, setShowProjectDetails] = useState(false)
 
   const project = data?.project
   const users = useMemo(() => usersData || [], [usersData])
@@ -548,45 +549,73 @@ function getTypeColor(type: string | null | undefined): string {
       >
         {project ? (
           <div className="space-y-6">
-            <section>
-              <h2 className="text-sm font-semibold text-foreground">Details</h2>
-              <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-                <div>
-                  <dt className="text-xs font-medium uppercase text-muted-foreground">Status</dt>
-                  <dd className="mt-1 text-sm capitalize text-foreground">{project.status}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase text-muted-foreground">Department</dt>
-                  <dd className="mt-1 text-sm text-foreground">{project.department?.name || "No department"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase text-muted-foreground">Require SQA</dt>
-                  <dd className="mt-1 text-sm text-foreground">{project.require_sqa ? "Yes" : "No"}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase text-muted-foreground">Created</dt>
-                  <dd className="mt-1 text-sm text-foreground">{formatDate(project.created_at)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase text-muted-foreground">Owner</dt>
-                  <dd className="mt-1 text-sm text-foreground">{ownerLabel}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase text-muted-foreground">Requesters</dt>
-                  <dd className="mt-1 text-sm text-foreground">{requestersLabel}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium uppercase text-muted-foreground">Collaborators</dt>
-                  <dd className="mt-1 text-sm text-foreground">{collaboratorsLabel}</dd>
-                </div>
-              </dl>
-            </section>
+            <section className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-foreground">Project Details</h2>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowProjectDetails((prev) => !prev)}
+                >
+                  {showProjectDetails ? "Hide" : "Show"}
+                </Button>
+              </div>
 
-            <section>
-              <h2 className="text-sm font-semibold text-foreground">Overview</h2>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                {project.description || "No project description provided."}
-              </p>
+              {showProjectDetails && (
+                <>
+                  <section>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Details
+                    </h3>
+                    <dl className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+                      <div>
+                        <dt className="text-xs font-medium uppercase text-muted-foreground">Status</dt>
+                        <dd className="mt-1 text-sm capitalize text-foreground">{project.status}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium uppercase text-muted-foreground">Department</dt>
+                        <dd className="mt-1 text-sm text-foreground">
+                          {project.department?.name || "No department"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium uppercase text-muted-foreground">Require SQA</dt>
+                        <dd className="mt-1 text-sm text-foreground">
+                          {project.require_sqa ? "Yes" : "No"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium uppercase text-muted-foreground">Created</dt>
+                        <dd className="mt-1 text-sm text-foreground">
+                          {formatDate(project.created_at)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium uppercase text-muted-foreground">Owner</dt>
+                        <dd className="mt-1 text-sm text-foreground">{ownerLabel}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium uppercase text-muted-foreground">Requesters</dt>
+                        <dd className="mt-1 text-sm text-foreground">{requestersLabel}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium uppercase text-muted-foreground">Collaborators</dt>
+                        <dd className="mt-1 text-sm text-foreground">{collaboratorsLabel}</dd>
+                      </div>
+                    </dl>
+                  </section>
+
+                  <section>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Overview
+                    </h3>
+                    <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                      {project.description || "No project description provided."}
+                    </p>
+                  </section>
+                </>
+              )}
             </section>
 
             <section>
