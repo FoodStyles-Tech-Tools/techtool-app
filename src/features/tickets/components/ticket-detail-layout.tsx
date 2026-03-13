@@ -233,29 +233,6 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
       )}
 
       <TicketDetailDialogs
-        canEditTickets={canEditTickets}
-        showCancelReasonDialog={actions.showCancelReasonDialog}
-        pendingStatusChange={actions.pendingStatusChange}
-        cancelReason={actions.cancelReason}
-        onCancelReasonChange={actions.setCancelReason}
-        onCancelReasonClose={actions.closeCancelReasonDialog}
-        onCancelReasonConfirm={() => {
-          void actions.handleCancelReasonSubmit()
-        }}
-        showDeleteReasonDialog={actions.showDeleteReasonDialog}
-        deleteReason={actions.deleteReason}
-        onDeleteReasonChange={actions.setDeleteReason}
-        onDeleteReasonClose={actions.closeDeleteReasonDialog}
-        onDeleteReasonConfirm={() => {
-          void actions.handleDeleteReasonSubmit()
-        }}
-        showReturnedReasonDialog={actions.showReturnedReasonDialog}
-        returnedReason={actions.returnedReason}
-        onReturnedReasonChange={actions.setReturnedReason}
-        onReturnedReasonClose={actions.closeReturnedReasonDialog}
-        onReturnedReasonConfirm={() => {
-          void actions.handleReturnedReasonSubmit()
-        }}
         openSubtasksDialog={openSubtasksDialog}
         onSubtasksCancel={() => resolveOpenSubtasksDialog("cancel")}
         onSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}

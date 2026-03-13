@@ -292,17 +292,6 @@ export default function ProjectDetailClient({
   const {
     selectedTicketId,
     setSelectedTicketId,
-    showCancelReasonDialog,
-    cancelReason,
-    setCancelReason,
-    showReturnedReasonDialog,
-    returnedReason,
-    setReturnedReason,
-    pendingStatusKind,
-    handleCancelReasonCancel,
-    handleCancelReasonConfirm,
-    handleReturnedReasonCancel,
-    handleReturnedReasonConfirm,
     handleKanbanDrop,
   } = useTicketBoardActions({
     allTickets: tickets,
@@ -1006,23 +995,12 @@ function getTypeColor(type: string | null | undefined): string {
         setTicketDialogOpen={() => {}}
         selectedTicketId={selectedTicketId}
         setSelectedTicketId={setSelectedTicketId}
-        showCancelReasonDialog={showCancelReasonDialog}
-        pendingStatusKind={pendingStatusKind}
-        cancelReason={cancelReason}
-        setCancelReason={setCancelReason}
-        onCancelReasonCancel={handleCancelReasonCancel}
-        onCancelReasonConfirm={handleCancelReasonConfirm}
         showOpenSubtasksDialog={!!openSubtasksDialog}
         openSubtasksTargetStatus={openSubtasksDialog?.targetStatus ?? null}
         openSubtasks={openSubtasksDialog?.subtasks ?? []}
         onOpenSubtasksCancel={() => resolveOpenSubtasksDialog("cancel")}
         onOpenSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}
         onOpenSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
-        showReturnedReasonDialog={showReturnedReasonDialog}
-        returnedReason={returnedReason}
-        setReturnedReason={setReturnedReason}
-        onReturnedReasonCancel={handleReturnedReasonCancel}
-        onReturnedReasonConfirm={handleReturnedReasonConfirm}
       />
 
       <Dialog open={isBulkDeployRoundOpen} onOpenChange={setBulkDeployRoundOpen}>

@@ -261,17 +261,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     setSelectedTicketId,
     isTicketDialogOpen,
     setTicketDialogOpen,
-    showCancelReasonDialog,
-    cancelReason,
-    setCancelReason,
-    showReturnedReasonDialog,
-    returnedReason,
-    setReturnedReason,
-    pendingStatusKind,
-    handleCancelReasonCancel,
-    handleCancelReasonConfirm,
-    handleReturnedReasonCancel,
-    handleReturnedReasonConfirm,
     handleKanbanDrop,
   } = useTicketBoardActions({
     allTickets,
@@ -374,23 +363,12 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           setTicketDialogOpen={setTicketDialogOpen}
           selectedTicketId={selectedTicketId}
           setSelectedTicketId={setSelectedTicketId}
-          showCancelReasonDialog={showCancelReasonDialog}
-          pendingStatusKind={pendingStatusKind}
-          cancelReason={cancelReason}
-          setCancelReason={setCancelReason}
-          onCancelReasonCancel={handleCancelReasonCancel}
-          onCancelReasonConfirm={handleCancelReasonConfirm}
           showOpenSubtasksDialog={!!openSubtasksDialog}
           openSubtasksTargetStatus={openSubtasksDialog?.targetStatus ?? null}
           openSubtasks={openSubtasksDialog?.subtasks || []}
           onOpenSubtasksCancel={() => resolveOpenSubtasksDialog("cancel")}
           onOpenSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}
           onOpenSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
-          showReturnedReasonDialog={showReturnedReasonDialog}
-          returnedReason={returnedReason}
-          setReturnedReason={setReturnedReason}
-          onReturnedReasonCancel={handleReturnedReasonCancel}
-          onReturnedReasonConfirm={handleReturnedReasonConfirm}
         />
 
       </EntityPageLayout>
