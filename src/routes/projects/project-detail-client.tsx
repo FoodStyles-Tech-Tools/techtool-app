@@ -3,6 +3,7 @@
 import { useCallback, useDeferredValue, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import { MagnifyingGlassIcon } from "@heroicons/react/20/solid"
+import { TableCellsIcon, ViewColumnsIcon } from "@heroicons/react/24/outline"
 import { useProject } from "@client/hooks/use-projects"
 import { useDepartments } from "@client/hooks/use-departments"
 import { useUsers } from "@client/hooks/use-users"
@@ -10,15 +11,21 @@ import { usePermissions } from "@client/hooks/use-permissions"
 import { useEpics } from "@client/hooks/use-epics"
 import { useSprints } from "@client/hooks/use-sprints"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
-import { useTickets } from "@client/features/tickets/hooks/use-tickets"
+import {
+  useTickets,
+  useUpdateTicket,
+  useUpdateTicketWithReasonComment,
+} from "@client/features/tickets/hooks/use-tickets"
+import { useTicketBoardActions } from "@client/features/tickets/hooks/use-ticket-board-actions"
+import { useOpenSubtasksDialog } from "@client/features/tickets/hooks/use-open-subtasks-dialog"
 import { DEFAULT_EXCLUDED_STATUSES } from "@client/hooks/use-tickets-filters"
 import { StatusFilterDropdown } from "@client/components/tickets/status-filter-dropdown"
-import { normalizeStatusKey, isArchivedStatus } from "@shared/ticket-statuses"
+import { isArchivedStatus } from "@shared/ticket-statuses"
+import { ROWS_PER_PAGE } from "@shared/ticket-constants"
 import { cn } from "@client/lib/utils"
 import { PageHeader } from "@client/components/ui/page-header"
 import { Breadcrumb } from "@client/components/ui/breadcrumb"
 import { PageLayout } from "@client/components/ui/page-layout"
-import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { DataState } from "@client/components/ui/data-state"
 import { Button } from "@client/components/ui/button"
@@ -29,20 +36,60 @@ import { Select } from "@client/components/ui/select"
 import { FilterField } from "@client/components/ui/filter-field"
 import { FilterBar } from "@client/components/ui/filter-bar"
 import { PriorityPill } from "@client/components/tickets/priority-pill"
-import { TicketTypeIcon } from "@client/components/ticket-type-select"
-import { StatusPill } from "@client/components/tickets/status-pill"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@client/components/ui/table"
+import { TicketsResults } from "@client/features/tickets/components/tickets-results"
+import { TicketsDialogs } from "@client/features/tickets/components/tickets-dialogs"
 import { toast } from "@client/components/ui/toast"
 import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 import type { Project } from "@shared/types"
-import type { Ticket } from "@shared/types"
+
+type ViewMode = "table" | "kanban"
+
+function ViewToggle({
+  viewMode,
+  onViewModeChange,
+}: {
+  viewMode: ViewMode
+  onViewModeChange: (mode: ViewMode) => void
+}) {
+  return (
+    <div
+      className="inline-flex items-center rounded-md border border-border bg-form-bg p-0.5 gap-0.5"
+      role="group"
+      aria-label="View mode"
+    >
+      <button
+        type="button"
+        onClick={() => onViewModeChange("table")}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors",
+          viewMode === "table"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground hover:bg-accent"
+        )}
+        aria-pressed={viewMode === "table"}
+        title="Table view"
+      >
+        <TableCellsIcon className="h-3.5 w-3.5" aria-hidden />
+        <span>Table</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => onViewModeChange("kanban")}
+        className={cn(
+          "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors",
+          viewMode === "kanban"
+            ? "bg-primary text-primary-foreground shadow-sm"
+            : "text-muted-foreground hover:text-foreground hover:bg-accent"
+        )}
+        aria-pressed={viewMode === "kanban"}
+        title="Kanban board"
+      >
+        <ViewColumnsIcon className="h-3.5 w-3.5" aria-hidden />
+        <span>Board</span>
+      </button>
+    </div>
+  )
+}
 
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString(undefined, {
@@ -83,10 +130,12 @@ export default function ProjectDetailClient({
   const { departments } = useDepartments()
   const { data: usersData } = useUsers()
   const [isEditOpen, setEditOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>("table")
 
   const project = data?.project
   const users = useMemo(() => usersData || [], [usersData])
   const canEditProjects = flags?.canEditProjects ?? false
+  const canCreateTickets = flags?.canCreateTickets ?? false
   const ownerLabel = project?.owner?.name || project?.owner?.email || "Unassigned"
   const requestersLabel = project?.requesters?.length
     ? project.requesters.map((person) => person.name || person.email).join(", ")
@@ -104,6 +153,7 @@ export default function ProjectDetailClient({
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [excludedStatuses, setExcludedStatuses] = useState<string[]>(() => [...DEFAULT_EXCLUDED_STATUSES])
+  const [currentPage, setCurrentPage] = useState(1)
 
   const deferredSearchQuery = useDeferredValue(searchQuery)
 
@@ -178,9 +228,12 @@ export default function ProjectDetailClient({
     setPriorityFilter("all")
     setTypeFilter("all")
     setExcludedStatuses([...DEFAULT_EXCLUDED_STATUSES])
+    setCurrentPage(1)
   }, [])
 
-  const { data: tickets = [], isLoading: ticketsLoading } = useTickets({
+  const isKanban = viewMode === "kanban"
+
+  const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
     projectId: project?.id,
     epicId: epicFilter !== "all" ? epicFilter : undefined,
     sprintId: sprintFilter !== "all" ? sprintFilter : undefined,
@@ -189,12 +242,49 @@ export default function ProjectDetailClient({
     sqaAssigneeId: sqaFilter !== "all" ? sqaFilter : undefined,
     priority: priorityFilter !== "all" ? priorityFilter : undefined,
     type: typeFilter !== "all" ? typeFilter : undefined,
-    includeStatuses: statusOptions.length > 0 ? includeStatuses : undefined,
+    includeStatuses: isKanban ? undefined : (statusOptions.length > 0 ? includeStatuses : undefined),
     q: deferredSearchQuery.trim() || undefined,
     excludeSubtasks: true,
-    limit: 500,
+    limit: isKanban ? 500 : ROWS_PER_PAGE,
+    page: isKanban ? 1 : currentPage,
     enabled: !!project?.id,
   })
+
+  const allTickets = useMemo(() => ticketsData || [], [ticketsData])
+  const filteredTickets = useMemo(
+    () => allTickets.filter((ticket) => !isArchivedStatus(ticket.status)),
+    [allTickets]
+  )
+
+  const updateTicket = useUpdateTicket()
+  const updateTicketWithReasonComment = useUpdateTicketWithReasonComment()
+  const { openSubtasksDialog, askHowToHandleOpenSubtasks, resolveOpenSubtasksDialog } = useOpenSubtasksDialog()
+
+  const {
+    selectedTicketId,
+    setSelectedTicketId,
+    isTicketDialogOpen,
+    setTicketDialogOpen,
+    showCancelReasonDialog,
+    cancelReason,
+    setCancelReason,
+    showReturnedReasonDialog,
+    returnedReason,
+    setReturnedReason,
+    pendingStatusKind,
+    handleCancelReasonCancel,
+    handleCancelReasonConfirm,
+    handleReturnedReasonCancel,
+    handleReturnedReasonConfirm,
+    handleKanbanDrop,
+  } = useTicketBoardActions({
+    allTickets,
+    projectFilter: projectId,
+    askHowToHandleOpenSubtasks,
+    updateTicket,
+    updateTicketWithReasonComment,
+  })
+
   const epicOptionsAsc = useMemo(
     () =>
       [...epics].sort((a, b) =>
@@ -220,28 +310,22 @@ export default function ProjectDetailClient({
     [users]
   )
 
-  const sortedTicketsForTable = useMemo(() => {
-    const order = [...ticketStatuses].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-    const orderMap = new Map(order.map((s, i) => [s.key, i]))
-    return [...tickets].sort((a, b) => {
-      const ai = orderMap.get(normalizeStatusKey(a.status)) ?? 999
-      const bi = orderMap.get(normalizeStatusKey(b.status)) ?? 999
-      if (ai !== bi) return ai - bi
-      return (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" })
-    })
-  }, [tickets, ticketStatuses])
+  const loading = !ticketsData && ticketsLoading
+  const totalPages = Math.max(1, ticketsPagination?.totalPages || 1)
+  const startIndex = (currentPage - 1) * ROWS_PER_PAGE
+  const endIndex = startIndex + ROWS_PER_PAGE
+  const hasSearchQuery = deferredSearchQuery.trim().length > 0
 
-function hexWithAlpha(hex: string, alphaHex = "1a"): string {
-  const normalized = hex.startsWith("#") ? hex.slice(1) : hex
-  return `#${normalized}${alphaHex}`
-}
-
-function getTypeColor(type: string | null | undefined): string {
-  if (type === "bug") return "#ef4444" // red-500
-  if (type === "request") return "#3b82f6" // blue-500
-  // default to task color
-  return "#f97316" // orange-500
-}
+  const handleSelectTicket = useCallback(
+    (ticketId: string) => {
+      const ticket = allTickets.find((t) => t.id === ticketId)
+      const slug = ticket
+        ? (ticket.displayId || ticketId.slice(0, 8)).toLowerCase()
+        : ticketId.slice(0, 8).toLowerCase()
+      openPreview({ ticketId, slug })
+    },
+    [allTickets, openPreview]
+  )
 
   return (
     <PageLayout>
@@ -325,7 +409,10 @@ function getTypeColor(type: string | null | undefined): string {
             </section>
 
             <section>
-              <h2 className="text-sm font-semibold text-foreground">Tickets</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-foreground">Tickets</h2>
+                <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
+              </div>
               <div className="mt-3">
                 <FilterBar
                   hasActiveFilters={hasActiveFilters}
@@ -475,91 +562,57 @@ function getTypeColor(type: string | null | undefined): string {
                   }
                 />
               </div>
-              {ticketsLoading ? (
-                <div className="mt-4 rounded-lg border border-border bg-card py-8">
-                  <LoadingIndicator variant="block" label="Loading tickets…" />
-                </div>
-              ) : sortedTicketsForTable.length === 0 ? (
-                <p className="mt-4 text-sm text-muted-foreground">No tickets match the filters.</p>
-              ) : (
-                <div className="mt-4 overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="h-9 py-2 text-muted-foreground">ID</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Title</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Status</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Type</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Priority</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Reporter</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Assignee</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">SQA</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortedTicketsForTable.map((ticket) => {
-                        const statusInfo = statusMap.get(normalizeStatusKey(ticket.status))
-                        const reporterLabel = ticket.requestedBy?.name || ticket.requestedBy?.email || "-"
-                        const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
-                        const sqaLabel = ticket.sqaAssignee?.name || ticket.sqaAssignee?.email || "-"
-                        return (
-                          <TableRow key={ticket.id}>
-                            <TableCell className="py-2 text-sm text-muted-foreground">
-                              {ticket.displayId || ticket.id.slice(0, 8)}
-                            </TableCell>
-                            <TableCell className="py-2">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openPreview({
-                                    ticketId: ticket.id,
-                                    slug: (ticket.displayId || ticket.id).toLowerCase(),
-                                  })
-                                }
-                                className="text-sm font-normal text-primary underline"
-                              >
-                                {ticket.title}
-                              </button>
-                            </TableCell>
-                            <TableCell className="py-2">
-                              {statusInfo ? (
-                                <StatusPill label={statusInfo.label} color={statusInfo.color} />
-                              ) : (
-                                <span className="text-sm text-foreground">{ticket.status}</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="py-2 text-sm text-foreground">
-                              {(() => {
-                                const rawType = ticket.type
-                                const type = !rawType || rawType === "subtask" ? "task" : rawType
-                                const typeColor = getTypeColor(type)
-                                return (
-                                  <span
-                                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium capitalize"
-                                    style={{
-                                      backgroundColor: hexWithAlpha(typeColor, "1a"),
-                                      borderColor: hexWithAlpha(typeColor, "40"),
-                                    }}
-                                  >
-                                    <TicketTypeIcon type={type} color={typeColor} />
-                                    <span className="text-foreground">{type}</span>
-                                  </span>
-                                )
-                              })()}
-                            </TableCell>
-                            <TableCell className="py-2 text-sm text-foreground">
-                              <PriorityPill priority={ticket.priority} />
-                            </TableCell>
-                            <TableCell className="py-2 text-sm text-foreground">{reporterLabel}</TableCell>
-                            <TableCell className="py-2 text-sm text-foreground">{assigneeLabel}</TableCell>
-                            <TableCell className="py-2 text-sm text-foreground">{sqaLabel}</TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+              <div className="mt-4">
+                <TicketsResults
+                  loading={loading}
+                  filteredTickets={filteredTickets}
+                  hasSearchQuery={hasSearchQuery}
+                  viewMode={viewMode}
+                  tableProps={{
+                    tickets: filteredTickets,
+                    totalCount: ticketsPagination?.total || filteredTickets.length,
+                    currentPage,
+                    totalPages,
+                    onPageChange: setCurrentPage,
+                    startIndex,
+                    endIndex,
+                    onSelectTicket: handleSelectTicket,
+                  }}
+                  boardProps={{
+                    statuses: ticketStatuses,
+                    excludedStatuses,
+                    onSelectTicket: handleSelectTicket,
+                    onKanbanDrop: handleKanbanDrop,
+                    onResetFilters: hasActiveFilters ? handleResetTicketFilters : undefined,
+                    onCreateTicket: canCreateTickets ? () => setTicketDialogOpen(true) : undefined,
+                  }}
+                />
+              </div>
+
+              <TicketsDialogs
+                canCreateTickets={canCreateTickets}
+                isTicketDialogOpen={isTicketDialogOpen}
+                setTicketDialogOpen={setTicketDialogOpen}
+                selectedTicketId={selectedTicketId}
+                setSelectedTicketId={setSelectedTicketId}
+                showCancelReasonDialog={showCancelReasonDialog}
+                pendingStatusKind={pendingStatusKind}
+                cancelReason={cancelReason}
+                setCancelReason={setCancelReason}
+                onCancelReasonCancel={handleCancelReasonCancel}
+                onCancelReasonConfirm={handleCancelReasonConfirm}
+                showOpenSubtasksDialog={!!openSubtasksDialog}
+                openSubtasksTargetStatus={openSubtasksDialog?.targetStatus ?? null}
+                openSubtasks={openSubtasksDialog?.subtasks || []}
+                onOpenSubtasksCancel={() => resolveOpenSubtasksDialog("cancel")}
+                onOpenSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}
+                onOpenSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
+                showReturnedReasonDialog={showReturnedReasonDialog}
+                returnedReason={returnedReason}
+                setReturnedReason={setReturnedReason}
+                onReturnedReasonCancel={handleReturnedReasonCancel}
+                onReturnedReasonConfirm={handleReturnedReasonConfirm}
+              />
             </section>
           </div>
         ) : null}
