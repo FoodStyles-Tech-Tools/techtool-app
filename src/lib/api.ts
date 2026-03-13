@@ -1,3 +1,5 @@
+import { getClientBackendUrl } from "./config/client-env"
+
 export class ApiError extends Error {
   status: number
   payload: unknown
@@ -25,7 +27,14 @@ export function createQueryString(params: Record<string, string | number | boole
 }
 
 export async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const response = await fetch(input, init)
+  let resolvedInput: RequestInfo | URL = input
+
+  if (typeof input === "string" && input.startsWith("/")) {
+    const backendBase = getClientBackendUrl()
+    resolvedInput = new URL(input, backendBase).toString()
+  }
+
+  const response = await fetch(resolvedInput, init)
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
