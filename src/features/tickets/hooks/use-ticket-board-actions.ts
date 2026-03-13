@@ -4,6 +4,7 @@ import { useCallback, useState } from "react"
 import { toast } from "@client/components/ui/toast"
 import type { Ticket } from "@shared/types"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText } from "@shared/rich-text"
+import { isSqaOnlyStatus, normalizeStatusKey } from "@shared/ticket-statuses"
 import { FIELD_LABELS, type TicketMutationField } from "@shared/ticket-constants"
 import {
   closeTicketSubtasksToStatus,
@@ -73,6 +74,15 @@ export function useTicketBoardActions({
     async (ticketId: string, columnId: string): Promise<boolean> => {
       const ticket = allTickets.find((candidate) => candidate.id === ticketId)
       if (!ticket || ticket.status === columnId) return false
+
+      const targetStatusKey = normalizeStatusKey(columnId)
+      if (isSqaOnlyStatus(targetStatusKey)) {
+        const requiresSqa = ticket.project?.require_sqa === true
+        if (!requiresSqa) {
+          toast("This project does not require SQA, so this status cannot be used.", "error")
+          return false
+        }
+      }
 
       if (columnId === "rejected") {
         setPendingStatusChange({ ticketId, newStatus: columnId })

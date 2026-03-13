@@ -1,15 +1,6 @@
 "use client"
 
-import { Button } from "@client/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@client/components/ui/dialog"
-import { Textarea } from "@client/components/ui/textarea"
+import { ReasonFormDialog } from "@client/features/tickets/components/reason-form-dialog"
 
 export function TicketCancelReasonDialog({
   open,
@@ -33,38 +24,19 @@ export function TicketCancelReasonDialog({
   const isRejected = status === "rejected"
 
   return (
-    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{isRejected ? "Reject Ticket" : "Cancel Ticket"}</DialogTitle>
-          <DialogDescription>
-            Please provide a reason for {isRejected ? "rejecting" : "cancelling"} this ticket.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <Textarea
-            placeholder={isRejected ? "Enter reject reason..." : "Enter cancellation reason..."}
-            value={reason}
-            onChange={(event) => onReasonChange(event.target.value)}
-            onKeyDown={(event) => {
-              if (onShortcutSubmit && (event.ctrlKey || event.metaKey) && event.key === "Enter") {
-                event.preventDefault()
-                void onShortcutSubmit()
-              }
-            }}
-            rows={4}
-            className="resize-none"
-          />
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button onClick={() => void onConfirm()} disabled={disabled}>
-            {isRejected ? "Confirm Rejection" : "Confirm Cancellation"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ReasonFormDialog
+      open={open}
+      title={isRejected ? "Reject Ticket" : "Cancel Ticket"}
+      description={`Please provide a reason for ${isRejected ? "rejecting" : "cancelling"} this ticket.`}
+      value={reason}
+      onChange={onReasonChange}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+      onShortcutSubmit={onShortcutSubmit}
+      disabled={disabled}
+      confirmLabel={isRejected ? "Confirm Rejection" : "Confirm Cancellation"}
+      placeholder={isRejected ? "Enter reject reason..." : "Enter cancellation reason..."}
+    />
   )
 }
+

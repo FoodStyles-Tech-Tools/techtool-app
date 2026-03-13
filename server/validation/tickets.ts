@@ -94,7 +94,7 @@ const updateTicketBodySchema = z.object({
 })
 
 const statusReasonBodySchema = z.object({
-  status: z.enum(["cancelled", "rejected", "returned_to_dev"]),
+  status: z.enum(["cancelled", "rejected", "returned_to_dev", "archived"]),
   reason: z.unknown().optional(),
   reasonCommentBody: z.string().trim().min(1, "Reason comment body is required"),
   startedAt: z.union([z.string(), z.null()]).optional(),

@@ -124,10 +124,20 @@ export function useTicketDetailStatusActions({
     if (!ensureCanEdit()) return
     if (!ticket || !ticketId) return
 
-    if (newStatus === "rejected" && ticket.status !== newStatus) {
+    if (
+      (newStatus === "rejected" || newStatus === "cancelled") &&
+      ticket.status !== newStatus
+    ) {
       setPendingStatusChange(newStatus)
       setCancelReason("")
       setShowCancelReasonDialog(true)
+      return
+    }
+
+    if (newStatus === "returned_to_dev" && ticket.status !== newStatus) {
+      setPendingStatusChange(newStatus)
+      setReturnedReason("")
+      setShowReturnedReasonDialog(true)
       return
     }
 
@@ -252,18 +262,7 @@ export function useTicketDetailStatusActions({
     }
   }
 
-    const archiveWithoutReason = async () => {
-      if (!ensureCanEdit()) return
-      if (!ticket || !ticketId) return
-
-      try {
-        await updateTicketWithToast({ status: "archived" }, "Ticket archived", "status")
-      } catch (error: any) {
-        toast(error.message || "Failed to archive ticket", "error")
-      }
-    }
-
-    return {
+  return {
     showCancelReasonDialog,
     cancelReason,
     setCancelReason,
@@ -279,7 +278,8 @@ export function useTicketDetailStatusActions({
     handleCancelReasonSubmit,
     handleDeleteReasonSubmit,
     openDeleteDialog: () => {
-      void archiveWithoutReason()
+      setShowDeleteReasonDialog(true)
+      setDeleteReason("")
     },
     closeCancelReasonDialog: () => {
       setShowCancelReasonDialog(false)

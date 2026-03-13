@@ -13,7 +13,7 @@ import { useSprints } from "@client/hooks/use-sprints"
 import { useTicketBoardActions } from "@client/features/tickets/hooks/use-ticket-board-actions"
 import { useOpenSubtasksDialog } from "@client/features/tickets/hooks/use-open-subtasks-dialog"
 import { useUserPreferences } from "@client/hooks/use-user-preferences"
-import { isArchivedStatus } from "@shared/ticket-statuses"
+import { filterStatusesBySqaRequirement, isArchivedStatus } from "@shared/ticket-statuses"
 import { ROWS_PER_PAGE } from "@shared/ticket-constants"
 import {
   useTickets,
@@ -159,6 +159,25 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
             .filter((o) => !excludedSet.has(o.id.toLowerCase()))
             .map((o) => o.id),
     [statusOptions, excludedSet, isKanban]
+  )
+
+  const selectedProjectForBoard = useMemo(
+    () =>
+      projectFilter !== "all"
+        ? projects.find((project) => project.id === projectFilter) ?? null
+        : null,
+    [projectFilter, projects]
+  )
+
+  const boardStatuses = useMemo(
+    () =>
+      selectedProjectForBoard
+        ? filterStatusesBySqaRequirement(
+            ticketStatuses,
+            selectedProjectForBoard.require_sqa === true
+          )
+        : ticketStatuses,
+    [selectedProjectForBoard, ticketStatuses]
   )
 
   const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
@@ -341,7 +360,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
             onSelectTicket: handleSelectTicket,
           }}
           boardProps={{
-            statuses: ticketStatuses,
+            statuses: boardStatuses,
             onSelectTicket: handleSelectTicket,
             onKanbanDrop: handleKanbanDrop,
             onResetFilters: hasActiveFilters ? resetToolbarFilters : undefined,

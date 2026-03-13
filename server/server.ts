@@ -31,6 +31,36 @@ const clientDistDir = path.join(workspaceRoot, "dist")
 app.use(express.json({ limit: "5mb" }))
 app.use(express.urlencoded({ extended: true }))
 
+function registerCors() {
+  if (process.env.NODE_ENV === "production") {
+    return
+  }
+
+  const allowedOrigins = new Set(["http://localhost:5173"])
+
+  app.use((request, response, next) => {
+    const origin = request.headers.origin
+
+    if (origin && allowedOrigins.has(origin)) {
+      response.header("Access-Control-Allow-Origin", origin)
+      response.header("Vary", "Origin")
+      response.header("Access-Control-Allow-Credentials", "true")
+      response.header("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS")
+      response.header(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization, X-Requested-With",
+      )
+    }
+
+    if (request.method === "OPTIONS") {
+      response.sendStatus(204)
+      return
+    }
+
+    next()
+  })
+}
+
 app.use(createAuthRouter())
 app.use(createAuditLogRouter())
 app.use(createAssetsRouter())
@@ -64,6 +94,7 @@ function registerRequestLogging() {
 }
 
 async function start() {
+  registerCors()
   registerRequestLogging()
 
   app.get("/healthz", (_request, response) => {

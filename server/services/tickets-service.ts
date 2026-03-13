@@ -387,7 +387,10 @@ export async function updateTicketStatusWithReason(
   ticketId: string,
   input: UpdateTicketStatusWithReasonInput
 ) {
-  if ((input.status === "cancelled" || input.status === "rejected") && (!input.reason || typeof input.reason !== "object" || Array.isArray(input.reason))) {
+  if (
+    (input.status === "cancelled" || input.status === "rejected" || input.status === "archived") &&
+    (!input.reason || typeof input.reason !== "object" || Array.isArray(input.reason))
+  ) {
     throw new HttpError(400, "reason object is required")
   }
 
@@ -431,13 +434,13 @@ export async function updateTicketStatusWithReason(
   }
 
   // Derive completedAt server-side when the client does not supply it.
-  // For cancelled / rejected: always mark as completed now.
-  // For returned_to_dev:       clear completed_at if the ticket was previously in a done state.
+  // For cancelled / rejected / archived: always mark as completed now.
+  // For returned_to_dev:                  clear completed_at if the ticket was previously in a done state.
   const clientSetCompletedAt = input.completedAt !== undefined
   let finalCompletedAt: string | null = clientSetCompletedAt ? parseOptionalTimestamp(input.completedAt) : null
   let setCompletedAt = clientSetCompletedAt
   if (!clientSetCompletedAt) {
-    if (input.status === "cancelled" || input.status === "rejected") {
+    if (input.status === "cancelled" || input.status === "rejected" || input.status === "archived") {
       finalCompletedAt = now
       setCompletedAt = true
     } else if (
