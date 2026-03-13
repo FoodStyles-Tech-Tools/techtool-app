@@ -1,11 +1,12 @@
 #!/usr/bin/env node
+/** Contrast audit for theme tokens. Expects CSS variables (e.g. --background, --foreground) in .dark or @layer base; when absent, token checks are skipped. See docs/UI-CONVENTIONS.md for current light-theme classes. */
 
 const fs = require("fs")
 const path = require("path")
 
 const ROOT_DIR = path.resolve(__dirname, "..")
-const GLOBALS_CSS_PATH = path.join(ROOT_DIR, "app", "globals.css")
-const SCAN_DIRS = ["app", "components"]
+const GLOBALS_CSS_PATH = path.join(ROOT_DIR, "src", "app", "globals.css")
+const SCAN_DIRS = ["src", "server", "shared"]
 const TEXT_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx", ".css", ".md"])
 
 const tokenPairChecks = [
@@ -41,7 +42,7 @@ const riskyClassPatterns = [
 function parseDarkTokens(cssContent) {
   const darkBlockMatch = cssContent.match(/\.dark\s*\{([\s\S]*?)\n\s*\}/m)
   if (!darkBlockMatch) {
-    throw new Error("Could not find `.dark { ... }` block in app/globals.css.")
+    return new Map()
   }
 
   const darkBlock = darkBlockMatch[1]

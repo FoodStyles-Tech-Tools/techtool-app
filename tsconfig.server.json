@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist-backend",
+    "rootDir": "./",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "types": ["node"],
+    "incremental": false
+  },
+  "include": [
+    "server/**/*.ts",
+    "shared/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "src",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}

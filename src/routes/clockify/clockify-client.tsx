@@ -1,0 +1,778 @@
+"use client"
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Link, useParams, useSearchParams } from "react-router-dom"
+import { useQueryClient } from "@tanstack/react-query"
+import { Breadcrumb } from "@client/components/ui/breadcrumb"
+import { Button } from "@client/components/ui/button"
+import { PageLayout } from "@client/components/ui/page-layout"
+import { PageHeader } from "@client/components/ui/page-header"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@client/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@client/components/ui/dialog"
+import { Input } from "@client/components/ui/input"
+import { Label } from "@client/components/ui/label"
+import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
+import { TicketForm } from "@client/components/forms/ticket-form"
+import { toast } from "@client/components/ui/toast"
+import { usePermissions } from "@client/hooks/use-permissions"
+import { useProjects } from "@client/hooks/use-projects"
+import {
+  ClockifyReportSession,
+  useClockifySession,
+  useClockifySessions,
+  useCreateClockifySession,
+} from "@client/hooks/use-clockify"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
+import { ClockifySessionsCard } from "@client/features/clockify/components/clockify-sessions-card"
+import { ClockifyReportSessionCard } from "@client/features/clockify/components/clockify-report-session-card"
+import {
+  extractTicketIdFromEntry,
+  formatDurationHours,
+  formatRangeLabel,
+  getEntryId,
+  getEntryTitle,
+  getWeekRange,
+  matchesCustomField,
+  nativeSelectClassName,
+  normalizeTicketId,
+} from "@client/features/clockify/lib/client"
+import type {
+  ClockifyConfirmDialogState,
+  ClockifyReconcileEntry,
+  ClockifyReportEntry,
+  ClockifyTicketLookupItem,
+} from "@client/features/clockify/types"
+
+export default function ClockifyClient() {
+  const queryClient = useQueryClient()
+  const { flags, user: currentUser, loading: permissionsLoading } = usePermissions()
+  const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>()
+  const isAdmin = currentUser?.role?.toLowerCase() === "admin"
+  const canManageClockify = flags?.canManageClockify ?? false
+  const canCreateTickets = flags?.canCreateTickets ?? false
+  const canManageSessions = canManageClockify
+  const [searchParams] = useSearchParams()
+
+  const [selectedSession, setSelectedSession] = useState<ClockifyReportSession | null>(null)
+  const [selectedUser, setSelectedUser] = useState<string>("")
+  const [selectedProject, setSelectedProject] = useState<string>("")
+  const [selectedTask, setSelectedTask] = useState<string>("")
+  const [reconcileMap, setReconcileMap] = useState<Record<string, ClockifyReconcileEntry>>({})
+  const reconcileMapRef = useRef(reconcileMap)
+  const [isSavingReconcile, setIsSavingReconcile] = useState(false)
+  const [isReconciling, setIsReconciling] = useState(false)
+  const [ticketLookup, setTicketLookup] = useState<Record<string, ClockifyTicketLookupItem>>({})
+  const [activeTicketEntryId, setActiveTicketEntryId] = useState<string | null>(null)
+  const [ticketSearchTerm, setTicketSearchTerm] = useState<string>("")
+  const [ticketSearchResults, setTicketSearchResults] = useState<ClockifyTicketLookupItem[]>([])
+  const [isTicketSearchLoading, setIsTicketSearchLoading] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState<ClockifyConfirmDialogState>(null)
+  const [syncModalOpen, setSyncModalOpen] = useState(false)
+  const [syncRange, setSyncRange] = useState(() => getWeekRange(1))
+  const [createTicketDialog, setCreateTicketDialog] = useState<{
+    entryId: string
+    title: string
+    createdAt: string | null
+  } | null>(null)
+  const [isCreatingTicket, setIsCreatingTicket] = useState(false)
+
+  const sessionIdParam = searchParams.get("sessionId")
+  const effectiveSessionId = routeSessionId || sessionIdParam || null
+
+  const { data: sessions = [], isLoading } = useClockifySessions()
+  const {
+    data: sessionDetail = null,
+    isLoading: isDetailLoading,
+  } = useClockifySession(effectiveSessionId)
+  const createSession = useCreateClockifySession()
+  const { data: projectOptions = [] } = useProjects({
+    enabled: !!createTicketDialog,
+    realtime: false,
+  })
+
+  const handleSyncReport = async () => {
+    if (!isAdmin) {
+      toast("Only admins can sync Clockify reports.", "error")
+      return
+    }
+    try {
+      await createSession.mutateAsync({
+        startDate: syncRange.startDate,
+        endDate: syncRange.endDate,
+        replaceInRange: true,
+      })
+      toast("Clockify report synced.", "success")
+      setSyncModalOpen(false)
+    } catch (error) {
+      console.error("Clockify sync failed:", error)
+      toast("Failed to sync Clockify report.", "error")
+    }
+  }
+
+  const resolveReconcileStatus = useCallback(async (
+    displayIds: string[],
+    sourceMap?: Record<string, ClockifyReconcileEntry>
+  ) => {
+    const baseMap = sourceMap || reconcileMapRef.current
+    const normalizedIds = Array.from(
+      new Set(displayIds.map((id) => normalizeTicketId(id)).filter((id) => id.length > 0))
+    )
+
+    if (normalizedIds.length === 0) {
+      setTicketLookup({})
+      setReconcileMap((prev) => {
+        const next = { ...prev }
+        Object.keys(next).forEach((entryId) => {
+          const entry = next[entryId]
+          if (!entry.ticketDisplayId) {
+            next[entryId] = { ...entry, status: "unlinked" }
+          }
+        })
+        return next
+      })
+      return { lookup: {}, updatedMap: baseMap }
+    }
+
+    const response = await fetch("/api/clockify/reconcile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ displayIds: normalizedIds }),
+    })
+
+    if (!response.ok) {
+      return { lookup: {}, updatedMap: baseMap }
+    }
+
+    const data = await response.json()
+    const lookup: Record<string, ClockifyTicketLookupItem> = {}
+    ;(data.tickets || []).forEach((ticket: any) => {
+      const displayId = ticket?.displayId ?? ticket?.display_id
+      if (displayId) {
+        lookup[String(displayId).toUpperCase()] = {
+          ...ticket,
+          displayId: String(displayId),
+        }
+      }
+    })
+
+    const updatedMap: Record<string, ClockifyReconcileEntry> = { ...baseMap }
+    Object.keys(updatedMap).forEach((entryId) => {
+      const entry = updatedMap[entryId]
+      const displayId = entry.ticketDisplayId
+      if (!displayId) {
+        updatedMap[entryId] = { ...entry, status: "unlinked", ticketId: undefined }
+        return
+      }
+      updatedMap[entryId] = {
+        ...entry,
+        status: lookup[displayId] ? "matched" : "not_found",
+        ticketId: lookup[displayId]?.id,
+      }
+    })
+
+    setTicketLookup((prev) => ({ ...prev, ...lookup }))
+    setReconcileMap(updatedMap)
+    return { lookup, updatedMap }
+  }, [])
+
+  const persistReconciliation = useCallback(async (map: Record<string, ClockifyReconcileEntry>) => {
+    if (!selectedSession) {
+      throw new Error("No selected session")
+    }
+
+    const response = await fetch("/api/clockify/sessions", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        sessionId: selectedSession.id,
+        reconciliation: map,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to save reconciliation")
+    }
+
+    const data = await response.json()
+    if (data?.session) {
+      setSelectedSession(data.session)
+    }
+    queryClient.invalidateQueries({ queryKey: ["clockify-sessions"] })
+    return data?.session || null
+  }, [queryClient, selectedSession])
+
+  const handleTicketChange = (entryId: string, value: string) => {
+    const normalizedValue = normalizeTicketId(value)
+    setReconcileMap((prev) => ({
+      ...prev,
+      [entryId]: {
+        ticketDisplayId: normalizedValue,
+        status: normalizedValue ? "pending" : "unlinked",
+      },
+    }))
+  }
+
+  const handleTicketBlur = async (entryId: string, value: string) => {
+    const normalizedValue = normalizeTicketId(value)
+    const nextMap = {
+      ...reconcileMap,
+      [entryId]: {
+        ticketDisplayId: normalizedValue,
+        status: normalizedValue ? "pending" : "unlinked",
+      },
+    }
+    const displayIds = Object.values(nextMap)
+      .map((entry) => entry.ticketDisplayId)
+      .filter((id) => id.length > 0)
+    await resolveReconcileStatus(displayIds, nextMap)
+  }
+
+  const handleSmartReconcile = async () => {
+    if (!reportEntriesRaw.length) return
+    setIsReconciling(true)
+    const currentMap = reconcileMapRef.current
+    const nextMap: Record<string, ClockifyReconcileEntry> = {}
+    const displayIds: string[] = []
+
+    reportEntriesRaw.forEach((entry) => {
+      const entryId = getEntryId(entry)
+      if (!entryId) return
+
+      const existingEntry = currentMap[entryId]
+      const existingDisplayId = normalizeTicketId(existingEntry?.ticketDisplayId || "")
+      if (existingDisplayId) {
+        displayIds.push(existingDisplayId)
+        nextMap[entryId] = {
+          ticketDisplayId: existingDisplayId,
+          status: existingEntry?.status || "pending",
+          ticketId: existingEntry?.ticketId,
+        }
+        return
+      }
+
+      const inferredId = extractTicketIdFromEntry(entry)
+      const normalizedId = inferredId ? normalizeTicketId(inferredId) : ""
+      if (normalizedId) {
+        displayIds.push(normalizedId)
+      }
+      nextMap[entryId] = {
+        ticketDisplayId: normalizedId,
+        status: normalizedId ? "pending" : "unlinked",
+      }
+    })
+
+    setReconcileMap(nextMap)
+    try {
+      await resolveReconcileStatus(displayIds, nextMap)
+      toast("Smart reconcile complete.", "success")
+    } finally {
+      setIsReconciling(false)
+    }
+  }
+
+  const handleTicketSelect = async (entryId: string, displayId: string) => {
+    const normalizedValue = normalizeTicketId(displayId)
+    const ticket = ticketLookup[normalizedValue]
+    const nextMap = {
+      ...reconcileMapRef.current,
+      [entryId]: {
+        ticketDisplayId: normalizedValue,
+        status: normalizedValue ? "pending" : "unlinked",
+        ticketId: ticket?.id,
+      },
+    }
+    setReconcileMap(nextMap)
+    setTicketSearchTerm(normalizedValue)
+    setActiveTicketEntryId(null)
+    const displayIds = Object.values(nextMap)
+      .map((entry) => entry.ticketDisplayId)
+      .filter((id) => id.length > 0)
+    const { updatedMap } = await resolveReconcileStatus(displayIds, nextMap)
+    return updatedMap || nextMap
+  }
+
+  const openCreateTicketDialog = (entryId: string, entry: ClockifyReportEntry) => {
+    if (!canCreateTickets) {
+      toast("You do not have permission to create tickets.", "error")
+      return
+    }
+
+    setCreateTicketDialog({
+      entryId,
+      title: getEntryTitle(entry),
+      createdAt: entry?.timeInterval?.start || null,
+    })
+  }
+
+  const handleClockifyTicketCreated = async (ticket: {
+    id: string
+    displayId: string | null
+    title: string
+  }) => {
+    if (!createTicketDialog?.entryId) {
+      return
+    }
+
+    if (!ticket.displayId) {
+      toast("Ticket created but display ID is missing. Link it manually.", "error")
+      return
+    }
+
+    try {
+      const updatedMap = await handleTicketSelect(createTicketDialog.entryId, ticket.displayId)
+      await persistReconciliation(updatedMap)
+      toast("Ticket created and linked.", "success")
+    } catch (error) {
+      console.error("Automatic ticket link failed:", error)
+      toast("Ticket created, but auto-link failed. Please save reconciliation.", "error")
+    }
+  }
+
+  const handleSaveReconciliation = async () => {
+    if (!selectedSession) return
+    setIsSavingReconcile(true)
+
+    try {
+      const displayIds = Object.values(reconcileMap)
+        .map((entry) => entry.ticketDisplayId)
+        .filter((value) => value.length > 0)
+
+      const { updatedMap } = await resolveReconcileStatus(displayIds, reconcileMap)
+      await persistReconciliation(updatedMap || reconcileMap)
+      toast("Reconciliation saved.", "success")
+    } catch (error) {
+      console.error("Reconciliation save failed:", error)
+      toast("Failed to save reconciliation.", "error")
+    } finally {
+      setIsSavingReconcile(false)
+    }
+  }
+
+  const clearSessionParam = () => {
+    if (typeof window === "undefined") return
+    const url = new URL(window.location.href)
+    url.searchParams.delete("sessionId")
+    window.history.replaceState({}, "", url.toString())
+  }
+
+  const handleDeleteSession = async (sessionId: string) => {
+    if (!canManageSessions) {
+      toast("You do not have permission to delete sessions.", "error")
+      return
+    }
+    setConfirmDialog({ type: "delete", sessionId })
+  }
+
+  const performDeleteSession = async (sessionId: string) => {
+    try {
+      const response = await fetch(`/api/clockify/sessions?sessionId=${sessionId}`, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to delete session")
+      }
+
+      if (selectedSession?.id === sessionId) {
+        setSelectedSession(null)
+        clearSessionParam()
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["clockify-sessions"] })
+      toast("Session deleted.", "success")
+    } catch (error) {
+      console.error("Delete session failed:", error)
+      toast("Failed to delete session.", "error")
+    } finally {
+      setConfirmDialog(null)
+    }
+  }
+
+  const reportEntriesRaw = useMemo(() => {
+    const reportData = selectedSession?.report_data
+    if (!reportData || typeof reportData !== "object") return []
+    const entries = Array.isArray((reportData as any).timeentries)
+      ? (reportData as any).timeentries
+      : Array.isArray((reportData as any).timeEntries)
+        ? (reportData as any).timeEntries
+        : []
+    return entries.filter(matchesCustomField)
+  }, [selectedSession])
+
+  useEffect(() => {
+    reconcileMapRef.current = reconcileMap
+  }, [reconcileMap])
+
+  useEffect(() => {
+    if (currentUser?.name) {
+      setSelectedUser(currentUser.name)
+    }
+  }, [currentUser?.name])
+
+  const userOptions = useMemo(() => {
+    const names = new Set<string>()
+    reportEntriesRaw.forEach((entry) => {
+      const name = entry.userName || entry.user?.name
+      if (name) names.add(name)
+    })
+    if (currentUser?.name) {
+      names.add(currentUser.name)
+    }
+    return Array.from(names).sort((a, b) => a.localeCompare(b))
+  }, [currentUser?.name, reportEntriesRaw])
+
+  const sessionProjectOptions = useMemo(() => {
+    const names = new Set<string>()
+    reportEntriesRaw.forEach((entry) => {
+      const name = entry.projectName || entry.project?.name
+      if (name) names.add(name)
+    })
+    return Array.from(names).sort((a, b) => a.localeCompare(b))
+  }, [reportEntriesRaw])
+
+  const sessionTaskOptions = useMemo(() => {
+    const names = new Set<string>()
+    reportEntriesRaw.forEach((entry) => {
+      const name = entry.taskName || entry.task?.name
+      if (name) names.add(name)
+    })
+    return Array.from(names).sort((a, b) => a.localeCompare(b))
+  }, [reportEntriesRaw])
+
+  const reportEntries = useMemo(() => {
+    return reportEntriesRaw.filter((entry) => {
+      const userName = entry.userName || entry.user?.name || ""
+      const projectName = entry.projectName || entry.project?.name || ""
+      const taskName = entry.taskName || entry.task?.name || ""
+      if (selectedUser && selectedUser !== "all" && userName !== selectedUser) return false
+      if (selectedProject && projectName !== selectedProject) return false
+      if (selectedTask && taskName !== selectedTask) return false
+      return true
+    })
+  }, [reportEntriesRaw, selectedUser, selectedProject, selectedTask])
+
+  useEffect(() => {
+    if (!selectedSession) {
+      setReconcileMap({})
+      setTicketLookup({})
+      return
+    }
+
+    const nextMap: Record<string, ClockifyReconcileEntry> = {}
+    const displayIds = new Set<string>()
+
+    reportEntriesRaw.forEach((entry) => {
+      const entryId = getEntryId(entry)
+      if (!entryId) return
+
+      const storedMap = selectedSession?.reconciliation?.[entryId]
+      const storedDisplayId = storedMap?.ticketDisplayId || entry?.reconcileTicketDisplayId
+      const storedStatus = storedMap?.status || entry?.reconcileStatus
+      const storedTicketId = storedMap?.ticketId || entry?.reconcileTicketId
+      const inferredId = storedDisplayId || extractTicketIdFromEntry(entry)
+      const normalizedId = inferredId ? normalizeTicketId(inferredId) : ""
+
+      if (normalizedId) {
+        displayIds.add(normalizedId)
+      }
+
+      nextMap[entryId] = {
+        ticketDisplayId: normalizedId,
+        status: storedStatus || (normalizedId ? "pending" : "unlinked"),
+        ticketId: storedTicketId,
+      }
+    })
+
+    setReconcileMap(nextMap)
+    resolveReconcileStatus(Array.from(displayIds), nextMap)
+  }, [reportEntriesRaw, resolveReconcileStatus, selectedSession])
+
+  useEffect(() => {
+    if (!activeTicketEntryId) return
+    let isActive = true
+    const controller = new AbortController()
+    setIsTicketSearchLoading(true)
+
+    const fetchTickets = async () => {
+      try {
+        const params = new URLSearchParams()
+        if (ticketSearchTerm) {
+          params.set("q", ticketSearchTerm)
+        }
+        const response = await fetch(`/api/clockify/tickets?${params.toString()}`, {
+          signal: controller.signal,
+        })
+        if (!response.ok) {
+          throw new Error("Ticket search failed")
+        }
+        const data = await response.json()
+        if (isActive) {
+          setTicketSearchResults(data.tickets || [])
+        }
+      } catch (_error) {
+        if (isActive) {
+          setTicketSearchResults([])
+        }
+      } finally {
+        if (isActive) {
+          setIsTicketSearchLoading(false)
+        }
+      }
+    }
+
+    const timeout = setTimeout(fetchTickets, 150)
+    const abortTimeout = setTimeout(() => controller.abort(), 6000)
+    return () => {
+      isActive = false
+      controller.abort()
+      clearTimeout(timeout)
+      clearTimeout(abortTimeout)
+    }
+  }, [activeTicketEntryId, ticketSearchTerm])
+
+  useEffect(() => {
+    if (!effectiveSessionId) {
+      setSelectedSession(null)
+      return
+    }
+    if (sessionDetail) {
+      setSelectedSession(sessionDetail)
+    }
+  }, [effectiveSessionId, sessionDetail])
+
+  const isSessionDetailMode = Boolean(effectiveSessionId)
+
+  return (
+    <PageLayout>
+      <PageHeader
+        title="Clockify"
+        breadcrumb={
+          isSessionDetailMode && selectedSession ? (
+            <Breadcrumb
+              items={[
+                { label: "Clockify", href: "/clockify" },
+                { label: formatRangeLabel(selectedSession.start_date, selectedSession.end_date) },
+              ]}
+            />
+          ) : null
+        }
+        actions={
+          !isSessionDetailMode && isAdmin ? (
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => {
+                setSyncRange(getWeekRange(1))
+                setSyncModalOpen(true)
+              }}
+              disabled={createSession.isPending}
+            >
+              {createSession.isPending ? "Syncing..." : "Sync"}
+            </Button>
+          ) : null
+        }
+      />
+
+      {!isSessionDetailMode && (canManageSessions || permissionsLoading) ? (
+        <ClockifySessionsCard
+          isLoading={isLoading || permissionsLoading}
+          sessions={sessions}
+          formatRangeLabel={formatRangeLabel}
+        />
+      ) : null}
+
+      {isSessionDetailMode && !isDetailLoading && !selectedSession ? (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Clockify Report Session</CardTitle>
+            <Button variant="outline" asChild>
+              <Link to="/clockify">Back to sessions</Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">Session not found.</p>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {isSessionDetailMode && isDetailLoading ? (
+        <div className="rounded-lg border border-border bg-card p-8">
+          <LoadingIndicator variant="block" label="Loading session…" />
+        </div>
+      ) : null}
+
+      {selectedSession && canManageSessions ? (
+        <ClockifyReportSessionCard
+          selectedSession={selectedSession}
+          selectedUser={selectedUser}
+          setSelectedUser={setSelectedUser}
+          userOptions={userOptions}
+          selectedProject={selectedProject}
+          setSelectedProject={setSelectedProject}
+          sessionProjectOptions={sessionProjectOptions}
+          selectedTask={selectedTask}
+          setSelectedTask={setSelectedTask}
+          sessionTaskOptions={sessionTaskOptions}
+          reportEntries={reportEntries}
+          nativeSelectClassName={nativeSelectClassName}
+          reconcileMap={reconcileMap}
+          activeTicketEntryId={activeTicketEntryId}
+          setActiveTicketEntryId={setActiveTicketEntryId}
+          setTicketSearchTerm={setTicketSearchTerm}
+          isTicketSearchLoading={isTicketSearchLoading}
+          ticketSearchResults={ticketSearchResults}
+          onTicketChange={handleTicketChange}
+          onTicketBlur={handleTicketBlur}
+          onTicketSelect={(entryId, displayId) => {
+            void handleTicketSelect(entryId, displayId)
+          }}
+          canCreateTickets={canCreateTickets}
+          onOpenCreateTicketDialog={openCreateTicketDialog}
+          getEntryId={getEntryId}
+          getEntryTitle={getEntryTitle}
+          formatDurationHours={formatDurationHours}
+        />
+      ) : null}
+
+      <Dialog open={!!confirmDialog} onOpenChange={(open) => !open && setConfirmDialog(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete session?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove the session and its report data.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setConfirmDialog(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (confirmDialog?.type === "delete" && confirmDialog.sessionId) {
+                  void performDeleteSession(confirmDialog.sessionId)
+                }
+              }}
+            >
+              Confirm
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={syncModalOpen} onOpenChange={setSyncModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Sync Clockify Report</DialogTitle>
+            <DialogDescription>
+              Choose a date range to fetch the report. Reports run Monday through Sunday. If a
+              report already exists for this range, it will be replaced.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label htmlFor="sync-range-start">Start date</Label>
+                <Input
+                  id="sync-range-start"
+                  type="date"
+                  value={syncRange.startDate}
+                  onChange={(e) =>
+                    setSyncRange((prev) => ({ ...prev, startDate: e.target.value || prev.startDate }))
+                  }
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sync-range-end">End date</Label>
+                <Input
+                  id="sync-range-end"
+                  type="date"
+                  value={syncRange.endDate}
+                  onChange={(e) =>
+                    setSyncRange((prev) => ({ ...prev, endDate: e.target.value || prev.endDate }))
+                  }
+                />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {formatRangeLabel(syncRange.startDate, syncRange.endDate)}
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setSyncModalOpen(false)}
+              disabled={createSession.isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={() => void handleSyncReport()} disabled={createSession.isPending}>
+              {createSession.isPending ? "Syncing…" : "Sync"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createSession.isPending} onOpenChange={() => {}}>
+        <DialogContent showCloseButton={false} className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Syncing report</DialogTitle>
+            <DialogDescription>
+              This can take a while for full-week data. Please wait.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4" />
+        </DialogContent>
+      </Dialog>
+
+      <FormDialogShell
+        open={!!createTicketDialog}
+        onOpenChange={(open) => {
+          if (isCreatingTicket) return
+          if (!open) setCreateTicketDialog(null)
+        }}
+        title="Create Ticket"
+        description="Ticket created_at will use the Clockify start date for this entry."
+        formId="clockify-create-ticket-form"
+        submitLabel={isCreatingTicket ? "Creating..." : "Create"}
+        submitDisabled={isCreatingTicket}
+      >
+        {createTicketDialog ? (
+          <TicketForm
+            key={createTicketDialog.entryId}
+            formId="clockify-create-ticket-form"
+            hideSubmitButton={true}
+            projectOptions={projectOptions}
+            initialData={{ title: createTicketDialog.title }}
+            createOverrides={{ created_at: createTicketDialog.createdAt }}
+            onSubmittingChange={setIsCreatingTicket}
+            onCreated={handleClockifyTicketCreated}
+            onSuccess={() => {
+              setIsCreatingTicket(false)
+              setCreateTicketDialog(null)
+            }}
+          />
+        ) : null}
+      </FormDialogShell>
+    </PageLayout>
+  )
+}

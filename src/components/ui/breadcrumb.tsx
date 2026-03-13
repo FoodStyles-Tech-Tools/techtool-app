@@ -1,0 +1,55 @@
+import { Link } from "react-router-dom"
+import { ChevronRightIcon } from "@heroicons/react/20/solid"
+import { cn } from "@client/lib/utils"
+
+export type BreadcrumbItem = {
+  label: string
+  href?: string
+}
+
+export type BreadcrumbProps = {
+  items: BreadcrumbItem[]
+  className?: string
+  separator?: "chevron" | "slash"
+}
+
+export function Breadcrumb({ items, className, separator = "chevron" }: BreadcrumbProps) {
+  if (items.length === 0) return null
+
+  const sep = separator === "slash" ? "/" : null
+
+  return (
+    <nav aria-label="Breadcrumb" className={cn("flex items-center gap-1.5 text-sm text-muted-foreground", className)}>
+      {items.map((item, i) => {
+        const isLast = i === items.length - 1
+        const content = item.href && !isLast ? (
+          <Link
+            to={item.href}
+            className="hover:text-foreground transition-colors"
+          >
+            {item.label}
+          </Link>
+        ) : (
+          <span className={isLast ? "font-medium text-foreground" : undefined}>
+            {item.label}
+          </span>
+        )
+        return (
+          <span key={i} className="flex items-center gap-1.5">
+            {i > 0 && (
+              sep ? (
+                <span className="px-1" aria-hidden>{sep}</span>
+              ) : (
+                <span className="text-muted-foreground" aria-hidden>
+                  <ChevronRightIcon className="h-4 w-4" />
+                </span>
+              )
+            )}
+            {content}
+          </span>
+        )
+      })}
+    </nav>
+  )
+}
+

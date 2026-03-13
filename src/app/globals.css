@@ -1,0 +1,616 @@
+@import "tailwindcss";
+
+/* Theme tokens: light (default) */
+@layer base {
+  :root {
+    /* Jira light: white page, white cards, N800 #172B4D, N300 #DFE1E6, selected #EBF5FF */
+    --background: 0 0% 100%;        /* #FFFFFF page */
+    --form-bg: 0 0% 100%;           /* form controls, same as background in light */
+    --foreground: 215 30% 23%;      /* #172B4D N800 */
+    --muted: 220 13% 92%;           /* #EBECF0 N30 default buttons */
+    --table-header: 220 14% 92%;    /* #e8eaed table header */
+    --muted-foreground: 218 19% 46%; /* #6B778C N500 */
+    --primary: 212 100% 40%;        /* #0052CC Atlassian blue */
+    --primary-foreground: 0 0% 100%;
+    --accent: 210 100% 97%;         /* #EBF5FF selected/highlight tint */
+    --accent-foreground: 215 30% 23%;
+    --border: 220 13% 87%;          /* #DFE1E6 N300 */
+    --input: 220 13% 87%;
+    --ring: 212 100% 40%;
+    --card: 0 0% 100%;              /* #FFFFFF panels */
+    --card-foreground: 215 30% 23%;
+    --ring-offset: 0 0% 100%;
+    --shadow-elevation-1: 0 1px 3px 0 rgba(0, 0, 0, 0.12);
+    --shadow-edge-r: 2px 0 6px -2px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark {
+    /* App bg #1f1f21, table header #18191b | Border #37373a | Text #dddee1, primary #4C9AFF */
+    --table-header: 220 4% 10%;      /* #18191b */
+    --background: 240 3% 12%;        /* #1f1f21 app */
+    --form-bg: 225 4% 18%;           /* #2b2c2f form controls */
+    --foreground: 224 6% 87%;        /* #dddee1 primary text */
+    --muted: 240 2% 18%;            /* #2c2c2e */
+    --muted-foreground: 215 25% 82%; /* #C7D1DB secondary text */
+    --primary: 212 100% 65%;         /* #4C9AFF */
+    --primary-foreground: 222 47% 11%;
+    --accent: 240 2% 22%;            /* Slightly lighter than muted, hover */
+    --accent-foreground: 224 6% 87%;
+    --border: 240 3% 22%;            /* #37373a */
+    --input: 240 3% 22%;
+    --ring: 212 100% 65%;
+    --card: 240 3% 12%;              /* #1f1f21 */
+    --card-foreground: 224 6% 87%;
+    --ring-offset: 228 4% 10%;       /* #18191a */
+    --shadow-elevation-1: 0 1px 4px 0 rgba(255, 255, 255, 0.06);
+    --shadow-edge-r: 2px 0 8px -2px rgba(255, 255, 255, 0.08);
+  }
+}
+
+@theme {
+  --default-border-width: 1.5px;
+  --shadow-elevation: var(--shadow-elevation-1);
+  --color-background: hsl(var(--background));
+  --color-form-bg: hsl(var(--form-bg));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted: hsl(var(--muted));
+  --color-table-header: hsl(var(--table-header));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-ring-offset: hsl(var(--ring-offset));
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    @apply h-full w-full;
+  }
+
+  html {
+    @apply font-sans text-base antialiased;
+  }
+
+  body {
+    @apply m-0 min-h-screen leading-6;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  /* Smooth light ↔ dark transition (only during theme switch) */
+  .theme-transition,
+  .theme-transition * {
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-property: background-color, color, border-color, box-shadow, fill, stroke;
+  }
+
+  p,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  ul,
+  ol {
+    margin: 0;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+
+  select,
+  summary {
+    cursor: pointer;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+  }
+
+  th {
+    color: hsl(var(--muted-foreground));
+    font-weight: 500;
+  }
+
+  th,
+  td {
+    line-height: 1.4;
+  }
+
+  *:focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  .shadow-edge-r {
+    box-shadow: var(--shadow-edge-r);
+  }
+}
+
+/* ===== Navigation Progress Bar ===== */
+@keyframes nav-progress-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+.nav-progress-bar-shimmer {
+  animation: nav-progress-slide 1.2s ease-in-out infinite;
+}
+
+/* ===== Unified Loading System ===== */
+
+/* Smooth eased rotation — slightly decelerated for a "live" feel */
+@keyframes loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Gentle fade on the spinner body — keeps it feeling alive */
+@keyframes loading-spinner-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Sonar ring — expands outward and fades for page-level loaders */
+@keyframes loading-ring-expand {
+  0% {
+    transform: scale(1);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.65);
+    opacity: 0;
+  }
+}
+
+/* Mount animation — subtle scale-up + fade-in when loader appears */
+@keyframes loading-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Core spinner: eased cubic for a satisfying "snap" */
+.loading-spinner {
+  animation:
+    loading-spin 0.85s cubic-bezier(0.45, 0, 0.55, 1) infinite,
+    loading-spinner-pulse 2s ease-in-out infinite;
+}
+
+/* Sonar ring behind page-level spinner */
+.loading-ring {
+  animation: loading-ring-expand 2s ease-out infinite;
+}
+
+/* Second sonar ring, offset for a continuous wave */
+.loading-ring-delayed {
+  animation: loading-ring-expand 2s ease-out 0.65s infinite;
+}
+
+/* Smooth appear on mount */
+.loading-fade-in {
+  animation: loading-fade-in 0.2s ease-out both;
+}
+
+/* Reduced-motion: swap spin/expand for a simple pulse */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner {
+    animation: loading-spinner-pulse 1.5s ease-in-out infinite;
+  }
+
+  .loading-ring,
+  .loading-ring-delayed {
+    animation: none;
+    opacity: 0;
+  }
+
+  .nav-progress-bar-shimmer {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  .loading-fade-in {
+    animation: none;
+  }
+}
+
+.tiptap {
+  min-height: 140px;
+  max-height: 240px;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+
+.tiptap.tiptap-compact {
+  min-height: 88px;
+  max-height: 200px;
+}
+
+.tiptap:focus {
+  outline: none;
+}
+
+/* Shared prose/editor styles for .tiptap and .rich-text-content */
+.tiptap p,
+.rich-text-content p {
+  margin: 0 0 0.75rem;
+}
+
+.tiptap p:last-child,
+.rich-text-content p:last-child {
+  margin-bottom: 0;
+}
+
+.tiptap h1,
+.tiptap h2,
+.tiptap h3,
+.rich-text-content h1,
+.rich-text-content h2,
+.rich-text-content h3 {
+  margin: 0 0 0.75rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+
+.tiptap h1,
+.rich-text-content h1 {
+  font-size: 1.25rem;
+}
+
+.tiptap h2,
+.rich-text-content h2 {
+  font-size: 1.125rem;
+}
+
+.tiptap h3,
+.rich-text-content h3 {
+  font-size: 1rem;
+}
+
+.tiptap li p,
+.rich-text-content li p {
+  margin: 0;
+}
+
+.tiptap li,
+.rich-text-content li {
+  margin: 0;
+}
+
+.tiptap ul,
+.tiptap ol,
+.rich-text-content ul,
+.rich-text-content ol {
+  padding-left: 1.25rem;
+  margin: 0 0 0.5rem;
+  list-style-position: outside;
+}
+
+.tiptap ul,
+.rich-text-content ul {
+  list-style-type: disc;
+}
+
+.tiptap ol,
+.rich-text-content ol {
+  list-style-type: decimal;
+}
+
+.tiptap blockquote,
+.rich-text-content blockquote {
+  @apply border-l-2 border-border text-muted-foreground;
+  margin: 0 0 0.75rem;
+  padding-left: 0.75rem;
+}
+
+.tiptap code,
+.rich-text-content code {
+  @apply rounded bg-muted;
+  padding: 0.1rem 0.25rem;
+}
+
+.tiptap pre,
+.rich-text-content pre {
+  @apply rounded-lg border border-border bg-muted;
+  position: relative;
+  margin: 0 0 0.75rem;
+  padding: 0.75rem;
+  overflow-x: auto;
+}
+
+.tiptap pre code,
+.rich-text-content pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.tiptap table,
+.rich-text-content table {
+  border-collapse: collapse;
+  margin: 0 0 0.75rem;
+  width: 100%;
+}
+
+.tiptap th,
+.tiptap td,
+.rich-text-content th,
+.rich-text-content td {
+  @apply border border-border;
+  padding: 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.tiptap th,
+.rich-text-content th {
+  @apply bg-muted font-semibold;
+}
+
+.tiptap a,
+.rich-text-content a {
+  @apply text-primary underline;
+}
+
+.tiptap ul[data-type="taskList"],
+.rich-text-content ul[data-type="taskList"] {
+  list-style-type: none !important;
+  list-style: none !important;
+  padding-left: 0 !important;
+  margin: 0 0 0.5rem;
+}
+
+.tiptap ul[data-type="taskList"] ul[data-type="taskList"],
+.rich-text-content ul[data-type="taskList"] ul[data-type="taskList"] {
+  padding-left: 1.25rem !important;
+}
+
+.tiptap ul[data-type="taskList"] > li,
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"],
+.rich-text-content ul[data-type="taskList"] > li,
+.rich-text-content ul[data-type="taskList"] li[data-type="taskItem"] {
+  list-style: none !important;
+  list-style-type: none !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start;
+  gap: 0.375rem;
+  margin: 0.125rem 0;
+}
+
+.tiptap ul[data-type="taskList"] > li::marker,
+.tiptap ul[data-type="taskList"] li[data-type="taskItem"]::marker,
+.rich-text-content ul[data-type="taskList"] > li::marker,
+.rich-text-content ul[data-type="taskList"] li[data-type="taskItem"]::marker {
+  content: none;
+  display: none;
+}
+
+.tiptap ul[data-type="taskList"] li > label,
+.rich-text-content ul[data-type="taskList"] li > label {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  margin-top: 0.2rem;
+  user-select: none;
+}
+
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"],
+.rich-text-content ul[data-type="taskList"] li > label input[type="checkbox"] {
+  @apply accent-primary;
+  width: 0.875rem;
+  height: 0.875rem;
+  cursor: pointer;
+  margin: 0;
+}
+
+.tiptap ul[data-type="taskList"] li > div,
+.rich-text-content ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tiptap ul[data-type="taskList"] li > div p,
+.rich-text-content ul[data-type="taskList"] li > div p {
+  margin: 0;
+}
+
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div p,
+.rich-text-content ul[data-type="taskList"] li[data-checked="true"] > div p {
+  @apply text-muted-foreground line-through;
+}
+
+.tiptap img,
+.rich-text-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+/* Editor-only: .tiptap */
+.tiptap {
+  min-height: 140px;
+  max-height: 240px;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  overflow-y: auto;
+}
+
+.tiptap.tiptap-compact {
+  min-height: 88px;
+  max-height: 200px;
+}
+
+.tiptap:focus {
+  outline: none;
+}
+
+/* Read-only content: .rich-text-content */
+.rich-text-content {
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.mention-pill {
+  @apply inline-flex items-center rounded border border-primary/60 bg-primary/10 px-1.5 py-0.5 font-semibold leading-5 text-primary whitespace-nowrap;
+}
+
+.mention-ticket {
+  text-decoration: none !important;
+  cursor: pointer;
+  gap: 0.35rem;
+}
+
+.mention-ticket:hover {
+  background: hsl(var(--primary) / 0.18);
+}
+
+.mention-ticket-status {
+  @apply inline-flex items-center rounded border border-border bg-card px-1 py-0 text-foreground uppercase;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1rem;
+}
+
+.code-copy-button {
+  @apply absolute right-2 top-2 cursor-pointer rounded border border-border bg-card/90 px-2 py-1 text-muted-foreground;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: all 120ms ease;
+}
+
+.code-copy-button:hover {
+  @apply border-primary/45 bg-primary/10 text-primary;
+}
+
+.asset-description {
+  @apply text-xs text-muted-foreground;
+  line-height: 1.4;
+}
+
+.asset-description p {
+  margin: 0 0 0.4rem;
+}
+
+.asset-description p:last-child {
+  margin-bottom: 0;
+}
+
+.asset-description li p {
+  margin: 0;
+}
+
+.asset-description li {
+  margin: 0;
+}
+
+.asset-description ul,
+.asset-description ol {
+  padding-left: 1rem;
+  margin: 0 0 0.3rem;
+  list-style-position: outside;
+}
+
+.asset-description ul {
+  list-style-type: disc;
+}
+
+.asset-description ol {
+  list-style-type: decimal;
+}
+
+.asset-description a {
+  @apply text-primary underline;
+}
+
+.asset-description--clamped {
+  max-height: 96px;
+  overflow: hidden;
+}
+
+/* ===== Scrollbars (Light & Dark) ===== */
+/* WebKit-based browsers (Chrome, Edge, Safari) */
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+*::-webkit-scrollbar-track {
+  background-color: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  background-color: hsl(var(--muted-foreground) / 0.35);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.6);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+}
