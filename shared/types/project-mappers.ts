@@ -2,7 +2,8 @@ import { sanitizeLinkArray } from "@shared/links"
 import type { Project, ProjectCollaborator } from "./domain"
 import type { ProjectDto } from "./api/projects"
 
-const toArray = <T>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : [])
+export const toArray = <T>(value: unknown): T[] =>
+  Array.isArray(value) ? (value as T[]) : []
 
 /** Normalize an API ProjectDto to the domain Project type. */
 export function normalizeProject(dto: ProjectDto): Project {

@@ -122,7 +122,8 @@ const FormControl = React.forwardRef<HTMLElement, FormControlProps>(
         ? formDescriptionId
         : `${formDescriptionId} ${formMessageId}`,
       "aria-invalid": !!error,
-      ref: composeRefs(ref, children.props.ref),
+      // Use the element's ref property instead of props.ref to avoid React warnings
+      ref: composeRefs(ref, (children as any).ref),
     })
   }
 )

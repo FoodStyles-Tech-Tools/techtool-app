@@ -5,7 +5,7 @@ import { useRealtimeSubscription } from "./use-realtime"
 import { requestJson, createQueryString } from "@client/lib/api"
 import { prepareLinkPayload } from "@shared/links"
 import type { Project, ProjectTicketStats } from "@shared/types"
-import { normalizeProject } from "@shared/types/project-mappers"
+import { normalizeProject, toArray } from "@shared/types/project-mappers"
 import type { ProjectDto, ProjectsResponseDto } from "@shared/types/api/projects"
 
 type UseProjectsOptions = {

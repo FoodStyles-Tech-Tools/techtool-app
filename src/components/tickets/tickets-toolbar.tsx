@@ -68,6 +68,8 @@ export interface TicketsToolbarProps {
   currentUserId: string | null
   /** When provided, status filter displays as StatusPill when a status is selected. */
   statusMap?: Map<string, { label: string; color: string }>
+  /** When true, the status filter UI is disabled (e.g. Kanban view shows all statuses). */
+  disableStatusFilter?: boolean
 }
 
 export function TicketsToolbar({
@@ -102,6 +104,7 @@ export function TicketsToolbar({
   hasActiveFilters: hasActiveFiltersProp,
   currentUserId,
   statusMap,
+  disableStatusFilter = false,
 }: TicketsToolbarProps) {
   const defaultExcludedSet = useMemo(
     () => new Set(["cancelled", "completed"]),
@@ -116,7 +119,7 @@ export function TicketsToolbar({
     hasActiveFiltersProp ??
     (searchQuery.trim() !== "" ||
       projectFilter !== "all" ||
-      statusFilterDiffersFromDefault ||
+      (!disableStatusFilter && statusFilterDiffersFromDefault) ||
       assigneeFilter !== "all" ||
       reporterFilter !== "all" ||
       sqaFilter !== "all" ||
@@ -167,6 +170,7 @@ export function TicketsToolbar({
               excludedStatuses={excludedStatuses}
               toggleStatusExcluded={toggleStatusExcluded}
               statusMap={statusMap}
+              disabled={disableStatusFilter}
             />
           </FilterField>
 

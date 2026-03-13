@@ -18,6 +18,7 @@ export interface StatusFilterDropdownProps {
   excludedStatuses: string[]
   toggleStatusExcluded: (statusKey: string) => void
   statusMap?: Map<string, { label: string; color: string }>
+  disabled?: boolean
 }
 
 /** Multi-select status filter: same as tickets page. Checked = included, unchecked = excluded. */
@@ -27,6 +28,7 @@ export function StatusFilterDropdown({
   excludedStatuses,
   toggleStatusExcluded,
   statusMap,
+  disabled = false,
 }: StatusFilterDropdownProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -58,21 +60,30 @@ export function StatusFilterDropdown({
     <div className="relative min-w-[140px]" ref={containerRef}>
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          if (disabled) return
+          setOpen((prev) => !prev)
+        }}
         className={cn(
-          "flex h-9 w-full cursor-pointer items-center justify-between rounded-md border border-input bg-form-bg px-3 py-1.5 text-sm text-foreground hover:bg-accent/50",
-          open && "ring-2 ring-ring ring-offset-2 ring-offset-background"
+          "flex h-9 w-full items-center justify-between rounded-md border border-input bg-form-bg px-3 py-1.5 text-sm text-foreground",
+          disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-accent/50",
+          open && !disabled && "ring-2 ring-ring ring-offset-2 ring-offset-background"
         )}
         aria-expanded={open}
         aria-haspopup="listbox"
+        aria-disabled={disabled}
         id={id}
+        disabled={disabled}
       >
         <span className="truncate">{summaryText}</span>
         <ChevronDownIcon
-          className={cn("ml-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")}
+          className={cn(
+            "ml-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+            open && !disabled && "rotate-180"
+          )}
         />
       </button>
-      {open ? (
+      {open && !disabled ? (
         <div
           className="absolute left-0 top-full z-50 mt-1 max-h-56 min-w-full overflow-y-auto rounded-md border border-border bg-card py-1 shadow-lg"
           role="listbox"
@@ -87,9 +98,13 @@ export function StatusFilterDropdown({
               >
                 <Checkbox
                   checked={isIncluded}
-                  onChange={() => toggleStatusExcluded(status.id)}
+                  onChange={() => {
+                    if (disabled) return
+                    toggleStatusExcluded(status.id)
+                  }}
                   label=""
                   aria-label={`Include ${status.label}`}
+                  disabled={disabled}
                 />
                 {statusMap ? (
                   <StatusPill

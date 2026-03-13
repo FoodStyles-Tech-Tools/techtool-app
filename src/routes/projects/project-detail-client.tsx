@@ -65,40 +65,32 @@ function ViewToggle({
 }) {
   return (
     <div
-      className="inline-flex items-center rounded-md border border-border bg-form-bg p-0.5 gap-0.5"
+      className="inline-flex items-center rounded-md border border-border bg-muted p-0.5"
       role="group"
       aria-label="View mode"
     >
-      <button
+      <Button
+        variant={viewMode === "table" ? "selected" : "ghost"}
+        size="sm"
+        className={cn("h-7 px-3", viewMode === "table" ? "shadow-none" : "")}
         type="button"
         onClick={() => onViewModeChange("table")}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors",
-          viewMode === "table"
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-        )}
-        aria-pressed={viewMode === "table"}
         title="Table view"
       >
-        <TableCellsIcon className="h-3.5 w-3.5" aria-hidden />
-        <span>Table</span>
-      </button>
-      <button
+        <TableCellsIcon className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+        <span className="text-xs font-medium">Table</span>
+      </Button>
+      <Button
+        variant={viewMode === "kanban" ? "selected" : "ghost"}
+        size="sm"
+        className={cn("h-7 px-3", viewMode === "kanban" ? "shadow-none" : "")}
         type="button"
         onClick={() => onViewModeChange("kanban")}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors",
-          viewMode === "kanban"
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-        )}
-        aria-pressed={viewMode === "kanban"}
         title="Kanban board"
       >
-        <ViewColumnsIcon className="h-3.5 w-3.5" aria-hidden />
-        <span>Board</span>
-      </button>
+        <ViewColumnsIcon className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+        <span className="text-xs font-medium">Board</span>
+      </Button>
     </div>
   )
 }
@@ -175,6 +167,8 @@ export default function ProjectDetailClient({
     )
   }, [])
 
+  const isKanban = viewMode === "kanban"
+
   const { statuses: ticketStatuses, statusMap } = useTicketStatuses()
   const { epics } = useEpics()
   const { sprints } = useSprints()
@@ -191,22 +185,26 @@ export default function ProjectDetailClient({
   )
   const includeStatuses = useMemo(
     () =>
-      statusOptions
-        .filter((o) => !excludedSet.has(o.id.toLowerCase()))
-        .map((o) => o.id),
-    [statusOptions, excludedSet]
+      isKanban
+        ? statusOptions.map((o) => o.id)
+        : statusOptions
+            .filter((o) => !excludedSet.has(o.id.toLowerCase()))
+            .map((o) => o.id),
+    [statusOptions, excludedSet, isKanban]
   )
 
   const defaultExcludedSet = useMemo(() => new Set(DEFAULT_EXCLUDED_STATUSES), [])
 
   const hasActiveFilters = useMemo(() => {
     if (searchQuery.trim() !== "") return true
-    const excludedSetForActive = new Set(excludedStatuses)
-    if (
-      excludedSetForActive.size !== defaultExcludedSet.size ||
-      [...excludedSetForActive].some((s) => !defaultExcludedSet.has(s))
-    ) {
-      return true
+    if (!isKanban) {
+      const excludedSetForActive = new Set(excludedStatuses)
+      if (
+        excludedSetForActive.size !== defaultExcludedSet.size ||
+        [...excludedSetForActive].some((s) => !defaultExcludedSet.has(s))
+      ) {
+        return true
+      }
     }
     if (assigneeFilter !== "all") return true
     if (reporterFilter !== "all") return true
@@ -241,8 +239,6 @@ export default function ProjectDetailClient({
     setExcludedStatuses([...DEFAULT_EXCLUDED_STATUSES])
     setCurrentPage(1)
   }, [])
-
-  const isKanban = viewMode === "kanban"
 
   const { data: tickets = [], pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
     projectId: project?.id,
@@ -466,9 +462,10 @@ function getTypeColor(type: string | null | undefined): string {
                         <StatusFilterDropdown
                           id="project-status-filter"
                           statusOptions={statusOptions}
-                          excludedStatuses={excludedStatuses}
-                          toggleStatusExcluded={toggleStatusExcluded}
+                          excludedStatuses={isKanban ? [] : excludedStatuses}
+                          toggleStatusExcluded={isKanban ? () => {} : toggleStatusExcluded}
                           statusMap={statusMap}
+                          disabled={isKanban}
                         />
                       </FilterField>
                       <FilterField label="Assignee" id="project-assignee-filter">
@@ -766,6 +763,7 @@ function getTypeColor(type: string | null | undefined): string {
               status: project.status as "active" | "inactive",
               require_sqa: project.require_sqa,
               department_id: project.department?.id,
+              owner_id: project.owner?.id ?? "",
               links: project.links || [],
               requester_ids: project.requester_ids || project.requesters.map((item) => item.id),
               collaborator_ids: project.collaborator_ids || project.collaborators.map((item) => item.id),

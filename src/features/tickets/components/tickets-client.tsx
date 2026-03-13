@@ -42,40 +42,32 @@ function ViewToggle({
 }) {
   return (
     <div
-      className="inline-flex items-center rounded-md border border-border bg-form-bg p-0.5 gap-0.5"
+      className="inline-flex items-center rounded-md border border-border bg-muted p-0.5"
       role="group"
       aria-label="View mode"
     >
-      <button
+      <Button
+        variant={viewMode === "table" ? "selected" : "ghost"}
+        size="sm"
+        className={cn("h-7 px-3", viewMode === "table" ? "shadow-none" : "")}
         type="button"
         onClick={() => onViewModeChange("table")}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors",
-          viewMode === "table"
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-        )}
-        aria-pressed={viewMode === "table"}
         title="Table view"
       >
-        <TableCellsIcon className="h-3.5 w-3.5" aria-hidden />
-        <span>Table</span>
-      </button>
-      <button
+        <TableCellsIcon className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+        <span className="text-xs font-medium">Table</span>
+      </Button>
+      <Button
+        variant={viewMode === "kanban" ? "selected" : "ghost"}
+        size="sm"
+        className={cn("h-7 px-3", viewMode === "kanban" ? "shadow-none" : "")}
         type="button"
         onClick={() => onViewModeChange("kanban")}
-        className={cn(
-          "inline-flex items-center gap-1.5 rounded px-2.5 py-1.5 text-xs font-medium transition-colors",
-          viewMode === "kanban"
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground hover:bg-accent"
-        )}
-        aria-pressed={viewMode === "kanban"}
         title="Kanban board"
       >
-        <ViewColumnsIcon className="h-3.5 w-3.5" aria-hidden />
-        <span>Board</span>
-      </button>
+        <ViewColumnsIcon className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+        <span className="text-xs font-medium">Board</span>
+      </Button>
     </div>
   )
 }
@@ -143,6 +135,10 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     hasActiveFilters,
   } = filters
 
+  // For Kanban, we want to load ALL tickets without pagination so the board is complete.
+  // For table, use normal pagination.
+  const isKanban = viewMode === "kanban"
+
   const { statuses: ticketStatuses, statusMap } = useTicketStatuses()
   const statusOptions = useMemo(
     () =>
@@ -157,15 +153,13 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
   )
   const includeStatuses = useMemo(
     () =>
-      statusOptions
-        .filter((o) => !excludedSet.has(o.id.toLowerCase()))
-        .map((o) => o.id),
-    [statusOptions, excludedSet]
+      isKanban
+        ? statusOptions.map((o) => o.id)
+        : statusOptions
+            .filter((o) => !excludedSet.has(o.id.toLowerCase()))
+            .map((o) => o.id),
+    [statusOptions, excludedSet, isKanban]
   )
-
-  // For Kanban, we want to load ALL tickets without pagination so the board is complete.
-  // For table, use normal pagination.
-  const isKanban = viewMode === "kanban"
 
   const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
     projectId: projectFilter !== "all" ? projectFilter : undefined,
@@ -337,6 +331,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
             hasActiveFilters={hasActiveFilters}
             currentUserId={user?.id ?? null}
             statusMap={statusMap}
+            disableStatusFilter={isKanban}
           />
         }
       >
