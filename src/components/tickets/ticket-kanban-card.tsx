@@ -1,6 +1,6 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useRef } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Square2StackIcon } from "@heroicons/react/20/solid"
@@ -16,9 +16,11 @@ export interface TicketKanbanCardProps {
   ticket: Ticket
   subtasksCount?: number
   onSelectTicket: (ticketId: string) => void
-  /** When set, renders a drop indicator line above ("before") or below ("after") this card */
   dropIndicatorPosition?: DropPosition | null
 }
+
+/** Threshold in pixels — moves smaller than this are treated as a click, not a drag. */
+const CLICK_MOVE_THRESHOLD = 4
 
 function DropLine() {
   return (
@@ -41,6 +43,27 @@ export const TicketKanbanCard = memo(function TicketKanbanCard({
     transition,
   }
 
+  // Track pointer-down position so we can distinguish a click from a drag.
+  const pointerDownPos = useRef<{ x: number; y: number } | null>(null)
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    pointerDownPos.current = { x: e.clientX, y: e.clientY }
+    // Forward to dnd-kit's listener so dragging still initiates on any pointer-down.
+    listeners?.onPointerDown?.(e as unknown as PointerEvent)
+  }
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!pointerDownPos.current) return
+    const dx = Math.abs(e.clientX - pointerDownPos.current.x)
+    const dy = Math.abs(e.clientY - pointerDownPos.current.y)
+    pointerDownPos.current = null
+
+    // Only treat as a click if the pointer barely moved (i.e. not a drag).
+    if (dx < CLICK_MOVE_THRESHOLD && dy < CLICK_MOVE_THRESHOLD) {
+      onSelectTicket(ticket.id)
+    }
+  }
+
   const isCompleted = isDoneStatus(normalizeStatusKey(ticket.status))
   const dueDate = getDueDateDisplay(ticket.dueDate, isCompleted)
   const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email
@@ -53,13 +76,25 @@ export const TicketKanbanCard = memo(function TicketKanbanCard({
       <div
         className={cn(
           "group relative rounded-lg border border-border bg-card p-3 shadow-sm my-1",
-          "cursor-grab active:cursor-grabbing select-none",
+          "cursor-pointer select-none",
           "transition-all hover:shadow-md hover:border-border/80",
-          isDragging && "opacity-40 shadow-lg"
+          isDragging && "opacity-40 shadow-lg cursor-grabbing"
         )}
-        aria-label={`Ticket ${ticket.displayId || ticket.id.slice(0, 8)}: ${ticket.title}`}
         {...attributes}
-        {...listeners}
+        // role and tabIndex come from dnd-kit attributes above; aria-label overrides here.
+        aria-label={`Ticket ${ticket.displayId || ticket.id.slice(0, 8)}: ${ticket.title}. Click to open.`}
+        // Replace the default listeners with our own onPointerDown so we can intercept.
+        // All other listeners (onKeyDown etc.) from dnd-kit are still spread via attributes.
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onKeyDown={(e) => {
+          // Keyboard: Enter/Space opens the preview; dnd-kit keyboard handling is via attributes.
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            onSelectTicket(ticket.id)
+          }
+          listeners?.onKeyDown?.(e as unknown as KeyboardEvent)
+        }}
       >
         {/* Card header: ID + type */}
         <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -69,18 +104,10 @@ export const TicketKanbanCard = memo(function TicketKanbanCard({
           <TicketTypePill type={ticket.type} />
         </div>
 
-        {/* Title — clickable, opens preview */}
-        <button
-          type="button"
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={(e) => {
-            e.stopPropagation()
-            onSelectTicket(ticket.id)
-          }}
-          className="mb-2.5 block w-full text-left text-sm font-medium text-foreground leading-snug line-clamp-2 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded"
-        >
+        {/* Title */}
+        <p className="mb-2.5 text-sm font-medium text-foreground leading-snug line-clamp-2">
           {ticket.title}
-        </button>
+        </p>
 
         {/* Priority + due date row */}
         <div className="flex flex-wrap items-center gap-1.5 mb-2">
