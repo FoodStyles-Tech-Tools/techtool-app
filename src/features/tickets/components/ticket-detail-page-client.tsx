@@ -1,7 +1,7 @@
 "use client"
 
 import { useNavigate } from "react-router-dom"
-import { ClipboardDocumentIcon, ShareIcon } from "@heroicons/react/24/outline"
+import { ClipboardDocumentIcon, ShareIcon, TrashIcon } from "@heroicons/react/24/outline"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { Breadcrumb } from "@client/components/ui/breadcrumb"
@@ -17,7 +17,7 @@ type TicketDetailPageClientProps = {
 export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps) {
   const navigate = useNavigate()
   const surface = useTicketDetailSurface(ticketId, { enabled: true })
-  const { ticket } = surface
+  const { ticket, actions, canEditTickets, isArchivedTicket } = surface
   const displayId = ticket?.displayId || ticketId.slice(0, 8)
   const { handleCopyTicketLabel, handleCopyShareUrl } = useTicketDetailSharing({
     ticket,
@@ -63,6 +63,18 @@ export function TicketDetailPageClient({ ticketId }: TicketDetailPageClientProps
               >
                 <ShareIcon className="h-4 w-4" />
               </Button>
+              {canEditTickets && !isArchivedTicket ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-red-600 hover:text-red-700"
+                  onClick={actions.openDeleteDialog}
+                  aria-label="Archive ticket"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </Button>
+              ) : null}
             </div>
           </div>
         }

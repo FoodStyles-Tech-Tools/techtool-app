@@ -209,8 +209,6 @@ export function KeyboardShortcuts() {
       // Detect platform (Mac uses Meta key, Windows/Linux use Ctrl)
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
       const modifierKey = isMac ? e.metaKey : e.ctrlKey
-      const altKey = e.altKey
-
       const targetForInput = e.target as HTMLElement | null
       const isInputElement = targetForInput && (
         targetForInput.tagName === "INPUT" ||
@@ -227,94 +225,6 @@ export function KeyboardShortcuts() {
         if (!isInputElement && !isCommandPaletteOpen) {
           setIsCommandPaletteOpen(true)
         }
-        return
-      }
-
-      // CTRL+F / COMMAND+F: Open search overlay directly (quick find)
-      if (modifierKey && (e.key === "f" || e.key === "F")) {
-        e.preventDefault()
-        e.stopPropagation()
-        e.stopImmediatePropagation()
-        if (!isInputElement) {
-          if (isUsersPage) {
-            if (!isUserSearchOverlayOpen) setIsUserSearchOverlayOpen(true)
-          } else {
-            if (!isSearchOverlayOpen) setIsSearchOverlayOpen(true)
-          }
-        }
-        return
-      }
-
-      // Don't trigger if a dialog/modal is already open (except our own)
-      const hasOpenDialog = document.querySelector('[role="dialog"][data-state="open"]')
-      if (
-        hasOpenDialog &&
-        !isTicketDialogOpen &&
-        !isSearchOverlayOpen &&
-        !isUserSearchOverlayOpen &&
-        !isProjectDialogOpen &&
-        !isCommandPaletteOpen &&
-        !isEpicDialogOpen &&
-        !isDepartmentDialogOpen &&
-        !isSprintDialogOpen
-      ) {
-        return
-      }
-
-      const isMacTicketShortcut = isMac && e.metaKey && !e.altKey && !e.ctrlKey
-      const isNonMacTicketShortcut = !isMac && altKey && !e.metaKey && !e.ctrlKey
-
-      if ((isMacTicketShortcut || isNonMacTicketShortcut) && (e.key === "a" || e.key === "A")) {
-        // Don't prevent default if in input (browser shortcuts like select all)
-        if (!isInputElement) {
-          e.preventDefault()
-          setIsTicketDialogOpen(true)
-        }
-      }
-
-      const isAltCombo = e.altKey && !e.metaKey && !e.ctrlKey
-      const isMetaCombo = e.metaKey && !e.altKey && !e.ctrlKey
-
-      if (
-        (e.key === "p" || e.key === "P") &&
-        (isAltCombo || isMetaCombo) &&
-        canCreateProjects &&
-        !isInputElement
-      ) {
-        e.preventDefault()
-        if (!isProjectDialogOpen) {
-          setIsProjectDialogOpen(true)
-        }
-        return
-      }
-
-      // ESC: Close dialogs/overlays (command palette and search overlays handle their own ESC)
-      if (e.key === "Escape" && !isSearchOverlayOpen && !isUserSearchOverlayOpen && !isCommandPaletteOpen) {
-        if (isTicketDialogOpen) {
-          e.preventDefault()
-          setIsTicketDialogOpen(false)
-          return
-        }
-        if (isProjectDialogOpen) {
-          e.preventDefault()
-          setIsProjectDialogOpen(false)
-          return
-        }
-        if (isEpicDialogOpen) {
-          e.preventDefault()
-          setIsEpicDialogOpen(false)
-          return
-        }
-        if (isDepartmentDialogOpen) {
-          e.preventDefault()
-          setIsDepartmentDialogOpen(false)
-          return
-        }
-        if (isSprintDialogOpen) {
-          e.preventDefault()
-          setIsSprintDialogOpen(false)
-          return
-        }
       }
     }
 
@@ -327,20 +237,7 @@ export function KeyboardShortcuts() {
       document.removeEventListener("keydown", handleKeyDown, true)
       window.removeEventListener("keydown", handleKeyDown, true)
     }
-  }, [
-    session,
-    isPending,
-    isCommandPaletteOpen,
-    isTicketDialogOpen,
-    isSearchOverlayOpen,
-    isUserSearchOverlayOpen,
-    isProjectDialogOpen,
-    isEpicDialogOpen,
-    isDepartmentDialogOpen,
-    isSprintDialogOpen,
-    canCreateProjects,
-    isUsersPage,
-  ])
+  }, [session, isPending, isCommandPaletteOpen])
 
   const handleSelectUser = (userId: string) => {
     // Dispatch custom event to scroll to user in Users page

@@ -4,6 +4,7 @@ import {
   ArrowTopRightOnSquareIcon,
   ClipboardDocumentIcon,
   ShareIcon,
+  TrashIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline"
 import {
@@ -93,10 +94,12 @@ export function TicketDetailPreviewModal({
               <Button
                 type="button"
                 variant="ghost"
+                size="icon"
                 className="text-red-600 hover:text-red-700"
                 onClick={surface.actions.openDeleteDialog}
+                aria-label="Archive ticket"
               >
-                Archive
+                <TrashIcon className="h-4 w-4" />
               </Button>
             ) : null}
             <Button

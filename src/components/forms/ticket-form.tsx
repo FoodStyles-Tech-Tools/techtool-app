@@ -30,6 +30,8 @@ import { SprintSelect } from "@client/components/sprint-select"
 import { ASSIGNEE_ALLOWED_ROLES } from "@shared/ticket-constants"
 import { inputClassNameLg } from "@client/lib/form-styles"
 import { normalizeRichTextInput } from "@shared/rich-text"
+import { DateTimePicker } from "@client/components/ui/datetime-picker"
+import { toUTCISOStringPreserveLocal } from "@client/lib/format-dates"
 import type { User } from "@shared/types"
 
 const NO_PROJECT_VALUE = "__no_project__"
@@ -42,7 +44,7 @@ const ticketSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
-  type: z.enum(["bug", "request", "task", "subtask"]).default("task"),
+  type: z.enum(["bug", "request"]).default("request"),
   project_id: z
     .union([
       z.string().uuid(),
@@ -74,6 +76,7 @@ const ticketSchema = z.object({
       z.null(),
     ])
     .optional(),
+  dueDate: z.date().nullable().optional(),
   links: z.array(z.string().url("Enter a valid URL")).default([]),
 })
 
@@ -133,13 +136,14 @@ export function TicketForm({
       title: initialData?.title || "",
       description: initialData?.description || "",
       priority: initialData?.priority || "medium",
-      type: initialData?.type || "task",
+    type: initialData?.type || "request",
       project_id: initialData?.project_id || projectId || NO_PROJECT_VALUE,
       assignee_id: initialData?.assignee_id || (isEditing ? "" : (user?.id || "")),
       requested_by_id: initialData?.requested_by_id || (isEditing ? "" : (user?.id || "")),
       department_id: initialData?.department_id || "",
       epic_id: initialData?.epic_id || "",
       sprint_id: initialData?.sprint_id || "",
+      dueDate: initialData?.dueDate ?? null,
       links: initialData?.links || [],
     },
   })
@@ -227,6 +231,7 @@ export function TicketForm({
         description: normalizeRichTextInput(values.description),
         priority: values.priority,
         type: values.type,
+        dueDate: values.dueDate ? toUTCISOStringPreserveLocal(values.dueDate) : undefined,
         projectId:
           projectId || (values.project_id && values.project_id !== NO_PROJECT_VALUE ? values.project_id : null),
         assigneeId: values.assignee_id || undefined,
@@ -312,6 +317,26 @@ export function TicketForm({
                   value={field.value}
                   onValueChange={field.onChange}
                   disabled={isReadOnly || isSubmitting}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="dueDate"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Due date</FormLabel>
+              <FormControl>
+                <DateTimePicker
+                  value={field.value || null}
+                  onChange={field.onChange}
+                  disabled={isReadOnly || isSubmitting}
+                  placeholder="No due date"
+                  className="h-8 w-full"
+                  hideIcon
                 />
               </FormControl>
               <FormMessage />

@@ -49,8 +49,9 @@ export function StatusFilterDropdown({
     (o) => !excludedSet.has(o.id.toLowerCase())
   ).length
   const totalCount = statusOptions.length
-  const summaryText =
-    includedCount === totalCount
+  const summaryText = disabled
+    ? "All statuses"
+    : includedCount === totalCount
       ? "All statuses"
       : includedCount === 0
         ? "None"

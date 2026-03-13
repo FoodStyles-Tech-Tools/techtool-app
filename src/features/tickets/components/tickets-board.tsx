@@ -131,7 +131,6 @@ function DropLine() {
 export interface TicketsBoardProps {
   tickets: Ticket[]
   statuses: TicketStatus[]
-  excludedStatuses: string[]
   loading: boolean
   hasSearchQuery: boolean
   onSelectTicket: (ticketId: string) => void
@@ -143,7 +142,6 @@ export interface TicketsBoardProps {
 export function TicketsBoard({
   tickets,
   statuses,
-  excludedStatuses,
   loading,
   hasSearchQuery,
   onSelectTicket,
@@ -163,19 +161,12 @@ export function TicketsBoard({
     })
   )
 
-  const excludedSet = useMemo(
-    () => new Set(excludedStatuses.map((s) => s.toLowerCase())),
-    [excludedStatuses]
-  )
-
   const visibleStatuses = useMemo(
     () =>
       sortTicketStatuses(
-        statuses.filter(
-          (s) => !isArchivedStatus(s.key) && !excludedSet.has(normalizeStatusKey(s.key))
-        )
+        statuses.filter((s) => !isArchivedStatus(s.key))
       ),
-    [statuses, excludedSet]
+    [statuses]
   )
 
   const ticketsByStatus = useMemo(() => {

@@ -352,7 +352,6 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           }}
           boardProps={{
             statuses: ticketStatuses,
-            excludedStatuses,
             onSelectTicket: handleSelectTicket,
             onKanbanDrop: handleKanbanDrop,
             onResetFilters: hasActiveFilters ? resetToolbarFilters : undefined,

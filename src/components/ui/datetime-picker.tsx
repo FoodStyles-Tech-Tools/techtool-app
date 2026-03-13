@@ -22,33 +22,17 @@ export function DateTimePicker({
   onChange,
   onCancel,
   disabled = false,
-  placeholder = "Pick a date and time",
+  placeholder = "Pick a date",
   className,
   hideIcon = false,
   renderTriggerContent,
 }: DateTimePickerProps) {
   const [open, setOpen] = React.useState(false)
   const [date, setDate] = React.useState<Date | null>(value)
-  const [time, setTime] = React.useState<string>(() => {
-    if (value) {
-      const hours = String(value.getHours()).padStart(2, "0")
-      const minutes = String(value.getMinutes()).padStart(2, "0")
-      return `${hours}:${minutes}`
-    }
-    return "00:00"
-  })
   const panelRef = React.useRef<HTMLDivElement | null>(null)
 
   const resetDraft = React.useCallback(() => {
     setDate(value)
-    if (value) {
-      const hours = String(value.getHours()).padStart(2, "0")
-      const minutes = String(value.getMinutes()).padStart(2, "0")
-      setTime(`${hours}:${minutes}`)
-      return
-    }
-
-    setTime("00:00")
   }, [value])
 
   const handleOpenChange = React.useCallback(
@@ -65,40 +49,12 @@ export function DateTimePicker({
   const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newDate = event.target.value ? new Date(event.target.value) : null
     if (newDate && !isNaN(newDate.getTime())) {
-      if (date) {
-        newDate.setHours(date.getHours())
-        newDate.setMinutes(date.getMinutes())
-      } else {
-        const [hours, minutes] = time.split(":").map(Number)
-        newDate.setHours(hours || 0)
-        newDate.setMinutes(minutes || 0)
-      }
-      setDate(newDate)
-    }
-  }
-
-  const handleTimeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = event.target.value
-    setTime(newTime)
-    if (date) {
-      const [hours, minutes] = newTime.split(":").map(Number)
-      const newDate = new Date(date)
-      newDate.setHours(hours || 0)
-      newDate.setMinutes(minutes || 0)
       setDate(newDate)
     }
   }
 
   const handleApply = () => {
-    if (date) {
-      const [hours, minutes] = time.split(":").map(Number)
-      const finalDate = new Date(date)
-      finalDate.setHours(hours || 0)
-      finalDate.setMinutes(minutes || 0)
-      onChange(finalDate)
-    } else {
-      onChange(null)
-    }
+    onChange(date)
     setOpen(false)
   }
 
@@ -134,7 +90,6 @@ export function DateTimePicker({
 
   const handleClear = () => {
     setDate(null)
-    setTime("00:00")
     onChange(null)
     setOpen(false)
   }
@@ -152,11 +107,15 @@ export function DateTimePicker({
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
       >
-        {!hideIcon ? <span className="mr-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Date</span> : null}
+        {!hideIcon ? (
+          <span className="mr-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground dark:text-white">
+            Date
+          </span>
+        ) : null}
         {renderTriggerContent
           ? renderTriggerContent(value)
           : value
-            ? format(value, "MMM d, yyyy HH:mm")
+            ? format(value, "MMM d, yyyy")
             : <span>{placeholder}</span>}
       </Button>
 
@@ -169,15 +128,6 @@ export function DateTimePicker({
                 type="date"
                 value={date ? format(date, "yyyy-MM-dd") : ""}
                 onChange={handleDateChange}
-                className="h-8 text-xs"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-medium">Time</label>
-              <Input
-                type="time"
-                value={time}
-                onChange={handleTimeChange}
                 className="h-8 text-xs"
               />
             </div>

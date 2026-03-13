@@ -27,42 +27,28 @@ const TICKET_TYPE_CONFIG: Record<
     Icon: SparklesIcon,
     colorClass: "text-blue-500",
   },
-  task: {
-    value: "task",
-    label: "Task",
-    description: "Track a deliverable",
-    Icon: ClipboardDocumentCheckIcon,
-    colorClass: "text-emerald-500",
-  },
-  subtask: {
-    value: "subtask",
-    label: "Subtask",
-    description: "Part of a parent",
-    Icon: Square2StackIcon,
-    colorClass: "text-muted-foreground",
-  },
 }
 
-const TYPE_ORDER = ["bug", "request", "task", "subtask"] as const
+const TYPE_ORDER = ["bug", "request"] as const
 
 export interface TicketTypeCardsProps {
   value: string
   onValueChange: (value: string) => void
   disabled?: boolean
   className?: string
-  /** When true, only Bug, Feature, and Task are shown (no Subtask). */
+  /** When true, only Bug and Feature are shown. */
   excludeSubtask?: boolean
 }
 
 export function TicketTypeCards({ value, onValueChange, disabled, className, excludeSubtask }: TicketTypeCardsProps) {
-  const order = excludeSubtask ? (TYPE_ORDER.filter((k) => k !== "subtask") as readonly string[]) : TYPE_ORDER
-  const selected = value || "task"
+  const order = TYPE_ORDER
+  const selected = value || "request"
 
   return (
     <div
       className={cn(
         "grid gap-3",
-        excludeSubtask ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-4",
+        "grid-cols-2",
         className
       )}
     >
