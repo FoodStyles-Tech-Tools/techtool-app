@@ -140,17 +140,7 @@ export default function ProjectsClient({
   const canCreateProjects = flags?.canCreateProjects ?? false
   return (
     <PageLayout>
-      <PageHeader
-        title="Projects"
-        actions={
-          canCreateProjects ? (
-            <Button type="button" onClick={() => setProjectFormOpen(true)}>
-              <PlusIcon className="h-4 w-4" />
-              Create Project
-            </Button>
-          ) : null
-        }
-      />
+      <PageHeader title="Projects" />
 
       <FilterBar
         hasActiveFilters={

@@ -22,7 +22,7 @@ export type UserPreferencesRecord = {
 }
 
 function sanitizePreferences(preferences: UserPreferencesRow): UserPreferencesRecord {
-  const ticketsView = preferences.tickets_view === "kanban" ? "kanban" : "table"
+  const ticketsView = preferences.tickets_view === "table" ? "table" : "kanban"
   return {
     user_id: typeof preferences.user_id === "string" ? preferences.user_id : "",
     group_by_epic: preferences.group_by_epic === true,

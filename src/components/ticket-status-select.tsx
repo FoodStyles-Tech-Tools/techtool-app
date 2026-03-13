@@ -53,6 +53,8 @@ export function TicketStatusSelect({
   const currentStatus = statusMap.get(normalizedValue) || statusMap.get(value)
   const currentLabel = currentStatus?.label || formatStatusLabel(value || "")
 
+  const shouldHideNativeSelect = hideNativeSelect || disabled
+
   return (
     <div className={cn("relative flex min-h-8 w-[120px] min-w-[120px] items-center", className)}>
       {isLoading ? (
@@ -72,7 +74,7 @@ export function TicketStatusSelect({
           ) : (
             <span className="pointer-events-none text-xs text-muted-foreground">{currentLabel}</span>
           )}
-          {!hideNativeSelect ? (
+          {!shouldHideNativeSelect ? (
             <select
               value={value}
               onChange={(event) => onValueChange(event.target.value)}

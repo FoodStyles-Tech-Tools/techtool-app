@@ -82,12 +82,12 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
 
   // --- User preferences for view mode ---
   const { preferences, updatePreferences } = useUserPreferences()
-  const [viewMode, setViewModeLocal] = useState<ViewMode>("table")
+  const [viewMode, setViewModeLocal] = useState<ViewMode>("kanban")
 
   // Sync view mode from preferences once loaded
   useEffect(() => {
     if (preferences.user_id) {
-      setViewModeLocal(preferences.tickets_view ?? "table")
+      setViewModeLocal(preferences.tickets_view ?? "kanban")
     }
   }, [preferences.user_id, preferences.tickets_view])
 
@@ -285,17 +285,7 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
         header={
           <PageHeader
             title="Tickets"
-            actions={
-              <div className="flex items-center gap-2">
-                <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
-                {canCreateTickets ? (
-                  <Button type="button" onClick={() => setTicketDialogOpen(true)}>
-                    <PlusIcon className="h-4 w-4" />
-                    Create Ticket
-                  </Button>
-                ) : null}
-              </div>
-            }
+            actions={<ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />}
           />
         }
         toolbar={

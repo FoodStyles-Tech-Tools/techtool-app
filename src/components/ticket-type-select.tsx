@@ -101,6 +101,8 @@ export function TicketTypeSelect({
     { value: "task", label: "Task" },
   ].sort((a, b) => a.label.localeCompare(b.label))
 
+  const shouldHideNativeSelect = hideNativeSelect || disabled
+
   return (
     <div className={cn("relative flex min-h-8 w-[120px] min-w-[120px] items-center", className)}>
       {isLoading ? (
@@ -110,7 +112,7 @@ export function TicketTypeSelect({
       ) : (
         <>
           <TicketTypePill type={resolvedValue} className="pointer-events-none shrink-0" />
-          {!hideNativeSelect ? (
+          {!shouldHideNativeSelect ? (
             <select
               value={resolvedValue}
               onChange={(event) => onValueChange(event.target.value)}

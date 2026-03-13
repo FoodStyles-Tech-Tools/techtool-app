@@ -51,7 +51,7 @@ export function useUserPreferences() {
       user_id: "",
       group_by_epic: false,
       pinned_project_ids: [],
-      tickets_view: "table" as const,
+      tickets_view: "kanban" as const,
     },
     loading: isLoading,
     updatePreferences: updatePreferences.mutateAsync,

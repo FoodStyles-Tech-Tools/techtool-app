@@ -6,10 +6,12 @@ import { Bars3Icon, Bars3CenterLeftIcon, SunIcon, MoonIcon, MagnifyingGlassIcon 
 import { Sidebar } from "./sidebar"
 import { PermissionsBootstrap } from "@client/components/permissions-bootstrap"
 import { CommentNotificationsDropdown } from "@client/components/comment-notifications-dropdown"
+import { CreateMenu } from "@client/components/create-menu"
 import { NavUser } from "@client/components/layout/nav-user"
 import { useTheme } from "@client/components/layout/theme-provider"
 import { signOut, useSession } from "@client/lib/auth-client"
 import { useSignOutOverlay } from "@client/components/signout-overlay"
+import { usePermissions } from "@client/hooks/use-permissions"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "techtool.sidebarCollapsed"
 
@@ -88,8 +90,11 @@ export function AppShell({
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false)
   const navigate = useNavigate()
   const { data: session } = useSession()
+  const { flags } = usePermissions()
   const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0
   const searchShortcutLabel = isMac ? "⌘K" : "Ctrl+K"
+  const canCreateTickets = flags?.canCreateTickets ?? false
+  const canCreateProjects = flags?.canCreateProjects ?? false
 
   const openCommandPalette = () => {
     window.dispatchEvent(new CustomEvent("open-command-palette"))
@@ -189,7 +194,7 @@ export function AppShell({
                 <p className="text-sm font-semibold text-foreground">Techtool</p>
               </div>
             </div>
-            <div className="flex flex-1 items-center justify-center px-4 md:max-w-md">
+            <div className="flex flex-1 items-center justify-center gap-3 px-4 md:max-w-2xl">
               <button
                 type="button"
                 onClick={openCommandPalette}
@@ -202,6 +207,18 @@ export function AppShell({
                   {searchShortcutLabel}
                 </kbd>
               </button>
+              <CreateMenu
+                canCreateTicket={canCreateTickets}
+                canCreateProject={canCreateProjects}
+                onCreateTicket={() => {
+                  if (!canCreateTickets) return
+                  window.dispatchEvent(new Event("open-ticket-dialog"))
+                }}
+                onCreateProject={() => {
+                  if (!canCreateProjects) return
+                  window.dispatchEvent(new Event("open-project-dialog"))
+                }}
+              />
             </div>
             <div className="flex items-center gap-1">
               <button

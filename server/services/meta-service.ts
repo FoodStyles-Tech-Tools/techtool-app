@@ -21,7 +21,7 @@ export async function getUserPreferences() {
       user_id: user.id,
       group_by_epic: false,
       pinned_project_ids: [],
-      tickets_view: "table" as const,
+      tickets_view: "kanban" as const,
     },
   }
 }
@@ -56,7 +56,7 @@ export async function updateUserPreferences(input: {
       user_id: user.id,
       group_by_epic: input.group_by_epic ?? false,
       pinned_project_ids: input.pinned_project_ids ?? [],
-      tickets_view: input.tickets_view ?? "table",
+      tickets_view: input.tickets_view ?? "kanban",
     }),
   }
 }

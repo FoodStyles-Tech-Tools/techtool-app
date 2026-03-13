@@ -55,7 +55,7 @@ export function useTheme() {
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = React.useState<Theme>("light")
+  const [theme, setThemeState] = React.useState<Theme>("dark")
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
@@ -65,7 +65,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (!mounted) return
     const stored = getStoredTheme()
-    const resolved = stored ?? getSystemTheme()
+    const resolved = stored ?? "dark"
     setThemeState(resolved)
     applyTheme(resolved)
   }, [mounted])

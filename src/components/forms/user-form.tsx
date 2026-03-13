@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -52,7 +53,7 @@ export function UserForm({ onSuccess, initialData, roles, formId, hideSubmitButt
     },
   })
 
-  const sortedRoles = React.useMemo(
+  const sortedRoles = useMemo(
     () =>
       [...roles].sort((a, b) =>
         (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })

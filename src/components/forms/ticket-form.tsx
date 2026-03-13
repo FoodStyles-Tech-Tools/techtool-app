@@ -19,7 +19,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DepartmentForm } from "@client/components/forms/department-form"
 import { useDepartments } from "@client/hooks/use-departments"
 import { TicketTypeCards } from "@client/components/forms/ticket-type-cards"
-import { TicketPriorityPills } from "@client/components/forms/ticket-priority-pills"
+import { TicketPrioritySelect } from "@client/components/ticket-priority-select"
 import { useCreateTicket, useUpdateTicket } from "@client/features/tickets/hooks/use-tickets"
 import { toast } from "@client/components/ui/toast"
 import { useEpics } from "@client/hooks/use-epics"
@@ -313,10 +313,12 @@ export function TicketForm({
             <FormItem>
               <FormLabel className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Priority</FormLabel>
               <FormControl>
-                <TicketPriorityPills
+                <TicketPrioritySelect
                   value={field.value}
                   onValueChange={field.onChange}
                   disabled={isReadOnly || isSubmitting}
+                  className="w-full"
+                  triggerClassName="h-10 w-full"
                 />
               </FormControl>
               <FormMessage />

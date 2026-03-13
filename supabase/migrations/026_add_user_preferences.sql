@@ -15,7 +15,7 @@ BEGIN
     WHERE table_name = 'user_preferences' AND column_name = 'tickets_view'
   ) THEN
     ALTER TABLE user_preferences 
-    ADD COLUMN tickets_view TEXT NOT NULL DEFAULT 'table' 
+    ADD COLUMN tickets_view TEXT NOT NULL DEFAULT 'kanban' 
     CHECK (tickets_view IN ('table', 'kanban'));
   END IF;
 END $$;
