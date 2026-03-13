@@ -20,12 +20,13 @@ import { useTicketBoardActions } from "@client/features/tickets/hooks/use-ticket
 import { useOpenSubtasksDialog } from "@client/features/tickets/hooks/use-open-subtasks-dialog"
 import { DEFAULT_EXCLUDED_STATUSES } from "@client/hooks/use-tickets-filters"
 import { StatusFilterDropdown } from "@client/components/tickets/status-filter-dropdown"
-import { isArchivedStatus } from "@shared/ticket-statuses"
+import { normalizeStatusKey, isArchivedStatus } from "@shared/ticket-statuses"
 import { ROWS_PER_PAGE } from "@shared/ticket-constants"
 import { cn } from "@client/lib/utils"
 import { PageHeader } from "@client/components/ui/page-header"
 import { Breadcrumb } from "@client/components/ui/breadcrumb"
 import { PageLayout } from "@client/components/ui/page-layout"
+import { LoadingIndicator } from "@client/components/ui/loading-indicator"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { DataState } from "@client/components/ui/data-state"
 import { Button } from "@client/components/ui/button"
@@ -36,11 +37,22 @@ import { Select } from "@client/components/ui/select"
 import { FilterField } from "@client/components/ui/filter-field"
 import { FilterBar } from "@client/components/ui/filter-bar"
 import { PriorityPill } from "@client/components/tickets/priority-pill"
-import { TicketsResults } from "@client/features/tickets/components/tickets-results"
-import { TicketsDialogs } from "@client/features/tickets/components/tickets-dialogs"
+import { TicketTypeIcon } from "@client/components/ticket-type-select"
+import { StatusPill } from "@client/components/tickets/status-pill"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@client/components/ui/table"
 import { toast } from "@client/components/ui/toast"
 import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
+import { TicketsBoard } from "@client/features/tickets/components/tickets-board"
+import { TicketsDialogs } from "@client/features/tickets/components/tickets-dialogs"
 import type { Project } from "@shared/types"
+import type { Ticket } from "@shared/types"
 
 type ViewMode = "table" | "kanban"
 
@@ -131,11 +143,11 @@ export default function ProjectDetailClient({
   const { data: usersData } = useUsers()
   const [isEditOpen, setEditOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>("table")
+  const [currentPage, setCurrentPage] = useState(1)
 
   const project = data?.project
   const users = useMemo(() => usersData || [], [usersData])
   const canEditProjects = flags?.canEditProjects ?? false
-  const canCreateTickets = flags?.canCreateTickets ?? false
   const ownerLabel = project?.owner?.name || project?.owner?.email || "Unassigned"
   const requestersLabel = project?.requesters?.length
     ? project.requesters.map((person) => person.name || person.email).join(", ")
@@ -153,7 +165,6 @@ export default function ProjectDetailClient({
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [excludedStatuses, setExcludedStatuses] = useState<string[]>(() => [...DEFAULT_EXCLUDED_STATUSES])
-  const [currentPage, setCurrentPage] = useState(1)
 
   const deferredSearchQuery = useDeferredValue(searchQuery)
 
@@ -233,7 +244,7 @@ export default function ProjectDetailClient({
 
   const isKanban = viewMode === "kanban"
 
-  const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
+  const { data: tickets = [], pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
     projectId: project?.id,
     epicId: epicFilter !== "all" ? epicFilter : undefined,
     sprintId: sprintFilter !== "all" ? sprintFilter : undefined,
@@ -242,19 +253,13 @@ export default function ProjectDetailClient({
     sqaAssigneeId: sqaFilter !== "all" ? sqaFilter : undefined,
     priority: priorityFilter !== "all" ? priorityFilter : undefined,
     type: typeFilter !== "all" ? typeFilter : undefined,
-    includeStatuses: isKanban ? undefined : (statusOptions.length > 0 ? includeStatuses : undefined),
+    includeStatuses: statusOptions.length > 0 ? includeStatuses : undefined,
     q: deferredSearchQuery.trim() || undefined,
     excludeSubtasks: true,
     limit: isKanban ? 500 : ROWS_PER_PAGE,
     page: isKanban ? 1 : currentPage,
     enabled: !!project?.id,
   })
-
-  const allTickets = useMemo(() => ticketsData || [], [ticketsData])
-  const filteredTickets = useMemo(
-    () => allTickets.filter((ticket) => !isArchivedStatus(ticket.status)),
-    [allTickets]
-  )
 
   const updateTicket = useUpdateTicket()
   const updateTicketWithReasonComment = useUpdateTicketWithReasonComment()
@@ -263,8 +268,6 @@ export default function ProjectDetailClient({
   const {
     selectedTicketId,
     setSelectedTicketId,
-    isTicketDialogOpen,
-    setTicketDialogOpen,
     showCancelReasonDialog,
     cancelReason,
     setCancelReason,
@@ -278,13 +281,12 @@ export default function ProjectDetailClient({
     handleReturnedReasonConfirm,
     handleKanbanDrop,
   } = useTicketBoardActions({
-    allTickets,
-    projectFilter: projectId,
+    allTickets: tickets,
+    projectFilter: project?.id ?? "all",
     askHowToHandleOpenSubtasks,
     updateTicket,
     updateTicketWithReasonComment,
   })
-
   const epicOptionsAsc = useMemo(
     () =>
       [...epics].sort((a, b) =>
@@ -310,22 +312,53 @@ export default function ProjectDetailClient({
     [users]
   )
 
-  const loading = !ticketsData && ticketsLoading
+  const sortedTicketsForTable = useMemo(() => {
+    const order = [...ticketStatuses].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    const orderMap = new Map(order.map((s, i) => [s.key, i]))
+    return [...tickets].sort((a, b) => {
+      const ai = orderMap.get(normalizeStatusKey(a.status)) ?? 999
+      const bi = orderMap.get(normalizeStatusKey(b.status)) ?? 999
+      if (ai !== bi) return ai - bi
+      return (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base" })
+    })
+  }, [tickets, ticketStatuses])
+
   const totalPages = Math.max(1, ticketsPagination?.totalPages || 1)
+  const totalCount = ticketsPagination?.total ?? sortedTicketsForTable.length
   const startIndex = (currentPage - 1) * ROWS_PER_PAGE
   const endIndex = startIndex + ROWS_PER_PAGE
-  const hasSearchQuery = deferredSearchQuery.trim().length > 0
 
   const handleSelectTicket = useCallback(
     (ticketId: string) => {
-      const ticket = allTickets.find((t) => t.id === ticketId)
+      const ticket = tickets.find((t) => t.id === ticketId)
       const slug = ticket
         ? (ticket.displayId || ticketId.slice(0, 8)).toLowerCase()
         : ticketId.slice(0, 8).toLowerCase()
       openPreview({ ticketId, slug })
     },
-    [allTickets, openPreview]
+    [tickets, openPreview]
   )
+
+  const handlePageChange = useCallback((page: number) => {
+    setCurrentPage(page)
+  }, [])
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    setViewMode(mode)
+    setCurrentPage(1)
+  }, [])
+
+function hexWithAlpha(hex: string, alphaHex = "1a"): string {
+  const normalized = hex.startsWith("#") ? hex.slice(1) : hex
+  return `#${normalized}${alphaHex}`
+}
+
+function getTypeColor(type: string | null | undefined): string {
+  if (type === "bug") return "#ef4444" // red-500
+  if (type === "request") return "#3b82f6" // blue-500
+  // default to task color
+  return "#f97316" // orange-500
+}
 
   return (
     <PageLayout>
@@ -341,7 +374,8 @@ export default function ProjectDetailClient({
             />
           }
           actions={
-            <>
+            <div className="flex items-center gap-2">
+              <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
               <Button asChild>
                 <Link to={`/tickets?projectId=${projectId}`}>
                   Open Tickets
@@ -352,7 +386,7 @@ export default function ProjectDetailClient({
                   Edit Project
                 </Button>
               ) : null}
-            </>
+            </div>
           }
         />
       }
@@ -409,10 +443,7 @@ export default function ProjectDetailClient({
             </section>
 
             <section>
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-foreground">Tickets</h2>
-                <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
-              </div>
+              <h2 className="text-sm font-semibold text-foreground">Tickets</h2>
               <div className="mt-3">
                 <FilterBar
                   hasActiveFilters={hasActiveFilters}
@@ -562,61 +593,158 @@ export default function ProjectDetailClient({
                   }
                 />
               </div>
-              <div className="mt-4">
-                <TicketsResults
-                  loading={loading}
-                  filteredTickets={filteredTickets}
-                  hasSearchQuery={hasSearchQuery}
-                  viewMode={viewMode}
-                  tableProps={{
-                    tickets: filteredTickets,
-                    totalCount: ticketsPagination?.total || filteredTickets.length,
-                    currentPage,
-                    totalPages,
-                    onPageChange: setCurrentPage,
-                    startIndex,
-                    endIndex,
-                    onSelectTicket: handleSelectTicket,
-                  }}
-                  boardProps={{
-                    statuses: ticketStatuses,
-                    excludedStatuses,
-                    onSelectTicket: handleSelectTicket,
-                    onKanbanDrop: handleKanbanDrop,
-                    onResetFilters: hasActiveFilters ? handleResetTicketFilters : undefined,
-                    onCreateTicket: canCreateTickets ? () => setTicketDialogOpen(true) : undefined,
-                  }}
-                />
-              </div>
-
-              <TicketsDialogs
-                canCreateTickets={canCreateTickets}
-                isTicketDialogOpen={isTicketDialogOpen}
-                setTicketDialogOpen={setTicketDialogOpen}
-                selectedTicketId={selectedTicketId}
-                setSelectedTicketId={setSelectedTicketId}
-                showCancelReasonDialog={showCancelReasonDialog}
-                pendingStatusKind={pendingStatusKind}
-                cancelReason={cancelReason}
-                setCancelReason={setCancelReason}
-                onCancelReasonCancel={handleCancelReasonCancel}
-                onCancelReasonConfirm={handleCancelReasonConfirm}
-                showOpenSubtasksDialog={!!openSubtasksDialog}
-                openSubtasksTargetStatus={openSubtasksDialog?.targetStatus ?? null}
-                openSubtasks={openSubtasksDialog?.subtasks || []}
-                onOpenSubtasksCancel={() => resolveOpenSubtasksDialog("cancel")}
-                onOpenSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}
-                onOpenSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
-                showReturnedReasonDialog={showReturnedReasonDialog}
-                returnedReason={returnedReason}
-                setReturnedReason={setReturnedReason}
-                onReturnedReasonCancel={handleReturnedReasonCancel}
-                onReturnedReasonConfirm={handleReturnedReasonConfirm}
-              />
+              {ticketsLoading ? (
+                <div className="mt-4 rounded-lg border border-border bg-card py-8">
+                  <LoadingIndicator variant="block" label="Loading tickets…" />
+                </div>
+              ) : isKanban ? (
+                <div className="mt-4">
+                  <TicketsBoard
+                    tickets={sortedTicketsForTable}
+                    statuses={ticketStatuses}
+                    excludedStatuses={excludedStatuses}
+                    loading={ticketsLoading}
+                    hasSearchQuery={deferredSearchQuery.trim().length > 0}
+                    onSelectTicket={handleSelectTicket}
+                    onKanbanDrop={handleKanbanDrop}
+                    onResetFilters={hasActiveFilters ? handleResetTicketFilters : undefined}
+                  />
+                </div>
+              ) : sortedTicketsForTable.length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">No tickets match the filters.</p>
+              ) : (
+                <div className="mt-4 overflow-x-auto rounded-lg border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="h-9 py-2 text-muted-foreground">ID</TableHead>
+                        <TableHead className="h-9 py-2 text-muted-foreground">Title</TableHead>
+                        <TableHead className="h-9 py-2 text-muted-foreground">Status</TableHead>
+                        <TableHead className="h-9 py-2 text-muted-foreground">Type</TableHead>
+                        <TableHead className="h-9 py-2 text-muted-foreground">Priority</TableHead>
+                        <TableHead className="h-9 py-2 text-muted-foreground">Reporter</TableHead>
+                        <TableHead className="h-9 py-2 text-muted-foreground">Assignee</TableHead>
+                        <TableHead className="h-9 py-2 text-muted-foreground">SQA</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedTicketsForTable.map((ticket) => {
+                        const statusInfo = statusMap.get(normalizeStatusKey(ticket.status))
+                        const reporterLabel = ticket.requestedBy?.name || ticket.requestedBy?.email || "-"
+                        const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
+                        const sqaLabel = ticket.sqaAssignee?.name || ticket.sqaAssignee?.email || "-"
+                        return (
+                          <TableRow key={ticket.id}>
+                            <TableCell className="py-2 text-sm text-muted-foreground">
+                              {ticket.displayId || ticket.id.slice(0, 8)}
+                            </TableCell>
+                            <TableCell className="py-2">
+                              <button
+                                type="button"
+                                onClick={() => handleSelectTicket(ticket.id)}
+                                className="text-sm font-normal text-primary underline"
+                              >
+                                {ticket.title}
+                              </button>
+                            </TableCell>
+                            <TableCell className="py-2">
+                              {statusInfo ? (
+                                <StatusPill label={statusInfo.label} color={statusInfo.color} />
+                              ) : (
+                                <span className="text-sm text-foreground">{ticket.status}</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-2 text-sm text-foreground">
+                              {(() => {
+                                const rawType = ticket.type
+                                const type = !rawType || rawType === "subtask" ? "task" : rawType
+                                const typeColor = getTypeColor(type)
+                                return (
+                                  <span
+                                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium capitalize"
+                                    style={{
+                                      backgroundColor: hexWithAlpha(typeColor, "1a"),
+                                      borderColor: hexWithAlpha(typeColor, "40"),
+                                    }}
+                                  >
+                                    <TicketTypeIcon type={type} color={typeColor} />
+                                    <span className="text-foreground">{type}</span>
+                                  </span>
+                                )
+                              })()}
+                            </TableCell>
+                            <TableCell className="py-2 text-sm text-foreground">
+                              <PriorityPill priority={ticket.priority} />
+                            </TableCell>
+                            <TableCell className="py-2 text-sm text-foreground">{reporterLabel}</TableCell>
+                            <TableCell className="py-2 text-sm text-foreground">{assigneeLabel}</TableCell>
+                            <TableCell className="py-2 text-sm text-foreground">{sqaLabel}</TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-border px-4 py-3">
+                      <div className="text-sm text-muted-foreground">
+                        Showing {startIndex + 1} to {Math.min(endIndex, totalCount)} of {totalCount} tickets
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
+                          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                          disabled={currentPage >= totalPages}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
           </div>
         ) : null}
       </DataState>
+
+      <TicketsDialogs
+        canCreateTickets={false}
+        isTicketDialogOpen={false}
+        setTicketDialogOpen={() => {}}
+        selectedTicketId={selectedTicketId}
+        setSelectedTicketId={setSelectedTicketId}
+        showCancelReasonDialog={showCancelReasonDialog}
+        pendingStatusKind={pendingStatusKind}
+        cancelReason={cancelReason}
+        setCancelReason={setCancelReason}
+        onCancelReasonCancel={handleCancelReasonCancel}
+        onCancelReasonConfirm={handleCancelReasonConfirm}
+        showOpenSubtasksDialog={!!openSubtasksDialog}
+        openSubtasksTargetStatus={openSubtasksDialog?.targetStatus ?? null}
+        openSubtasks={openSubtasksDialog?.subtasks ?? []}
+        onOpenSubtasksCancel={() => resolveOpenSubtasksDialog("cancel")}
+        onOpenSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}
+        onOpenSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
+        showReturnedReasonDialog={showReturnedReasonDialog}
+        returnedReason={returnedReason}
+        setReturnedReason={setReturnedReason}
+        onReturnedReasonCancel={handleReturnedReasonCancel}
+        onReturnedReasonConfirm={handleReturnedReasonConfirm}
+      />
 
       <FormDialogShell
         open={isEditOpen}
