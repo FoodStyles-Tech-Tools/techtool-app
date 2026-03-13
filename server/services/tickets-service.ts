@@ -211,19 +211,25 @@ export async function updateTicket(
     const requestedSqaAssigneeId = !hasField("sqaAssigneeId", "sqa_assignee_id")
       ? undefined
       : input.sqaAssigneeId || null
-    const touchedNonSqaAssignmentField = Object.keys(rawBody).some(
-      (field) =>
-        field !== "sqa_assignee_id" &&
-        field !== "sqa_assigned_at" &&
-        field !== "sqaAssigneeId" &&
-        field !== "sqaAssignedAt"
+    const sqaAllowedFields = new Set([
+      "sqa_assignee_id",
+      "sqa_assigned_at",
+      "sqaAssigneeId",
+      "sqaAssignedAt",
+      "deploy_round_id",
+      "deployRoundId",
+    ])
+    const touchedNonSqaAllowedField = Object.keys(rawBody).some(
+      (field) => !sqaAllowedFields.has(field)
     )
     const isSelfAssignOnlyRequest =
       hasField("sqaAssigneeId", "sqa_assignee_id") &&
       requestedSqaAssigneeId === context.userId &&
-      !touchedNonSqaAssignmentField
+      !touchedNonSqaAllowedField
+    const isDeployRoundOnlyRequest =
+      hasField("deployRoundId", "deploy_round_id") && !touchedNonSqaAllowedField
 
-    if (currentSqaAssigneeId !== context.userId && !isSelfAssignOnlyRequest) {
+    if (currentSqaAssigneeId !== context.userId && !isSelfAssignOnlyRequest && !isDeployRoundOnlyRequest) {
       throw new HttpError(
         403,
         "SQA users can only edit tickets assigned to them. Assign yourself as SQA first."

@@ -64,6 +64,10 @@ export function getClientSupabaseAnonKey() {
 }
 
 export function getClientAppVersion() {
+  // VITE_APP_VERSION is injected at build time (e.g. git SHA). Fall back to
+  // package.json version so local dev and non-SHA builds still work.
+  const envVersion = readClientEnv("VITE_APP_VERSION")
+  if (envVersion) return envVersion.slice(0, 7)
   const rawVersion =
     (packageJson as { version?: string }).version?.trim() || "0.0.0"
   return rawVersion.slice(0, 7)

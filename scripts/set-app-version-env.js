@@ -27,12 +27,16 @@ function main() {
     existing = fs.readFileSync(envPath, "utf8");
   }
 
-  const lines = existing.split(/\r?\n/).filter(Boolean).filter((line) => !line.startsWith("VITE_APP_VERSION="));
+  const lines = existing
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .filter((line) => !line.startsWith("VITE_APP_VERSION=") && !line.startsWith("APP_VERSION="));
   lines.push(`VITE_APP_VERSION=${appVersion}`);
+  lines.push(`APP_VERSION=${appVersion}`);
 
   fs.writeFileSync(envPath, lines.join("\n") + "\n", "utf8");
   // eslint-disable-next-line no-console
-  console.log(`[set-app-version-env] VITE_APP_VERSION=${appVersion}`);
+  console.log(`[set-app-version-env] VITE_APP_VERSION=${appVersion} APP_VERSION=${appVersion}`);
 }
 
 main();
