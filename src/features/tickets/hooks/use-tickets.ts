@@ -32,6 +32,7 @@ type UseTicketsOptions = {
   requestedById?: string
   epicId?: string
   sprintId?: string
+  deployRoundId?: string
   excludeDone?: boolean
   excludeSubtasks?: boolean
   q?: string
@@ -55,6 +56,7 @@ export function useTickets(options?: UseTicketsOptions) {
   const requestedById = options?.requestedById
   const epicId = options?.epicId
   const sprintId = options?.sprintId
+  const deployRoundId = options?.deployRoundId
   const excludeDone = options?.excludeDone
   const excludeStatuses = options?.excludeStatuses
   const includeStatuses = options?.includeStatuses
@@ -73,6 +75,7 @@ export function useTickets(options?: UseTicketsOptions) {
     requestedById,
     epicId,
     sprintId,
+    deployRoundId,
     excludeDone,
     excludeSubtasks,
     q: options?.q,
@@ -197,6 +200,7 @@ export function useTickets(options?: UseTicketsOptions) {
         requestedById,
         epicId,
         sprintId,
+        deployRoundId,
         excludeDone,
         excludeSubtasks,
         q: options?.q,

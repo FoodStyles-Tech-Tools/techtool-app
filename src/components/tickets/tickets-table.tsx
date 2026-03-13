@@ -99,7 +99,12 @@ const TicketRow = memo(function TicketRow({
       <TableCell className="py-2 text-sm text-foreground">
         {ticket.project?.name || "No project"}
       </TableCell>
-      <TableCell className={cn("py-2 text-sm", dueDate.isOverdue ? "text-red-600 font-medium" : "text-muted-foreground")}>
+      <TableCell
+        className={cn(
+          "py-2 text-sm",
+          dueDate.isOverdue ? "text-red-600 font-medium" : "text-muted-foreground"
+        )}
+      >
         {dueDate.label}
       </TableCell>
       <TableCell className="py-2 text-sm text-muted-foreground">
@@ -168,8 +173,8 @@ export function TicketsTable({
             <TableHead className="h-9 w-[400px] min-w-[300px] py-2">Title</TableHead>
             <TableHead className="h-9 py-2 text-center">Subtasks</TableHead>
             <TableHead className="h-9 py-2">Status</TableHead>
-          <TableHead className="h-9 py-2">Type</TableHead>
-          <TableHead className="h-9 py-2">Priority</TableHead>
+            <TableHead className="h-9 py-2">Type</TableHead>
+            <TableHead className="h-9 py-2">Priority</TableHead>
             <TableHead className="h-9 py-2">Assignee</TableHead>
             <TableHead className="h-9 py-2">Requester</TableHead>
             <TableHead className="h-9 py-2">SQA</TableHead>
@@ -181,7 +186,7 @@ export function TicketsTable({
         <TableBody>
           {tickets.map((ticket) => {
             const hasLiveCount = Object.prototype.hasOwnProperty.call(subtaskCounts, ticket.id)
-            const rawCount = hasLiveCount ? subtaskCounts[ticket.id] ?? 0 : (ticket.subtasksCount ?? 0)
+            const rawCount = hasLiveCount ? subtaskCounts[ticket.id] ?? 0 : ticket.subtasksCount ?? 0
             const displayCount = rawCount > 0 ? rawCount : "-"
 
             return (

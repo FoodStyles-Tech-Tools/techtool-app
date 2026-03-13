@@ -12,6 +12,8 @@ import { useTheme } from "@client/components/layout/theme-provider"
 import { signOut, useSession } from "@client/lib/auth-client"
 import { useSignOutOverlay } from "@client/components/signout-overlay"
 import { usePermissions } from "@client/hooks/use-permissions"
+import { useVersionStatus } from "@client/hooks/use-version-status"
+import { clearCachesAndReload } from "@client/lib/cache-utils"
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "techtool.sidebarCollapsed"
 
@@ -91,6 +93,7 @@ export function AppShell({
   const navigate = useNavigate()
   const { data: session } = useSession()
   const { flags } = usePermissions()
+  const version = useVersionStatus()
   const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().indexOf("MAC") >= 0
   const searchShortcutLabel = isMac ? "⌘K" : "Ctrl+K"
   const canCreateTickets = flags?.canCreateTickets ?? false
@@ -220,7 +223,7 @@ export function AppShell({
                 }}
               />
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -233,6 +236,36 @@ export function AppShell({
                   <MoonIcon className="h-5 w-5" />
                 )}
               </button>
+              {version.status !== "unknown" ? (
+                <div className="flex items-center gap-1">
+                  <div
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                      version.status === "up_to_date"
+                        ? "bg-emerald-500/15 text-emerald-500 border border-emerald-500/40"
+                        : "bg-red-500/15 text-red-500 border border-red-500/40 animate-pulse"
+                    )}
+                    title={
+                      version.clientVersion && version.serverVersion
+                        ? `Client: ${version.clientVersion} · Server: ${version.serverVersion}`
+                        : undefined
+                    }
+                  >
+                    {version.status === "up_to_date" ? "Up to date" : "New version available"}
+                  </div>
+                  {version.status === "outdated" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void clearCachesAndReload()
+                      }}
+                      className="inline-flex items-center rounded-md border border-border/60 bg-background px-2 py-1 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-accent"
+                    >
+                      Sync
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               <CommentNotificationsDropdown />
               <NavUser
                 avatarOnly

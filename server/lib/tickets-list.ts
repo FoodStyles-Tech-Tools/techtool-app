@@ -65,6 +65,7 @@ export type TicketListQuery = {
   requestedById?: string | null
   epicId?: string | null
   sprintId?: string | null
+  deployRoundId?: string | null
   excludeDone: boolean
   /** When set, exclude tickets with these statuses (overrides excludeDone for those statuses). */
   excludeStatuses?: string[]
@@ -166,6 +167,7 @@ export function parseTicketListQuery(searchParams: URLSearchParams): TicketListQ
     requestedById: firstNonEmpty(searchParams, ["requestedById", "requested_by_id"]),
     epicId: firstNonEmpty(searchParams, ["epicId", "epic_id"]),
     sprintId: firstNonEmpty(searchParams, ["sprintId", "sprint_id"]),
+    deployRoundId: firstNonEmpty(searchParams, ["deployRoundId", "deploy_round_id"]),
     excludeDone: parseBoolean(searchParams, ["excludeDone", "exclude_done"]),
     excludeStatuses: parseExcludeStatuses(searchParams, ["excludeStatuses", "exclude_statuses"]),
     includeStatuses: parseIncludeStatuses(searchParams, ["includeStatuses", "include_statuses"]),
@@ -249,7 +251,8 @@ export async function fetchTicketList(
       requested_by:users!tickets_requested_by_id_fkey(id, name, email, avatar_url),
       department:departments(id, name),
       epic:epics(id, name, color),
-      sprint:sprints(id, name)
+      sprint:sprints(id, name),
+      deploy_round:deploy_rounds(id, name)
     `,
       usePageMode ? { count: "exact" } : undefined
     )
@@ -321,6 +324,13 @@ export async function fetchTicketList(
       ticketsQuery = ticketsQuery.is("sprint_id", null)
     } else {
       ticketsQuery = ticketsQuery.eq("sprint_id", query.sprintId)
+    }
+  }
+  if (query.deployRoundId) {
+    if (query.deployRoundId === "no_deploy_round") {
+      ticketsQuery = ticketsQuery.is("deploy_round_id", null)
+    } else {
+      ticketsQuery = ticketsQuery.eq("deploy_round_id", query.deployRoundId)
     }
   }
   // Allow-list: only show tickets whose status is in includeStatuses (multi-select "checked" = include)

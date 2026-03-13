@@ -6,7 +6,7 @@
     "dev": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
     "dev:client": "vite",
     "dev:server": "tsx watch --include server/**/*.ts --include shared/**/*.ts server/server.ts",
-    "build": "vite build && tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
+    "build": "node scripts/set-app-version-env.js && vite build && tsc -p tsconfig.server.json && tsc-alias -p tsconfig.server.json",
     "start": "node dist-backend/server/server.js",
     "audit:contrast": "node scripts/contrast-audit.js",
     "check:boundaries": "node scripts/check-runtime-boundaries.js",

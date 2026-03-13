@@ -48,6 +48,8 @@ export type RawTicket = {
   epic: Ticket["epic"]
   sprint: Ticket["sprint"]
   project: Ticket["project"]
+  deploy_round?: Ticket["deployRound"]
+  deployRound?: Ticket["deployRound"]
   assignee: Ticket["assignee"]
   sqa_assignee?: Ticket["sqaAssignee"]
   sqaAssignee?: Ticket["sqaAssignee"]
@@ -114,6 +116,7 @@ export function normalizeTicket(ticket: RawTicket): Ticket {
     epic: ticket.epic,
     sprint: ticket.sprint,
     project: ticket.project,
+    deployRound: ticket.deployRound ?? ticket.deploy_round ?? null,
     assignee: ticket.assignee,
     subtasksCount: ticket.subtasksCount ?? ticket.subtasks_count,
   }

@@ -4,7 +4,7 @@ import { TicketDetailAssignmentSection } from "@client/features/tickets/componen
 import { TicketDetailPlanningSection } from "@client/features/tickets/components/ticket-detail-planning-section"
 import type { Epic } from "@client/hooks/use-epics"
 import type { Sprint } from "@client/hooks/use-sprints"
-import type { Department, Ticket, User } from "@shared/types"
+import type { Department, Ticket, User, DeployRound } from "@shared/types"
 import type { TicketProjectOption } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 
 type TicketDetailFieldsSectionProps = {
@@ -22,6 +22,7 @@ type TicketDetailFieldsSectionProps = {
   sprints: Sprint[]
   projectOptions: TicketProjectOption[]
   parseTimestamp: (timestamp: string | null | undefined) => Date | null
+  deployRounds: Array<Pick<DeployRound, "id" | "name">>
   onAssigneeChange: (value: string | null) => void | Promise<void>
   onRequestedByChange: (value: string) => void | Promise<void>
   onSqaAssigneeChange: (value: string | null) => void | Promise<void>
@@ -33,6 +34,7 @@ type TicketDetailFieldsSectionProps = {
   onEpicChange: (value: string | null) => void | Promise<void>
   onSprintChange: (value: string | null) => void | Promise<void>
   onProjectChange: (value: string) => void | Promise<void>
+  onDeployRoundChange: (value: string | null) => void | Promise<void>
 }
 
 export function TicketDetailFieldsSection(props: TicketDetailFieldsSectionProps) {
@@ -63,12 +65,14 @@ export function TicketDetailFieldsSection(props: TicketDetailFieldsSectionProps)
         sprints={props.sprints}
         projectOptions={props.projectOptions}
         parseTimestamp={props.parseTimestamp}
+        deployRounds={props.deployRounds}
         onPriorityChange={props.onPriorityChange}
         onDueDateChange={props.onDueDateChange}
         onDepartmentChange={props.onDepartmentChange}
         onEpicChange={props.onEpicChange}
         onSprintChange={props.onSprintChange}
         onProjectChange={props.onProjectChange}
+        onDeployRoundChange={props.onDeployRoundChange}
       />
     </>
   )

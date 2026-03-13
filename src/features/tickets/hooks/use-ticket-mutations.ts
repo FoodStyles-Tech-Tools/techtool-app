@@ -29,6 +29,7 @@ export type CreateTicketInput = {
   epicId?: string
   sprintId?: string
   parentTicketId?: string | null
+  deployRoundId?: string | null
 }
 
 export type UpdateTicketInput = {
@@ -54,6 +55,7 @@ export type UpdateTicketInput = {
   createdAt?: string | null
   links?: string[]
   reason?: unknown
+  deployRoundId?: string | null
 }
 
 export function useCreateTicket() {
@@ -79,6 +81,7 @@ export function useCreateTicket() {
           epicId: data.epicId,
           sprintId: data.sprintId,
           parentTicketId: data.parentTicketId,
+          deployRoundId: data.deployRoundId,
         }),
         links: prepareLinkPayload(data.links),
       }
@@ -124,6 +127,7 @@ export function useUpdateTicket() {
           completedAt: data.completedAt,
           createdAt: data.createdAt,
           reason: data.reason,
+          deployRoundId: data.deployRoundId,
         }),
       }
       if (data.links !== undefined) {

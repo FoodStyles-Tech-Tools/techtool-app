@@ -22,6 +22,11 @@ export type TicketSprintRelation = {
   name: string
 }
 
+export type TicketDeployRoundRelation = {
+  id: string
+  name: string
+}
+
 export type TicketReasonMap = {
   cancelled?: {
     reason: string
@@ -67,6 +72,7 @@ export type TicketListItem = {
   department: TicketRelation | null
   epic?: TicketEpicRelation | null
   sprint?: TicketSprintRelation | null
+  deploy_round?: TicketDeployRoundRelation | null
 }
 
 export type TicketDetailPayload = TicketListItem & {
@@ -81,4 +87,5 @@ export type TicketDetailPayload = TicketListItem & {
   requested_by: TicketPerson | null
   epic: TicketEpicRelation | null
   sprint: TicketSprintRelation | null
+  deploy_round: TicketDeployRoundRelation | null
 }

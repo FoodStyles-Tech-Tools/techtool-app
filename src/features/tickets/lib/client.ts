@@ -27,6 +27,7 @@ export type TicketListParams = {
   requestedById?: string
   epicId?: string
   sprintId?: string
+  deployRoundId?: string
   excludeDone?: boolean
   excludeSubtasks?: boolean
   q?: string
@@ -103,6 +104,7 @@ export function buildTicketListQueryString(params: TicketListParams) {
     requestedById: params.requestedById,
     epicId: params.epicId,
     sprintId: params.sprintId,
+    deployRoundId: params.deployRoundId,
     excludeDone: params.excludeDone,
     excludeSubtasks: params.excludeSubtasks,
     q: params.q,

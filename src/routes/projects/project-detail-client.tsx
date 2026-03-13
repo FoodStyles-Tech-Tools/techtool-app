@@ -1,8 +1,7 @@
 "use client"
 
 import { useCallback, useDeferredValue, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
-import { MagnifyingGlassIcon } from "@heroicons/react/20/solid"
+import { MagnifyingGlassIcon, PlusIcon } from "@heroicons/react/20/solid"
 import { TableCellsIcon, ViewColumnsIcon } from "@heroicons/react/24/outline"
 import { useProject } from "@client/hooks/use-projects"
 import { useDepartments } from "@client/hooks/use-departments"
@@ -18,6 +17,12 @@ import {
 } from "@client/features/tickets/hooks/use-tickets"
 import { useTicketBoardActions } from "@client/features/tickets/hooks/use-ticket-board-actions"
 import { useOpenSubtasksDialog } from "@client/features/tickets/hooks/use-open-subtasks-dialog"
+import {
+  useDeployRounds,
+  useCreateDeployRound,
+  useUpdateDeployRound,
+  useDeleteDeployRound,
+} from "@client/features/projects/hooks/use-deploy-rounds"
 import { DEFAULT_EXCLUDED_STATUSES } from "@client/hooks/use-tickets-filters"
 import { StatusFilterDropdown } from "@client/components/tickets/status-filter-dropdown"
 import { normalizeStatusKey, isArchivedStatus } from "@shared/ticket-statuses"
@@ -51,8 +56,17 @@ import { toast } from "@client/components/ui/toast"
 import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 import { TicketsBoard } from "@client/features/tickets/components/tickets-board"
 import { TicketsDialogs } from "@client/features/tickets/components/tickets-dialogs"
+import { DeployRoundFormDialog } from "@client/components/deploy-rounds/deploy-round-form-dialog"
+import { DeployRoundManager } from "@client/components/deploy-rounds/deploy-round-manager"
 import type { Project } from "@shared/types"
-import type { Ticket } from "@shared/types"
+import type { Ticket, DeployRoundChecklistItem } from "@shared/types"
+import { Checkbox } from "@client/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@client/components/ui/dialog"
 
 type ViewMode = "table" | "kanban"
 
@@ -151,12 +165,17 @@ export default function ProjectDetailClient({
   const [searchQuery, setSearchQuery] = useState("")
   const [sprintFilter, setSprintFilter] = useState<string>("all")
   const [epicFilter, setEpicFilter] = useState<string>("all")
+  const [deployRoundFilter, setDeployRoundFilter] = useState<string>("all")
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [reporterFilter, setReporterFilter] = useState<string>("all")
   const [sqaFilter, setSqaFilter] = useState<string>("all")
   const [priorityFilter, setPriorityFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [excludedStatuses, setExcludedStatuses] = useState<string[]>(() => [...DEFAULT_EXCLUDED_STATUSES])
+  const [isCreateDeployRoundOpen, setCreateDeployRoundOpen] = useState(false)
+  const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
+  const [isBulkDeployRoundOpen, setBulkDeployRoundOpen] = useState(false)
+  const [bulkDeployRoundId, setBulkDeployRoundId] = useState<string>("")
 
   const deferredSearchQuery = useDeferredValue(searchQuery)
 
@@ -172,6 +191,10 @@ export default function ProjectDetailClient({
   const { statuses: ticketStatuses, statusMap } = useTicketStatuses()
   const { epics } = useEpics()
   const { sprints } = useSprints()
+  const { data: deployRounds = [], isLoading: deployRoundsLoading } = useDeployRounds(projectId)
+  const createDeployRound = useCreateDeployRound()
+  const updateDeployRound = useUpdateDeployRound()
+  const deleteDeployRound = useDeleteDeployRound()
   const statusOptions = useMemo(
     () =>
       ticketStatuses
@@ -213,6 +236,7 @@ export default function ProjectDetailClient({
     if (typeFilter !== "all") return true
     if (epicFilter !== "all") return true
     if (sprintFilter !== "all") return true
+    if (deployRoundFilter !== "all") return true
     return false
   }, [
     assigneeFilter,
@@ -225,12 +249,14 @@ export default function ProjectDetailClient({
     searchQuery,
     sprintFilter,
     sqaFilter,
+    deployRoundFilter,
   ])
 
   const handleResetTicketFilters = useCallback(() => {
     setSearchQuery("")
     setSprintFilter("all")
     setEpicFilter("all")
+    setDeployRoundFilter("all")
     setAssigneeFilter("all")
     setReporterFilter("all")
     setSqaFilter("all")
@@ -244,6 +270,7 @@ export default function ProjectDetailClient({
     projectId: project?.id,
     epicId: epicFilter !== "all" ? epicFilter : undefined,
     sprintId: sprintFilter !== "all" ? sprintFilter : undefined,
+    deployRoundId: deployRoundFilter !== "all" ? deployRoundFilter : undefined,
     assigneeId: assigneeFilter !== "all" ? assigneeFilter : undefined,
     requestedById: reporterFilter !== "all" ? reporterFilter : undefined,
     sqaAssigneeId: sqaFilter !== "all" ? sqaFilter : undefined,
@@ -339,10 +366,109 @@ export default function ProjectDetailClient({
     setCurrentPage(page)
   }, [])
 
+  const handleToggleTicketSelection = useCallback((ticketId: string, checked: boolean) => {
+    setSelectedTicketIds((prev) =>
+      checked ? [...prev, ticketId] : prev.filter((id) => id !== ticketId)
+    )
+  }, [])
+
+  const handleToggleSelectAllVisible = useCallback(
+    (checked: boolean) => {
+      const visibleIds = sortedTicketsForTable.map((t) => t.id)
+      setSelectedTicketIds((prev) => {
+        if (!checked) {
+          return prev.filter((id) => !visibleIds.includes(id))
+        }
+        const next = new Set([...prev, ...visibleIds])
+        return Array.from(next)
+      })
+    },
+    [sortedTicketsForTable]
+  )
+
+  const handleBulkAssignDeployRound = useCallback(async () => {
+    if (!bulkDeployRoundId || selectedTicketIds.length === 0) return
+    try {
+      await Promise.all(
+        selectedTicketIds.map((ticketId) =>
+          updateTicket.mutateAsync({ id: ticketId, deployRoundId: bulkDeployRoundId })
+        )
+      )
+      toast(
+        `Added ${selectedTicketIds.length} ticket${
+          selectedTicketIds.length === 1 ? "" : "s"
+        } to deploy round`
+      )
+      setBulkDeployRoundOpen(false)
+      setSelectedTicketIds([])
+      setBulkDeployRoundId("")
+    } catch (error: any) {
+      // eslint-disable-next-line no-console
+      console.error("Error assigning deploy round in bulk:", error)
+      toast(error?.message || "Failed to update tickets", "error")
+    }
+  }, [bulkDeployRoundId, selectedTicketIds, updateTicket])
+
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode)
     setCurrentPage(1)
   }, [])
+
+  const handleCreateDeployRound = useCallback(
+    async (values: { name: string; checklist: DeployRoundChecklistItem[] }) => {
+      if (!projectId) return
+      try {
+        const result = await createDeployRound.mutateAsync({
+          projectId,
+          name: values.name,
+          checklist: values.checklist,
+        })
+        setDeployRoundFilter(result.id)
+        toast("Deploy round created successfully")
+      } catch (error: any) {
+        console.error("Error creating deploy round:", error)
+        toast(error?.message || "Failed to create deploy round", "error")
+        throw error
+      }
+    },
+    [projectId, createDeployRound]
+  )
+
+  const handleUpdateDeployRound = useCallback(
+    async (deployRoundId: string, data: { name?: string; checklist?: DeployRoundChecklistItem[] }) => {
+      if (!projectId) return
+      try {
+        await updateDeployRound.mutateAsync({
+          projectId,
+          deployRoundId,
+          ...data,
+        })
+      } catch (error: any) {
+        console.error("Error updating deploy round:", error)
+        throw error
+      }
+    },
+    [projectId, updateDeployRound]
+  )
+
+  const handleDeleteDeployRound = useCallback(
+    async (deployRoundId: string) => {
+      if (!projectId) return
+      try {
+        await deleteDeployRound.mutateAsync({
+          projectId,
+          deployRoundId,
+        })
+        if (deployRoundFilter === deployRoundId) {
+          setDeployRoundFilter("all")
+        }
+      } catch (error: any) {
+        console.error("Error deleting deploy round:", error)
+        throw error
+      }
+    },
+    [projectId, deleteDeployRound, deployRoundFilter]
+  )
 
 function hexWithAlpha(hex: string, alphaHex = "1a"): string {
   const normalized = hex.startsWith("#") ? hex.slice(1) : hex
@@ -372,11 +498,15 @@ function getTypeColor(type: string | null | undefined): string {
           actions={
             <div className="flex items-center gap-2">
               <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
-              <Button asChild>
-                <Link to={`/tickets?projectId=${projectId}`}>
-                  Open Tickets
-                </Link>
-              </Button>
+              {canEditProjects && (
+                <Button
+                  variant="outline"
+                  onClick={() => setCreateDeployRoundOpen(true)}
+                >
+                  <PlusIcon className="mr-1.5 h-4 w-4" />
+                  New Deploy Round
+                </Button>
+              )}
               {canEditProjects ? (
                 <Button variant="outline" onClick={() => setEditOpen(true)}>
                   Edit Project
@@ -586,10 +716,44 @@ function getTypeColor(type: string | null | undefined): string {
                           ))}
                         </Select>
                       </FilterField>
+                      <FilterField label="Deploy Round" id="project-deploy-round-filter">
+                        <Select
+                          id="project-deploy-round-filter"
+                          value={deployRoundFilter}
+                          onChange={(e) => setDeployRoundFilter(e.target.value)}
+                          className="min-w-[160px]"
+                        >
+                          <option value="all">All</option>
+                          <option value="no_deploy_round">No deploy round</option>
+                          {deployRounds.map((dr) => (
+                            <option key={dr.id} value={dr.id}>
+                              {dr.name}
+                            </option>
+                          ))}
+                        </Select>
+                      </FilterField>
                     </>
                   }
                 />
               </div>
+
+              {deployRoundFilter !== "all" && deployRoundFilter !== "no_deploy_round" && canEditProjects && (
+                <div className="mt-4 space-y-3">
+                  <h3 className="text-sm font-semibold text-foreground">Deploy Round Management</h3>
+                  {(() => {
+                    const selectedDeployRound = deployRounds.find((dr) => dr.id === deployRoundFilter)
+                    if (!selectedDeployRound) return null
+                    return (
+                      <DeployRoundManager
+                        deployRound={selectedDeployRound}
+                        onUpdate={handleUpdateDeployRound}
+                        onDelete={handleDeleteDeployRound}
+                      />
+                    )
+                  })()}
+                </div>
+              )}
+
               {ticketsLoading ? (
                 <div className="mt-4 rounded-lg border border-border bg-card py-8">
                   <LoadingIndicator variant="block" label="Loading tickets…" />
@@ -610,108 +774,168 @@ function getTypeColor(type: string | null | undefined): string {
               ) : sortedTicketsForTable.length === 0 ? (
                 <p className="mt-4 text-sm text-muted-foreground">No tickets match the filters.</p>
               ) : (
-                <div className="mt-4 overflow-x-auto rounded-lg border border-border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="h-9 py-2 text-muted-foreground">ID</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Title</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Status</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Type</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Priority</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Reporter</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">Assignee</TableHead>
-                        <TableHead className="h-9 py-2 text-muted-foreground">SQA</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortedTicketsForTable.map((ticket) => {
-                        const statusInfo = statusMap.get(normalizeStatusKey(ticket.status))
-                        const reporterLabel = ticket.requestedBy?.name || ticket.requestedBy?.email || "-"
-                        const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
-                        const sqaLabel = ticket.sqaAssignee?.name || ticket.sqaAssignee?.email || "-"
-                        return (
-                          <TableRow key={ticket.id}>
-                            <TableCell className="py-2 text-sm text-muted-foreground">
-                              {ticket.displayId || ticket.id.slice(0, 8)}
-                            </TableCell>
-                            <TableCell className="py-2">
-                              <button
-                                type="button"
-                                onClick={() => handleSelectTicket(ticket.id)}
-                                className="text-sm font-normal text-primary underline"
-                              >
-                                {ticket.title}
-                              </button>
-                            </TableCell>
-                            <TableCell className="py-2">
-                              {statusInfo ? (
-                                <StatusPill label={statusInfo.label} color={statusInfo.color} />
-                              ) : (
-                                <span className="text-sm text-foreground">{ticket.status}</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="py-2 text-sm text-foreground">
-                              {(() => {
-                                const rawType = ticket.type
-                                const type = !rawType || rawType === "subtask" ? "task" : rawType
-                                const typeColor = getTypeColor(type)
-                                return (
-                                  <span
-                                    className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium capitalize"
-                                    style={{
-                                      backgroundColor: hexWithAlpha(typeColor, "1a"),
-                                      borderColor: hexWithAlpha(typeColor, "40"),
-                                    }}
-                                  >
-                                    <TicketTypeIcon type={type} color={typeColor} />
-                                    <span className="text-foreground">{type}</span>
-                                  </span>
-                                )
-                              })()}
-                            </TableCell>
-                            <TableCell className="py-2 text-sm text-foreground">
-                              <PriorityPill priority={ticket.priority} />
-                            </TableCell>
-                            <TableCell className="py-2 text-sm text-foreground">{reporterLabel}</TableCell>
-                            <TableCell className="py-2 text-sm text-foreground">{assigneeLabel}</TableCell>
-                            <TableCell className="py-2 text-sm text-foreground">{sqaLabel}</TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                  {totalPages > 1 && (
-                    <div className="flex items-center justify-between border-t border-border px-4 py-3">
-                      <div className="text-sm text-muted-foreground">
-                        Showing {startIndex + 1} to {Math.min(endIndex, totalCount)} of {totalCount} tickets
-                      </div>
+                <>
+                  {selectedTicketIds.length > 0 && (
+                    <div className="mt-4 flex items-center justify-between rounded-md border border-border bg-muted px-3 py-2">
+                      <span className="text-sm text-muted-foreground">
+                        {selectedTicketIds.length} ticket
+                        {selectedTicketIds.length === 1 ? "" : "s"} selected
+                      </span>
                       <div className="flex items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
                           type="button"
-                          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                          disabled={currentPage === 1}
+                          onClick={() => setBulkDeployRoundOpen(true)}
+                          disabled={!deployRounds.length}
                         >
-                          Previous
+                          Add to Deploy Round
                         </Button>
-                        <span className="text-sm text-muted-foreground">
-                          Page {currentPage} of {totalPages}
-                        </span>
                         <Button
-                          variant="outline"
+                          variant="ghost"
                           size="sm"
                           type="button"
-                          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                          disabled={currentPage >= totalPages}
+                          onClick={() => setSelectedTicketIds([])}
                         >
-                          Next
+                          Clear selection
                         </Button>
                       </div>
                     </div>
                   )}
-                </div>
+
+                  <div className="mt-4 overflow-x-auto rounded-lg border border-border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="w-8 px-2 py-2">
+                            <Checkbox
+                              checked={
+                                sortedTicketsForTable.length > 0 &&
+                                sortedTicketsForTable.every((t) =>
+                                  selectedTicketIds.includes(t.id)
+                                )
+                              }
+                              onChange={(event) =>
+                                handleToggleSelectAllVisible(event.target.checked)
+                              }
+                              aria-label="Select all tickets"
+                            />
+                          </TableHead>
+                          <TableHead className="h-9 py-2 text-muted-foreground">ID</TableHead>
+                          <TableHead className="h-9 py-2 text-muted-foreground">Title</TableHead>
+                          <TableHead className="h-9 py-2 text-muted-foreground">Status</TableHead>
+                          <TableHead className="h-9 py-2 text-muted-foreground">Type</TableHead>
+                          <TableHead className="h-9 py-2 text-muted-foreground">Priority</TableHead>
+                          <TableHead className="h-9 py-2 text-muted-foreground">Reporter</TableHead>
+                          <TableHead className="h-9 py-2 text-muted-foreground">Assignee</TableHead>
+                          <TableHead className="h-9 py-2 text-muted-foreground">SQA</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {sortedTicketsForTable.map((ticket) => {
+                          const statusInfo = statusMap.get(normalizeStatusKey(ticket.status))
+                          const reporterLabel = ticket.requestedBy?.name || ticket.requestedBy?.email || "-"
+                          const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
+                          const sqaLabel = ticket.sqaAssignee?.name || ticket.sqaAssignee?.email || "-"
+                          const isSelected = selectedTicketIds.includes(ticket.id)
+                          return (
+                            <TableRow key={ticket.id}>
+                              <TableCell className="px-2 py-2">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onChange={(event) =>
+                                    handleToggleTicketSelection(ticket.id, event.target.checked)
+                                  }
+                                  aria-label={`Select ticket ${
+                                    ticket.displayId || ticket.id.slice(0, 8)
+                                  }`}
+                                />
+                              </TableCell>
+                              <TableCell className="py-2 text-sm text-muted-foreground">
+                                {ticket.displayId || ticket.id.slice(0, 8)}
+                              </TableCell>
+                              <TableCell className="py-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectTicket(ticket.id)}
+                                  className="text-sm font-normal text-primary underline"
+                                >
+                                  {ticket.title}
+                                </button>
+                              </TableCell>
+                              <TableCell className="py-2">
+                                {statusInfo ? (
+                                  <StatusPill label={statusInfo.label} color={statusInfo.color} />
+                                ) : (
+                                  <span className="text-sm text-foreground">{ticket.status}</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="py-2 text-sm text-foreground">
+                                {(() => {
+                                  const rawType = ticket.type
+                                  const type = !rawType || rawType === "subtask" ? "task" : rawType
+                                  const typeColor = getTypeColor(type)
+                                  return (
+                                    <span
+                                      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium capitalize"
+                                      style={{
+                                        backgroundColor: hexWithAlpha(typeColor, "1a"),
+                                        borderColor: hexWithAlpha(typeColor, "40"),
+                                      }}
+                                    >
+                                      <TicketTypeIcon type={type} color={typeColor} />
+                                      <span className="text-foreground">{type}</span>
+                                    </span>
+                                  )
+                                })()}
+                              </TableCell>
+                              <TableCell className="py-2 text-sm text-foreground">
+                                <PriorityPill priority={ticket.priority} />
+                              </TableCell>
+                              <TableCell className="py-2 text-sm text-foreground">
+                                {reporterLabel}
+                              </TableCell>
+                              <TableCell className="py-2 text-sm text-foreground">
+                                {assigneeLabel}
+                              </TableCell>
+                              <TableCell className="py-2 text-sm text-foreground">{sqaLabel}</TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between border-t border-border px-4 py-3">
+                        <div className="text-sm text-muted-foreground">
+                          Showing {startIndex + 1} to {Math.min(endIndex, totalCount)} of {totalCount} tickets
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                          >
+                            Previous
+                          </Button>
+                          <span className="text-sm text-muted-foreground">
+                            Page {currentPage} of {totalPages}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            type="button"
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage >= totalPages}
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </section>
           </div>
@@ -742,6 +966,48 @@ function getTypeColor(type: string | null | undefined): string {
         onReturnedReasonCancel={handleReturnedReasonCancel}
         onReturnedReasonConfirm={handleReturnedReasonConfirm}
       />
+
+      <Dialog open={isBulkDeployRoundOpen} onOpenChange={setBulkDeployRoundOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add tickets to deploy round</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Select a deploy round to assign {selectedTicketIds.length} selected ticket
+              {selectedTicketIds.length === 1 ? "" : "s"}.
+            </p>
+            <Select
+              value={bulkDeployRoundId}
+              onChange={(e) => setBulkDeployRoundId(e.target.value)}
+              className="w-full"
+            >
+              <option value="">Select deploy round</option>
+              {deployRounds.map((dr) => (
+                <option key={dr.id} value={dr.id}>
+                  {dr.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setBulkDeployRoundOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleBulkAssignDeployRound()}
+              disabled={!bulkDeployRoundId || !selectedTicketIds.length}
+            >
+              Add to Deploy Round
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <FormDialogShell
         open={isEditOpen}
@@ -776,6 +1042,15 @@ function getTypeColor(type: string | null | undefined): string {
           />
         ) : null}
       </FormDialogShell>
+
+      <DeployRoundFormDialog
+        open={isCreateDeployRoundOpen}
+        onOpenChange={setCreateDeployRoundOpen}
+        onSubmit={handleCreateDeployRound}
+        title="Create Deploy Round"
+        description="Create a new deploy round with a checklist for tracking deployment tasks."
+        submitLabel="Create"
+      />
       </EntityPageLayout>
     </PageLayout>
   )

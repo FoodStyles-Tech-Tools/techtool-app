@@ -9,6 +9,7 @@ import { TicketDetailMainColumn } from "@client/features/tickets/components/tick
 import { TicketDetailSidebar } from "@client/features/tickets/components/ticket-detail-sidebar"
 import { TicketDetailDialogs } from "@client/features/tickets/components/ticket-detail-dialogs"
 import type { TicketDetailSurface } from "@client/features/tickets/hooks/use-ticket-detail-surface"
+import { useDeployRounds } from "@client/features/projects/hooks/use-deploy-rounds"
 
 type TicketDetailLayoutProps = {
   surface: TicketDetailSurface
@@ -44,6 +45,11 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
     NO_PARENT_TICKET_VALUE,
   } = surface
   const isTicketUnassigned = !ticket?.assignee?.id
+
+  const projectIdForDeployRounds = ticket?.project?.id ?? null
+  const { data: deployRounds = [] } = useDeployRounds(projectIdForDeployRounds || "", {
+    enabled: !!projectIdForDeployRounds,
+  })
 
   const gridContent = (
     <DataState
@@ -169,6 +175,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                 sprints={sprints}
                 projectOptions={projectOptions}
                 parseTimestamp={actions.parseTimestamp}
+                deployRounds={deployRounds}
                 onAssigneeChange={actions.handleAssigneeChange}
                 onRequestedByChange={actions.handleRequestedByChange}
                 onSqaAssigneeChange={actions.handleSqaAssigneeChange}
@@ -187,6 +194,7 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
                   actions.handleProjectChange(nextProjectId, NO_PROJECT_VALUE)
                 }
                 onStatusChange={(status) => actions.handleStatusChange(status)}
+                onDeployRoundChange={actions.handleDeployRoundChange}
               />
             </div>
           </div>

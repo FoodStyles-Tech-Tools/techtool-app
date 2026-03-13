@@ -1,7 +1,6 @@
 import { normalizeRichTextInput, isRichTextEmpty } from "@shared/rich-text"
 import { prepareLinkPayload } from "@shared/links"
 import { buildStatusChangeBody } from "@shared/ticket-statuses"
-import { enqueueTicketStatusDiscordNotifications } from "@server/lib/discord-outbox"
 import { invalidateTicketCaches } from "@server/lib/ticket-cache"
 import { HttpError } from "@server/http/http-error"
 import * as ticketsRepository from "@server/repositories/tickets-repository"
@@ -72,6 +71,7 @@ export function buildTicketListCacheKey(
     listQuery.requestedById || "all",
     listQuery.epicId || "all",
     listQuery.sprintId || "all",
+    listQuery.deployRoundId || "all",
     listQuery.status || "all",
     listQuery.priority || "all",
     listQuery.excludeDone ? "exclude_done" : "include_done",
@@ -148,6 +148,7 @@ export async function createTicket(context: TicketRequestContext, input: CreateT
     activity_actor_id: context.userId,
     department_id: input.departmentId || null,
     epic_id: input.epicId || null,
+    deploy_round_id: input.deployRoundId || null,
     sprint_id: input.sprintId || null,
     parent_ticket_id: input.parentTicketId || null,
   })
@@ -326,6 +327,7 @@ export async function updateTicket(
   if (hasField("departmentId", "department_id")) updates.department_id = input.departmentId || null
   if (hasField("epicId", "epic_id")) updates.epic_id = input.epicId || null
   if (hasField("sprintId", "sprint_id")) updates.sprint_id = input.sprintId || null
+  if (hasField("deployRoundId", "deploy_round_id")) updates.deploy_round_id = input.deployRoundId || null
   if (hasField("parentTicketId", "parent_ticket_id")) updates.parent_ticket_id = input.parentTicketId || null
   if (hasField("reason")) updates.reason = input.reason
   if (hasField("sqaAssignedAt", "sqa_assigned_at")) updates.sqa_assigned_at = input.sqaAssignedAt || null
@@ -343,7 +345,6 @@ export async function updateTicket(
     updates.completed_at = parseOptionalTimestamp(input.completedAt)
   }
 
-  const previousStatus = currentTicket.status || null
   const { data: ticket, error } = await ticketsRepository.updateTicket(context.supabase, ticketId, updates)
 
   if (error) {
@@ -356,14 +357,6 @@ export async function updateTicket(
 
   if (!ticket) {
     throw new HttpError(404, "Ticket not found")
-  }
-
-  if (hasField("status")) {
-    void enqueueTicketStatusDiscordNotifications(
-      context.supabase,
-      normalizePersistedTicket(ticket as Record<string, unknown>),
-      previousStatus
-    )
   }
 
   await invalidateTicketCaches()
@@ -407,7 +400,6 @@ export async function updateTicketStatusWithReason(
     )
   }
 
-  const previousStatus = currentTicket.status || null
   const now = new Date().toISOString()
 
   // Derive startedAt server-side when the client does not supply it.
@@ -479,7 +471,6 @@ export async function updateTicketStatusWithReason(
   }
 
   const normalizedTicket = normalizePersistedTicket(updatedTicket as Record<string, unknown>)
-  await enqueueTicketStatusDiscordNotifications(context.supabase, normalizedTicket, previousStatus)
   await invalidateTicketCaches()
 
   return {

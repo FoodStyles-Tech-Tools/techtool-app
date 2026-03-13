@@ -6,7 +6,7 @@ import { SprintSelect } from "@client/components/sprint-select"
 import { TicketPrioritySelect } from "@client/components/ticket-priority-select"
 import type { Epic } from "@client/hooks/use-epics"
 import type { Sprint } from "@client/hooks/use-sprints"
-import type { Department, Ticket } from "@shared/types"
+import type { Department, Ticket, DeployRound } from "@shared/types"
 import type { TicketProjectOption } from "@client/features/tickets/components/ticket-detail-sidebar-types"
 import { selectStyleInputSm } from "@client/lib/form-styles"
 
@@ -26,12 +26,14 @@ type TicketDetailPlanningSectionProps = {
   sprints: Sprint[]
   projectOptions: TicketProjectOption[]
   parseTimestamp: (timestamp: string | null | undefined) => Date | null
+  deployRounds: Array<Pick<DeployRound, "id" | "name">>
   onPriorityChange: (value: string) => void | Promise<void>
   onDueDateChange: (value: Date | null) => void | Promise<void>
   onDepartmentChange: (value: string) => void | Promise<void>
   onEpicChange: (value: string | null) => void | Promise<void>
   onSprintChange: (value: string | null) => void | Promise<void>
   onProjectChange: (value: string) => void | Promise<void>
+  onDeployRoundChange: (value: string | null) => void | Promise<void>
 }
 
 export function TicketDetailPlanningSection({
@@ -44,12 +46,14 @@ export function TicketDetailPlanningSection({
   sprints,
   projectOptions,
   parseTimestamp,
+  deployRounds,
   onPriorityChange,
   onDueDateChange,
   onDepartmentChange,
   onEpicChange,
   onSprintChange,
   onProjectChange,
+  onDeployRoundChange,
 }: TicketDetailPlanningSectionProps) {
   const isTicketUnassigned = !ticket.assignee?.id
 
@@ -127,6 +131,34 @@ export function TicketDetailPlanningSection({
             disabled={!canEditTickets || isAssignmentLocked || updatingFields["sprintId"]}
             triggerClassName="h-8 w-full"
           />
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3">
+        <label className={fieldLabelClassName}>Deploy Round</label>
+        <div className="min-w-0 flex-1">
+          <select
+            value={ticket.deployRound?.id || "no_deploy_round"}
+            onChange={(event) =>
+              void onDeployRoundChange(
+                event.target.value === "no_deploy_round" ? null : event.target.value
+              )
+            }
+            disabled={
+              !canEditTickets ||
+              isAssignmentLocked ||
+              updatingFields["deployRoundId"] ||
+              !deployRounds.length
+            }
+            className={nativeSelectClassName}
+          >
+            <option value="no_deploy_round">No Deploy Round</option>
+            {deployRounds.map((dr) => (
+              <option key={dr.id} value={dr.id}>
+                {dr.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 

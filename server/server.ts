@@ -9,6 +9,7 @@ import { createAssetsRouter } from "@server/routes/assets-router"
 import { createAuditLogRouter } from "@server/routes/audit-log-router"
 import { createAuthRouter } from "@server/routes/auth-router"
 import { createClockifyRouter } from "@server/routes/clockify-router"
+import { createDeployRoundsRouter } from "@server/routes/deploy-rounds-router"
 import { createInternalRouter } from "@server/routes/internal-router"
 import { createMetaRouter } from "@server/routes/meta-router"
 import { createNotificationsRouter } from "@server/routes/notifications-router"
@@ -34,6 +35,7 @@ app.use(createAuthRouter())
 app.use(createAuditLogRouter())
 app.use(createAssetsRouter())
 app.use(createClockifyRouter())
+app.use(createDeployRoundsRouter())
 app.use(createInternalRouter())
 app.use(createMetaRouter())
 app.use(createNotificationsRouter())

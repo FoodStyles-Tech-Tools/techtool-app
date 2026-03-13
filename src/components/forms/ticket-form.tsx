@@ -27,6 +27,7 @@ import { EpicSelect } from "@client/components/epic-select"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { useSprints } from "@client/hooks/use-sprints"
 import { SprintSelect } from "@client/components/sprint-select"
+import { useDeployRounds } from "@client/features/projects/hooks/use-deploy-rounds"
 import { ASSIGNEE_ALLOWED_ROLES } from "@shared/ticket-constants"
 import { inputClassNameLg } from "@client/lib/form-styles"
 import { normalizeRichTextInput } from "@shared/rich-text"
@@ -70,6 +71,13 @@ const ticketSchema = z.object({
     ])
     .optional(),
   sprint_id: z
+    .union([
+      z.string().uuid(),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional(),
+  deploy_round_id: z
     .union([
       z.string().uuid(),
       z.literal(""),
@@ -143,6 +151,7 @@ export function TicketForm({
       department_id: initialData?.department_id || "",
       epic_id: initialData?.epic_id || "",
       sprint_id: initialData?.sprint_id || "",
+      deploy_round_id: initialData?.deploy_round_id || "",
       dueDate: initialData?.dueDate ?? null,
       links: initialData?.links || [],
     },
@@ -183,11 +192,15 @@ export function TicketForm({
   )
   const { epics } = useEpics()
   const { sprints } = useSprints()
+  const { data: deployRounds = [] } = useDeployRounds(effectiveProjectId, {
+    enabled: !!effectiveProjectId,
+  })
 
   useEffect(() => {
     if (projectId) return
     form.setValue("epic_id", "")
     form.setValue("sprint_id", "")
+    form.setValue("deploy_round_id", "")
   }, [selectedProjectId, projectId, form])
 
   // Set default assignee to current user when creating a new ticket
@@ -239,6 +252,7 @@ export function TicketForm({
         departmentId: values.department_id || undefined,
         epicId: values.epic_id || undefined,
         sprintId: values.sprint_id || undefined,
+        deployRoundId: values.deploy_round_id || undefined,
         links: sanitizedLinks,
       }
 
@@ -548,6 +562,32 @@ export function TicketForm({
                     onValueChange={(value) => field.onChange(value || "")}
                     sprints={sprints}
                   />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        )}
+        {effectiveProjectId && deployRounds.length > 0 && (
+          <FormField
+            control={form.control}
+            name="deploy_round_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Deploy Round</FormLabel>
+                <FormControl>
+                  <select
+                    value={field.value || ""}
+                    onChange={(event) => field.onChange(event.target.value)}
+                    className={nativeSelectClassName}
+                  >
+                    <option value="">No deploy round</option>
+                    {deployRounds.map((dr) => (
+                      <option key={dr.id} value={dr.id}>
+                        {dr.name}
+                      </option>
+                    ))}
+                  </select>
                 </FormControl>
                 <FormMessage />
               </FormItem>

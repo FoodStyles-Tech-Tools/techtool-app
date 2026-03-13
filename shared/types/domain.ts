@@ -196,6 +196,7 @@ export interface Ticket {
   epic: TicketEpic | null
   sprint: TicketSprint | null
   project: TicketProject | null
+  deployRound: TicketDeployRound | null
   assignee: TicketUser | null
   sqaAssignee: TicketUser | null
   requestedBy: TicketUser
@@ -228,4 +229,30 @@ export interface QuickAddTicketData {
   sqaAssigneeId?: string
   requestedById?: string
   dueDate?: string | null
+}
+
+/** Deploy round ID type alias */
+export type DeployRoundId = string
+
+/** Checklist item for a deploy round */
+export interface DeployRoundChecklistItem {
+  id: string
+  label: string
+  completed: boolean
+}
+
+/** Deploy round (project-scoped deployment tracking) */
+export interface DeployRound {
+  id: DeployRoundId
+  projectId: string
+  name: string
+  checklist: DeployRoundChecklistItem[]
+  createdAt: string
+  updatedAt: string
+}
+
+/** Deploy round relation for tickets */
+export interface TicketDeployRound {
+  id: string
+  name: string
 }

@@ -157,6 +157,15 @@ export function useTicketDetailActions({
     void updateTicketWithToast({ sprintId: newSprintId }, "Sprint updated", "sprintId")
   }
 
+  const handleDeployRoundChange = (newDeployRoundId: string | null) => {
+    if (!ensureCanEdit()) return
+    void updateTicketWithToast(
+      { deployRoundId: newDeployRoundId },
+      newDeployRoundId ? "Deploy round updated" : "Deploy round cleared",
+      "deployRoundId"
+    )
+  }
+
   const handleProjectChange = (newProjectId: string, noProjectValue: string) => {
     if (!ensureCanEdit()) return
     void updateTicketWithToast(
@@ -303,6 +312,7 @@ export function useTicketDetailActions({
     handleDepartmentChange,
     handleEpicChange,
     handleSprintChange,
+    handleDeployRoundChange,
     handleProjectChange,
     handleParentTicketChange,
     handleAssigneeChange,
