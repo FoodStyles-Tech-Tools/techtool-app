@@ -34,6 +34,14 @@ export function getClientAppUrl() {
 }
 
 export function getClientBackendUrl() {
+  // In production on Vercel, prefer deriving from the current origin to avoid misconfigured envs.
+  if (typeof window !== "undefined") {
+    const origin = window.location.origin
+    if (origin.includes("techtool-app.vercel.app")) {
+      return `${origin}/api/server`
+    }
+  }
+
   return readClientEnv("VITE_BACKEND_URL", ["VITE_SERVER_URL", "VITE_API_URL"]) || "http://localhost:4000"
 }
 
