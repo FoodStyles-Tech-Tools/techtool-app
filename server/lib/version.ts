@@ -1,8 +1,13 @@
 import packageJson from "../../package.json"
 
-// APP_VERSION env var is injected at deploy time (e.g. git SHA).
-// Fall back to package.json version for local dev and non-SHA builds.
-const envVersion = process.env.APP_VERSION?.trim()
+// Priority order:
+// 1. APP_VERSION            — explicitly set (local dev build, CI, etc.)
+// 2. VERCEL_GIT_COMMIT_SHA  — injected automatically by Vercel at runtime
+// 3. package.json version   — last resort fallback
+const envVersion =
+  process.env.APP_VERSION?.trim() ||
+  process.env.VERCEL_GIT_COMMIT_SHA?.trim()
+
 const rawVersion =
   (packageJson as { version?: string }).version?.trim() || "0.0.0"
 
