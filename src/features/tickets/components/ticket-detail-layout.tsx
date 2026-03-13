@@ -222,9 +222,6 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
             onCopyShareUrl={actions.handleCopyShareUrl}
             onCopyHyperlinkedUrl={actions.handleCopyHyperlinkedUrl}
             onRequestDelete={actions.openDeleteDialog}
-            onStatusChange={(status) => {
-              void actions.handleStatusChange(status)
-            }}
           />
           <div className="flex-1 overflow-y-auto">{gridContent}</div>
         </>
@@ -237,6 +234,9 @@ export function TicketDetailLayout({ surface, onBackToTickets, showHeader = true
         onSubtasksCancel={() => resolveOpenSubtasksDialog("cancel")}
         onSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}
         onSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
+        isDeleteDialogOpen={actions.isDeleteDialogOpen}
+        onDeleteCancel={() => actions.setIsDeleteDialogOpen(false)}
+        onDeleteConfirm={actions.confirmDelete}
       />
     </>
   )

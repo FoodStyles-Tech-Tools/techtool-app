@@ -1,6 +1,6 @@
 "use client"
 
-import type { Dispatch, SetStateAction } from "react"
+import { useState, type Dispatch, type SetStateAction } from "react"
 import { toast } from "@client/components/ui/toast"
 import type { Ticket } from "@shared/types"
 import {
@@ -43,6 +43,8 @@ export function useTicketDetailStatusActions({
   updateTicketWithToast,
   setUpdatingFields,
 }: UseTicketDetailStatusActionsParams) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+
   const resolveSubtaskStatusGuard = async (
     targetStatus: string
   ): Promise<TicketStatusGuardResult> =>
@@ -99,7 +101,14 @@ export function useTicketDetailStatusActions({
   }
   return {
     handleStatusChange,
-    openDeleteDialog: async () => {
+    isDeleteDialogOpen,
+    setIsDeleteDialogOpen,
+    openDeleteDialog: () => {
+      if (!ensureCanEdit()) return
+      if (!ticket || !ticketId) return
+      setIsDeleteDialogOpen(true)
+    },
+    confirmDelete: async () => {
       if (!ensureCanEdit()) return
       if (!ticket || !ticketId) return
 
@@ -109,6 +118,7 @@ export function useTicketDetailStatusActions({
 
       try {
         await updateTicketWithToast(body, "Ticket archived", "status")
+        setIsDeleteDialogOpen(false)
       } catch (error: any) {
         toast(error.message || "Failed to archive ticket", "error")
       }
