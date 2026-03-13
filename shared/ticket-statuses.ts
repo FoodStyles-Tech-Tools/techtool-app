@@ -21,8 +21,8 @@ export const SQA_ONLY_STATUS_KEYS = new Set([
   "qa_pass",
 ])
 
-export const normalizeStatusKey = (value: string) =>
-  value
+export const normalizeStatusKey = (value: string | null | undefined): string =>
+  (value ?? "")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, "_")

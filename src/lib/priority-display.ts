@@ -30,8 +30,8 @@ const PRIORITY_ICONS: Record<PriorityKey, ComponentType<SVGProps<SVGSVGElement>>
   urgent: ExclamationTriangleIcon,
 }
 
-export function normalizePriorityKey(value: string): PriorityKey {
-  const key = value.trim().toLowerCase()
+export function normalizePriorityKey(value: string | null | undefined): PriorityKey {
+  const key = (value ?? "").trim().toLowerCase()
   if (PRIORITY_ORDER.includes(key as PriorityKey)) {
     return key as PriorityKey
   }
