@@ -34,6 +34,7 @@ import { normalizeRichTextInput } from "@shared/rich-text"
 import { DateTimePicker } from "@client/components/ui/datetime-picker"
 import { toUTCISOStringPreserveLocal } from "@client/lib/format-dates"
 import type { User } from "@shared/types"
+import { getClientBackendUrl } from "@client/lib/config/client-env"
 
 const NO_PROJECT_VALUE = "__no_project__"
 const RichTextEditor = lazyComponent(
@@ -126,7 +127,8 @@ export function TicketForm({
 
   useEffect(() => {
     // Fetch users for assignee dropdown
-    fetch("/api/users")
+    const backendUrl = getClientBackendUrl()
+    fetch(new URL("/api/users", backendUrl).toString())
       .then((res) => res.json())
       .then((data) => {
         if (data.users) {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { getClientBackendUrl } from "@client/lib/config/client-env"
 import { Button } from "@client/components/ui/button"
 import { Input } from "@client/components/ui/input"
 import { toast } from "@client/components/ui/toast"
@@ -21,7 +22,7 @@ export function DepartmentForm({ onSuccess }: DepartmentFormProps) {
     }
     setLoading(true)
     try {
-      const res = await fetch("/api/departments", {
+      const res = await fetch(new URL("/api/departments", getClientBackendUrl()).toString(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
