@@ -89,6 +89,16 @@ export function TicketDetailPreviewModal({
             </Button>
           </div>
           <div className="flex items-center gap-2">
+            {surface.ticket && surface.canEditTickets ? (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-red-600 hover:text-red-700"
+                onClick={surface.actions.openDeleteDialog}
+              >
+                Archive
+              </Button>
+            ) : null}
             <Button
               type="button"
               variant="outline"

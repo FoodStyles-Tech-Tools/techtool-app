@@ -23,7 +23,7 @@ export function TicketDetailFooter({
         {ticket && canEditTickets ? (
           <Button variant="ghost" className="text-red-600 hover:text-red-700" onClick={onRequestDelete}>
             <TrashIcon className="h-4 w-4" />
-            Delete Ticket
+            Archive Ticket
           </Button>
         ) : null}
       </div>

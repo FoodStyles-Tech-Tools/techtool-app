@@ -30,14 +30,14 @@ export function TicketDeleteReasonDialog({
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Delete Ticket</DialogTitle>
+          <DialogTitle>Archive Ticket</DialogTitle>
           <DialogDescription>
-            This will archive the ticket. Please provide a reason for deleting it.
+            This will archive the ticket. Please provide a reason for archiving it.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <Textarea
-            placeholder="Enter delete reason..."
+            placeholder="Enter archive reason..."
             value={reason}
             onChange={(event) => onReasonChange(event.target.value)}
             onKeyDown={(event) => {
@@ -55,7 +55,7 @@ export function TicketDeleteReasonDialog({
             Cancel
           </Button>
           <Button variant="destructive" onClick={() => void onConfirm()} disabled={disabled}>
-            Confirm Delete
+            Confirm Archive
           </Button>
         </DialogFooter>
       </DialogContent>

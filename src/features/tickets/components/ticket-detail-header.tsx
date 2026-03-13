@@ -5,7 +5,7 @@ import { Input } from "@client/components/ui/input"
 import { cn } from "@client/lib/utils"
 import { Breadcrumb } from "@client/components/ui/breadcrumb"
 import { Button } from "@client/components/ui/button"
-import { ClipboardDocumentIcon } from "@heroicons/react/24/outline"
+import { ClipboardDocumentIcon, ShareIcon, TrashIcon } from "@heroicons/react/24/outline"
 import type { Ticket } from "@shared/types"
 
 type TicketDetailHeaderProps = {
@@ -59,6 +59,27 @@ export function TicketDetailHeader({
           >
             <ClipboardDocumentIcon className="h-4 w-4" />
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onCopyShareUrl}
+            aria-label="Copy share URL"
+          >
+            <ShareIcon className="h-4 w-4" />
+          </Button>
+          {canEditTickets ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-red-600 hover:text-red-700"
+              onClick={onRequestDelete}
+              aria-label="Archive ticket"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </Button>
+          ) : null}
         </div>
       </div>
 
