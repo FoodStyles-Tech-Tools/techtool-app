@@ -74,17 +74,10 @@ export function useTicketBoardActions({
       const ticket = allTickets.find((candidate) => candidate.id === ticketId)
       if (!ticket || ticket.status === columnId) return false
 
-      if (columnId === "cancelled" || columnId === "rejected") {
+      if (columnId === "rejected") {
         setPendingStatusChange({ ticketId, newStatus: columnId })
         setCancelReason("")
         setShowCancelReasonDialog(true)
-        return false
-      }
-
-      if (columnId === "returned_to_dev" && ticket.status !== "returned_to_dev") {
-        setPendingReturnedStatusChange({ ticketId, newStatus: columnId })
-        setReturnedReason("")
-        setShowReturnedReasonDialog(true)
         return false
       }
 
@@ -144,16 +137,10 @@ export function useTicketBoardActions({
         const previousStatus = currentTicket?.status ?? "open"
         const newStatus = value as string
 
-        if ((newStatus === "cancelled" || newStatus === "rejected") && previousStatus !== newStatus) {
+        if (newStatus === "rejected" && previousStatus !== newStatus) {
           setPendingStatusChange({ ticketId, newStatus })
           setCancelReason("")
           setShowCancelReasonDialog(true)
-          return
-        }
-        if (newStatus === "returned_to_dev" && previousStatus !== "returned_to_dev") {
-          setPendingReturnedStatusChange({ ticketId, newStatus })
-          setReturnedReason("")
-          setShowReturnedReasonDialog(true)
           return
         }
 
