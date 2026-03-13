@@ -158,7 +158,7 @@ export function useTicketDetailActions({
   }
 
   const handleDeployRoundChange = (newDeployRoundId: string | null) => {
-    if (!ensureCanEdit()) return
+    if (!ensureCanEdit({ allowWhenUnassigned: true, allowSqaSelfAssign: true })) return
     void updateTicketWithToast(
       { deployRoundId: newDeployRoundId },
       newDeployRoundId ? "Deploy round updated" : "Deploy round cleared",

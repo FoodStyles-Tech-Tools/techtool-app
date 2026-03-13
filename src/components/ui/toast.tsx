@@ -132,7 +132,7 @@ function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: () => voi
       role="status"
       aria-live="polite"
       className={cn(
-        "pointer-events-auto flex w-full max-w-xs items-center gap-2 rounded-lg border px-3 py-2 shadow-lg shadow-black/15",
+        "pointer-events-auto flex w-full max-w-sm items-start gap-2 rounded-lg border px-3 py-2 shadow-lg shadow-black/15",
         isSuccess
           ? "border-emerald-200 bg-white dark:border-emerald-500/30 dark:bg-emerald-950/90"
           : "border-red-200 bg-white dark:border-red-500/30 dark:bg-red-950/90"
@@ -146,10 +146,10 @@ function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: () => voi
       )}
 
       {/* Content */}
-      <div className="flex min-w-0 flex-1 items-baseline gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span
           className={cn(
-            "shrink-0 text-[10px] font-bold uppercase tracking-widest",
+            "text-[10px] font-bold uppercase tracking-widest",
             isSuccess
               ? "text-emerald-600 dark:text-emerald-400"
               : "text-red-600 dark:text-red-400"
@@ -159,7 +159,7 @@ function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: () => voi
         </span>
         <p
           className={cn(
-            "truncate text-xs font-medium",
+            "break-words text-xs font-medium",
             isSuccess
               ? "text-emerald-950 dark:text-emerald-50"
               : "text-red-950 dark:text-red-50"
@@ -175,7 +175,7 @@ function ToastItem({ toast: t, onDismiss }: { toast: Toast; onDismiss: () => voi
         aria-label="Dismiss notification"
         onClick={onDismiss}
         className={cn(
-          "shrink-0 transition-colors",
+          "mt-0.5 shrink-0 transition-colors",
           isSuccess
             ? "text-emerald-400 hover:text-emerald-600 dark:text-emerald-500 dark:hover:text-emerald-300"
             : "text-red-400 hover:text-red-600 dark:text-red-500 dark:hover:text-red-300"

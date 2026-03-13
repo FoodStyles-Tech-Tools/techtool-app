@@ -146,7 +146,6 @@ export function TicketDetailPlanningSection({
             }
             disabled={
               !canEditTickets ||
-              isAssignmentLocked ||
               updatingFields["deployRoundId"] ||
               !deployRounds.length
             }
