@@ -73,8 +73,7 @@ CREATE POLICY "Users can view ticket comments"
 CREATE POLICY "Users can create ticket comments"
   ON ticket_comments FOR INSERT
   WITH CHECK (
-    user_has_permission('tickets'::permission_resource, 'edit'::permission_action)
-    AND author_id = current_user_id()
+    author_id = current_user_id()
     AND EXISTS (
       SELECT 1 FROM tickets
       WHERE tickets.id = ticket_comments.ticket_id
