@@ -24,6 +24,11 @@ type SignInOptions = {
   callbackURL?: string
 }
 
+type PasswordSignInOptions = {
+  email: string
+  password: string
+}
+
 type SignInCallbacks = {
   onRequest?: () => void
   onError?: (error: Error) => void
@@ -49,6 +54,13 @@ function clearClientAuthCache() {
     window.localStorage.removeItem("tt.permissions")
   } catch {
     // Ignore storage failures during sign out.
+  }
+}
+
+async function assertAppUserAccess() {
+  const response = await fetch("/api/auth/me", { cache: "no-store" })
+  if (!response.ok) {
+    throw new Error("not_registered")
   }
 }
 
@@ -123,6 +135,33 @@ export const signIn = {
     } catch (error) {
       const normalizedError =
         error instanceof Error ? error : new Error("Failed to sign in with Supabase")
+      callbacks?.onError?.(normalizedError)
+      throw normalizedError
+    }
+  },
+  async password(options: PasswordSignInOptions, callbacks?: SignInCallbacks) {
+    callbacks?.onRequest?.()
+
+    try {
+      const supabase = getBrowserSupabaseClient()
+      const { error } = await supabase.auth.signInWithPassword({
+        email: options.email.trim(),
+        password: options.password,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      try {
+        await assertAppUserAccess()
+      } catch (verificationError) {
+        await supabase.auth.signOut()
+        throw verificationError
+      }
+    } catch (error) {
+      const normalizedError =
+        error instanceof Error ? error : new Error("Failed to sign in with email and password")
       callbacks?.onError?.(normalizedError)
       throw normalizedError
     }

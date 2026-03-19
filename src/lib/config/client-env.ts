@@ -31,6 +31,33 @@ function readClientEnv(preferredKey: string, legacyKeys: string[] = []) {
   return undefined
 }
 
+function parseBooleanEnvValue(value: string | boolean | undefined): boolean | undefined {
+  if (typeof value === "boolean") return value
+  if (typeof value !== "string") return undefined
+
+  const normalized = value.trim().toLowerCase()
+  if (["1", "true", "yes", "on"].includes(normalized)) return true
+  if (["0", "false", "no", "off"].includes(normalized)) return false
+  return undefined
+}
+
+function readClientBooleanEnv(preferredKey: string, legacyKeys: string[] = []) {
+  const preferredValue = parseBooleanEnvValue(clientEnv[preferredKey])
+  if (preferredValue !== undefined) {
+    return preferredValue
+  }
+
+  for (const legacyKey of legacyKeys) {
+    const legacyValue = parseBooleanEnvValue(clientEnv[legacyKey])
+    if (legacyValue !== undefined) {
+      warnLegacyEnv(legacyKey, preferredKey)
+      return legacyValue
+    }
+  }
+
+  return undefined
+}
+
 export function getClientAppUrl() {
   return readClientEnv("VITE_APP_URL", ["VITE_PUBLIC_APP_URL"]) || "http://localhost:5173"
 }
@@ -71,4 +98,8 @@ export function getClientAppVersion() {
   const rawVersion =
     (packageJson as { version?: string }).version?.trim() || "0.0.0"
   return rawVersion.slice(0, 7)
+}
+
+export function getClientEnableEmailPasswordLogin() {
+  return readClientBooleanEnv("VITE_ENABLE_EMAIL_PASSWORD_LOGIN") ?? false
 }

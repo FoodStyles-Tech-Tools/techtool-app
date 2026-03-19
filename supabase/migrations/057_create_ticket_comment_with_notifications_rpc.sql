@@ -80,7 +80,7 @@ BEGIN
     INSERT INTO comment_mentions (comment_id, user_id)
     SELECT v_comment.id, mention_id
     FROM unnest(v_unique_mentions) AS mention_id
-    ON CONFLICT (comment_id, user_id) DO NOTHING;
+    ON CONFLICT ON CONSTRAINT comment_mentions_comment_id_user_id_key DO NOTHING;
   END IF;
 
   IF p_parent_id IS NOT NULL THEN

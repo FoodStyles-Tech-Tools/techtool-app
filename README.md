@@ -37,6 +37,7 @@ VITE_APP_URL=http://localhost:5173
 VITE_BACKEND_URL=http://localhost:4000
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_ENABLE_EMAIL_PASSWORD_LOGIN=false
 
 # Backend
 PORT=4000
@@ -46,6 +47,8 @@ SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 Compatibility fallbacks still work for older env names such as `NEXT_PUBLIC_*`, `VITE_PUBLIC_*`, `VITE_API_URL`, and `VITE_SERVER_URL`, but they are now deprecated.
+
+Set `VITE_ENABLE_EMAIL_PASSWORD_LOGIN=true` in local development to add email/password sign-in (Google OAuth remains available).
 
 ## Auth setup
 
