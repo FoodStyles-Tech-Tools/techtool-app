@@ -66,7 +66,7 @@ const TicketRow = memo(function TicketRow({
         <button
           type="button"
           onClick={() => onSelectTicket(ticket.id)}
-          className="text-left text-sm font-normal text-primary underline"
+          className="block w-full text-left text-sm font-normal text-primary underline"
         >
           {ticket.title}
         </button>

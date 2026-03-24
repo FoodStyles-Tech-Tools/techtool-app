@@ -1,6 +1,7 @@
 "use client"
 
-import { useCallback, useDeferredValue, useMemo, useState } from "react"
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { ArrowPathIcon, MagnifyingGlassIcon, PlusIcon } from "@heroicons/react/20/solid"
 import { TableCellsIcon, ViewColumnsIcon } from "@heroicons/react/24/outline"
@@ -141,6 +142,7 @@ export default function ProjectDetailClient({
   projectId,
   initialProject,
 }: ProjectDetailClientProps) {
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const { openPreview } = useTicketPreview()
   const { flags, user: currentUser } = usePermissions()
@@ -149,8 +151,10 @@ export default function ProjectDetailClient({
   })
   const { departments } = useDepartments()
   const { data: usersData } = useUsers()
+  const initialViewMode = searchParams.get("view") === "table" ? "table" : "kanban"
+  const initialDeployRoundFilter = searchParams.get("deployRoundId") || searchParams.get("deploy_round") || "all"
   const [isEditOpen, setEditOpen] = useState(false)
-  const [viewMode, setViewMode] = useState<ViewMode>("kanban")
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode)
   const [currentPage, setCurrentPage] = useState(1)
   const [showProjectDetails, setShowProjectDetails] = useState(false)
 
@@ -168,7 +172,7 @@ export default function ProjectDetailClient({
   const [searchQuery, setSearchQuery] = useState("")
   const [sprintFilter, setSprintFilter] = useState<string>("all")
   const [epicFilter, setEpicFilter] = useState<string>("all")
-  const [deployRoundFilter, setDeployRoundFilter] = useState<string>("all")
+  const [deployRoundFilter, setDeployRoundFilter] = useState<string>(initialDeployRoundFilter)
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [reporterFilter, setReporterFilter] = useState<string>("all")
   const [sqaFilter, setSqaFilter] = useState<string>("all")
@@ -447,6 +451,41 @@ export default function ProjectDetailClient({
     setViewMode(mode)
     setCurrentPage(1)
   }, [])
+
+  useEffect(() => {
+    const next = new URLSearchParams(searchParams)
+    let changed = false
+
+    const currentView = next.get("view")
+    if (viewMode === "table") {
+      if (currentView !== "table") {
+        next.set("view", "table")
+        changed = true
+      }
+    } else if (currentView) {
+      next.delete("view")
+      changed = true
+    }
+
+    if (next.has("deploy_round")) {
+      next.delete("deploy_round")
+      changed = true
+    }
+
+    if (deployRoundFilter !== "all") {
+      if (next.get("deployRoundId") !== deployRoundFilter) {
+        next.set("deployRoundId", deployRoundFilter)
+        changed = true
+      }
+    } else if (next.has("deployRoundId")) {
+      next.delete("deployRoundId")
+      changed = true
+    }
+
+    if (changed) {
+      setSearchParams(next, { replace: true })
+    }
+  }, [deployRoundFilter, searchParams, setSearchParams, viewMode])
 
   const handleCreateDeployRound = useCallback(
     async (values: { name: string; checklist: DeployRoundChecklistItem[] }) => {
@@ -795,7 +834,10 @@ function getTypeColor(type: string | null | undefined): string {
                         <Select
                           id="project-deploy-round-filter"
                           value={deployRoundFilter}
-                          onChange={(e) => setDeployRoundFilter(e.target.value)}
+                          onChange={(e) => {
+                            setDeployRoundFilter(e.target.value)
+                            setCurrentPage(1)
+                          }}
                           className="min-w-[160px]"
                         >
                           <option value="all">All</option>
@@ -956,7 +998,7 @@ function getTypeColor(type: string | null | undefined): string {
                                 <button
                                   type="button"
                                   onClick={() => handleSelectTicket(ticket.id)}
-                                  className="text-sm font-normal text-primary underline"
+                                  className="block w-full text-left text-sm font-normal text-primary underline"
                                 >
                                   {ticket.title}
                                 </button>

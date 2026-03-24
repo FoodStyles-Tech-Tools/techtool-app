@@ -59,6 +59,7 @@ export function KeyboardShortcuts() {
   const canEditProjects = flags?.canEditProjects ?? false
   const canViewTickets = flags?.canViewTickets ?? false
   const canViewProjects = flags?.canViewProjects ?? false
+  const canViewDeployRounds = flags?.canViewDeployRounds ?? false
   const canViewClockify = flags?.canViewClockify ?? false
   const canViewAssets = flags?.canViewAssets ?? false
   const canViewUsers = flags?.canViewUsers ?? false
@@ -100,6 +101,9 @@ export function KeyboardShortcuts() {
     if (canViewProjects) {
       list.push({ id: "open-projects", label: "Open Projects", keywords: "projects go", icon: "open" })
     }
+    if (canViewDeployRounds) {
+      list.push({ id: "open-deploy-rounds", label: "Open Deploy Round", keywords: "deploy round release go", icon: "open" })
+    }
     if (canViewClockify) {
       list.push({ id: "open-reports", label: "Open Reports", keywords: "reports go", icon: "open" })
       list.push({ id: "open-clockify", label: "Open Clockify", keywords: "clockify time go", icon: "open" })
@@ -130,6 +134,7 @@ export function KeyboardShortcuts() {
     canEditProjects,
     canViewTickets,
     canViewProjects,
+    canViewDeployRounds,
     canViewClockify,
     canViewAssets,
     canViewUsers,
@@ -166,6 +171,9 @@ export function KeyboardShortcuts() {
         break
       case "open-projects":
         navigate("/projects")
+        break
+      case "open-deploy-rounds":
+        navigate("/deploy-rounds")
         break
       case "open-reports":
         navigate("/report")

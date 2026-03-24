@@ -2,6 +2,7 @@ import { z } from "zod"
 
 const ROLE_PERMISSION_RESOURCES = [
   "projects",
+  "deploy_rounds",
   "tickets",
   "users",
   "roles",
@@ -9,6 +10,7 @@ const ROLE_PERMISSION_RESOURCES = [
   "assets",
   "clockify",
   "status",
+  "audit_log",
 ] as const
 
 const ROLE_PERMISSION_ACTIONS = ["view", "create", "edit", "delete", "manage"] as const

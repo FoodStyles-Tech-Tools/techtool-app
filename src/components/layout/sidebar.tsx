@@ -7,6 +7,7 @@ import {
   ChevronLeftIcon,
   TicketIcon,
   FolderIcon,
+  RectangleStackIcon,
   ChartBarIcon,
   CubeIcon,
   ClockIcon,
@@ -52,6 +53,12 @@ const primaryNavItems: NavItem[] = [
     href: "/projects",
     icon: FolderIcon,
     flag: "canViewProjects",
+  },
+  {
+    title: "Deploy Round",
+    href: "/deploy-rounds",
+    icon: RectangleStackIcon,
+    flag: "canViewDeployRounds",
   },
 ]
 

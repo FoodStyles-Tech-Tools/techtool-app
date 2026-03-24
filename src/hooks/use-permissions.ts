@@ -126,7 +126,10 @@ export function usePermissions() {
 
     // If cached flags are from an older app version (missing new keys), refetch so we get full shape
     const defaultFlags = buildPermissionFlags()
-    const hasFullShape = cache.flags && "canViewAuditLog" in cache.flags
+    const hasFullShape =
+      cache.flags &&
+      "canViewAuditLog" in cache.flags &&
+      "canViewDeployRounds" in cache.flags
     if (!hasFullShape) {
       void refresh()
       return

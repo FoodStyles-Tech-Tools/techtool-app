@@ -17,6 +17,12 @@ export function buildPermissionFlags(permissions: Permission[] = []): Permission
     canViewProjects: has("projects", "view"),
     canCreateProjects: has("projects", "create"),
     canEditProjects: has("projects", "edit"),
+    // Backward-compatible fallback: deploy round access follows project access if explicit deploy_rounds permissions are absent.
+    canViewDeployRounds: has("deploy_rounds", "view") || has("projects", "view"),
+    canCreateDeployRounds: has("deploy_rounds", "create") || has("projects", "create"),
+    canEditDeployRounds: has("deploy_rounds", "edit") || has("projects", "edit"),
+    canDeleteDeployRounds: has("deploy_rounds", "delete") || has("projects", "delete"),
+    canManageDeployRounds: has("deploy_rounds", "manage") || has("projects", "manage"),
     canViewAssets: has("assets", "view"),
     canCreateAssets: has("assets", "create"),
     canEditAssets: has("assets", "edit"),

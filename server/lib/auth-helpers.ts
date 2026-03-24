@@ -3,6 +3,7 @@ import { timeQuery } from "./query-timing"
 
 export type PermissionResource =
   | "projects"
+  | "deploy_rounds"
   | "tickets"
   | "users"
   | "roles"

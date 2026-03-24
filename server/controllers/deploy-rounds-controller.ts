@@ -1,5 +1,5 @@
 import type { Request, Response } from "express"
-import { getRequestContext } from "@server/lib/auth-helpers"
+import { getRequestContext, hasPermission } from "@server/lib/auth-helpers"
 import { handleControllerError } from "@server/http/handle-controller-error"
 import { HttpError } from "@server/http/http-error"
 import * as deployRoundsService from "@server/services/deploy-rounds-service"
@@ -10,11 +10,41 @@ import {
   parseUpdateDeployRoundBody,
 } from "@server/validation/deploy-rounds"
 
+async function requireDeployRoundViewContext() {
+  const context = await getRequestContext()
+  const [canViewDeployRounds, canManageDeployRounds, canViewProjects, canManageProjects] = await Promise.all([
+    hasPermission("deploy_rounds", "view", context.session),
+    hasPermission("deploy_rounds", "manage", context.session),
+    hasPermission("projects", "view", context.session),
+    hasPermission("projects", "manage", context.session),
+  ])
+
+  if (!canViewDeployRounds && !canManageDeployRounds && !canViewProjects && !canManageProjects) {
+    throw new HttpError(403, "Forbidden: view deploy rounds permission required")
+  }
+
+  return context
+}
+
+async function requireDeployRoundEditContext() {
+  const context = await getRequestContext()
+  const [canEditDeployRounds, canManageDeployRounds, canEditProjects, canManageProjects] = await Promise.all([
+    hasPermission("deploy_rounds", "edit", context.session),
+    hasPermission("deploy_rounds", "manage", context.session),
+    hasPermission("projects", "edit", context.session),
+    hasPermission("projects", "manage", context.session),
+  ])
+
+  if (!canEditDeployRounds && !canManageDeployRounds && !canEditProjects && !canManageProjects) {
+    throw new HttpError(403, "Forbidden: edit deploy rounds permission required")
+  }
+
+  return context
+}
+
 export async function listDeployRoundsController(request: Request, response: Response) {
   try {
-    const context = await getRequestContext({
-      permission: { resource: "projects", action: "view" },
-    })
+    const context = await requireDeployRoundViewContext()
     const { projectId } = parseProjectIdParams(request.params)
     const payload = await deployRoundsService.listDeployRounds(context, projectId)
     response.json(payload)
@@ -25,9 +55,7 @@ export async function listDeployRoundsController(request: Request, response: Res
 
 export async function getDeployRoundController(request: Request, response: Response) {
   try {
-    const context = await getRequestContext({
-      permission: { resource: "projects", action: "view" },
-    })
+    const context = await requireDeployRoundViewContext()
     const { projectId, deployRoundId } = parseDeployRoundIdParams(request.params)
     const payload = await deployRoundsService.getDeployRound(context, projectId, deployRoundId)
     response.json(payload)
@@ -38,9 +66,7 @@ export async function getDeployRoundController(request: Request, response: Respo
 
 export async function createDeployRoundController(request: Request, response: Response) {
   try {
-    const context = await getRequestContext({
-      permission: { resource: "projects", action: "edit" },
-    })
+    const context = await requireDeployRoundEditContext()
     const { projectId } = parseProjectIdParams(request.params)
     const payload = await deployRoundsService.createDeployRound(
       context,
@@ -55,9 +81,7 @@ export async function createDeployRoundController(request: Request, response: Re
 
 export async function updateDeployRoundController(request: Request, response: Response) {
   try {
-    const context = await getRequestContext({
-      permission: { resource: "projects", action: "edit" },
-    })
+    const context = await requireDeployRoundEditContext()
     const { projectId, deployRoundId } = parseDeployRoundIdParams(request.params)
     const payload = await deployRoundsService.updateDeployRound(
       context,
@@ -73,9 +97,7 @@ export async function updateDeployRoundController(request: Request, response: Re
 
 export async function deleteDeployRoundController(request: Request, response: Response) {
   try {
-    const context = await getRequestContext({
-      permission: { resource: "projects", action: "edit" },
-    })
+    const context = await requireDeployRoundEditContext()
     const { projectId, deployRoundId } = parseDeployRoundIdParams(request.params)
     const payload = await deployRoundsService.deleteDeployRound(context, projectId, deployRoundId)
     response.json(payload)

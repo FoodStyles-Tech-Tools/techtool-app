@@ -7,6 +7,11 @@ export type PermissionFlags = {
   canViewProjects: boolean
   canCreateProjects: boolean
   canEditProjects: boolean
+  canViewDeployRounds: boolean
+  canCreateDeployRounds: boolean
+  canEditDeployRounds: boolean
+  canDeleteDeployRounds: boolean
+  canManageDeployRounds: boolean
   canViewAssets: boolean
   canCreateAssets: boolean
   canEditAssets: boolean

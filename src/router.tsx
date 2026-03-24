@@ -12,6 +12,7 @@ import { AppProviders } from "@client/components/layout/app-providers"
 import { SignInContent } from "@client/routes/signin/signin-content"
 import { ProjectsPage } from "@client/routes/projects/projects-page"
 import { ProjectDetailRoute } from "@client/routes/projects/project-detail-route"
+import { DeployRoundsPage } from "@client/routes/deploy-rounds/deploy-rounds-page"
 import { AssetsPage } from "@client/routes/assets/assets-page"
 import { UsersPage } from "@client/routes/admin/users/users-page"
 import { RolesPage } from "@client/routes/admin/roles/roles-page"
@@ -124,6 +125,7 @@ export const router = createBrowserRouter([
             element: <TicketDetailRoute />,
           },
           { path: "projects", element: <ProjectsPage /> },
+          { path: "deploy-rounds", element: <DeployRoundsPage /> },
           {
             path: "projects/:projectId",
             loader: projectDetailLoader,
