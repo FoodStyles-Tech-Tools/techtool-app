@@ -33,6 +33,7 @@ export async function listDeployRounds(context: RequestContext, projectId: strin
       createdAt: dr.created_at,
       updatedAt: dr.updated_at,
       hasTickets: dr.has_tickets ?? false,
+      ticketCount: dr.ticket_count ?? 0,
     })),
   }
 }
@@ -48,10 +49,11 @@ export async function getDeployRound(context: RequestContext, projectId: string,
     throw new HttpError(404, "Deploy round not found")
   }
 
-  const hasTickets = await deployRoundsRepository.hasTicketsForDeployRound(
+  const ticketCount = await deployRoundsRepository.countTicketsForDeployRound(
     context.supabase,
     deployRoundId
   )
+  const hasTickets = ticketCount > 0
 
   return {
     deployRound: {
@@ -62,6 +64,7 @@ export async function getDeployRound(context: RequestContext, projectId: string,
       createdAt: deployRound.created_at,
       updatedAt: deployRound.updated_at,
       hasTickets,
+      ticketCount,
     },
   }
 }
@@ -92,6 +95,7 @@ export async function createDeployRound(
       createdAt: deployRound.created_at,
       updatedAt: deployRound.updated_at,
       hasTickets: false,
+      ticketCount: 0,
     },
   }
 }
@@ -130,10 +134,11 @@ export async function updateDeployRound(
     throw new HttpError(404, "Deploy round not found")
   }
 
-  const hasTickets = await deployRoundsRepository.hasTicketsForDeployRound(
+  const ticketCount = await deployRoundsRepository.countTicketsForDeployRound(
     context.supabase,
     deployRoundId
   )
+  const hasTickets = ticketCount > 0
 
   return {
     deployRound: {
@@ -144,6 +149,7 @@ export async function updateDeployRound(
       createdAt: deployRound.created_at,
       updatedAt: deployRound.updated_at,
       hasTickets,
+      ticketCount,
     },
   }
 }

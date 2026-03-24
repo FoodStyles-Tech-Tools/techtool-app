@@ -5,7 +5,6 @@ import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { requestJson } from "@client/lib/api"
 import { fetchDeployRounds } from "@client/features/projects/lib/deploy-rounds-client"
-import { fetchTicketList } from "@client/features/tickets/lib/client"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
 import { FilterBar } from "@client/components/ui/filter-bar"
@@ -80,34 +79,15 @@ async function fetchDeployRoundRows(): Promise<DeployRoundRow[]> {
           projectName: project.name,
           deployRoundName: deployRound.name,
           createdAt: deployRound.createdAt,
-          totalTickets: 0,
+          totalTickets: deployRound.ticketCount ?? 0,
           checklistCompleted,
           checklistTotal,
         }
       })
     })
   )
-
-  const baseRows = rowsByProject.flat()
-
-  const ticketCounts = await Promise.all(
-    baseRows.map(async (row) => {
-      const response = await fetchTicketList({
-        projectId: row.projectId,
-        deployRoundId: row.id,
-        excludeSubtasks: true,
-        limit: 1,
-        page: 1,
-      })
-      return response.pageInfo?.total ?? response.items.length
-    })
-  )
-
-  return baseRows
-    .map((row, index) => ({
-      ...row,
-      totalTickets: ticketCounts[index] || 0,
-    }))
+  return rowsByProject
+    .flat()
     .sort((left, right) => {
       const leftTime = Date.parse(left.createdAt)
       const rightTime = Date.parse(right.createdAt)
@@ -263,3 +243,4 @@ export function DeployRoundsPage() {
     </PageLayout>
   )
 }
+

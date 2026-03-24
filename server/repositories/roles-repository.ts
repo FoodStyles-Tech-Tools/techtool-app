@@ -17,6 +17,35 @@ export type RoleRecord = {
 
 type SupabaseClient = Awaited<ReturnType<typeof import("@server/lib/supabase").createServerClient>>
 
+function isMissingDeployRoundsEnum(error: { message?: string; details?: string; hint?: string } | null | undefined) {
+  const text = `${error?.message || ""} ${error?.details || ""} ${error?.hint || ""}`.toLowerCase()
+  return (
+    text.includes("permission_resource") &&
+    text.includes("deploy_rounds") &&
+    (text.includes("invalid input value for enum") || text.includes("does not exist"))
+  )
+}
+
+function mapDeployRoundsToProjects(
+  permissions: RolePermissionRecord[]
+): RolePermissionRecord[] {
+  const seen = new Set<string>()
+  const mapped: RolePermissionRecord[] = []
+
+  for (const permission of permissions) {
+    const resource = permission.resource === "deploy_rounds" ? "projects" : permission.resource
+    const signature = `${resource}:${permission.action}`
+    if (seen.has(signature)) continue
+    seen.add(signature)
+    mapped.push({
+      resource,
+      action: permission.action,
+    })
+  }
+
+  return mapped
+}
+
 export async function listRoles(supabase: SupabaseClient): Promise<RoleRecord[]> {
   const { data, error } = await supabase
     .from("roles")
@@ -121,20 +150,43 @@ export async function replaceRolePermissions(
     return
   }
 
+  const payload = permissions.map((permission) => ({
+    role_id: roleId,
+    resource: permission.resource,
+    action: permission.action,
+  }))
+
   const { error: insertError } = await supabase
     .from("permissions")
-    .insert(
-      permissions.map((permission) => ({
-        role_id: roleId,
-        resource: permission.resource,
-        action: permission.action,
-      }))
-    )
+    .insert(payload)
 
-  if (insertError) {
-    console.error("Error inserting role permissions:", insertError)
+  if (!insertError) {
+    return
+  }
+
+  if (isMissingDeployRoundsEnum(insertError)) {
+    // Backward compatibility for environments where deploy_rounds enum migration is not applied yet.
+    const legacyMapped = mapDeployRoundsToProjects(permissions).map((permission) => ({
+      role_id: roleId,
+      resource: permission.resource,
+      action: permission.action,
+    }))
+
+    const { error: retryError } = await supabase
+      .from("permissions")
+      .insert(legacyMapped)
+
+    if (!retryError) {
+      console.warn("Deploy-rounds permissions mapped to projects because enum migration is missing")
+      return
+    }
+
+    console.error("Error inserting fallback role permissions:", retryError)
     throw new HttpError(500, "Failed to update role permissions")
   }
+
+  console.error("Error inserting role permissions:", insertError)
+  throw new HttpError(500, "Failed to update role permissions")
 }
 
 export async function deleteRole(supabase: SupabaseClient, id: string) {

@@ -2,15 +2,6 @@ import { HttpError } from "@server/http/http-error"
 
 type SupabaseClient = Awaited<ReturnType<typeof import("@server/lib/supabase").createServerClient>>
 
-type DeployRoundRow = {
-  id: string
-  project_id: string
-  name: string
-  checklist: unknown
-  created_at: string
-  updated_at: string
-}
-
 export type DeployRoundRecord = {
   id: string
   project_id: string
@@ -19,6 +10,7 @@ export type DeployRoundRecord = {
   created_at: string
   updated_at: string
   has_tickets?: boolean
+  ticket_count?: number
 }
 
 function normalizeChecklist(checklist: unknown): Array<{ id: string; label: string; completed: boolean }> {
@@ -163,17 +155,25 @@ export async function hasTicketsForDeployRound(
   supabase: SupabaseClient,
   deployRoundId: string
 ): Promise<boolean> {
+  const ticketCount = await countTicketsForDeployRound(supabase, deployRoundId)
+  return ticketCount > 0
+}
+
+export async function countTicketsForDeployRound(
+  supabase: SupabaseClient,
+  deployRoundId: string
+): Promise<number> {
   const { count, error } = await supabase
     .from("tickets")
     .select("*", { count: "exact", head: true })
     .eq("deploy_round_id", deployRoundId)
 
   if (error) {
-    console.error("Error checking tickets for deploy round:", error)
-    return false
+    console.error("Error counting tickets for deploy round:", error)
+    return 0
   }
 
-  return (count ?? 0) > 0
+  return count ?? 0
 }
 
 export async function listDeployRoundsWithTicketCounts(
@@ -184,10 +184,11 @@ export async function listDeployRoundsWithTicketCounts(
 
   const enriched = await Promise.all(
     deployRounds.map(async (deployRound) => {
-      const hasTickets = await hasTicketsForDeployRound(supabase, deployRound.id)
+      const ticketCount = await countTicketsForDeployRound(supabase, deployRound.id)
       return {
         ...deployRound,
-        has_tickets: hasTickets,
+        has_tickets: ticketCount > 0,
+        ticket_count: ticketCount,
       }
     })
   )

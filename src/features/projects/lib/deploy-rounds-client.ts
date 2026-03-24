@@ -9,10 +9,12 @@ type RawDeployRound = {
   createdAt: string
   updatedAt: string
   hasTickets?: boolean
+  ticketCount?: number
 }
 
 export type DeployRoundWithMeta = DeployRound & {
   hasTickets: boolean
+  ticketCount: number
 }
 
 type DeployRoundsResponse = {
@@ -36,6 +38,7 @@ export async function fetchDeployRounds(projectId: string): Promise<DeployRoundW
     createdAt: dr.createdAt,
     updatedAt: dr.updatedAt,
     hasTickets: dr.hasTickets ?? false,
+    ticketCount: dr.ticketCount ?? 0,
   }))
 }
 
@@ -65,6 +68,7 @@ export async function createDeployRound(
     createdAt: response.deployRound.createdAt,
     updatedAt: response.deployRound.updatedAt,
     hasTickets: response.deployRound.hasTickets ?? false,
+    ticketCount: response.deployRound.ticketCount ?? 0,
   }
 }
 
@@ -95,6 +99,7 @@ export async function updateDeployRound(
     createdAt: response.deployRound.createdAt,
     updatedAt: response.deployRound.updatedAt,
     hasTickets: response.deployRound.hasTickets ?? false,
+    ticketCount: response.deployRound.ticketCount ?? 0,
   }
 }
 
