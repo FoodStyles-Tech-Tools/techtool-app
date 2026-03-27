@@ -51,10 +51,6 @@ function isBugTicket(type: string | null | undefined) {
   return (type || "").trim().toLowerCase() === "bug"
 }
 
-function normalizeTicketTypeLabel(type: string | null | undefined) {
-  return isBugTicket(type) ? "Bug" : "Feature"
-}
-
 function normalizePriorityLabel(priority: string | null | undefined) {
   const normalized = (priority || "").trim().toLowerCase()
   if (!normalized) return "Medium"
@@ -67,11 +63,24 @@ function formatDueDate(dueDate: string | null | undefined) {
   if (Number.isNaN(parsed.getTime())) {
     return dueDate
   }
-  return parsed.toISOString().replace("T", " ").replace(".000Z", " UTC")
+  return new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "UTC",
+  })
+    .format(parsed)
+    .replace(",", "") + " UTC"
 }
 
-function resolveDisplayName(user: { name?: string | null; email?: string | null } | null | undefined) {
-  return (user?.name || user?.email || "Unknown Reporter").trim()
+function resolveDisplayName(
+  user: { name?: string | null; email?: string | null } | null | undefined,
+  fallback: string
+) {
+  return (user?.name || user?.email || fallback).trim()
 }
 
 function resolveTicketType(ticket: TicketWithRelations) {
@@ -96,6 +105,54 @@ function buildTicketUrl(ticket: TicketWithRelations) {
   return `${DISCORD_TICKET_BASE_URL}/${encodeURIComponent(ticketSlug)}`
 }
 
+function truncateForDiscord(value: string, maxLength = 1000) {
+  if (value.length <= maxLength) return value
+  return `${value.slice(0, maxLength - 1)}…`
+}
+
+function buildTicketCreatedEmbed(args: {
+  isBug: boolean
+  reporterLabel: string
+  ticketTitle: string
+  ticketLink: string
+  priorityLabel: string
+  dueDateLabel: string
+  submitterEmail: string
+  assigneeLabel?: string
+}) {
+  const description = args.assigneeLabel
+    ? args.isBug
+      ? `**${args.reporterLabel}** has reported a **BUG**.`
+      : `**${args.reporterLabel}** has requested a **feature**.`
+    : `A new **${args.isBug ? "Bug" : "Feature"}** ticket is available to pull.`
+
+  const fields = [
+    { name: "Reporter", value: truncateForDiscord(args.reporterLabel), inline: true },
+    { name: "Priority", value: `\`${truncateForDiscord(args.priorityLabel, 64)}\``, inline: true },
+    { name: "Due Date", value: `\`${truncateForDiscord(args.dueDateLabel, 64)}\``, inline: true },
+    ...(args.assigneeLabel
+      ? [{ name: "Assignee", value: truncateForDiscord(args.assigneeLabel), inline: true }]
+      : [{ name: "Type", value: args.isBug ? "Bug" : "Feature", inline: true }]),
+    { name: "Ticket Title", value: truncateForDiscord(args.ticketTitle, 512), inline: false },
+    { name: "Link", value: `[Open Ticket](${args.ticketLink})`, inline: false },
+  ]
+
+  return {
+    title: args.isBug ? "New Bug Ticket" : "New Feature Request",
+    description,
+    color: args.isBug ? DISCORD_EMBED_BUG_COLOR : DISCORD_EMBED_REQUEST_COLOR,
+    url: args.ticketLink,
+    fields,
+    footer: {
+      text: `submitted by: ${args.submitterEmail || "Unknown"} | via: Techtool App`,
+    },
+    author: {
+      name: "Techtool App",
+    },
+    timestamp: new Date().toISOString(),
+  }
+}
+
 export async function notifyTicketCreated(
   ticket: TicketWithRelations,
   submitterEmail: string | null | undefined
@@ -105,41 +162,39 @@ export async function notifyTicketCreated(
   const isReporterAssignee = Boolean(reporterId && assigneeId && reporterId === assigneeId)
 
   if (isReporterAssignee) {
+    console.info("[discord] Ticket create notification skipped: reporter equals assignee", {
+      ticketId: ticket.id,
+      reporterId,
+      assigneeId,
+    })
     return
   }
 
-  const reporterLabel = resolveDisplayName(ticket.requested_by)
+  const reporterLabel = resolveDisplayName(ticket.requested_by, "Unknown Reporter")
   const isBug = isBugTicket(resolveTicketType(ticket))
-  const embedColor = isBug ? DISCORD_EMBED_BUG_COLOR : DISCORD_EMBED_REQUEST_COLOR
   const ticketLink = buildTicketUrl(ticket)
+  const ticketTitle = ticket.title || "Untitled ticket"
   const priorityLabel = normalizePriorityLabel(ticket.priority)
   const dueDateLabel = formatDueDate(ticket.due_date ?? ticket.dueDate ?? null)
+  const safeSubmitterEmail = submitterEmail || "Unknown"
 
   if (assigneeId) {
     const assigneeMention = buildDiscordUserMention(ticket.assignee?.discord_id ?? null)
-    const assigneeLabel = assigneeMention || resolveDisplayName(ticket.assignee) || "Unknown Assignee"
-    const summary = isBug
-      ? `${reporterLabel} has reported a BUG`
-      : `${reporterLabel} has requested a feature`
-
-    const content = [
-      summary,
-      `Ticket Title: ${ticket.title || "Untitled ticket"}`,
-      `Link: ${ticketLink}`,
-      `Priority: ${priorityLabel}`,
-      `Due Date: ${dueDateLabel}`,
-      `Assignee: ${assigneeLabel}`,
-      "",
-      `submitted by: ${submitterEmail || "Unknown"} | via: Techtool App`,
-    ].join("\n")
+    const assigneeLabel = assigneeMention || resolveDisplayName(ticket.assignee, "Unknown Assignee")
 
     await postToDiscordWebhook({
-      content,
+      content: assigneeMention ? `Hi ${assigneeMention}` : undefined,
       embeds: [
-        {
-          title: isBug ? "New Bug Ticket" : "New Feature Request",
-          color: embedColor,
-        },
+        buildTicketCreatedEmbed({
+          isBug,
+          reporterLabel,
+          ticketTitle,
+          ticketLink,
+          priorityLabel,
+          dueDateLabel,
+          submitterEmail: safeSubmitterEmail,
+          assigneeLabel,
+        }),
       ],
       allowed_mentions: {
         parse: ["users", "roles"],
@@ -149,25 +204,19 @@ export async function notifyTicketCreated(
   }
 
   const roleMention = buildDiscordRoleMention(process.env.DISCORD_ROLE_ID ?? null)
-  const content = [
-    `Hi ${roleMention ?? "team"} a new ticket available to PULL!`,
-    `Reporter: ${reporterLabel}`,
-    `Type: ${normalizeTicketTypeLabel(resolveTicketType(ticket))}`,
-    `Ticket Title: ${ticket.title || "Untitled ticket"}`,
-    `Link: ${ticketLink}`,
-    `Priority: ${priorityLabel}`,
-    `Due Date: ${dueDateLabel}`,
-    "",
-    `submitted by: ${submitterEmail || "Unknown"} | via: Techtool App`,
-  ].join("\n")
 
   await postToDiscordWebhook({
-    content,
+    content: `Hi ${roleMention ?? "team"} a new ticket available to PULL!`,
     embeds: [
-      {
-        title: isBug ? "Unassigned Bug Ticket" : "Unassigned Feature Ticket",
-        color: embedColor,
-      },
+      buildTicketCreatedEmbed({
+        isBug,
+        reporterLabel,
+        ticketTitle,
+        ticketLink,
+        priorityLabel,
+        dueDateLabel,
+        submitterEmail: safeSubmitterEmail,
+      }),
     ],
     allowed_mentions: {
       parse: ["users", "roles"],

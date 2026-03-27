@@ -148,7 +148,7 @@ export function TicketForm({
       priority: initialData?.priority || "medium",
     type: initialData?.type || "request",
       project_id: initialData?.project_id || projectId || NO_PROJECT_VALUE,
-      assignee_id: initialData?.assignee_id || (isEditing ? "" : (user?.id || "")),
+      assignee_id: initialData?.assignee_id || "",
       requested_by_id: initialData?.requested_by_id || (isEditing ? "" : (user?.id || "")),
       department_id: initialData?.department_id || "",
       epic_id: initialData?.epic_id || "",
@@ -204,13 +204,6 @@ export function TicketForm({
     form.setValue("sprint_id", "")
     form.setValue("deploy_round_id", "")
   }, [selectedProjectId, projectId, form])
-
-  // Set default assignee to current user when creating a new ticket
-  useEffect(() => {
-    if (!isEditing && user?.id && !form.getValues("assignee_id")) {
-      form.setValue("assignee_id", user.id)
-    }
-  }, [user?.id, isEditing, form])
 
   // Set default reporter to current user when creating a new ticket
   useEffect(() => {
