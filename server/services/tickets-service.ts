@@ -6,6 +6,7 @@ import { HttpError } from "@server/http/http-error"
 import * as ticketsRepository from "@server/repositories/tickets-repository"
 import {
   notifyBatchTicketStatus,
+  notifyTicketCreated,
   notifyTicketForQa,
   notifyTicketReturnedToDev,
 } from "@server/lib/discord-ticket-status"
@@ -21,6 +22,11 @@ type TicketRequestContext = {
   supabase: Parameters<typeof ticketsRepository.listTickets>[0]
   userId: string
   userRole?: string | null
+  session?: {
+    user?: {
+      email?: string | null
+    }
+  }
 }
 
 function isSupabaseDataInconsistencyError(message: string | undefined) {
@@ -168,8 +174,11 @@ export async function createTicket(context: TicketRequestContext, input: CreateT
 
   await invalidateTicketCaches()
 
+  const normalizedTicket = normalizePersistedTicket(ticket as Record<string, unknown>)
+  void notifyTicketCreated(normalizedTicket as any, context.session?.user?.email ?? null)
+
   return {
-    ticket: normalizePersistedTicket(ticket as Record<string, unknown>),
+    ticket: normalizedTicket,
   }
 }
 

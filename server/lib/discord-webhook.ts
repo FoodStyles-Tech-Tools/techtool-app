@@ -1,15 +1,40 @@
 const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL
 
-type DiscordWebhookPayload = {
-  content: string
+type DiscordAllowedMentions = {
+  parse?: Array<"roles" | "users" | "everyone">
+  users?: string[]
+  roles?: string[]
 }
 
-export async function postToDiscordWebhook(content: string): Promise<void> {
+type DiscordWebhookEmbed = {
+  title?: string
+  description?: string
+  color?: number
+}
+
+type DiscordWebhookPayload = {
+  content?: string
+  username?: string
+  embeds?: DiscordWebhookEmbed[]
+  allowed_mentions?: DiscordAllowedMentions
+}
+
+type DiscordWebhookInput = string | DiscordWebhookPayload
+
+const DEFAULT_DISCORD_USERNAME = "Techtool App"
+
+export async function postToDiscordWebhook(input: DiscordWebhookInput): Promise<void> {
   if (!DISCORD_WEBHOOK_URL) {
     return
   }
 
-  const payload: DiscordWebhookPayload = { content }
+  const payload: DiscordWebhookPayload =
+    typeof input === "string"
+      ? { content: input, username: DEFAULT_DISCORD_USERNAME }
+      : {
+          ...input,
+          username: input.username || DEFAULT_DISCORD_USERNAME,
+        }
 
   try {
     const response = await fetch(DISCORD_WEBHOOK_URL, {
@@ -29,7 +54,9 @@ export async function postToDiscordWebhook(content: string): Promise<void> {
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error ?? "Unknown error")
-    console.error("Failed to send Discord webhook request", message.slice(0, 500))
+    console.error("Failed to send Discord webhook request", message.slice(0, 500), {
+      payloadPreview: JSON.stringify(payload).slice(0, 500),
+    })
   }
 }
 
