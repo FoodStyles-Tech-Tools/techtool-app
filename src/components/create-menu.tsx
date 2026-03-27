@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@client/components/ui/button"
+import { isEditableElement, shouldIgnoreGlobalHotkey } from "@client/lib/keyboard"
 
 interface CreateMenuProps {
   canCreateTicket: boolean
@@ -34,15 +35,19 @@ export function CreateMenu({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null
-      const isInputElement =
-        target &&
-        (target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable)
+      if (shouldIgnoreGlobalHotkey(event)) {
+        return
+      }
 
-      if (isInputElement) {
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return
+      }
+
+      if (event.repeat) {
+        return
+      }
+
+      if (isEditableElement(event.target)) {
         return
       }
 

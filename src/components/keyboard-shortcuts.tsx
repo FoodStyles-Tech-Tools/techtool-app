@@ -9,6 +9,7 @@ import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import { useUsers } from "@client/hooks/use-users"
 import { useDepartments } from "@client/hooks/use-departments"
 import { toast } from "@client/components/ui/toast"
+import { isEditableElement, shouldIgnoreGlobalHotkey } from "@client/lib/keyboard"
 import {
   Dialog,
   DialogContent,
@@ -214,16 +215,14 @@ export function KeyboardShortcuts() {
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (shouldIgnoreGlobalHotkey(e)) {
+        return
+      }
+
       // Detect platform (Mac uses Meta key, Windows/Linux use Ctrl)
       const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0
       const modifierKey = isMac ? e.metaKey : e.ctrlKey
-      const targetForInput = e.target as HTMLElement | null
-      const isInputElement = targetForInput && (
-        targetForInput.tagName === "INPUT" ||
-        targetForInput.tagName === "TEXTAREA" ||
-        targetForInput.tagName === "SELECT" ||
-        targetForInput.isContentEditable
-      )
+      const isInputElement = isEditableElement(e.target)
 
       // CTRL+K / COMMAND+K: Open command palette (platform: Mac = Meta, Windows/Linux = Ctrl)
       if (modifierKey && (e.key === "k" || e.key === "K")) {
@@ -236,13 +235,10 @@ export function KeyboardShortcuts() {
       }
     }
 
-    // Use capture phase to catch the event before it reaches other handlers
-    // Also attach to window to ensure we catch events even when focus is lost
-    document.addEventListener("keydown", handleKeyDown, true)
+    // Use capture phase so we can safely prevent default browser shortcuts before handlers run
     window.addEventListener("keydown", handleKeyDown, true)
 
     return () => {
-      document.removeEventListener("keydown", handleKeyDown, true)
       window.removeEventListener("keydown", handleKeyDown, true)
     }
   }, [session, isPending, isCommandPaletteOpen])

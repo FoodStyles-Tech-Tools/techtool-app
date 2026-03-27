@@ -37,15 +37,20 @@ const Dialog = ({ children, open, defaultOpen = false, onOpenChange }: DialogPro
   const currentOpen = isControlled ? open : uncontrolledOpen
   const titleId = React.useId()
   const descriptionId = React.useId()
+  const onOpenChangeRef = React.useRef(onOpenChange)
+
+  React.useEffect(() => {
+    onOpenChangeRef.current = onOpenChange
+  }, [onOpenChange])
 
   const setOpen = React.useCallback(
     (nextOpen: boolean) => {
       if (!isControlled) {
         setUncontrolledOpen(nextOpen)
       }
-      onOpenChange?.(nextOpen)
+      onOpenChangeRef.current?.(nextOpen)
     },
-    [isControlled, onOpenChange]
+    [isControlled]
   )
 
   return (

@@ -23,6 +23,7 @@ import { useSession } from "@client/lib/auth-client"
 import { usePermissions } from "@client/hooks/use-permissions"
 import { toast } from "@client/components/ui/toast"
 import { cn } from "@client/lib/utils"
+import { isEditableElement, shouldIgnoreGlobalHotkey } from "@client/lib/keyboard"
 import { getSanitizedHtmlProps } from "@client/lib/sanitize-html"
 import { isRichTextEmpty, normalizeRichTextInput, richTextToPlainText, toDisplayHtml } from "@shared/rich-text"
 
@@ -972,10 +973,9 @@ export function TicketComments({
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (shouldIgnoreGlobalHotkey(e)) return
       if (e.key !== "r" && e.key !== "R") return
-      const target = e.target as HTMLElement | null
-      const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.isContentEditable
-      if (isInput) return
+      if (isEditableElement(e.target)) return
       if (!hoveredCommentId) return
       e.preventDefault()
       setReplyingToId(hoveredCommentId)

@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from "@client/components/ui/form"
 import { Input } from "@client/components/ui/input"
+import { Textarea } from "@client/components/ui/textarea"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -207,9 +208,9 @@ export function CreateSubtaskDialog({
                 <FormItem>
                   <FormLabel>Description (optional)</FormLabel>
                   <FormControl>
-                    <textarea
+                    <Textarea
                       placeholder="Add details..."
-                      className={inputClassNameLg + " min-h-[80px] resize-y"}
+                      className="min-h-[80px] resize-y"
                       {...field}
                       value={field.value ?? ""}
                     />
