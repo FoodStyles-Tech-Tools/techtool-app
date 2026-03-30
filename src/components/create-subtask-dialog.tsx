@@ -59,6 +59,7 @@ export function CreateSubtaskDialog({
   parentTicketId,
   parentDisplayId,
   parentTitle,
+  projectId,
   departmentId,
   parentRequestedById,
   onSuccess,
