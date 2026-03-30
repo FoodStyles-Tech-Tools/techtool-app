@@ -3,23 +3,18 @@ export type TicketStatus = {
   label: string
   color: string
   sort_order: number
+  sqa_flow: boolean
 }
 
 export const DEFAULT_TICKET_STATUSES: TicketStatus[] = [
-  { key: "open", label: "Open", sort_order: 1, color: "#9ca3af" },
-  { key: "in_progress", label: "In Progress", sort_order: 2, color: "#f59e0b" },
-  { key: "blocked", label: "Blocked", sort_order: 3, color: "#a855f7" },
-  { key: "for_qa", label: "For QA", sort_order: 4, color: "#38bdf8" },
-  { key: "qa_pass", label: "QA Pass", sort_order: 5, color: "#14b8a6" },
-  { key: "completed", label: "Completed", sort_order: 6, color: "#22c55e" },
-  { key: "cancelled", label: "Cancelled", sort_order: 7, color: "#ef4444" },
+  { key: "open", label: "Open", sort_order: 1, color: "#9ca3af", sqa_flow: false },
+  { key: "in_progress", label: "In Progress", sort_order: 2, color: "#f59e0b", sqa_flow: false },
+  { key: "blocked", label: "Blocked", sort_order: 3, color: "#a855f7", sqa_flow: false },
+  { key: "for_qa", label: "For QA", sort_order: 4, color: "#38bdf8", sqa_flow: true },
+  { key: "qa_pass", label: "QA Pass", sort_order: 5, color: "#14b8a6", sqa_flow: true },
+  { key: "completed", label: "Completed", sort_order: 6, color: "#22c55e", sqa_flow: false },
+  { key: "cancelled", label: "Cancelled", sort_order: 7, color: "#ef4444", sqa_flow: false },
 ]
-
-export const SQA_ONLY_STATUS_KEYS = new Set([
-  "returned_to_dev",
-  "for_qa",
-  "qa_pass",
-])
 
 export const normalizeStatusKey = (value: string | null | undefined): string =>
   (value ?? "")
@@ -46,13 +41,10 @@ export const isArchivedStatus = (key: string) =>
 export const isDoneStatus = (key: string) =>
   key === "completed" || key === "cancelled" || key === "rejected"
 
-export const isSqaOnlyStatus = (key: string) =>
-  SQA_ONLY_STATUS_KEYS.has(normalizeStatusKey(key))
-
 export const filterStatusesBySqaRequirement = (
   statuses: TicketStatus[],
   requireSqa: boolean
-) => (requireSqa ? statuses : statuses.filter((status) => !isSqaOnlyStatus(status.key)))
+) => (requireSqa ? statuses : statuses.filter((status) => status.sqa_flow !== true))
 
 /** Build API body for a status change (started_at, completed_at, reason). Caller adds status and optional reason. */
 export function buildStatusChangeBody(

@@ -43,6 +43,7 @@ export function TicketProjectEntityDialogs({
             <DialogTitle>Create Sprint</DialogTitle>
           </DialogHeader>
           <SprintForm
+            projectId={projectId}
             onSuccess={() => {
               onSprintOpenChange(false)
             }}

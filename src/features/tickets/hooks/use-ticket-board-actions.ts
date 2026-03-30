@@ -3,8 +3,9 @@
 import { useCallback, useState } from "react"
 import { toast } from "@client/components/ui/toast"
 import type { Ticket } from "@shared/types"
-import { isSqaOnlyStatus, normalizeStatusKey } from "@shared/ticket-statuses"
+import { normalizeStatusKey } from "@shared/ticket-statuses"
 import { FIELD_LABELS, type TicketMutationField } from "@shared/ticket-constants"
+import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import {
   closeTicketSubtasksToStatus,
   resolveTicketDoneStatusGuard,
@@ -38,6 +39,7 @@ export function useTicketBoardActions({
   askHowToHandleOpenSubtasks,
   updateTicket,
 }: UseTicketBoardActionsParams) {
+  const { statusMap } = useTicketStatuses({ realtime: false })
   const [updatingFields, setUpdatingFields] = useState<Record<string, string>>({})
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null)
   const [isTicketDialogOpen, setTicketDialogOpen] = useState(false)
@@ -68,7 +70,8 @@ export function useTicketBoardActions({
       if (!ticket || ticket.status === columnId) return false
 
       const targetStatusKey = normalizeStatusKey(columnId)
-      if (isSqaOnlyStatus(targetStatusKey)) {
+      const targetStatus = statusMap.get(targetStatusKey) || statusMap.get(columnId)
+      if (targetStatus?.sqa_flow === true) {
         const requiresSqa = ticket.project?.require_sqa === true
         if (!requiresSqa) {
           toast("This project does not require SQA, so this status cannot be used.", "error")
@@ -95,7 +98,7 @@ export function useTicketBoardActions({
         return false
       }
     },
-    [allTickets, resolveDoneStatusGuard, updateTicket]
+    [allTickets, resolveDoneStatusGuard, statusMap, updateTicket]
   )
 
   const handleCopyTicketLabel = useCallback((ticket: Ticket) => {

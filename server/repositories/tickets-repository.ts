@@ -76,7 +76,7 @@ export function findParentTicket(supabase: SupabaseClientLike, ticketId: string)
 export function findTicketForUpdate(supabase: SupabaseClientLike, ticketId: string) {
   return supabase
     .from("tickets")
-    .select("assignee_id, sqa_assignee_id, assigned_at, sqa_assigned_at, status, started_at, completed_at, created_at")
+    .select("assignee_id, sqa_assignee_id, assigned_at, sqa_assigned_at, status, started_at, completed_at, created_at, project_id")
     .eq("id", ticketId)
     .maybeSingle()
 }
@@ -88,9 +88,32 @@ export function findUserRoleById(supabase: SupabaseClientLike, userId: string) {
 export function findTicketForStatusReason(supabase: SupabaseClientLike, ticketId: string) {
   return supabase
     .from("tickets")
-    .select("id, status, sqa_assignee_id, started_at")
+    .select("id, status, sqa_assignee_id, started_at, project_id")
     .eq("id", ticketId)
     .maybeSingle()
+}
+
+export function findTicketStatusConfig(supabase: SupabaseClientLike, statusKey: string) {
+  return supabase
+    .from("ticket_statuses")
+    .select("key, sqa_flow")
+    .eq("key", statusKey)
+    .maybeSingle()
+}
+
+export function findProjectSqaRequirementById(supabase: SupabaseClientLike, projectId: string) {
+  return supabase
+    .from("projects")
+    .select("id, require_sqa")
+    .eq("id", projectId)
+    .maybeSingle()
+}
+
+export function findProjectsSqaRequirementsByIds(supabase: SupabaseClientLike, projectIds: string[]) {
+  return supabase
+    .from("projects")
+    .select("id, require_sqa")
+    .in("id", projectIds)
 }
 
 export function insertTicket(
@@ -120,7 +143,7 @@ export function getTicketByIdWithRelations(supabase: SupabaseClientLike, ticketI
 }
 
 export function findTicketsForBatchStatus(supabase: SupabaseClientLike, ticketIds: string[]) {
-  return supabase.from("tickets").select("id, status, started_at").in("id", ticketIds)
+  return supabase.from("tickets").select("id, status, started_at, project_id").in("id", ticketIds)
 }
 
 export function updateTicketStatusBatch(

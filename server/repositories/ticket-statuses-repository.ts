@@ -5,6 +5,7 @@ export type TicketStatusRecord = {
   label: string
   sort_order: number
   color: string
+  sqa_flow: boolean
   created_at?: string
   updated_at?: string
 }
@@ -14,7 +15,7 @@ type SupabaseClient = Awaited<ReturnType<typeof import("@server/lib/supabase").c
 export async function listTicketStatuses(supabase: SupabaseClient): Promise<TicketStatusRecord[]> {
   const { data, error } = await supabase
     .from("ticket_statuses")
-    .select("key, label, sort_order, color, created_at, updated_at")
+    .select("key, label, sort_order, color, sqa_flow, created_at, updated_at")
     .order("sort_order", { ascending: true })
     .order("label", { ascending: true })
 
@@ -33,7 +34,7 @@ export async function createTicketStatus(
   const { data, error } = await supabase
     .from("ticket_statuses")
     .insert(input)
-    .select("key, label, sort_order, color, created_at, updated_at")
+    .select("key, label, sort_order, color, sqa_flow, created_at, updated_at")
     .single()
 
   if (error) {
@@ -57,7 +58,7 @@ export async function updateTicketStatus(
     .from("ticket_statuses")
     .update(updates)
     .eq("key", key)
-    .select("key, label, sort_order, color, created_at, updated_at")
+    .select("key, label, sort_order, color, sqa_flow, created_at, updated_at")
     .maybeSingle()
 
   if (error) {

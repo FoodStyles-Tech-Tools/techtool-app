@@ -70,6 +70,7 @@ const createSprintBodySchema = z.object({
   description: optionalNullableString,
   start_date: optionalNullableString,
   end_date: optionalNullableString,
+  projectId: optionalNullableString,
 })
 
 const updateSprintBodySchema = z
@@ -150,7 +151,14 @@ export function parseUpdateEpicBody(input: unknown): UpdateEpicInput {
 }
 
 export function parseCreateSprintBody(input: unknown) {
-  return createSprintBodySchema.parse(input)
+  const body = asRecord(input)
+  return createSprintBodySchema.parse({
+    name: readCompatValue(body, "name"),
+    description: readCompatValue(body, "description"),
+    start_date: readCompatValue(body, "startDate", "start_date"),
+    end_date: readCompatValue(body, "endDate", "end_date"),
+    projectId: readCompatValue(body, "projectId", "project_id"),
+  })
 }
 
 export function parseUpdateSprintBody(input: unknown): UpdateSprintInput {

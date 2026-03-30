@@ -1,6 +1,6 @@
 import { normalizeRichTextInput, isRichTextEmpty } from "@shared/rich-text"
 import { prepareLinkPayload } from "@shared/links"
-import { buildStatusChangeBody } from "@shared/ticket-statuses"
+import { buildStatusChangeBody, normalizeStatusKey } from "@shared/ticket-statuses"
 import { invalidateTicketCaches } from "@server/lib/ticket-cache"
 import { HttpError } from "@server/http/http-error"
 import * as ticketsRepository from "@server/repositories/tickets-repository"
@@ -44,6 +44,63 @@ function parseOptionalTimestamp(value: string | null | undefined) {
   }
 
   return value
+}
+
+async function isSqaFlowStatus(
+  supabase: TicketRequestContext["supabase"],
+  status: string | null | undefined
+) {
+  const normalizedStatus = normalizeStatusKey(status)
+  if (!normalizedStatus) {
+    return false
+  }
+
+  const { data: statusConfig, error } = await ticketsRepository.findTicketStatusConfig(
+    supabase,
+    normalizedStatus
+  )
+
+  if (error) {
+    console.error("Error loading status config:", error)
+    throw new HttpError(500, "Failed to validate status flow")
+  }
+
+  return statusConfig?.sqa_flow === true
+}
+
+async function assertSqaFlowStatusAllowed(
+  supabase: TicketRequestContext["supabase"],
+  status: string | null | undefined,
+  projectId: string | null | undefined
+) {
+  const requiresSqaFlow = await isSqaFlowStatus(supabase, status)
+  if (!requiresSqaFlow) {
+    return
+  }
+
+  if (!projectId) {
+    throw new HttpError(
+      400,
+      "This status requires SQA Flow and can only be used for tickets in projects with Require SQA enabled."
+    )
+  }
+
+  const { data: project, error } = await ticketsRepository.findProjectSqaRequirementById(
+    supabase,
+    projectId
+  )
+
+  if (error) {
+    console.error("Error validating project SQA requirement:", error)
+    throw new HttpError(500, "Failed to validate project SQA requirement")
+  }
+
+  if (!project?.require_sqa) {
+    throw new HttpError(
+      400,
+      "This status requires SQA Flow and can only be used for tickets in projects with Require SQA enabled."
+    )
+  }
 }
 
 async function assertValidParentTicket(
@@ -137,10 +194,13 @@ export async function createTicket(context: TicketRequestContext, input: CreateT
   const now = new Date().toISOString()
   const assigneeId = input.assigneeId || null
   const sqaAssigneeId = input.sqaAssigneeId || null
+  const projectId = input.projectId || null
   const status = (input.status || "open").trim()
 
+  await assertSqaFlowStatusAllowed(context.supabase, status, projectId)
+
   const { data: ticket, error } = await ticketsRepository.insertTicket(context.supabase, {
-    project_id: input.projectId || null,
+    project_id: projectId,
     title: input.title,
     description: normalizeRichTextInput(input.description),
     assignee_id: assigneeId,
@@ -254,6 +314,17 @@ export async function updateTicket(
     if (input.parentTicketId) {
       await assertValidParentTicket(context.supabase, input.parentTicketId)
     }
+  }
+
+  if (hasField("status") || hasField("projectId", "project_id")) {
+    const effectiveStatus = hasField("status")
+      ? input.status || null
+      : ((currentTicket.status as string | null) || null)
+    const effectiveProjectId = hasField("projectId", "project_id")
+      ? input.projectId || null
+      : ((currentTicket.project_id as string | null) || null)
+
+    await assertSqaFlowStatusAllowed(context.supabase, effectiveStatus, effectiveProjectId)
   }
 
   const updates: Record<string, unknown> = {
@@ -434,6 +505,12 @@ export async function updateTicketStatusWithReason(
     )
   }
 
+  await assertSqaFlowStatusAllowed(
+    context.supabase,
+    input.status,
+    (currentTicket.project_id as string | null) || null
+  )
+
   const now = new Date().toISOString()
   const previousStatus = (currentTicket.status as string | null) || null
 
@@ -531,6 +608,49 @@ export async function batchUpdateTicketStatus(
 
   if (!currentTickets?.length) {
     throw new HttpError(404, "Tickets not found")
+  }
+
+  const targetStatusRequiresSqaFlow = await isSqaFlowStatus(context.supabase, input.status)
+  if (targetStatusRequiresSqaFlow) {
+    const projectIds = Array.from(
+      new Set(
+        currentTickets
+          .map((ticket) => (ticket.project_id as string | null) || null)
+          .filter((projectId): projectId is string => Boolean(projectId))
+      )
+    )
+
+    const projectRequireSqaById = new Map<string, boolean>()
+    if (projectIds.length > 0) {
+      const { data: projects, error: projectsError } = await ticketsRepository.findProjectsSqaRequirementsByIds(
+        context.supabase,
+        projectIds
+      )
+
+      if (projectsError) {
+        console.error("Error validating project SQA requirements for batch update:", projectsError)
+        throw new HttpError(500, "Failed to validate project SQA requirement")
+      }
+
+      for (const project of projects || []) {
+        projectRequireSqaById.set(project.id, project.require_sqa === true)
+      }
+    }
+
+    const invalidTickets = currentTickets.filter((ticket) => {
+      const projectId = (ticket.project_id as string | null) || null
+      if (!projectId) {
+        return true
+      }
+      return projectRequireSqaById.get(projectId) !== true
+    })
+
+    if (invalidTickets.length > 0) {
+      throw new HttpError(
+        400,
+        `Cannot move to "${input.status}" because ${invalidTickets.length} ticket(s) are not in projects with Require SQA enabled.`
+      )
+    }
   }
 
   const results = await Promise.all(

@@ -69,6 +69,7 @@ export async function createSprint(context: RequestContext, input: CreateSprintI
     description: input.description || null,
     start_date: input.start_date || null,
     end_date: input.end_date || null,
+    projectId: input.projectId || null,
   })
 
   return { sprint }

@@ -30,6 +30,16 @@ function mapCreateError(error: { message?: string; code?: string; hint?: string 
     return new HttpError(403, "Permission denied. Please check RLS policies.")
   }
 
+  if (
+    errorMessage.includes('column "project_id"') &&
+    errorMessage.includes("not-null constraint")
+  ) {
+    return new HttpError(
+      400,
+      "Project is required to create sprint in this workspace. Please select a project."
+    )
+  }
+
   return new HttpError(500, errorMessage)
 }
 
@@ -72,13 +82,47 @@ export async function createSprint(
     description: string | null
     start_date: string | null
     end_date: string | null
+    projectId: string | null
   }
 ) {
+  const basePayload = {
+    name: input.name,
+    description: input.description,
+    start_date: input.start_date,
+    end_date: input.end_date,
+  }
+
   const { data, error } = await supabase
     .from("sprints")
-    .insert(input)
+    .insert(basePayload)
     .select(SPRINT_SELECT)
     .single()
+
+  if (
+    error &&
+    error.message?.includes('column "project_id"') &&
+    error.message?.includes("not-null constraint")
+  ) {
+    if (!input.projectId) {
+      throw mapCreateError(error)
+    }
+
+    const { data: retryData, error: retryError } = await supabase
+      .from("sprints")
+      .insert({
+        ...basePayload,
+        project_id: input.projectId,
+      })
+      .select(SPRINT_SELECT)
+      .single()
+
+    if (retryError || !retryData) {
+      console.error("Error creating sprint (retry with project_id):", retryError)
+      throw mapCreateError(retryError)
+    }
+
+    return retryData as SprintRecord
+  }
 
   if (error || !data) {
     console.error("Error creating sprint:", error)

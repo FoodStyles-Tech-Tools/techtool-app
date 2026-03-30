@@ -12,6 +12,7 @@ const createTicketStatusBodySchema = z.object({
   label: z.string().trim().min(1, "Label is required"),
   color: z.string().optional(),
   sort_order: z.unknown().optional(),
+  sqa_flow: z.boolean().optional(),
 })
 
 const updateTicketStatusBodySchema = z
@@ -19,12 +20,14 @@ const updateTicketStatusBodySchema = z
     label: z.string().optional(),
     color: z.string().optional(),
     sort_order: z.unknown().optional(),
+    sqa_flow: z.boolean().optional(),
   })
   .refine(
     (body) =>
       body.label !== undefined ||
       body.color !== undefined ||
-      body.sort_order !== undefined,
+      body.sort_order !== undefined ||
+      body.sqa_flow !== undefined,
     {
       message: "No updates provided",
     }
@@ -42,12 +45,14 @@ export type CreateTicketStatusInput = {
   label: string
   color: string
   sort_order: number
+  sqa_flow: boolean
 }
 
 export type UpdateTicketStatusInput = {
   label?: string
   color?: string
   sort_order?: number
+  sqa_flow?: boolean
 }
 
 function normalizeColor(color: string | undefined) {
@@ -93,6 +98,7 @@ export function parseCreateTicketStatusBody(input: unknown): CreateTicketStatusI
     label: body.label.trim(),
     color: normalizeColor(body.color),
     sort_order: normalizeSortOrder(body.sort_order),
+    sqa_flow: body.sqa_flow ?? false,
   }
 }
 
@@ -120,6 +126,10 @@ export function parseUpdateTicketStatusBody(input: unknown): UpdateTicketStatusI
 
   if (body.sort_order !== undefined) {
     updates.sort_order = normalizeSortOrder(body.sort_order)
+  }
+
+  if (body.sqa_flow !== undefined) {
+    updates.sqa_flow = body.sqa_flow
   }
 
   return updates

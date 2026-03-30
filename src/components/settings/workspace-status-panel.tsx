@@ -1,13 +1,14 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { PlusIcon } from "@heroicons/react/20/solid"
+import { ChevronDownIcon, ChevronUpIcon, PlusIcon } from "@heroicons/react/20/solid"
 import { Button } from "@client/components/ui/button"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { PageHeader } from "@client/components/ui/page-header"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import { Input } from "@client/components/ui/input"
 import { Label } from "@client/components/ui/label"
+import { Switch } from "@client/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ import { toast } from "@client/components/ui/toast"
 type StatusDraft = {
   label: string
   color: string
+  sqaFlow: boolean
 }
 
 type StatusRow = TicketStatus & {
@@ -47,8 +49,9 @@ export function WorkspaceStatusPanel() {
   const { statuses, loading, refresh } = useTicketStatuses({ fallback: false, enabled: canManageStatus })
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingStatus, setEditingStatus] = useState<TicketStatus | null>(null)
-  const [draft, setDraft] = useState<StatusDraft>({ label: "", color: DEFAULT_COLOR })
+  const [draft, setDraft] = useState<StatusDraft>({ label: "", color: DEFAULT_COLOR, sqaFlow: false })
   const [saving, setSaving] = useState(false)
+  const [reordering, setReordering] = useState(false)
   const [statusToDelete, setStatusToDelete] = useState<TicketStatus | null>(null)
 
   const sortedStatuses = useMemo<StatusRow[]>(
@@ -58,7 +61,7 @@ export function WorkspaceStatusPanel() {
 
   const openCreate = () => {
     setEditingStatus(null)
-    setDraft({ label: "", color: DEFAULT_COLOR })
+    setDraft({ label: "", color: DEFAULT_COLOR, sqaFlow: false })
     setDialogOpen(true)
   }
 
@@ -67,8 +70,42 @@ export function WorkspaceStatusPanel() {
     setDraft({
       label: status.label,
       color: status.color || DEFAULT_COLOR,
+      sqaFlow: status.sqa_flow === true,
     })
     setDialogOpen(true)
+  }
+
+  const handleMoveStatus = async (statusKey: string, direction: "up" | "down") => {
+    const currentIndex = sortedStatuses.findIndex((status) => status.key === statusKey)
+    if (currentIndex === -1) return
+
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1
+    if (targetIndex < 0 || targetIndex >= sortedStatuses.length) return
+
+    const reordered = [...sortedStatuses]
+    const [moved] = reordered.splice(currentIndex, 1)
+    reordered.splice(targetIndex, 0, moved)
+
+    setReordering(true)
+    try {
+      const res = await fetch("/api/ticket-statuses/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: reordered.map((status) => status.key) }),
+      })
+
+      if (!res.ok) {
+        const error = await res.json().catch(() => null)
+        throw new Error(error?.error || "Failed to reorder statuses")
+      }
+
+      await refresh()
+      toast("Status order updated")
+    } catch (error: any) {
+      toast(error.message || "Failed to reorder statuses", "error")
+    } finally {
+      setReordering(false)
+    }
   }
 
   const handleSave = async () => {
@@ -97,12 +134,14 @@ export function WorkspaceStatusPanel() {
             label: trimmedLabel,
             color: normalizedColor,
             sort_order: editingStatus.sort_order,
+            sqa_flow: draft.sqaFlow,
           }
         : {
             key: normalizedKey,
             label: trimmedLabel,
             color: normalizedColor,
             sort_order: sortedStatuses.length + 1,
+            sqa_flow: draft.sqaFlow,
           }
 
       const res = await fetch(
@@ -178,19 +217,20 @@ export function WorkspaceStatusPanel() {
               <TableHead>Label</TableHead>
               <TableHead>Key</TableHead>
               <TableHead>Color</TableHead>
+              <TableHead>SQA Flow</TableHead>
               <TableHead>Order</TableHead>
               <TableHead>Updated</TableHead>
-              <TableHead className="w-[60px] text-right">Actions</TableHead>
+              <TableHead className="w-[180px] text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8" />
+                <TableCell colSpan={7} className="py-8" />
               </TableRow>
             ) : sortedStatuses.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
                   No statuses found.
                 </TableCell>
               </TableRow>
@@ -208,6 +248,7 @@ export function WorkspaceStatusPanel() {
                       <span className="text-sm">{status.color}</span>
                     </div>
                   </TableCell>
+                  <TableCell>{status.sqa_flow ? "Yes" : "No"}</TableCell>
                   <TableCell>{status.sort_order}</TableCell>
                   <TableCell>{status.updated_at ? new Date(status.updated_at).toLocaleDateString() : "-"}</TableCell>
                   <TableCell>
@@ -216,7 +257,30 @@ export function WorkspaceStatusPanel() {
                         variant="ghost"
                         size="sm"
                         type="button"
+                        onClick={() => void handleMoveStatus(status.key, "up")}
+                        aria-label={`Move ${status.label} up`}
+                        title="Move up"
+                        disabled={reordering || sortedStatuses[0]?.key === status.key}
+                      >
+                        <ChevronUpIcon className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() => void handleMoveStatus(status.key, "down")}
+                        aria-label={`Move ${status.label} down`}
+                        title="Move down"
+                        disabled={reordering || sortedStatuses[sortedStatuses.length - 1]?.key === status.key}
+                      >
+                        <ChevronDownIcon className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
                         onClick={() => openEdit(status)}
+                        disabled={reordering}
                         aria-label={`Edit ${status.label}`}
                         title="Edit status"
                       >
@@ -227,6 +291,7 @@ export function WorkspaceStatusPanel() {
                         size="sm"
                         type="button"
                         onClick={() => setStatusToDelete(status)}
+                        disabled={reordering}
                         aria-label={`Delete ${status.label}`}
                         title="Delete status"
                       >
@@ -254,7 +319,7 @@ export function WorkspaceStatusPanel() {
           <DialogHeader>
             <DialogTitle>{editingStatus ? "Edit Status" : "Create Status"}</DialogTitle>
             <DialogDescription>
-              {editingStatus ? "Update the status label and color." : "Create a new ticket status."}
+              {editingStatus ? "Update label, color, and SQA Flow behavior." : "Create a new ticket status."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -284,6 +349,19 @@ export function WorkspaceStatusPanel() {
                   className="font-mono"
                 />
               </div>
+            </div>
+            <div className="flex items-start justify-between gap-4 rounded-md border border-border px-3 py-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="status-sqa-flow">SQA Flow</Label>
+                <p className="text-xs text-muted-foreground">
+                  If enabled, this status is only valid for tickets in projects with Require SQA.
+                </p>
+              </div>
+              <Switch
+                id="status-sqa-flow"
+                checked={draft.sqaFlow}
+                onCheckedChange={(checked) => setDraft((prev) => ({ ...prev, sqaFlow: checked }))}
+              />
             </div>
           </div>
           <DialogFooter>

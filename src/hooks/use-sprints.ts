@@ -57,6 +57,7 @@ export function useCreateSprint() {
       description?: string
       start_date?: string | null
       end_date?: string | null
+      projectId?: string | null
     }) => requestJson<{ sprint: Sprint }>("/api/sprints", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
