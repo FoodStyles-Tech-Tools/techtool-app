@@ -10,6 +10,7 @@ import {
   resolveTicketDoneStatusGuard,
 } from "@client/features/tickets/api/client"
 import { buildAssignmentPayload, DONE_STATUS_KEYS } from "@client/features/tickets/lib/update-payloads"
+import { buildTicketClipboardLabel } from "@client/features/tickets/lib/share-url"
 import type { TicketStatusGuardResult, TicketSubtaskDecision, TicketSubtaskRow } from "@client/features/tickets/types"
 
 type PendingStatusChange = {
@@ -98,8 +99,7 @@ export function useTicketBoardActions({
   )
 
   const handleCopyTicketLabel = useCallback((ticket: Ticket) => {
-    const projectName = ticket.project?.name || "No Project"
-    const label = `[${projectName}] ${ticket.displayId || ticket.id.slice(0, 8)}_${ticket.title}`
+    const label = buildTicketClipboardLabel(ticket)
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard
         .writeText(label)

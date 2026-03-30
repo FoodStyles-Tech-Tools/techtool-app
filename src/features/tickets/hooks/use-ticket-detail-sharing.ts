@@ -2,7 +2,10 @@
 
 import { toast } from "@client/components/ui/toast"
 import type { Ticket } from "@shared/types"
-import { buildTicketShareUrl } from "@client/features/tickets/lib/share-url"
+import {
+  buildTicketClipboardLabel,
+  buildTicketShareUrl,
+} from "@client/features/tickets/lib/share-url"
 
 type UseTicketDetailSharingParams = {
   ticket: Ticket | null | undefined
@@ -11,9 +14,7 @@ type UseTicketDetailSharingParams = {
 export function useTicketDetailSharing({ ticket }: UseTicketDetailSharingParams) {
   const handleCopyTicketLabel = () => {
     if (!ticket) return
-    const projectName = ticket.project?.name || "No Project"
-    const ticketIdLabel = ticket.displayId || ticket.id.slice(0, 8)
-    const label = `[${projectName}] ${ticketIdLabel}_${ticket.title}`
+    const label = buildTicketClipboardLabel(ticket)
     if (!navigator?.clipboard?.writeText) {
       toast("Clipboard not available", "error")
       return

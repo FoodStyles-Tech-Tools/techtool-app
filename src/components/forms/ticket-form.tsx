@@ -525,7 +525,7 @@ export function TicketForm({
             </FormItem>
           )}
         />
-        {effectiveProjectId && epics.length > 0 && (
+        {effectiveProjectId && (
           <FormField
             control={form.control}
             name="epic_id"

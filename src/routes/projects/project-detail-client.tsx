@@ -4,7 +4,12 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "rea
 import { useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { ArrowPathIcon, MagnifyingGlassIcon, PlusIcon } from "@heroicons/react/20/solid"
-import { ShareIcon, TableCellsIcon, ViewColumnsIcon } from "@heroicons/react/24/outline"
+import {
+  ClipboardDocumentIcon,
+  ShareIcon,
+  TableCellsIcon,
+  ViewColumnsIcon,
+} from "@heroicons/react/24/outline"
 import { useProject, useProjects } from "@client/hooks/use-projects"
 import { useDepartments } from "@client/hooks/use-departments"
 import { useUsers } from "@client/hooks/use-users"
@@ -60,7 +65,10 @@ import { toast } from "@client/components/ui/toast"
 import { useTicketPreview } from "@client/features/tickets/context/ticket-preview-context"
 import { TicketsBoard } from "@client/features/tickets/components/tickets-board"
 import { TicketsDialogs } from "@client/features/tickets/components/tickets-dialogs"
-import { buildTicketShareUrl } from "@client/features/tickets/lib/share-url"
+import {
+  buildTicketClipboardLabel,
+  buildTicketShareUrl,
+} from "@client/features/tickets/lib/share-url"
 import { DeployRoundFormDialog } from "@client/components/deploy-rounds/deploy-round-form-dialog"
 import { DeployRoundManager } from "@client/components/deploy-rounds/deploy-round-manager"
 import type { Project } from "@shared/types"
@@ -389,6 +397,18 @@ export default function ProjectDetailClient({
       .writeText(shareUrl)
       .then(() => toast("Ticket URL copied"))
       .catch(() => toast("Failed to copy ticket URL", "error"))
+  }, [])
+  const handleCopyTicketLabel = useCallback((ticket: Ticket) => {
+    const label = buildTicketClipboardLabel(ticket)
+    if (!navigator?.clipboard?.writeText) {
+      toast("Clipboard not available", "error")
+      return
+    }
+
+    navigator.clipboard
+      .writeText(label)
+      .then(() => toast("Copied ticket info"))
+      .catch(() => toast("Failed to copy ticket info", "error"))
   }, [])
 
   const handlePageChange = useCallback((page: number) => {
@@ -1114,7 +1134,7 @@ function getTypeColor(type: string | null | undefined): string {
                           <TableHead className="h-9 py-2 text-muted-foreground">Reporter</TableHead>
                           <TableHead className="h-9 py-2 text-muted-foreground">Assignee</TableHead>
                           <TableHead className="h-9 py-2 text-muted-foreground">SQA</TableHead>
-                          <TableHead className="h-9 py-2 text-muted-foreground text-right">Share</TableHead>
+                          <TableHead className="h-9 py-2 text-muted-foreground text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1187,16 +1207,28 @@ function getTypeColor(type: string | null | undefined): string {
                               </TableCell>
                               <TableCell className="py-2 text-sm text-foreground">{sqaLabel}</TableCell>
                               <TableCell className="py-2 text-right">
-                                <button
-                                  type="button"
-                                  className="inline-flex h-7 w-7 items-center justify-center rounded border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground"
-                                  onClick={() => handleCopyShareUrl(ticket)}
-                                  aria-label="Copy share URL"
-                                  title="Copy share URL"
-                                  disabled={isBulkDeployRoundUpdating || isBulkTicketUpdating}
-                                >
-                                  <ShareIcon className="h-4 w-4" />
-                                </button>
+                                <div className="inline-flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground"
+                                    onClick={() => handleCopyTicketLabel(ticket)}
+                                    aria-label="Copy ticket info"
+                                    title="Copy ticket info"
+                                    disabled={isBulkDeployRoundUpdating || isBulkTicketUpdating}
+                                  >
+                                    <ClipboardDocumentIcon className="h-4 w-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="inline-flex h-7 w-7 items-center justify-center rounded border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground"
+                                    onClick={() => handleCopyShareUrl(ticket)}
+                                    aria-label="Copy share URL"
+                                    title="Copy share URL"
+                                    disabled={isBulkDeployRoundUpdating || isBulkTicketUpdating}
+                                  >
+                                    <ShareIcon className="h-4 w-4" />
+                                  </button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           )

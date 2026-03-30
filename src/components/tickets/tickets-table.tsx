@@ -1,7 +1,7 @@
 "use client"
 
 import { memo, useCallback } from "react"
-import { ShareIcon } from "@heroicons/react/24/outline"
+import { ClipboardDocumentIcon, ShareIcon } from "@heroicons/react/24/outline"
 import type { Ticket } from "@shared/types"
 import { cn } from "@client/lib/utils"
 import { formatRelativeDate, getDueDateDisplay } from "@client/lib/format-dates"
@@ -15,7 +15,10 @@ import { StatusPill } from "@client/components/tickets/status-pill"
 import { PriorityPill } from "@client/components/tickets/priority-pill"
 import { TicketTypePill } from "@client/components/ticket-type-select"
 import { toast } from "@client/components/ui/toast"
-import { buildTicketShareUrl } from "@client/features/tickets/lib/share-url"
+import {
+  buildTicketClipboardLabel,
+  buildTicketShareUrl,
+} from "@client/features/tickets/lib/share-url"
 import { EntityTableShell } from "@client/components/ui/entity-table-shell"
 import {
   Table,
@@ -51,6 +54,7 @@ interface TicketRowProps {
   isSelected: boolean
   onToggleTicketSelection?: (ticketId: string, checked: boolean) => void
   selectionDisabled: boolean
+  onCopyTicketLabel: (ticket: Ticket) => void
   onCopyShareUrl: (ticket: Ticket) => void
 }
 
@@ -64,6 +68,7 @@ const TicketRow = memo(function TicketRow({
   isSelected,
   onToggleTicketSelection,
   selectionDisabled,
+  onCopyTicketLabel,
   onCopyShareUrl,
 }: TicketRowProps) {
   const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
@@ -138,17 +143,29 @@ const TicketRow = memo(function TicketRow({
       <TableCell className="py-2 text-sm text-muted-foreground">
         {formatRelativeDate(ticket.createdAt)}
       </TableCell>
-      <TableCell className="w-[60px] py-2 text-right">
-        <button
-          type="button"
-          className="inline-flex h-7 w-7 items-center justify-center rounded border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground"
-          onClick={() => onCopyShareUrl(ticket)}
-          aria-label="Copy share URL"
-          title="Copy share URL"
-          disabled={selectionDisabled}
-        >
-          <ShareIcon className="h-4 w-4" />
-        </button>
+      <TableCell className="w-[84px] py-2 text-right">
+        <div className="inline-flex items-center gap-1">
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground"
+            onClick={() => onCopyTicketLabel(ticket)}
+            aria-label="Copy ticket info"
+            title="Copy ticket info"
+            disabled={selectionDisabled}
+          >
+            <ClipboardDocumentIcon className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className="inline-flex h-7 w-7 items-center justify-center rounded border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground"
+            onClick={() => onCopyShareUrl(ticket)}
+            aria-label="Copy share URL"
+            title="Copy share URL"
+            disabled={selectionDisabled}
+          >
+            <ShareIcon className="h-4 w-4" />
+          </button>
+        </div>
       </TableCell>
     </TableRow>
   )
@@ -192,6 +209,17 @@ export function TicketsTable({
       .writeText(shareUrl)
       .then(() => toast("Ticket URL copied"))
       .catch(() => toast("Failed to copy ticket URL", "error"))
+  }, [])
+  const handleCopyTicketLabel = useCallback((ticket: Ticket) => {
+    const label = buildTicketClipboardLabel(ticket)
+    if (!navigator?.clipboard?.writeText) {
+      toast("Clipboard not available", "error")
+      return
+    }
+    navigator.clipboard
+      .writeText(label)
+      .then(() => toast("Copied ticket info"))
+      .catch(() => toast("Failed to copy ticket info", "error"))
   }, [])
 
   return (
@@ -252,7 +280,7 @@ export function TicketsTable({
             <TableHead className="h-9 py-2">Project</TableHead>
             <TableHead className="h-9 py-2">Due</TableHead>
             <TableHead className="h-9 py-2">Created</TableHead>
-            <TableHead className="h-9 py-2 text-right">Share</TableHead>
+            <TableHead className="h-9 py-2 text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -276,6 +304,7 @@ export function TicketsTable({
                 isSelected={selectedTicketIds.includes(ticket.id)}
                 onToggleTicketSelection={onToggleTicketSelection}
                 selectionDisabled={selectionDisabled}
+                onCopyTicketLabel={handleCopyTicketLabel}
                 onCopyShareUrl={handleCopyShareUrl}
               />
             )
