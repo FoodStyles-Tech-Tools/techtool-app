@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router-dom"
 import { useQueryClient } from "@tanstack/react-query"
 import { ArrowPathIcon, MagnifyingGlassIcon, PlusIcon } from "@heroicons/react/20/solid"
 import { TableCellsIcon, ViewColumnsIcon } from "@heroicons/react/24/outline"
-import { useProject } from "@client/hooks/use-projects"
+import { useProject, useProjects } from "@client/hooks/use-projects"
 import { useDepartments } from "@client/hooks/use-departments"
 import { useUsers } from "@client/hooks/use-users"
 import { usePermissions } from "@client/hooks/use-permissions"
@@ -40,6 +40,7 @@ import { DataState } from "@client/components/ui/data-state"
 import { Button } from "@client/components/ui/button"
 import { FormDialogShell } from "@client/components/ui/form-dialog-shell"
 import { ProjectForm } from "@client/components/forms/project-form"
+import { EpicForm } from "@client/components/forms/epic-form"
 import { Input } from "@client/components/ui/input"
 import { Select } from "@client/components/ui/select"
 import { FilterField } from "@client/components/ui/filter-field"
@@ -138,6 +139,9 @@ const TYPE_OPTIONS = [
   { id: "subtask", label: "Subtask" },
 ] as const
 
+const BULK_NO_CHANGE = "__no_change__"
+const BULK_CLEAR_VALUE = "__clear__"
+
 export default function ProjectDetailClient({
   projectId,
   initialProject,
@@ -149,6 +153,7 @@ export default function ProjectDetailClient({
   const { data, isLoading } = useProject(projectId, {
     initialData: initialProject,
   })
+  const { data: projectsData } = useProjects({ realtime: false })
   const { departments } = useDepartments()
   const { data: usersData } = useUsers()
   const initialViewMode = searchParams.get("view") === "table" ? "table" : "kanban"
@@ -180,10 +185,17 @@ export default function ProjectDetailClient({
   const [typeFilter, setTypeFilter] = useState<string>("all")
   const [excludedStatuses, setExcludedStatuses] = useState<string[]>(() => [...DEFAULT_EXCLUDED_STATUSES])
   const [isCreateDeployRoundOpen, setCreateDeployRoundOpen] = useState(false)
+  const [isCreateEpicOpen, setCreateEpicOpen] = useState(false)
   const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
   const [isBulkDeployRoundOpen, setBulkDeployRoundOpen] = useState(false)
   const [bulkDeployRoundId, setBulkDeployRoundId] = useState<string>("")
   const [isBulkDeployRoundUpdating, setIsBulkDeployRoundUpdating] = useState(false)
+  const [isBulkEditOpen, setBulkEditOpen] = useState(false)
+  const [isBulkTicketUpdating, setIsBulkTicketUpdating] = useState(false)
+  const [bulkStatusValue, setBulkStatusValue] = useState<string>(BULK_NO_CHANGE)
+  const [bulkProjectValue, setBulkProjectValue] = useState<string>(BULK_NO_CHANGE)
+  const [bulkEpicValue, setBulkEpicValue] = useState<string>(BULK_NO_CHANGE)
+  const [bulkSprintValue, setBulkSprintValue] = useState<string>(BULK_NO_CHANGE)
 
   const deferredSearchQuery = useDeferredValue(searchQuery)
 
@@ -321,6 +333,13 @@ export default function ProjectDetailClient({
       ),
     [sprints]
   )
+  const bulkProjectOptionsAsc = useMemo(
+    () =>
+      [...(projectsData || [])].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" })
+      ),
+    [projectsData]
+  )
 
   const userOptions = useMemo(
     () =>
@@ -383,8 +402,93 @@ export default function ProjectDetailClient({
     [sortedTicketsForTable]
   )
 
+  const resetBulkEditFields = useCallback(() => {
+    setBulkStatusValue(BULK_NO_CHANGE)
+    setBulkProjectValue(BULK_NO_CHANGE)
+    setBulkEpicValue(BULK_NO_CHANGE)
+    setBulkSprintValue(BULK_NO_CHANGE)
+  }, [])
+
+  const hasBulkEditChanges = useMemo(
+    () =>
+      bulkStatusValue !== BULK_NO_CHANGE ||
+      bulkProjectValue !== BULK_NO_CHANGE ||
+      bulkEpicValue !== BULK_NO_CHANGE ||
+      bulkSprintValue !== BULK_NO_CHANGE,
+    [bulkStatusValue, bulkProjectValue, bulkEpicValue, bulkSprintValue]
+  )
+
+  const handleApplyBulkTicketUpdates = useCallback(async () => {
+    if (selectedTicketIds.length === 0) return
+
+    const updates: {
+      status?: string
+      projectId?: string | null
+      epicId?: string | null
+      sprintId?: string | null
+    } = {}
+
+    if (bulkStatusValue !== BULK_NO_CHANGE) {
+      updates.status = bulkStatusValue
+    }
+    if (bulkProjectValue !== BULK_NO_CHANGE) {
+      updates.projectId = bulkProjectValue === BULK_CLEAR_VALUE ? null : bulkProjectValue
+    }
+    if (bulkEpicValue !== BULK_NO_CHANGE) {
+      updates.epicId = bulkEpicValue === BULK_CLEAR_VALUE ? null : bulkEpicValue
+    }
+    if (bulkSprintValue !== BULK_NO_CHANGE) {
+      updates.sprintId = bulkSprintValue === BULK_CLEAR_VALUE ? null : bulkSprintValue
+    }
+
+    if (Object.keys(updates).length === 0) {
+      toast("Choose at least one field to update.", "error")
+      return
+    }
+
+    setIsBulkTicketUpdating(true)
+    try {
+      await Promise.all(
+        selectedTicketIds.map((ticketId) =>
+          updateTicket.mutateAsync({
+            id: ticketId,
+            ...updates,
+          })
+        )
+      )
+
+      await refetchTickets()
+
+      toast(
+        `Updated ${selectedTicketIds.length} ticket${
+          selectedTicketIds.length === 1 ? "" : "s"
+        }.`
+      )
+      setBulkEditOpen(false)
+      setSelectedTicketIds([])
+      resetBulkEditFields()
+    } catch (error: unknown) {
+      const message =
+        error && typeof error === "object" && "message" in error
+          ? String((error as { message?: unknown }).message)
+          : "Failed to update tickets"
+      toast(message, "error")
+    } finally {
+      setIsBulkTicketUpdating(false)
+    }
+  }, [
+    selectedTicketIds,
+    bulkStatusValue,
+    bulkProjectValue,
+    bulkEpicValue,
+    bulkSprintValue,
+    updateTicket,
+    refetchTickets,
+    resetBulkEditFields,
+  ])
+
   const handleBulkAssignDeployRound = useCallback(async () => {
-    if (!bulkDeployRoundId || selectedTicketIds.length === 0) return
+    if (!bulkDeployRoundId || selectedTicketIds.length === 0 || isBulkTicketUpdating) return
     setIsBulkDeployRoundUpdating(true)
     try {
       await Promise.all(
@@ -414,10 +518,10 @@ export default function ProjectDetailClient({
     } finally {
       setIsBulkDeployRoundUpdating(false)
     }
-  }, [bulkDeployRoundId, projectId, queryClient, refetchTickets, selectedTicketIds, updateTicket])
+  }, [bulkDeployRoundId, isBulkTicketUpdating, projectId, queryClient, refetchTickets, selectedTicketIds, updateTicket])
 
   const handleBulkRemoveDeployRound = useCallback(async () => {
-    if (selectedTicketIds.length === 0) return
+    if (selectedTicketIds.length === 0 || isBulkTicketUpdating) return
     setIsBulkDeployRoundUpdating(true)
     try {
       await Promise.all(
@@ -445,7 +549,7 @@ export default function ProjectDetailClient({
     } finally {
       setIsBulkDeployRoundUpdating(false)
     }
-  }, [projectId, queryClient, refetchTickets, selectedTicketIds, updateTicket])
+  }, [isBulkTicketUpdating, projectId, queryClient, refetchTickets, selectedTicketIds, updateTicket])
 
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode)
@@ -571,6 +675,15 @@ function getTypeColor(type: string | null | undefined): string {
           actions={
             <div className="flex items-center gap-2">
               <ViewToggle viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+              {canEditProjects && (
+                <Button
+                  variant="outline"
+                  onClick={() => setCreateEpicOpen(true)}
+                >
+                  <PlusIcon className="mr-1.5 h-4 w-4" />
+                  New Epic
+                </Button>
+              )}
               {canEditProjects && (
                 <Button
                   variant="outline"
@@ -871,9 +984,18 @@ function getTypeColor(type: string | null | undefined): string {
                 </div>
               )}
 
-              {ticketsLoading || isBulkDeployRoundUpdating ? (
+              {ticketsLoading || isBulkDeployRoundUpdating || isBulkTicketUpdating ? (
                 <div className="mt-4 rounded-lg border border-border bg-card py-8">
-                  <LoadingIndicator variant="block" label={isBulkDeployRoundUpdating ? "Updating tickets…" : "Loading tickets…"} />
+                  <LoadingIndicator
+                    variant="block"
+                    label={
+                      isBulkDeployRoundUpdating
+                        ? "Updating deploy round..."
+                        : isBulkTicketUpdating
+                          ? "Applying bulk updates..."
+                          : "Loading tickets..."
+                    }
+                  />
                 </div>
               ) : isKanban ? (
                 <div className="mt-4">
@@ -903,8 +1025,17 @@ function getTypeColor(type: string | null | undefined): string {
                           variant="outline"
                           size="sm"
                           type="button"
+                          onClick={() => setBulkEditOpen(true)}
+                          disabled={isBulkDeployRoundUpdating || isBulkTicketUpdating}
+                        >
+                          Bulk Update
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          type="button"
                           onClick={() => setBulkDeployRoundOpen(true)}
-                          disabled={!deployRounds.length || isBulkDeployRoundUpdating}
+                          disabled={!deployRounds.length || isBulkDeployRoundUpdating || isBulkTicketUpdating}
                         >
                           {isBulkDeployRoundUpdating ? (
                             <span className="inline-flex items-center gap-2">
@@ -920,7 +1051,7 @@ function getTypeColor(type: string | null | undefined): string {
                           size="sm"
                           type="button"
                           onClick={() => void handleBulkRemoveDeployRound()}
-                          disabled={isBulkDeployRoundUpdating}
+                          disabled={isBulkDeployRoundUpdating || isBulkTicketUpdating}
                         >
                           {isBulkDeployRoundUpdating ? (
                             <span className="inline-flex items-center gap-2">
@@ -955,6 +1086,7 @@ function getTypeColor(type: string | null | undefined): string {
                                   selectedTicketIds.includes(t.id)
                                 )
                               }
+                              disabled={isBulkDeployRoundUpdating || isBulkTicketUpdating}
                               onChange={(event) =>
                                 handleToggleSelectAllVisible(event.target.checked)
                               }
@@ -983,6 +1115,7 @@ function getTypeColor(type: string | null | undefined): string {
                               <TableCell className="px-2 py-2">
                                 <Checkbox
                                   checked={isSelected}
+                                  disabled={isBulkDeployRoundUpdating || isBulkTicketUpdating}
                                   onChange={(event) =>
                                     handleToggleTicketSelection(ticket.id, event.target.checked)
                                   }
@@ -1096,6 +1229,110 @@ function getTypeColor(type: string | null | undefined): string {
         onOpenSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
       />
 
+      <Dialog
+        open={isBulkEditOpen}
+        onOpenChange={(open) => {
+          setBulkEditOpen(open)
+          if (!open) {
+            resetBulkEditFields()
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk update selected tickets</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Choose one or more fields to update for {selectedTicketIds.length} selected ticket
+              {selectedTicketIds.length === 1 ? "" : "s"}.
+            </p>
+            <FilterField label="Status" id="bulk-status">
+              <Select
+                id="bulk-status"
+                value={bulkStatusValue}
+                onChange={(e) => setBulkStatusValue(e.target.value)}
+                className="w-full"
+              >
+                <option value={BULK_NO_CHANGE}>No change</option>
+                {statusOptions.map((statusOption) => (
+                  <option key={statusOption.id} value={statusOption.id}>
+                    {statusOption.label}
+                  </option>
+                ))}
+              </Select>
+            </FilterField>
+            <FilterField label="Project" id="bulk-project">
+              <Select
+                id="bulk-project"
+                value={bulkProjectValue}
+                onChange={(e) => setBulkProjectValue(e.target.value)}
+                className="w-full"
+              >
+                <option value={BULK_NO_CHANGE}>No change</option>
+                <option value={BULK_CLEAR_VALUE}>No project</option>
+                {bulkProjectOptionsAsc.map((projectOption) => (
+                  <option key={projectOption.id} value={projectOption.id}>
+                    {projectOption.name}
+                  </option>
+                ))}
+              </Select>
+            </FilterField>
+            <FilterField label="Epic" id="bulk-epic">
+              <Select
+                id="bulk-epic"
+                value={bulkEpicValue}
+                onChange={(e) => setBulkEpicValue(e.target.value)}
+                className="w-full"
+              >
+                <option value={BULK_NO_CHANGE}>No change</option>
+                <option value={BULK_CLEAR_VALUE}>No epic</option>
+                {epicOptionsAsc.map((epicOption) => (
+                  <option key={epicOption.id} value={epicOption.id}>
+                    {epicOption.name}
+                  </option>
+                ))}
+              </Select>
+            </FilterField>
+            <FilterField label="Sprint" id="bulk-sprint">
+              <Select
+                id="bulk-sprint"
+                value={bulkSprintValue}
+                onChange={(e) => setBulkSprintValue(e.target.value)}
+                className="w-full"
+              >
+                <option value={BULK_NO_CHANGE}>No change</option>
+                <option value={BULK_CLEAR_VALUE}>No sprint</option>
+                {sprintOptionsAsc.map((sprintOption) => (
+                  <option key={sprintOption.id} value={sprintOption.id}>
+                    {sprintOption.name}
+                  </option>
+                ))}
+              </Select>
+            </FilterField>
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setBulkEditOpen(false)
+                resetBulkEditFields()
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void handleApplyBulkTicketUpdates()}
+              disabled={!selectedTicketIds.length || !hasBulkEditChanges || isBulkTicketUpdating}
+            >
+              {isBulkTicketUpdating ? "Applying..." : "Apply updates"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isBulkDeployRoundOpen} onOpenChange={setBulkDeployRoundOpen}>
         <DialogContent>
           <DialogHeader>
@@ -1187,6 +1424,23 @@ function getTypeColor(type: string | null | undefined): string {
         description="Create a new deploy round with a checklist for tracking deployment tasks."
         submitLabel="Create"
       />
+
+      <Dialog open={isCreateEpicOpen} onOpenChange={setCreateEpicOpen}>
+        <DialogContent showCloseButton className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Epic</DialogTitle>
+          </DialogHeader>
+          <div className="px-6 pb-6">
+            {isCreateEpicOpen ? (
+              <EpicForm
+                onSuccess={() => {
+                  setCreateEpicOpen(false)
+                }}
+              />
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
       </EntityPageLayout>
     </PageLayout>
   )

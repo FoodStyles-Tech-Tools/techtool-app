@@ -9,6 +9,7 @@ import type { TicketStatus } from "@shared/ticket-statuses"
 import { useTicketStatuses } from "@client/hooks/use-ticket-statuses"
 import { useTicketSubtaskCounts } from "@client/hooks/use-ticket-subtask-counts"
 import { Button } from "@client/components/ui/button"
+import { Checkbox } from "@client/components/ui/checkbox"
 import { StatusPill } from "@client/components/tickets/status-pill"
 import { PriorityPill } from "@client/components/tickets/priority-pill"
 import { TicketTypePill } from "@client/components/ticket-type-select"
@@ -31,6 +32,10 @@ export interface TicketsTableProps {
   startIndex: number
   endIndex: number
   onSelectTicket: (ticketId: string) => void
+  selectedTicketIds?: string[]
+  onToggleTicketSelection?: (ticketId: string, checked: boolean) => void
+  onToggleSelectAllVisible?: (checked: boolean) => void
+  selectionDisabled?: boolean
 }
 
 interface TicketRowProps {
@@ -39,6 +44,10 @@ interface TicketRowProps {
   onSelectTicket: (ticketId: string) => void
   getStatusLabel: (statusKey: string) => string
   statusMap: Map<string, TicketStatus>
+  selectionEnabled: boolean
+  isSelected: boolean
+  onToggleTicketSelection?: (ticketId: string, checked: boolean) => void
+  selectionDisabled: boolean
 }
 
 const TicketRow = memo(function TicketRow({
@@ -47,6 +56,10 @@ const TicketRow = memo(function TicketRow({
   onSelectTicket,
   getStatusLabel,
   statusMap,
+  selectionEnabled,
+  isSelected,
+  onToggleTicketSelection,
+  selectionDisabled,
 }: TicketRowProps) {
   const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email || "-"
   const requesterLabel = ticket.requestedBy?.name || ticket.requestedBy?.email || "-"
@@ -59,6 +72,16 @@ const TicketRow = memo(function TicketRow({
 
   return (
     <TableRow>
+      {selectionEnabled ? (
+        <TableCell className="w-8 px-2 py-2">
+          <Checkbox
+            checked={isSelected}
+            disabled={selectionDisabled}
+            onChange={(event) => onToggleTicketSelection?.(ticket.id, event.target.checked)}
+            aria-label={`Select ticket ${ticket.displayId || ticket.id.slice(0, 8)}`}
+          />
+        </TableCell>
+      ) : null}
       <TableCell className="py-2 text-sm text-muted-foreground">
         {ticket.displayId || ticket.id.slice(0, 8)}
       </TableCell>
@@ -123,10 +146,20 @@ export function TicketsTable({
   startIndex,
   endIndex,
   onSelectTicket,
+  selectedTicketIds = [],
+  onToggleTicketSelection,
+  onToggleSelectAllVisible,
+  selectionDisabled = false,
 }: TicketsTableProps) {
   const { statusMap } = useTicketStatuses()
   const parentTicketIds = tickets.map((ticket) => ticket.id)
   const { data: subtaskCounts = {} } = useTicketSubtaskCounts(parentTicketIds)
+  const selectionEnabled =
+    typeof onToggleTicketSelection === "function" && typeof onToggleSelectAllVisible === "function"
+  const allVisibleSelected =
+    selectionEnabled &&
+    tickets.length > 0 &&
+    tickets.every((ticket) => selectedTicketIds.includes(ticket.id))
   const getStatusLabel = useCallback(
     (statusKey: string) =>
       statusMap.get(normalizeStatusKey(statusKey))?.label ?? formatStatusLabel(statusKey),
@@ -169,6 +202,16 @@ export function TicketsTable({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
+            {selectionEnabled ? (
+              <TableHead className="w-8 px-2 py-2">
+                <Checkbox
+                  checked={allVisibleSelected}
+                  disabled={selectionDisabled}
+                  onChange={(event) => onToggleSelectAllVisible?.(event.target.checked)}
+                  aria-label="Select all visible tickets"
+                />
+              </TableHead>
+            ) : null}
             <TableHead className="h-9 py-2">ID</TableHead>
             <TableHead className="h-9 w-[400px] min-w-[300px] py-2">Title</TableHead>
             <TableHead className="h-9 py-2 text-center">Subtasks</TableHead>
@@ -200,6 +243,10 @@ export function TicketsTable({
                 onSelectTicket={onSelectTicket}
                 getStatusLabel={getStatusLabel}
                 statusMap={statusMap}
+                selectionEnabled={selectionEnabled}
+                isSelected={selectedTicketIds.includes(ticket.id)}
+                onToggleTicketSelection={onToggleTicketSelection}
+                selectionDisabled={selectionDisabled}
               />
             )
           })}

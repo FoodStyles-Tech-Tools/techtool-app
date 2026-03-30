@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo, useCallback, useState, useEffect } from "react"
-import { PlusIcon } from "@heroicons/react/20/solid"
 import { TableCellsIcon, ViewColumnsIcon } from "@heroicons/react/24/outline"
 import { useProjects } from "@client/hooks/use-projects"
 import { usePermissions } from "@client/hooks/use-permissions"
@@ -29,9 +28,21 @@ import { PageHeader } from "@client/components/ui/page-header"
 import { PageLayout } from "@client/components/ui/page-layout"
 import { EntityPageLayout } from "@client/components/ui/entity-page-layout"
 import { Button } from "@client/components/ui/button"
+import { Select } from "@client/components/ui/select"
+import { FilterField } from "@client/components/ui/filter-field"
+import { toast } from "@client/components/ui/toast"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@client/components/ui/dialog"
 import { cn } from "@client/lib/utils"
 
 type ViewMode = "table" | "kanban"
+
+const BULK_NO_CHANGE = "__no_change__"
+const BULK_CLEAR_VALUE = "__clear__"
 
 function ViewToggle({
   viewMode,
@@ -180,7 +191,12 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     [selectedProjectForBoard, ticketStatuses]
   )
 
-  const { data: ticketsData, pagination: ticketsPagination, isLoading: ticketsLoading } = useTickets({
+  const {
+    data: ticketsData,
+    pagination: ticketsPagination,
+    isLoading: ticketsLoading,
+    refetch: refetchTickets,
+  } = useTickets({
     projectId: projectFilter !== "all" ? projectFilter : undefined,
     assigneeId: assigneeFilter !== "all" ? assigneeFilter : undefined,
     requestedById: requestedByFilter !== "all" ? requestedByFilter : undefined,
@@ -256,6 +272,14 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
 
   const loading = !ticketsData && ticketsLoading
   const canCreateTickets = flags?.canCreateTickets ?? false
+  const canEditTickets = flags?.canEditTickets ?? false
+  const [selectedTicketIds, setSelectedTicketIds] = useState<string[]>([])
+  const [isBulkEditOpen, setBulkEditOpen] = useState(false)
+  const [isBulkTicketUpdating, setIsBulkTicketUpdating] = useState(false)
+  const [bulkStatusValue, setBulkStatusValue] = useState<string>(BULK_NO_CHANGE)
+  const [bulkProjectValue, setBulkProjectValue] = useState<string>(BULK_NO_CHANGE)
+  const [bulkEpicValue, setBulkEpicValue] = useState<string>(BULK_NO_CHANGE)
+  const [bulkSprintValue, setBulkSprintValue] = useState<string>(BULK_NO_CHANGE)
   const {
     selectedTicketId,
     setSelectedTicketId,
@@ -286,6 +310,116 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
     },
     [allTickets, openPreview]
   )
+
+  const handleToggleTicketSelection = useCallback((ticketId: string, checked: boolean) => {
+    setSelectedTicketIds((prev) =>
+      checked ? [...prev, ticketId] : prev.filter((id) => id !== ticketId)
+    )
+  }, [])
+
+  const handleToggleSelectAllVisible = useCallback(
+    (checked: boolean) => {
+      const visibleIds = paginatedTickets.map((ticket) => ticket.id)
+      setSelectedTicketIds((prev) => {
+        if (!checked) {
+          return prev.filter((id) => !visibleIds.includes(id))
+        }
+        const next = new Set([...prev, ...visibleIds])
+        return Array.from(next)
+      })
+    },
+    [paginatedTickets]
+  )
+
+  const resetBulkEditFields = useCallback(() => {
+    setBulkStatusValue(BULK_NO_CHANGE)
+    setBulkProjectValue(BULK_NO_CHANGE)
+    setBulkEpicValue(BULK_NO_CHANGE)
+    setBulkSprintValue(BULK_NO_CHANGE)
+  }, [])
+
+  const hasBulkEditChanges = useMemo(
+    () =>
+      bulkStatusValue !== BULK_NO_CHANGE ||
+      bulkProjectValue !== BULK_NO_CHANGE ||
+      bulkEpicValue !== BULK_NO_CHANGE ||
+      bulkSprintValue !== BULK_NO_CHANGE,
+    [bulkStatusValue, bulkProjectValue, bulkEpicValue, bulkSprintValue]
+  )
+
+  const handleApplyBulkTicketUpdates = useCallback(async () => {
+    if (selectedTicketIds.length === 0) return
+
+    const updates: {
+      status?: string
+      projectId?: string | null
+      epicId?: string | null
+      sprintId?: string | null
+    } = {}
+
+    if (bulkStatusValue !== BULK_NO_CHANGE) {
+      updates.status = bulkStatusValue
+    }
+    if (bulkProjectValue !== BULK_NO_CHANGE) {
+      updates.projectId = bulkProjectValue === BULK_CLEAR_VALUE ? null : bulkProjectValue
+    }
+    if (bulkEpicValue !== BULK_NO_CHANGE) {
+      updates.epicId = bulkEpicValue === BULK_CLEAR_VALUE ? null : bulkEpicValue
+    }
+    if (bulkSprintValue !== BULK_NO_CHANGE) {
+      updates.sprintId = bulkSprintValue === BULK_CLEAR_VALUE ? null : bulkSprintValue
+    }
+
+    if (Object.keys(updates).length === 0) {
+      toast("Choose at least one field to update.", "error")
+      return
+    }
+
+    setIsBulkTicketUpdating(true)
+    try {
+      await Promise.all(
+        selectedTicketIds.map((ticketId) =>
+          updateTicket.mutateAsync({
+            id: ticketId,
+            ...updates,
+          })
+        )
+      )
+
+      await refetchTickets()
+      toast(
+        `Updated ${selectedTicketIds.length} ticket${
+          selectedTicketIds.length === 1 ? "" : "s"
+        }.`
+      )
+      setBulkEditOpen(false)
+      setSelectedTicketIds([])
+      resetBulkEditFields()
+    } catch (error: unknown) {
+      const message =
+        error && typeof error === "object" && "message" in error
+          ? String((error as { message?: unknown }).message)
+          : "Failed to update tickets"
+      toast(message, "error")
+    } finally {
+      setIsBulkTicketUpdating(false)
+    }
+  }, [
+    selectedTicketIds,
+    bulkStatusValue,
+    bulkProjectValue,
+    bulkEpicValue,
+    bulkSprintValue,
+    updateTicket,
+    refetchTickets,
+    resetBulkEditFields,
+  ])
+
+  useEffect(() => {
+    if (isKanban && selectedTicketIds.length > 0) {
+      setSelectedTicketIds([])
+    }
+  }, [isKanban, selectedTicketIds.length])
 
   return (
     <PageLayout>
@@ -333,8 +467,36 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           />
         }
       >
+        {!isKanban && canEditTickets && selectedTicketIds.length > 0 ? (
+          <div className="mb-4 flex items-center justify-between rounded-md border border-border bg-muted px-3 py-2">
+            <span className="text-sm text-muted-foreground">
+              {selectedTicketIds.length} ticket{selectedTicketIds.length === 1 ? "" : "s"} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => setBulkEditOpen(true)}
+                disabled={isBulkTicketUpdating}
+              >
+                Bulk Update
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => setSelectedTicketIds([])}
+                disabled={isBulkTicketUpdating}
+              >
+                Clear selection
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         <TicketsResults
-          loading={loading}
+          loading={loading || isBulkTicketUpdating}
           filteredTickets={filteredTickets}
           hasSearchQuery={hasSearchQuery}
           viewMode={viewMode}
@@ -347,6 +509,10 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
             startIndex,
             endIndex,
             onSelectTicket: handleSelectTicket,
+            selectedTicketIds: canEditTickets ? selectedTicketIds : [],
+            onToggleTicketSelection: canEditTickets ? handleToggleTicketSelection : undefined,
+            onToggleSelectAllVisible: canEditTickets ? handleToggleSelectAllVisible : undefined,
+            selectionDisabled: isBulkTicketUpdating,
           }}
           boardProps={{
             statuses: boardStatuses,
@@ -370,6 +536,110 @@ export default function TicketsPage({ initialProjectId }: TicketsClientProps) {
           onOpenSubtasksKeepOpen={() => resolveOpenSubtasksDialog("keep_open")}
           onOpenSubtasksCloseAll={() => resolveOpenSubtasksDialog("close_all")}
         />
+
+        <Dialog
+          open={isBulkEditOpen}
+          onOpenChange={(open) => {
+            setBulkEditOpen(open)
+            if (!open) {
+              resetBulkEditFields()
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Bulk update selected tickets</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Choose one or more fields to update for {selectedTicketIds.length} selected ticket
+                {selectedTicketIds.length === 1 ? "" : "s"}.
+              </p>
+              <FilterField label="Status" id="tickets-bulk-status">
+                <Select
+                  id="tickets-bulk-status"
+                  value={bulkStatusValue}
+                  onChange={(e) => setBulkStatusValue(e.target.value)}
+                  className="w-full"
+                >
+                  <option value={BULK_NO_CHANGE}>No change</option>
+                  {statusOptions.map((statusOption) => (
+                    <option key={statusOption.id} value={statusOption.id}>
+                      {statusOption.label}
+                    </option>
+                  ))}
+                </Select>
+              </FilterField>
+              <FilterField label="Project" id="tickets-bulk-project">
+                <Select
+                  id="tickets-bulk-project"
+                  value={bulkProjectValue}
+                  onChange={(e) => setBulkProjectValue(e.target.value)}
+                  className="w-full"
+                >
+                  <option value={BULK_NO_CHANGE}>No change</option>
+                  <option value={BULK_CLEAR_VALUE}>No project</option>
+                  {projectOptions.map((projectOption) => (
+                    <option key={projectOption.id} value={projectOption.id}>
+                      {projectOption.name}
+                    </option>
+                  ))}
+                </Select>
+              </FilterField>
+              <FilterField label="Epic" id="tickets-bulk-epic">
+                <Select
+                  id="tickets-bulk-epic"
+                  value={bulkEpicValue}
+                  onChange={(e) => setBulkEpicValue(e.target.value)}
+                  className="w-full"
+                >
+                  <option value={BULK_NO_CHANGE}>No change</option>
+                  <option value={BULK_CLEAR_VALUE}>No epic</option>
+                  {epicOptions.map((epicOption) => (
+                    <option key={epicOption.id} value={epicOption.id}>
+                      {epicOption.name}
+                    </option>
+                  ))}
+                </Select>
+              </FilterField>
+              <FilterField label="Sprint" id="tickets-bulk-sprint">
+                <Select
+                  id="tickets-bulk-sprint"
+                  value={bulkSprintValue}
+                  onChange={(e) => setBulkSprintValue(e.target.value)}
+                  className="w-full"
+                >
+                  <option value={BULK_NO_CHANGE}>No change</option>
+                  <option value={BULK_CLEAR_VALUE}>No sprint</option>
+                  {sprintOptions.map((sprintOption) => (
+                    <option key={sprintOption.id} value={sprintOption.id}>
+                      {sprintOption.name}
+                    </option>
+                  ))}
+                </Select>
+              </FilterField>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setBulkEditOpen(false)
+                  resetBulkEditFields()
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void handleApplyBulkTicketUpdates()}
+                disabled={!selectedTicketIds.length || !hasBulkEditChanges || isBulkTicketUpdating}
+              >
+                {isBulkTicketUpdating ? "Applying..." : "Apply updates"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
       </EntityPageLayout>
     </PageLayout>
