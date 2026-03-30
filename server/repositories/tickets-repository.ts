@@ -4,6 +4,7 @@ import { fetchTicketList } from "@server/lib/tickets-list"
 import { createServerClient } from "@server/lib/supabase"
 
 type SupabaseClientLike = Awaited<ReturnType<typeof createServerClient>>
+const LEGACY_SQA_FLOW_KEYS = new Set(["for_qa", "qa_pass", "returned_to_dev"])
 
 const TICKET_SELECT = `
   *,
@@ -99,6 +100,32 @@ export function findTicketStatusConfig(supabase: SupabaseClientLike, statusKey: 
     .select("key, sqa_flow")
     .eq("key", statusKey)
     .maybeSingle()
+    .then(async (result) => {
+      const message = `${result.error?.message || ""} ${result.error?.details || ""}`.toLowerCase()
+      const missingSqaFlowColumn = message.includes("sqa_flow") && message.includes("column")
+
+      if (!missingSqaFlowColumn) {
+        return result
+      }
+
+      const legacyResult = await supabase
+        .from("ticket_statuses")
+        .select("key")
+        .eq("key", statusKey)
+        .maybeSingle()
+
+      if (legacyResult.error || !legacyResult.data) {
+        return legacyResult as typeof result
+      }
+
+      return {
+        data: {
+          key: legacyResult.data.key,
+          sqa_flow: LEGACY_SQA_FLOW_KEYS.has(String(legacyResult.data.key || "").toLowerCase()),
+        },
+        error: null,
+      }
+    })
 }
 
 export function findProjectSqaRequirementById(supabase: SupabaseClientLike, projectId: string) {

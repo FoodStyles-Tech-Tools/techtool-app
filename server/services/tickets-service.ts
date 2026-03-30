@@ -235,7 +235,7 @@ export async function createTicket(context: TicketRequestContext, input: CreateT
   await invalidateTicketCaches()
 
   const normalizedTicket = normalizePersistedTicket(ticket as Record<string, unknown>)
-  await notifyTicketCreated(normalizedTicket as any, context.session?.user?.email ?? null)
+  await notifyTicketCreated(normalizedTicket as any, context.session?.user?.email ?? null, context.userId)
 
   return {
     ticket: normalizedTicket,

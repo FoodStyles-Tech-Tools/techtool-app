@@ -155,17 +155,21 @@ function buildTicketCreatedEmbed(args: {
 
 export async function notifyTicketCreated(
   ticket: TicketWithRelations,
-  submitterEmail: string | null | undefined
+  submitterEmail: string | null | undefined,
+  submitterUserId?: string | null
 ) {
   const reporterId = ticket.requested_by_id || ticket.requested_by?.id || null
   const assigneeId = ticket.assignee_id || ticket.assignee?.id || null
   const isReporterAssignee = Boolean(reporterId && assigneeId && reporterId === assigneeId)
+  const isSubmitterAssignee = Boolean(submitterUserId && assigneeId && submitterUserId === assigneeId)
 
-  if (isReporterAssignee) {
-    console.info("[discord] Ticket create notification skipped: reporter equals assignee", {
+  if (isReporterAssignee || isSubmitterAssignee) {
+    console.info("[discord] Ticket create notification skipped: assignee matches actor", {
       ticketId: ticket.id,
       reporterId,
+      submitterUserId,
       assigneeId,
+      reason: isSubmitterAssignee ? "submitter_equals_assignee" : "reporter_equals_assignee",
     })
     return
   }
