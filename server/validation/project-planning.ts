@@ -1,5 +1,29 @@
 import { z } from "zod"
 
+function asRecord(input: unknown) {
+  return z.record(z.string(), z.unknown()).parse(input)
+}
+
+function hasOwn(record: Record<string, unknown>, key: string) {
+  return Object.prototype.hasOwnProperty.call(record, key)
+}
+
+function readCompatValue<T = unknown>(
+  body: Record<string, unknown>,
+  camelKey: string,
+  snakeKey?: string
+): T | undefined {
+  if (hasOwn(body, camelKey)) {
+    return body[camelKey] as T
+  }
+
+  if (snakeKey && hasOwn(body, snakeKey)) {
+    return body[snakeKey] as T
+  }
+
+  return undefined
+}
+
 const entityIdParamsSchema = z.object({
   id: z.string().trim().min(1, "Entity id is required"),
 })
@@ -22,6 +46,7 @@ const createEpicBodySchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
   description: optionalNullableString,
   color: optionalNullableString,
+  projectId: optionalNullableString,
 })
 
 const updateEpicBodySchema = z
@@ -107,7 +132,13 @@ export function parseProjectScopedQuery(input: unknown) {
 }
 
 export function parseCreateEpicBody(input: unknown) {
-  return createEpicBodySchema.parse(input)
+  const body = asRecord(input)
+  return createEpicBodySchema.parse({
+    name: readCompatValue(body, "name"),
+    description: readCompatValue(body, "description"),
+    color: readCompatValue(body, "color"),
+    projectId: readCompatValue(body, "projectId", "project_id"),
+  })
 }
 
 export function parseUpdateEpicBody(input: unknown): UpdateEpicInput {

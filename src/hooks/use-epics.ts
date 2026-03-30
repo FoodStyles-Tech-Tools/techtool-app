@@ -55,13 +55,14 @@ export function useCreateEpic() {
       name: string
       description?: string
       color?: string
+      projectId?: string | null
     }) =>
       requestJson<{ epic: Epic }>("/api/epics", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(epic),
       }),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["epics"] })
       toast("Epic created successfully")
     },

@@ -20,6 +20,7 @@ export async function createEpic(context: RequestContext, input: CreateEpicInput
     name: input.name,
     description: input.description || null,
     color: input.color || "#3b82f6",
+    projectId: input.projectId || null,
   })
 
   return { epic }

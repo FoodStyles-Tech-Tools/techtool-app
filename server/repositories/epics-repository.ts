@@ -13,7 +13,10 @@ export type EpicRecord = {
 
 const EPIC_SELECT = "id, name, description, color, created_at, updated_at"
 
-function mapCreateError(error: { message?: string; code?: string; hint?: string } | null) {
+function mapCreateError(
+  error: { message?: string; code?: string; hint?: string } | null,
+  options?: { projectIdProvided?: boolean }
+) {
   const errorMessage = error?.message || "Failed to create epic"
   const errorCode = error?.code || error?.hint || "UNKNOWN"
 
@@ -26,6 +29,16 @@ function mapCreateError(error: { message?: string; code?: string; hint?: string 
 
   if (errorMessage.includes("new row violates row-level security") || errorCode === "42501") {
     return new HttpError(403, "Permission denied. Please check RLS policies.")
+  }
+
+  if (
+    errorMessage.includes('null value in column "project_id"') &&
+    !options?.projectIdProvided
+  ) {
+    return new HttpError(
+      400,
+      "This workspace requires projectId when creating an epic. Create epics from a project page or include projectId in the request."
+    )
   }
 
   return new HttpError(500, errorMessage)
@@ -66,17 +79,44 @@ export async function createEpic(
     name: string
     description: string | null
     color: string
+    projectId?: string | null
   }
 ) {
-  const { data, error } = await supabase
+  const baseInsert = {
+    name: input.name,
+    description: input.description,
+    color: input.color,
+  }
+  const hasProjectId = typeof input.projectId === "string" && input.projectId.trim().length > 0
+  const insertWithProject = hasProjectId
+    ? { ...baseInsert, project_id: input.projectId }
+    : baseInsert
+
+  let { data, error } = await supabase
     .from("epics")
-    .insert(input)
+    .insert(insertWithProject)
     .select(EPIC_SELECT)
     .single()
 
+  if (
+    error &&
+    hasProjectId &&
+    error.message &&
+    error.message.includes("project_id") &&
+    (error.message.includes("does not exist") || error.message.includes("schema cache"))
+  ) {
+    const retry = await supabase
+      .from("epics")
+      .insert(baseInsert)
+      .select(EPIC_SELECT)
+      .single()
+    data = retry.data
+    error = retry.error
+  }
+
   if (error || !data) {
     console.error("Error creating epic:", error)
-    throw mapCreateError(error)
+    throw mapCreateError(error, { projectIdProvided: hasProjectId })
   }
 
   return data as EpicRecord

@@ -4,12 +4,15 @@ import { memo, useRef } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Square2StackIcon } from "@heroicons/react/20/solid"
+import { ShareIcon } from "@heroicons/react/24/outline"
 import type { Ticket } from "@shared/types"
 import { cn } from "@client/lib/utils"
 import { isDoneStatus, normalizeStatusKey } from "@shared/ticket-statuses"
 import { getDueDateDisplay } from "@client/lib/format-dates"
 import { PriorityPill } from "@client/components/tickets/priority-pill"
 import { TicketTypePill } from "@client/components/ticket-type-select"
+import { toast } from "@client/components/ui/toast"
+import { buildTicketShareUrl } from "@client/features/tickets/lib/share-url"
 import type { DropPosition } from "@client/features/tickets/components/tickets-board"
 
 export interface TicketKanbanCardProps {
@@ -68,6 +71,18 @@ export const TicketKanbanCard = memo(function TicketKanbanCard({
   const dueDate = getDueDateDisplay(ticket.dueDate, isCompleted)
   const assigneeLabel = ticket.assignee?.name || ticket.assignee?.email
   const count = subtasksCount ?? ticket.subtasksCount ?? 0
+  const handleCopyShareUrl = () => {
+    const shareUrl = buildTicketShareUrl(ticket)
+    if (!navigator?.clipboard?.writeText) {
+      toast("Clipboard not available", "error")
+      return
+    }
+
+    navigator.clipboard
+      .writeText(shareUrl)
+      .then(() => toast("Ticket URL copied"))
+      .catch(() => toast("Failed to copy ticket URL", "error"))
+  }
 
   return (
     <div ref={setNodeRef} style={style} className="flex flex-col">
@@ -101,7 +116,30 @@ export const TicketKanbanCard = memo(function TicketKanbanCard({
           <span className="text-[10px] font-mono text-muted-foreground tracking-wide">
             {ticket.displayId || ticket.id.slice(0, 8)}
           </span>
-          <TicketTypePill type={ticket.type} />
+          <div className="flex items-center gap-1.5">
+            <TicketTypePill type={ticket.type} />
+            <button
+              type="button"
+              className="inline-flex h-6 w-6 items-center justify-center rounded border border-transparent text-muted-foreground transition-colors hover:border-border hover:bg-accent hover:text-foreground"
+              aria-label="Copy share URL"
+              title="Copy share URL"
+              onPointerDown={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+              onPointerUp={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+              }}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                handleCopyShareUrl()
+              }}
+            >
+              <ShareIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* Title */}

@@ -1,16 +1,8 @@
 "use client"
 
-import { getClientAppUrl } from "@client/lib/config/client-env"
 import { toast } from "@client/components/ui/toast"
 import type { Ticket } from "@shared/types"
-
-function getTicketShareBaseOrigin() {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin
-  }
-
-  return getClientAppUrl()
-}
+import { buildTicketShareUrl } from "@client/features/tickets/lib/share-url"
 
 type UseTicketDetailSharingParams = {
   ticket: Ticket | null | undefined
@@ -34,8 +26,7 @@ export function useTicketDetailSharing({ ticket }: UseTicketDetailSharingParams)
 
   const getTicketShareUrl = () => {
     if (!ticket) return null
-    const slug = String(ticket.displayId || ticket.id).toLowerCase()
-    return new URL(`/tickets/${slug}`, getTicketShareBaseOrigin()).toString()
+    return buildTicketShareUrl(ticket)
   }
 
   const handleCopyShareUrl = () => {

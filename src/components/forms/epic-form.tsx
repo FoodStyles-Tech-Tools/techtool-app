@@ -27,6 +27,7 @@ type EpicFormValues = z.infer<typeof epicSchema>
 interface EpicFormProps {
   onSuccess?: () => void
   initialData?: Partial<EpicFormValues> & { id?: string }
+  projectId?: string | null
 }
 
 const DEFAULT_COLORS = [
@@ -40,7 +41,7 @@ const DEFAULT_COLORS = [
   "#84cc16", // lime
 ]
 
-export function EpicForm({ onSuccess, initialData }: EpicFormProps) {
+export function EpicForm({ onSuccess, initialData, projectId }: EpicFormProps) {
   const createEpic = useCreateEpic()
   const updateEpic = useUpdateEpic()
   const isEditing = Boolean(initialData?.id)
@@ -60,6 +61,7 @@ export function EpicForm({ onSuccess, initialData }: EpicFormProps) {
         name: values.name,
         description: values.description,
         color: values.color,
+        projectId: projectId || undefined,
       }
       if (initialData?.id) {
         await updateEpic.mutateAsync({ id: initialData.id, ...payload })

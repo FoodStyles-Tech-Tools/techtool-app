@@ -30,6 +30,7 @@ export function TicketProjectEntityDialogs({
             <DialogTitle>Create Epic</DialogTitle>
           </DialogHeader>
           <EpicForm
+            projectId={projectId}
             onSuccess={() => {
               onEpicOpenChange(false)
             }}
